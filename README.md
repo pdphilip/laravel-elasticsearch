@@ -689,10 +689,10 @@ $company->photos->toArray(); //Shows the company photos (morph many)
 
 #### Elasticsearch <-> MySQL
 
-Since it's unlikely that you will use Elasticsearch in isolation for your App; we've ensured that you can have hybrid
+Since it's unlikely that you will use Elasticsearch exclusively in your App; we've ensured that you can have hybrid
 relationships between Elasticsearch and MySQL (Or any native Laravel datasource) models.
 
-**For the MySQL(or similar) model that you wish to bind to Elasticsearch relationbships, please
+**For the MySQL(or similar) model that you wish to bind to Elasticsearch relationships, please
 use**: `use PDPhilip\Elasticsearch\Eloquent\HybridRelations`
 
 Example, mysql User model:

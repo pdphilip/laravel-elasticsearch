@@ -35,8 +35,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "PDPhilip\\Elasticsearch\\ElasticServiceProvider",
-                "PDPhilip\\Elasticsearch\\ElasticQueueServiceProvider"
+                "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
             ]
         }
     }
