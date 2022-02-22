@@ -18,7 +18,6 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 - This plugin is not a search wrapper for your existing models
 
 > # Alpha release notice
-> ______
 > This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included. I built this because I needed it but this plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to submit pull requests.
 >
 > #### Versioning Schema: {plugin_version}.{laravel_version}.{iteration}
@@ -32,7 +31,7 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 ____
 
 Installation
-------------
+-------------
 
 Install the package via Composer:
 
@@ -40,7 +39,6 @@ Install the package via Composer:
 $ composer require pdphilip/elasticsearch
 ```
 
-____
 
 Configuration
 -------------
@@ -99,10 +97,8 @@ Add the service provider to `config/app.php` (If your Laravel version does not a
 
 ```
 
-____
-
 Eloquent
----------
+-------------
 
 ### Extending the base model
 
@@ -136,9 +132,9 @@ class Product extends Model
 }
 ```
 
-### Querying Models
+Querying Models
+-------------
 
-****
 
 #### ALL
 
@@ -334,9 +330,9 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
-___
 
-### Saving Models
+Saving Models
+-------------
 
 The same as you always have with Laravel:
 
@@ -413,7 +409,6 @@ $log->saveWithoutRefresh();
 //Will result in two separate records
 ```
 
-___
 
 ### Deleting
 
@@ -476,9 +471,8 @@ $product->forceDelete();
 
 ```
 
-____
-
-### Mutators & Casting
+Mutators & Casting
+-------------
 
 All Laravel's Mutating and casting features are inherited:
 
@@ -486,9 +480,8 @@ See [https://laravel.com/docs/8.x/eloquent-mutators](https://laravel.com/docs/8.
 
 Cool!
 
-___
-
-## Relationships
+Relationships
+-------------
 
 Model Relationships are the lifeblood of any Laravel App, for that you can use them with `belongsTo` , `hasMany`
 , `hasOne`, `morphOne` and `morphMany` as you have before:
@@ -832,10 +825,9 @@ $userLog = UserLog::first();
 $userLog->user->name; 
 ```
 
-____
 
 Schema/Index
------------------
+-------------
 
 Since there is very little overlap with how Elasticsearch handles index management to how MySQL and related tencologioes
 handle Schema manipulation; the schema feature of this plugin has been written from the ground up to work 100% with
@@ -983,15 +975,11 @@ Schema::dsl('open',['index' => 'my_index'])
 
 Behind the scenes it uses the official elasticsearch PHP client, it will call `$client->indices()->{$method}($params);`
 
-____
 
 Queues
 ----------
 _[Coming]_
 
-
-
-___
 
 Elasticsearch-specific operators
 --------------------------------
@@ -1014,10 +1002,8 @@ $bodyParams = [
 return Product::rawSearch($bodyParams); //Will search within the products index
 ```
 
-___
-
 Elasticsearchisms
---------------------------------
+=================
 
 #### Elasticsearch's default search limit is to return 10 collections
 
@@ -1077,16 +1063,12 @@ immediately after it has been written. However, there is response delay which ma
 once and not update immediately or won't need to search for the record immediately, then do `saveWithoutRefresh()`
 
 
-
-_____
-
 ### Unsupported Eloquent methods
 
 - _[Coming]_
 
-___
 Acknowledgements
-----------------
+-------------
 
 This package was inspired by [jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb), a MongoDB
 implementation of Laravel's Eloquent ORM - Thank you!
