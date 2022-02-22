@@ -1,0 +1,43 @@
+{
+    "name": "pdphilip/elasticsearch",
+    "description": "An Elasticsearch implementation of Laravel's Eloquent ORM",
+    "keywords": [
+        "laravel",
+        "eloquent",
+        "elasticsearch",
+        "elastic",
+        "database",
+        "model"
+    ],
+    "homepage": "https://github.com/pdphilip/laravel-elasticsearch",
+    "authors": [
+        {
+            "name": "David Philip",
+            "homepage": "https://github.com/pdphilip"
+        }
+    ],
+    "license": "MIT",
+    "require": {
+        "illuminate/support": "^8.0",
+        "illuminate/container": "^8.0",
+        "illuminate/database": "^8.0",
+        "illuminate/events": "^8.0",
+        "elasticsearch/elasticsearch": "^7.16",
+        "ongr/elasticsearch-dsl": "^7.2"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "PDPhilip\\Elasticsearch\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "PDPhilip\\Elasticsearch\\ElasticServiceProvider",
+                "PDPhilip\\Elasticsearch\\ElasticQueueServiceProvider"
+            ]
+        }
+    }
+}
