@@ -20,18 +20,26 @@ class Builder
     //  View Index Meta
     //----------------------------------------------------------------------
 
-    public function getIndices($all = false)
+    public function getIndices($includeSystem = false)
     {
-        return $this->connection->getIndices($all);
+        return $this->connection->getIndices($includeSystem);
     }
 
-    public function getMappings($index)
+    public function getMappings($index, $forceIndexName = false)
     {
+        if (!$forceIndexName) {
+            $index = $this->connection->setIndex($index);
+        }
+
         return $this->connection->indexMappings($index);
     }
 
-    public function getSettings($index)
+    public function getSettings($index, $forceIndexName = false)
     {
+        if (!$forceIndexName) {
+            $index = $this->connection->setIndex($index);
+        }
+
         return $this->connection->indexSettings($index);
     }
 

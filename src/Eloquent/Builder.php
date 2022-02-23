@@ -41,6 +41,13 @@ class Builder extends BaseEloquentBuilder
         'matrix',
         'query',
         'rawSearch',
+        'getIndexSettings',
+        'getIndexMappings',
+        'deleteIndexIfExists',
+        'deleteIndex',
+        'truncate',
+        'indexExists',
+        'createIndex',
     ];
 
 
