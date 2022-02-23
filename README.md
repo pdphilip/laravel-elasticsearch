@@ -33,12 +33,27 @@ ____
 Installation
 -------------
 
+#### (current Alphas)
+
 Install the package via Composer:
+
+Laravel 8:
 
 ```bash
 $ composer require pdphilip/elasticsearch
 ```
 
+Laravel 7:
+
+```bash
+$ composer require pdphilip/elasticsearch:v0.7-alpha
+```
+
+Laravel 6 (and 5.8):
+
+```bash
+$ composer require pdphilip/elasticsearch:v0.6-alpha
+```
 
 Configuration
 -------------
@@ -134,7 +149,6 @@ class Product extends Model
 
 Querying Models
 -------------
-
 
 #### ALL
 
@@ -330,7 +344,6 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
-
 Saving Models
 -------------
 
@@ -408,7 +421,6 @@ $log->company_id = 'ABC-123'
 $log->saveWithoutRefresh();
 //Will result in two separate records
 ```
-
 
 ### Deleting
 
@@ -825,7 +837,6 @@ $userLog = UserLog::first();
 $userLog->user->name; 
 ```
 
-
 Schema/Index
 -------------
 
@@ -1061,7 +1072,6 @@ Refresh requests are synchronous and do not return a response until the refresh 
 All saves are by default done with `refresh=wait_for` parameter - this is to ensure that the data is available
 immediately after it has been written. However, there is response delay which may not be optimal. If you intend to write
 once and not update immediately or won't need to search for the record immediately, then do `saveWithoutRefresh()`
-
 
 ### Unsupported Eloquent methods
 
