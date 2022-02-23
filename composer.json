@@ -18,10 +18,10 @@
     ],
     "license": "MIT",
     "require": {
-        "illuminate/support": "^8.0",
-        "illuminate/container": "^8.0",
-        "illuminate/database": "^8.0",
-        "illuminate/events": "^8.0",
+        "illuminate/support": "^5.8|^6.0",
+        "illuminate/container": "^5.8|^6.0",
+        "illuminate/database": "^5.8|^6.0",
+        "illuminate/events": "^5.8|^6.0",
         "elasticsearch/elasticsearch": "^7.16",
         "ongr/elasticsearch-dsl": "^7.2"
     },

@@ -92,6 +92,11 @@ abstract class Model extends BaseModel
      */
     protected function asDateTime($value)
     {
+        $explode = explode('.', $value);
+        if (isset($explode[1])) {
+            return Carbon::parse($value)->setTimezone('UTC');
+
+        }
 
         return parent::asDateTime($value);
     }
@@ -181,7 +186,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function originalIsEquivalent($key)
+    public function originalIsEquivalent($key, $current)
     {
         if (!array_key_exists($key, $this->original)) {
             return false;
@@ -350,15 +355,23 @@ abstract class Model extends BaseModel
 
     public function saveWithoutRefresh(array $options = [])
     {
-        $this->mergeAttributesFromCachedCasts();
 
         $query = $this->newModelQuery();
         $query->setRefresh(false);
+
+        if ($this->fireModelEvent('saving') === false) {
+            return false;
+        }
 
         if ($this->exists) {
             $saved = $this->isDirty() ? $this->performUpdate($query) : true;
         } else {
             $saved = $this->performInsert($query);
+
+            if (!$this->getConnectionName()
+                && $connection = $query->getConnection()) {
+                $this->setConnection($connection->getName());
+            }
         }
 
         if ($saved) {
