@@ -696,7 +696,7 @@ class Bridge
     private function _parseParams($key, $value): string
     {
 
-        if (in_array($key, $this->bucketOperators)) {
+        if ($key == 'and' || $key == 'or') {
             return $this->{'_'.$key.'QueryString'}($value);
         }
         if (is_array($value)) {
