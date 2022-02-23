@@ -282,7 +282,7 @@ class Builder extends BaseBuilder
         $options = $this->compileOptions();
 
         if ($this->groups) {
-            abort(500, 'Group By is not available yet');
+            throw new RuntimeException('Group By is not available yet');
         }
 
         if ($this->aggregate) {
@@ -306,7 +306,7 @@ class Builder extends BaseBuilder
         }
 
         if ($this->distinct) {
-            abort(500, 'Distinct is not available yet');
+            throw new RuntimeException('Distinct is not available yet');
         }
 
         //Else Normal find query
@@ -327,7 +327,7 @@ class Builder extends BaseBuilder
 
             return new Collection($data);
         } else {
-            abort(500, $find->errorMessage);
+            throw new RuntimeException('Error: '.$find->errorMessage);
         }
 
     }
@@ -888,7 +888,7 @@ class Builder extends BaseBuilder
 
             return new Collection($data);
         } else {
-            abort(500, $result->errorMessage);
+            throw new RuntimeException('Error: '.$result->errorMessage);
         }
     }
 
