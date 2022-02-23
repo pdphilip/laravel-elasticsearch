@@ -770,6 +770,32 @@ class Builder extends BaseBuilder
 
     }
 
+    public function getIndexMappings()
+    {
+        return Schema::getMappings($this->index);
+    }
+
+    public function getIndexSettings()
+    {
+        return Schema::getSettings($this->index);
+    }
+
+    public function indexExists()
+    {
+        return Schema::hasIndex($this->index);
+    }
+
+    public function createIndex()
+    {
+        if (!$this->indexExists()) {
+            $this->connection->indexCreate($this->index);
+
+            return true;
+        }
+
+        return false;
+    }
+
     public function rawSearch(array $bodyParams)
     {
         $find = $this->connection->searchRaw($bodyParams);
@@ -888,7 +914,7 @@ class Builder extends BaseBuilder
 
             return new Collection($data);
         } else {
-            throw new RuntimeException('Error: '.$find->errorMessage);
+            throw new RuntimeException('Error: '.$result->errorMessage);
         }
     }
 
