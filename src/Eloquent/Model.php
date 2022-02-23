@@ -350,17 +350,26 @@ abstract class Model extends BaseModel
 
     public function saveWithoutRefresh(array $options = [])
     {
-        $this->mergeAttributesFromCachedCasts();
+
+        $this->mergeAttributesFromClassCasts();
 
         $query = $this->newModelQuery();
         $query->setRefresh(false);
+
+        if ($this->fireModelEvent('saving') === false) {
+            return false;
+        }
 
         if ($this->exists) {
             $saved = $this->isDirty() ? $this->performUpdate($query) : true;
         } else {
             $saved = $this->performInsert($query);
-        }
 
+            if (!$this->getConnectionName()
+                && $connection = $query->getConnection()) {
+                $this->setConnection($connection->getName());
+            }
+        }
         if ($saved) {
             $this->finishSave($options);
         }
