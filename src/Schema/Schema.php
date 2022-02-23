@@ -5,9 +5,9 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static Builder getIndices(bool $all = null)
- * @method static Builder getMappings(string $index)
- * @method static Builder getSettings(string $index)
+ * @method static Builder getIndices(bool $includeSystem = false)
+ * @method static Builder getMappings(string $index, $forceIndexName = false)
+ * @method static Builder getSettings(string $index, $forceIndexName = false)
  * @method static Builder create(string $index, \Closure $callback)
  * @method static Builder createIfNotExists(string $index, \Closure $callback)
  * @method static Builder reIndex(string $from, string $to)
