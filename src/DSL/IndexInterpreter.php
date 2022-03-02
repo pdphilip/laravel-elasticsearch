@@ -2,6 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 trait IndexInterpreter
@@ -87,6 +88,19 @@ trait IndexInterpreter
 
         return $data;
 
+    }
+
+    public static function cleanData($data): array
+    {
+        if ($data) {
+            array_walk_recursive($data, function (&$item) {
+                if ($item instanceof Carbon) {
+                    $item = $item->toIso8601String();
+                }
+            });
+        }
+
+        return $data;
     }
 
 }
