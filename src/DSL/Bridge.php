@@ -19,6 +19,8 @@ use ONGR\ElasticsearchDSL\Sort\FieldSort;
 class Bridge
 {
 
+    use QueryBuilder, IndexInterpreter;
+
     protected $client;
 
     protected $queryLogger = false;
@@ -29,11 +31,7 @@ class Bridge
 
     private $index;
 
-    protected $bucketOperators = ['and', 'or'];
 
-    protected $equivalenceOperators = ['in', 'nin'];
-
-    protected $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists'];
 
     public function __construct(Client $client, $index, $maxSize)
     {
@@ -124,7 +122,7 @@ class Bridge
 //                return $this->processGet($wheres['_id'], $columns);
 //            }
 //        }
-        $params = $this->_buildParams($wheres, $options, $columns);
+        $params = $this->buildParams($this->index, $wheres, $options, $columns);
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
         }
@@ -141,7 +139,7 @@ class Bridge
 
     public function processSearch($term, $options, $columns = [])
     {
-        $params = $this->_buildParams([], $options);
+//        $params = $this->_buildParams([], $options);
     }
 
     public function processDistinct($column, $wheres): Results
@@ -150,7 +148,7 @@ class Bridge
         if (is_array($column)) {
             $col = $column[0];
         }
-        $params = $this->_buildParams($wheres);
+        $params = $this->buildParams($this->index,$wheres);
         $params['body']['aggs']['distinct_'.$col]['terms'] = [
             'field' => $col,
             'size'  => $this->maxSize,
@@ -176,7 +174,7 @@ class Bridge
 
     public function processShowQuery($wheres, $options, $columns)
     {
-        $params = $this->_buildParams($wheres, $options, $columns);
+        $params = $this->buildParams($this->index,$wheres, $options, $columns);
 
         return $params['body']['query']['query_string']['query'] ?? null;
     }
@@ -219,18 +217,7 @@ class Bridge
 
     }
 
-    public function cleanData($data): array
-    {
-        if ($data) {
-            array_walk_recursive($data, function (&$item) {
-                if ($item instanceof Carbon) {
-                    $item = $item->toIso8601String();
-                }
-            });
-        }
 
-        return $data;
-    }
 
     public function processInsertOne($values, $refresh): Results
     {
@@ -332,7 +319,7 @@ class Bridge
             }
         }
         try {
-            $params = $this->_buildParams($wheres, $options);
+            $params = $this->buildParams($this->index, $wheres, $options);
             $response = $this->client->deleteByQuery($params);
             $response['deleteCount'] = $response['deleted'] ?? 0;
 
@@ -370,7 +357,7 @@ class Bridge
     {
         $response = $this->client->cat()->indices();
 
-        return IndexInterpreter::catIndices($response, $all);
+        return $this->catIndices($response, $all);
     }
 
     public function processIndexExists($index)
@@ -413,7 +400,7 @@ class Bridge
     public function processIndexCreate($settings): bool
     {
 
-        $params = IndexInterpreter::buildIndexMap($this->index, $settings);
+        $params = $this->buildIndexMap($this->index, $settings);
 
         try {
             $response = $this->client->indices()->create($params);
@@ -447,7 +434,7 @@ class Bridge
     public function processIndexModify($settings)
     {
 
-        $params = IndexInterpreter::buildIndexMap($this->index, $settings);
+        $params = $this->buildIndexMap($this->index, $settings);
         $params['body']['_source']['enabled'] = true;
 
         try {
@@ -479,7 +466,7 @@ class Bridge
 
     public function processIndexAnalyzerSettings($settings)
     {
-        $params = IndexInterpreter::buildAnalyzerSettings($this->index, $settings);
+        $params = $this->buildAnalyzerSettings($this->index, $settings);
         try {
             $this->client->indices()->close(['index' => $this->index]);
             $response = $this->client->indices()->putSettings($params);
@@ -515,7 +502,7 @@ class Bridge
 
     public function _countAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres);
+        $params = $this->buildParams($this->index, $wheres);
         try {
             $process = $this->client->count($params);
 
@@ -529,7 +516,7 @@ class Bridge
 
     private function _maxAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres, $options);
+        $params = $this->buildParams($this->index, $wheres, $options);
 
         try {
             $agg = new MaxAggregation('max_value', $columns[0]);
@@ -547,7 +534,7 @@ class Bridge
 
     private function _minAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres, $options);
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $agg = new MinAggregation('min_value', $columns[0]);
             $params['body']['aggs']['min_value'] = $agg->toArray();
@@ -563,7 +550,7 @@ class Bridge
 
     private function _sumAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres, $options);
+        $params = $this->buildParams($this->index,$wheres, $options);
         try {
             $agg = new SumAggregation('sum_value', $columns[0]);
             $params['body']['aggs']['sum_value'] = $agg->toArray();
@@ -579,7 +566,7 @@ class Bridge
 
     private function _avgAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres, $options);
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $agg = new AvgAggregation('avg_value', $columns[0]);
             $params['body']['aggs']['avg_value'] = $agg->toArray();
@@ -595,7 +582,7 @@ class Bridge
 
     private function _matrixAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->_buildParams($wheres, $options);
+        $params = $this->buildParams($this->index,$wheres, $options);
         try {
             $agg = new MatrixAggregation('sum_value', $columns);
             $params['body']['aggs']['statistics'] = $agg->toArray();
@@ -611,237 +598,10 @@ class Bridge
 
 
     //======================================================================
-    // Private Builder & Sanitization methods
+    // Private & Sanitization methods
     //======================================================================
 
-    private function _buildParams($wheres, $options = [], $columns = [], $_id = null)
-    {
-        $params = [
-            'index' => $this->index,
-        ];
-        if ($_id) {
-            $params['id'] = $_id;
-        }
 
-        $params['body'] = $this->_buildQuery($wheres);
-        if ($columns && $columns != '*') {
-            $params['body']['_source'] = $columns;
-        }
-
-        $opts = $this->_buildOptions($options);
-        if ($opts) {
-            foreach ($opts as $key => $value) {
-                if (isset($params[$key])) {
-                    $params[$key] = array_merge($params[$key], $opts[$key]);
-                } else {
-                    $params[$key] = $value;
-                }
-            }
-        }
-
-        return $params;
-    }
-
-    private function _buildQueryString($wheres): string
-    {
-        if ($wheres) {
-            foreach ($wheres as $key => $value) {
-                return $this->_parseParams($key, $value);
-            }
-        }
-
-        return '';
-    }
-
-    private function _andQueryString($values): string
-    {
-        $strings = [];
-        foreach ($values as $key => $val) {
-            $strings[] = $this->_parseParams($key, $val);
-        }
-
-        return '('.implode(' AND ', $strings).')';
-    }
-
-    private function _orQueryString($values): string
-    {
-        $strings = [];
-        foreach ($values as $key => $val) {
-            $strings[] = $this->_parseParams($key, $val);
-        }
-
-        return '('.implode(' OR ', $strings).')';
-    }
-
-    private function _inQueryString($key, $values): string
-    {
-        $strings = [];
-        foreach ($values as $val) {
-            $strings[] = $this->_parseParams(null, $val);
-        }
-
-        return '('.$key.':('.implode(' OR ', $strings).'))';
-    }
-
-    private function _ninQueryString($key, $values): string
-    {
-        $strings = [];
-        foreach ($values as $val) {
-            $strings[] = $this->_parseParams(null, $val);
-        }
-
-        return '(NOT '.$key.':('.implode(' OR ', $strings).'))';
-    }
-
-    private function _parseParams($key, $value): string
-    {
-
-        if ($key == 'and' || $key == 'or') {
-            return $this->{'_'.$key.'QueryString'}($value);
-        }
-        if (is_array($value)) {
-
-            foreach ($value as $op => $opVal) {
-
-                if (in_array($op, $this->bucketOperators)) {
-                    return $this->{'_'.$op.'QueryString'}($opVal);
-                }
-                if (in_array($op, $this->equivalenceOperators)) {
-                    return $this->{'_'.$op.'QueryString'}($key, $opVal);
-                }
-                if (in_array($op, $this->clauseOperators)) {
-                    switch ($op) {
-                        case 'ne':
-                            if (!$opVal) {
-                                // Is not equal to null => exists and has a value
-                                return '(_exists_:'.$key.')';
-                            }
-
-                            return '(NOT '.$key.':'.$this->_escape($opVal).')';
-                        case 'lt':
-                            return '('.$key.':{* TO '.$opVal.'})';
-                        case 'lte':
-                            return '('.$key.':[* TO '.$opVal.'])';
-                        case 'gt':
-                            return '('.$key.':{'.$opVal.' TO *})';
-                        case 'gte':
-                            return '('.$key.':['.$opVal.' TO *])';
-                        case 'between':
-                            return '('.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-                        case 'not_between':
-                            return '(NOT '.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-                        case 'like':
-                            return '('.$key.':*'.$this->_escape($opVal).'*)';
-                        case 'not_like':
-                            return '(NOT '.$key.':*'.$this->_escape($opVal).'*)';
-                        case 'exists':
-                            if ($opVal) {
-                                return '(_exists_:'.$key.')';
-                            }
-
-                            return '(NOT _exists_:'.$key.')';
-
-                    }
-
-                }
-
-                return $this->_parseParams($op, $opVal);
-            }
-        }
-
-        if (!$key) {
-            return $this->_escape($value);
-        }
-        if ($value === true) {
-            return '('.$key.':true)';
-        }
-        if ($value === false) {
-            return '('.$key.':false)';
-        }
-        if ($value === null) {
-            return '(NOT _exists_:'.$key.')';
-        }
-
-        return '('.$key.':"'.$this->_escape($value).'")';
-
-    }
-
-    private function _escape($string): string
-    {
-        //+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /
-        $stripped = preg_replace('/\W/', '\\\\$0', $string);
-
-        //Put the spaces back;
-        $stripped = str_replace('\ ', ' ', $stripped);
-        //Edge cases
-        $stripped = str_replace('\&\&', '\&&', $stripped);
-        $stripped = str_replace('\|\|', '\||', $stripped);
-
-        return $stripped;
-
-    }
-
-    private function _buildQuery($wheres): array
-    {
-        $search = new Search();
-        if (!$wheres) {
-            $search->addQuery(new MatchAllQuery());
-            $search->toArray();
-
-            return $search->toArray();
-        }
-        $string = $this->_buildQueryString($wheres);
-        $queryStringQuery = new QueryStringQuery($string);
-        $search->addQuery($queryStringQuery);
-
-        return $search->toArray();
-
-    }
-
-    private function _buildOptions($options): array
-    {
-
-        $return = [];
-        if ($options) {
-            foreach ($options as $key => $value) {
-                switch ($key) {
-                    case 'limit':
-                        $return['size'] = $value;
-                        break;
-                    case 'sort':
-                        if (!isset($return['body']['sort'])) {
-                            $return['body']['sort'] = [];
-                        }
-                        $sortBy = $this->_parseSortOrder($value);
-                        $return['body']['sort'][] = $sortBy;
-                        break;
-                    case 'skip':
-                        $return['from'] = $value;
-                        break;
-                    case 'multiple':
-                        break;
-                    default:
-                        throw new Exception('Unexpected option: '.$key);
-                }
-            }
-        }
-
-        return $return;
-    }
-
-    private function _parseSortOrder($value): array
-    {
-        $field = array_key_first($value);
-        $direction = $value[$field];
-
-        $dir = 'desc';
-        if ($direction == 1) {
-            $dir = 'asc';
-        }
-        $sort = new FieldSort($field, $dir);
-
-        return $sort->toArray();
-    }
 
     private function _queryTag($function)
     {
