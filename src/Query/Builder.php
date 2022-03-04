@@ -752,9 +752,7 @@ class Builder extends BaseBuilder
         $value = $where['expression'];
         $column = $where['column'];
         return [$column => ['regex' => $value]];
-//        return ['regex' => [$column => $value]];
 
-//        return $where['sql'];
     }
 
     /**
@@ -944,7 +942,6 @@ class Builder extends BaseBuilder
 
     public function query($columns = [])
     {
-        return $this->_processGet();
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
 

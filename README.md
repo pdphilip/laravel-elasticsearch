@@ -47,13 +47,13 @@ $ composer require pdphilip/elasticsearch
 Laravel 7:
 
 ```bash
-$ composer require pdphilip/elasticsearch:v0.7-alpha
+$ composer require pdphilip/elasticsearch:~0.7
 ```
 
 Laravel 6 (and 5.8):
 
 ```bash
-$ composer require pdphilip/elasticsearch:v0.6-alpha
+$ composer require pdphilip/elasticsearch:~0.6
 ```
 
 Configuration
