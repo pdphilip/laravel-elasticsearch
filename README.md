@@ -13,9 +13,10 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
     - [Soft Deletes](#soft-deletes)
     - [Aggregations](#aggregation)
     - [Migrations](#schema/index)
+    - ES features like [Geo Filtering](#geo) & [Regular Expressions](#regex-in-where)
 
 - No need to write your own DSL queries ([unless you want to](#raw-dsl)!)
-- This plugin is not a search wrapper for your existing models
+- [Eloquent style searching](#elasticsearching)
 
 > # Alpha release notice
 > This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included. I built this because I needed it but this plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to submit pull requests.
@@ -31,9 +32,9 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 ____
 
 Installation
--------------
+===============
 
-#### (current Alphas)
+#### (Current Alphas)
 
 Install the package via Composer:
 
@@ -56,7 +57,7 @@ $ composer require pdphilip/elasticsearch:v0.6-alpha
 ```
 
 Configuration
--------------
+===============
 
 Proposed .env settings:
 
@@ -113,7 +114,7 @@ Add the service provider to `config/app.php` (If your Laravel version does not a
 ```
 
 Eloquent
--------------
+===============
 
 ### Extending the base model
 
@@ -344,6 +345,56 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
+
+
+Elasticsearch specific queries
+-----------------------------
+
+#### Geo:
+
+**GeoBox**
+
+Filters results of all geo points that fall within a box drawn from `topleft[lat,lon]` to `bottomRight[lat,lon]`
+
+- **Method**: `filterGeoBox($field,$topleft,$bottomRight)`
+- `$topleft` and `$bottomRight`  are arrays that hold [$lat,$lon] coordinates
+
+```php
+UserLog::where('status',7)->filterGeoBox('agent.geo',[-10,10],[10,-10])->get();
+```
+
+**GeoPoint**
+
+Filters results that fall within a radius distance from a `point[lat,lon]`
+
+- **Method**: `filterGeoPoint($field,$distance,$point)`
+- `$distance` is a string value of distance and distance-unit, see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
+
+```php
+UserLog::where('status',7)->filterGeoPoint('agent.geo','20km',[0,0])->get();
+```
+
+**Note:** the field **must be of type geo otherwise your [shards will fail](#error-all-shards-failed) **, make sure to set the geo field in your [migration](#migrations), ex:
+
+```php
+Schema::create('user_logs',function (IndexBlueprint $index){
+	$index->geo('agent.geo');
+});
+```
+
+
+
+#### Regex (in where)
+
+[Syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/regexp-syntax.html)
+
+```php
+Product::whereRegex('color','bl(ue)?(ack)?')->get();   //Returns blue or black
+Product::whereRegex('color','bl...*')->get();           //Returns blue or black or blond or blush etc..
+```
+
+
+
 Saving Models
 -------------
 
@@ -483,6 +534,131 @@ $product->forceDelete();
 
 ```
 
+
+
+Elasticsearching
+===============
+
+The Search Query
+----------------
+
+The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call off your model with `term()`, chain your ORM clauses, then end your chain with `search()` to perform your search, ie:
+
+```php
+MyModel::term('XYZ')->.........->search()
+```
+
+### 1.Term:
+
+**1.1 Simple example**
+
+- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is set), 
+- Results ordered by most relevant first (score in desc order) 
+
+```php
+Book::term('Eric')->search();
+```
+
+**1.2 Multiple terms**
+
+- To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
+- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or - **ordering matters***
+
+```php
+Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
+```
+
+**1.3 Boosting Terms**
+
+- **Boosting terms: `term(string $term, int $boostFactor)`**
+- To search across all fields for **eric OR lean OR startup** but 'eric' is boosted by a factor of 2; **(eric)^2**
+- Boosting affects the score and thus the ordering of the results for relevance
+- Also note, spaces in terms are treated as OR's between each word
+
+```php
+Book::term('Eric',2)->orTerm('Lean Startup')->search();
+```
+
+**1.4 Searching over selected fields**
+
+- To search across fields [**title, author and description**] for **eric**.
+
+```php
+Book::term('Eric')->fields(['title','author','description'])->search();
+```
+
+**1.5 Boosting fields**
+
+- To search across fields [**title, author and description**] for **eric**.
+- **title** is boosted by a factor of 3, search hits here will be the most relevant
+- **author** is boosted by a factor of 2, search hits here will be the second most relevant
+- **description** has no boost, search hits here will be the least relevant
+- *The results, as per the default, are ordered by most relevant first (score in desc order)* 
+
+```php
+Book::term('Eric')->field('title',3)->field('author',2)->field('description')->search();
+```
+
+**1.6 Minimum should match**
+
+- Controls how many 'should' clauses the query should match
+- Caveats:
+  - Fields must be specified in your query
+  - You can have no standard clauses in your query (ex `where()`)
+  - Won't work on SoftDelete enabled models
+- https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
+
+- Match at least 2 of the 3 terms:
+
+```php
+Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->field('title')->field('author')->minShouldMatch(2)->search();
+```
+
+**1.7 Min Score**
+
+- Sets a min_score filter for the search
+- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in the search results.
+
+```php
+Book::term('Eric')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->search();
+```
+
+**1.8 Blend Search with [most] standard eloquent queries** 
+
+- Yep:
+
+```php
+Book::term('David')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->where('is_active',true)->search();
+```
+
+
+
+### 2. FuzzyTerm:
+
+- Same usage as `term()` `andTerm()` `orTerm()` but as 
+  - `fuzzyTerm()`
+  - `orFuzzyTerm()`
+  - `andFuzzyTerm()`
+
+```php
+Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
+```
+
+### 2. RegEx in Search:
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/regexp-syntax.html
+
+- Same usage as `term()` `andTerm()` `orTerm()` but as 
+  - `regEx()`
+  - `orRegEx()`
+  - `andRegEx()`
+
+```php
+Book::regEx('joh?n(ath[oa]n)')->andRegEx('doey*')->search();
+```
+
+
+
 Mutators & Casting
 -------------
 
@@ -493,7 +669,7 @@ See [https://laravel.com/docs/8.x/eloquent-mutators](https://laravel.com/docs/8.
 Cool!
 
 Relationships
--------------
+==============
 
 Model Relationships are the lifeblood of any Laravel App, for that you can use them with `belongsTo` , `hasMany`
 , `hasOne`, `morphOne` and `morphMany` as you have before:
@@ -838,14 +1014,16 @@ $userLog->user->name;
 ```
 
 Schema/Index
--------------
+==========
+Migrations
+----------
 
-Since there is very little overlap with how Elasticsearch handles index management to how MySQL and related tencologioes
+Since there is very little overlap with how Elasticsearch handles index management to how MySQL and related technologies
 handle Schema manipulation; the schema feature of this plugin has been written from the ground up to work 100% with
 Elasticsearch.
 
-You can still create a migration class as normal (and it's recommened that you do), however the `up()` and `down()`
-methods will need to encapsualte the following:
+You can still create a migration class as normal (and it's recommended that you do), however the `up()` and `down()`
+methods will need to encapsulate the following:
 
 - **Schema** via `PDPhilip\Elasticsearch\Schema\Schema`
 - **IndexBlueprint** via `PDPhilip\Elasticsearch\Schema\IndexBlueprint`
@@ -992,10 +1170,8 @@ Queues
 _[Coming]_
 
 
-Elasticsearch-specific operators
---------------------------------
-
-#### RAW DSL
+RAW DSL
+========
 
 BYO query, sure! We'll get out the way and try to return the values in a collection for you:
 
@@ -1015,6 +1191,13 @@ return Product::rawSearch($bodyParams); //Will search within the products index
 
 Elasticsearchisms
 =================
+
+#### Error: all shards failed
+
+This error usually points to an index mapping issue, ex:
+
+- Trying to order on a TEXT field
+- Trying a get filter on a field that is not explicitly set as one
 
 #### Elasticsearch's default search limit is to return 10 collections
 
@@ -1075,7 +1258,7 @@ once and not update immediately or won't need to search for the record immediate
 
 ### Unsupported Eloquent methods
 
-- _[Coming]_
+`upsert()`, `distinct()`, `groupBy()`, `groupByRaw()`
 
 Acknowledgements
 -------------

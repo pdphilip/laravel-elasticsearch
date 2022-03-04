@@ -4,17 +4,14 @@ namespace PDPhilip\Elasticsearch\DSL;
 
 use Exception;
 use Elasticsearch\Client;
-use Illuminate\Support\Carbon;
 use ONGR\ElasticsearchDSL\Aggregation\Matrix\MaxAggregation as MatrixAggregation;
 use ONGR\ElasticsearchDSL\Aggregation\Metric\AvgAggregation;
 use ONGR\ElasticsearchDSL\Aggregation\Metric\MaxAggregation;
 use ONGR\ElasticsearchDSL\Aggregation\Metric\MinAggregation;
 use ONGR\ElasticsearchDSL\Aggregation\Metric\SumAggregation;
-use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
-use ONGR\ElasticsearchDSL\Query\MatchAllQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\IdsQuery;
 use ONGR\ElasticsearchDSL\Search;
-use ONGR\ElasticsearchDSL\Sort\FieldSort;
+
 
 class Bridge
 {
@@ -30,7 +27,6 @@ class Bridge
     protected $maxSize = 10; //ES default
 
     private $index;
-
 
 
     public function __construct(Client $client, $index, $maxSize)
@@ -123,23 +119,30 @@ class Bridge
 //            }
 //        }
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
+        return $this->_returnSearch($params,__FUNCTION__);
+
+    }
+
+    public function processSearch($searchParams,$searchOptions,$wheres,$opts,$fields,$cols)
+    {
+        $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions,$wheres,$opts,$fields,$cols);
+        return $this->_returnSearch($params,__FUNCTION__);
+
+    }
+
+    protected function _returnSearch($params,$source)
+    {
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
         }
         try {
             $process = $this->client->search($params);
 
-            return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
+            return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
         } catch (Exception $e) {
 
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag($source));
         }
-
-    }
-
-    public function processSearch($term, $options, $columns = [])
-    {
-//        $params = $this->_buildParams([], $options);
     }
 
     public function processDistinct($column, $wheres): Results
@@ -216,8 +219,6 @@ class Bridge
 
 
     }
-
-
 
     public function processInsertOne($values, $refresh): Results
     {
@@ -600,7 +601,6 @@ class Bridge
     //======================================================================
     // Private & Sanitization methods
     //======================================================================
-
 
 
     private function _queryTag($function)

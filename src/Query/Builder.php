@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
+use PDPhilip\Elasticsearch\DSL\QueryBuilder;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use RuntimeException;
 use LogicException;
@@ -23,6 +24,15 @@ class Builder extends BaseBuilder
 
     public $paginating = false;
 
+    public $searchQuery = '';
+
+    public $searchOptions = [];
+
+    public $minScore = null;
+
+    public $fields = [];
+
+    public $filters = [];
 
     /**
      * Clause ops.
@@ -38,7 +48,7 @@ class Builder extends BaseBuilder
         '~', '~*', '!~', '!~*', 'similar to',
         'not similar to', 'not ilike', '~~*', '!~~*',
         // @Elastic Search
-        'exist',
+        'exist','regex',
     ];
 
     /**
@@ -324,7 +334,6 @@ class Builder extends BaseBuilder
                 }
 
             }
-
             return new Collection($data);
         } else {
             throw new RuntimeException('Error: '.$find->errorMessage);
@@ -420,6 +429,45 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+
+    //Filters
+
+    public function filterGeoBox($field,$topLeft,$bottomRight)
+    {
+        $this->filters['filterGeoBox'] = [
+            'field' => $field,
+            'topLeft' => $topLeft,
+            'bottomRight' => $bottomRight,
+        ];
+    }
+
+    public function filterGeoPoint($field,$distance,$geoPoint)
+    {
+        $this->filters['filterGeoPoint'] = [
+            'field' => $field,
+            'distance' => $distance,
+            'geoPoint' => $geoPoint,
+        ];
+    }
+
+    //Regexs
+
+    public function whereRegex($column,$expression)
+    {
+        $type = 'regex';
+        $boolean = 'and';
+        $this->wheres[] = compact('column', 'type', 'expression','boolean');
+        return $this;
+    }
+
+    public function orWhereRegex($column,$expression)
+    {
+        $type = 'regex';
+        $boolean = 'or';
+        $this->wheres[] = compact('column', 'type', 'expression','boolean');
+        return $this;
+    }
+
     /**
      * @inheritdoc
      */
@@ -442,9 +490,16 @@ class Builder extends BaseBuilder
             //Check if it's first() with no ordering,
             //Set order to created_at -> asc for consistency
             //TODO
-
         }
-
+        if ($this->minScore){
+            $options['minScore'] = $this->minScore;
+        }
+        if ($this->searchOptions){
+            $options['searchOptions'] = $this->searchOptions;
+        }
+        if ($this->filters){
+            $options['filters'] = $this->filters;
+        }
 
         return $options;
     }
@@ -683,7 +738,23 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereRaw(array $where)
     {
+        throw new LogicException('whereRaw clause is not available yet');
         return $where['sql'];
+    }
+
+    /**
+     * @param    array    $where
+     *
+     * @return mixed
+     */
+    protected function _parseWhereRegex(array $where)
+    {
+        $value = $where['expression'];
+        $column = $where['column'];
+        return [$column => ['regex' => $value]];
+//        return ['regex' => [$column => $value]];
+
+//        return $where['sql'];
     }
 
     /**
@@ -873,6 +944,7 @@ class Builder extends BaseBuilder
 
     public function query($columns = [])
     {
+        return $this->_processGet();
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
 
@@ -890,32 +962,107 @@ class Builder extends BaseBuilder
     }
 
     //----------------------------------------------------------------------
-    // WIP::
+    // ES Search query methods
     //----------------------------------------------------------------------
 
-    public function search($text, $columns = [], $returnLazy = false)
+    public function searchQuery($term,$boostFactor = null,$clause = null,$type = 'term')
     {
-        throw new LogicException('Search is coming');
-        $options = $this->compileOptions();
-        $result = $this->connection->search($text, $options, $columns);
-
-        if ($result->isSuccessful()) {
-            $data = $result->data;
-            if ($returnLazy) {
-                if ($data) {
-                    return LazyCollection::make(function () use ($data) {
-                        foreach ($data as $item) {
-                            yield $item;
-                        }
-                    });
-                }
-
+        if (!$clause && !empty($this->searchQuery)){
+            switch ($type){
+                case 'fuzzy':
+                    throw new RuntimeException('Incorrect query sequencing, searchFuzzyTerm() should only start the ORM chain');
+                case 'regex':
+                    throw new RuntimeException('Incorrect query sequencing, searchRegEx() should only start the ORM chain');
+                default:
+                    throw new RuntimeException('Incorrect query sequencing, searchTerm() should only start the ORM chain');
             }
 
-            return new Collection($data);
-        } else {
-            throw new RuntimeException('Error: '.$result->errorMessage);
         }
+        if ($clause && empty($this->searchQuery)){
+            switch ($type){
+                case 'fuzzy':
+                    throw new RuntimeException('Incorrect query sequencing, andFuzzyTerm()/orFuzzyTerm() cannot start the ORM chain');
+                case 'regex':
+                    throw new RuntimeException('Incorrect query sequencing, andRegEx()/orRegEx() cannot start the ORM chain');
+                default:
+                    throw new RuntimeException('Incorrect query sequencing, andTerm()/orTerm() cannot start the ORM chain');
+            }
+
+        }
+        switch ($type){
+            case 'fuzzy':
+                $nextTerm = '('.QueryBuilder::_escape($term).'~)';
+                break;
+            case 'regex':
+                $nextTerm = '(/'.$term.'/)';
+                break;
+            default:
+                $nextTerm = '('.QueryBuilder::_escape($term).')';
+                break;
+        }
+
+        if($boostFactor){
+            $nextTerm.='^'.$boostFactor;
+        }
+        if ($clause){
+            $this->searchQuery = $this->searchQuery.' '.strtoupper($clause).' '.$nextTerm;
+        }else{
+            $this->searchQuery = $nextTerm;
+        }
+    }
+
+    public function minShouldMatch($value)
+    {
+        $this->searchOptions['minimum_should_match'] = $value;
+    }
+
+    public function minScore($value)
+    {
+        $this->minScore = $value;
+    }
+
+    public function boostField($field,$factor)
+    {
+        $this->fields[$field] = $factor ?? 1;
+    }
+
+    public function searchFields(array $fields)
+    {
+        foreach ($fields as $field){
+            if (empty($this->fields[$field])){
+                $this->fields[$field] = 1;
+            }
+        }
+    }
+
+    public function searchField($field,$boostFactor = null)
+    {
+        $this->fields[$field] = $boostFactor ?? 1;
+    }
+
+    public function search($columns = '*')
+    {
+
+        $searchParams = $this->searchQuery;
+        if (!$searchParams){
+            throw new RuntimeException('No search parameters. Add terms to search for.');
+        }
+        $searchOptions = $this->searchOptions;
+        $wheres = $this->compileWheres();
+        $options = $this->compileOptions();
+        $fields = $this->fields;
+
+        $search = $this->connection->search($searchParams,$searchOptions,$wheres,$options,$fields,$columns);
+        if ($search->isSuccessful()) {
+            $data = $search->data;
+            return new Collection($data);
+
+
+        } else {
+            throw new RuntimeException('Error: '.$search->errorMessage);
+        }
+
+
     }
 
 

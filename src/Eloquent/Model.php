@@ -8,12 +8,14 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use RuntimeException;
 
+
 abstract class Model extends BaseModel
 {
-    use HybridRelations;
+    use HybridRelations, ModelDocs;
 
 
     const MAX_SIZE = 1000;
