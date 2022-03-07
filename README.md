@@ -34,23 +34,27 @@ ____
 Installation
 ===============
 
-#### (Current Alphas)
-
 Install the package via Composer:
 
-Laravel 8:
+Laravel 9.x:
 
 ```bash
 $ composer require pdphilip/elasticsearch
 ```
 
-Laravel 7:
+Laravel 8.x:
+
+```bash
+$ composer require pdphilip/elasticsearch:~0.8
+```
+
+Laravel 7.x:
 
 ```bash
 $ composer require pdphilip/elasticsearch:~0.7
 ```
 
-Laravel 6 (and 5.8):
+Laravel 6.x (and 5.8):
 
 ```bash
 $ composer require pdphilip/elasticsearch:~0.6
