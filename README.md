@@ -611,7 +611,7 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->s
 - Match at least 2 of the 3 terms:
 
 ```php
-Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->field('title')->field('author')->minShouldMatch(2)->search();
+Book::term('Eric')->orTerm('Lean')->orTerm('Startup')->field('title')->field('author')->minShouldMatch(2)->search();
 ```
 
 **1.7 Min Score**
@@ -625,7 +625,7 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->m
 
 **1.8 Blend Search with [most] standard eloquent queries** 
 
-- Yep:
+- Search for 'david' where field `is_active` is `true`:
 
 ```php
 Book::term('David')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->where('is_active',true)->search();
