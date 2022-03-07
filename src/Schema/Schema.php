@@ -2,6 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Schema;
 
+use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -29,6 +30,12 @@ use Illuminate\Support\Facades\Facade;
  */
 class Schema extends Facade
 {
+//    protected static $app;
+//
+//    protected static $resolvedInstance;
+//
+//
+//    protected static $cached = false;
     /**
      * Get a schema builder instance for a connection.
      *
@@ -50,4 +57,12 @@ class Schema extends Facade
     {
         return static::$app['db']->connection('elasticsearch')->getSchemaBuilder();
     }
+//
+    public static function __callStatic($method, $args)
+    {
+        $instance = static::getFacadeAccessor();
+
+        return $instance->$method(...$args);
+    }
+
 }
