@@ -306,6 +306,49 @@ Elasticsearch [Matrix](https://www.elastic.co/guide/en/elasticsearch/reference/c
 $stats = Product::whereNotIn('color', ['red','green'])->matrix('price');
 $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'orders']);
 ```
+Matrix results return as (example):
+```json
+{
+    "matrix": {
+        "doc_count": 24,
+        "fields": [
+            {
+                "name": "price",
+                "count": 24,
+                "mean": 944.1987476348877,
+                "variance": 392916.60523541126,
+                "skewness": 0.1301389603055256,
+                "kurtosis": 1.6419181162499876,
+                "covariance": {
+                    "price": 392916.60523541126,
+                    "orders": 5569.635773119718
+                },
+                "correlation": {
+                    "price": 1,
+                    "orders": 0.03421141805225852
+                }
+            },
+            {
+                "name": "orders",
+                "count": 24,
+                "mean": 501.79166666666663,
+                "variance": 67454.5199275362,
+                "skewness": 0.31085136523548346,
+                "kurtosis": 1.9897405370026835,
+                "covariance": {
+                    "price": 5569.635773119718,
+                    "orders": 67454.5199275362
+                },
+                "correlation": {
+                    "price": 0.03421141805225852,
+                    "orders": 1
+                }
+            }
+        ]
+    }
+}
+
+```
 
 ### Ordering
 
