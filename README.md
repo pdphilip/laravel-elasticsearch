@@ -80,6 +80,25 @@ ES_API_KEY=
 ES_SSL_CERT=
 ```
 
+
+
+
+<details>
+<summary>Example cloud config .env: (Click to expand)</summary>
+
+```dotenv
+ES_AUTH_TYPE=cloud
+ES_HOSTS="https://xxxxx-xxxxxx.es.europe-west1.gcp.cloud.es.io:9243"
+ES_USERNAME=elastic
+ES_PASSWORD=XXXXXXXXXXXXXXXXXXXX
+ES_CLOUD_ID=XXXXX:ZXVyb3BlLXdl.........SQwYzM1YzU5ODI5MTE0NjQ3YmEyNDZlYWUzOGNkN2Q1Yg==
+ES_API_ID=
+ES_API_KEY=
+ES_SSL_CERT=
+```
+
+</details>
+
 For multiple nodes, pass in as comma separated:
 
 ```dotenv
