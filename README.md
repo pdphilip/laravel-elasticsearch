@@ -19,7 +19,7 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 - [Eloquent style searching](#elasticsearching)
 
 > # Alpha release notice
-> This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included. I built this because I needed it but this plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to submit pull requests.
+> This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included.
 >
 > #### Versioning Schema: {plugin_version}.{laravel_version}.{iteration}
 >
@@ -33,6 +33,10 @@ ____
 
 Installation
 ===============
+
+[Known] Elasticsearch compatible versions:
+- 7.16
+- 8.0
 
 Install the package via Composer:
 
@@ -310,7 +314,10 @@ Elasticsearch [Matrix](https://www.elastic.co/guide/en/elasticsearch/reference/c
 $stats = Product::whereNotIn('color', ['red','green'])->matrix('price');
 $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'orders']);
 ```
-Matrix results return as (example):
+
+<details>
+  <summary>Matrix results return as: (Click to expand)</summary>
+  
 ```json
 {
     "matrix": {
@@ -351,8 +358,10 @@ Matrix results return as (example):
         ]
     }
 }
-
 ```
+
+</details>
+
 
 ### Ordering
 
@@ -725,7 +734,8 @@ Model Relationships are the lifeblood of any Laravel App, for that you can use t
 
 Full Example:
 
-Company:
+<details>
+<summary>Company: (Click to expand)</summary>
 
 ```php
 /**
@@ -737,6 +747,7 @@ Company:
  * @property integer $status
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read CompanyLog $companyLogs
  * @property-read CompanyProfile $companyProfile
@@ -749,7 +760,7 @@ Company:
 class Company extends Model
 {
     protected $connection = 'elasticsearch';
-  
+
     //Relationships  =====================================
 
     public function companyLogs()
@@ -774,8 +785,11 @@ class Company extends Model
 }
 
 ```
+</details>
 
-CompanyLog:
+
+<details>
+<summary>CompanyLog: (Click to expand)</summary>
 
 ```php
 /**
@@ -789,6 +803,7 @@ CompanyLog:
  * @property mixed $meta
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read Company $company
  *
@@ -808,7 +823,10 @@ class CompanyLog extends Model
 }
 ```
 
-CompanyProfile:
+</details>
+
+<details>
+<summary>CompanyProfile: (Click to expand)</summary>
 
 ```php
 /**
@@ -821,6 +839,7 @@ CompanyProfile:
  * @property string $website
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read Company $company
  *
@@ -841,7 +860,10 @@ class CompanyProfile extends Model
 }
 ```
 
-Avatar:
+</details>
+
+<details>
+<summary>Avatar: (Click to expand)</summary>
 
 ```php
 /**
@@ -854,6 +876,7 @@ Avatar:
  * @property string $imageable_type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read Company $company
  *
@@ -873,11 +896,16 @@ class Avatar extends Model
 }
 ```
 
-Photo:
+</details>
+
+
+<details>
+<summary>Photo: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\Photo
+ * 
  ******Fields*******
  * @property string $_id
  * @property string $url
@@ -885,6 +913,7 @@ Photo:
  * @property string $photoable_type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read Company $company
  *
@@ -903,6 +932,8 @@ class Photo extends Model
     }
 }
 ```
+
+</details>
 
 Example Usage:
 
@@ -925,6 +956,9 @@ use**: `use PDPhilip\Elasticsearch\Eloquent\HybridRelations`
 
 Example, mysql User model:
 
+<details>
+<summary>MySQL => User: (Click to expand)</summary>
+
 ```php
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
@@ -933,49 +967,58 @@ use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
  * App\Models\User
  *
  * *****Relationships*******
- * @property-read User $user
+ * @property-read UserLog $userLogs
+ * @property-read UserProfile $userProfile
+ * @property-read Company $company
+ * @property-read Avatar $avatar
+ * @property-read Photo $photos
  */
 class User extends Authenticatable
 {
-  use HybridRelations;
-  
-  protected $connection = 'mysql'; 
-
-  //Relationships  =====================================
-  // With Elasticsearch models
-  
-  public function userLogs()
-  {
-    return $this->hasMany(UserLog::class);
-  }
-  
-  public function userProfile()
-  {
-    return $this->hasOne(UserProfile::class);
-  }
-  
-  public function company()
-  {
-    return $this->belongsTo(Company::class);
-  }
- 
-  public function avatar()
-  {
-		return $this->morphOne(Avatar::class, 'imageable');
-  }
-
-  public function photos()
-  {
-		return $this->morphMany(Photo::class, 'photoable');
-	}
+    use HybridRelations;
+    
+    protected $connection = 'mysql'; 
+    
+    //Relationships  =====================================
+    // With Elasticsearch models
+    
+    public function userLogs()
+    {
+        return $this->hasMany(UserLog::class);
+    }
+    
+    public function userProfile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+    
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+    
+    public function avatar()
+    {
+        return $this->morphOne(Avatar::class, 'imageable');
+    }
+    
+    public function photos()
+    {
+        return $this->morphMany(Photo::class, 'photoable');
+    }
 }
 ```
 
-UserLog
+</details>
+
+
+<details>
+<summary>ES => UserLog: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\UserLog
+ * 
  ******Fields*******
  * @property string $_id
  * @property string $company_id
@@ -984,6 +1027,7 @@ UserLog
  * @property mixed $meta
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * 
  ******Relationships*******
  * @property-read User $user
  *
@@ -993,7 +1037,7 @@ class UserLog extends Model
 {
 
     protected $connection = 'elasticsearch';
-
+    
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -1002,14 +1046,17 @@ class UserLog extends Model
 }
 ```
 
-UserProfile
+</details>
+
+
+<details>
+<summary>ES => UserProfile: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\UserProfile
  *
  ******Fields*******
- *
  * @property string $_id
  * @property string $user_id
  * @property string $twitter
@@ -1021,10 +1068,6 @@ UserProfile
  ******Relationships*******
  * @property-read User $user
  *
- ******Attributes*******
- * @property-read mixed $status_name
- * @property-read mixed $status_color
- *
  * @mixin \Eloquent
  *
  */
@@ -1034,7 +1077,7 @@ class UserProfile extends Model
     protected $connection = 'elasticsearch';
     
     //Relationships  =====================================
-
+    
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -1043,7 +1086,10 @@ class UserProfile extends Model
 }
 ```
 
-- Company (as example before) where user has the filed `company_id` as $company->_id
+</details>
+
+
+- Company (as example before) where user has the field `company_id` as $company->_id
 - Avatar: (as before) having `imageable_id` as $user->id and `imageable_type` as 'App\Models\User'
 - Photo: (as before) having `photoable_id` as $user->id and `photoable_type` as 'App\Models\User'
 
@@ -1239,14 +1285,14 @@ return Product::rawSearch($bodyParams); //Will search within the products index
 Elasticsearchisms
 =================
 
-#### Error: all shards failed
+#### [A] Error: all shards failed
 
 This error usually points to an index mapping issue, ex:
 
 - Trying to order on a TEXT field
 - Trying a get filter on a field that is not explicitly set as one
 
-#### Elasticsearch's default search limit is to return 10 collections
+#### [B] Elasticsearch's default search limit is to return 10 collections
 
 This plugin sets the default limit to 1000, however you can set your own with `MAX_SIZE`:
 
@@ -1265,7 +1311,7 @@ class Product extends Model
 
 **Remember, you can use chunking if you need to cycle through all the records**
 
-#### Empty Text Fields
+#### [C] Empty Text Fields
 
 By default, empty text fields are not searchable as they are not indexed. If you need to be able to search for empty
 values you have two options:
@@ -1274,11 +1320,11 @@ values you have two options:
 2. Create an index where the field is set to have a null value see [Schema](#Schema/index)
    where `$index->keyword('favorite_color')->nullValue('NA');  `
 
-#### Ordering by Text field
+#### [D] Ordering by Text field
 
 Elasticsearch can not order by text fields due to how the values are indexed and tokenized. If you do not define a
 string value upfront in your [Schema](#Schema/index) then Elasticsearch will default to saving the field as a `text`
-field. If you try to sort by that field the database engine will fail. Options:
+field. If you try to sort by that field the database engine will fail with the error: [all shards failed](#a-error-all-shards-failed). Options:
 
 1. If you do not need to search the text within the field and ordering is important, then use a `keyword` field type: To
    do so define your index upfront in the  [Schema](#Schema/index) and set `$index->keyword('email')`
@@ -1295,7 +1341,7 @@ field. If you try to sort by that field the database engine will fail. Options:
    able to order by this field you would have to use `orderBy('description.keyword')` to tell elasticsearch which type
    to use.
 
-#### Saving and refresh
+#### [E] Saving and refresh
 
 Refresh requests are synchronous and do not return a response until the refresh operation completes.
 
