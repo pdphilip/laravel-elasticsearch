@@ -12,7 +12,7 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
     - Data returned as Collections
     - [Soft Deletes](#soft-deletes)
     - [Aggregations](#aggregation)
-    - [Migrations](#schema/index)
+    - [Migrations](#migrations)
     - ES features like [Geo Filtering](#geo) & [Regular Expressions](#regex-in-where)
 
 - No need to write your own DSL queries ([unless you want to](#raw-dsl)!)
@@ -35,6 +35,7 @@ Installation
 ===============
 
 [Known] Elasticsearch compatible versions:
+
 - 7.16
 - 8.0
 
@@ -79,9 +80,6 @@ ES_API_ID=
 ES_API_KEY=
 ES_SSL_CERT=
 ```
-
-
-
 
 <details>
 <summary>Example cloud config .env: (Click to expand)</summary>
@@ -336,7 +334,7 @@ $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'order
 
 <details>
   <summary>Matrix results return as: (Click to expand)</summary>
-  
+
 ```json
 {
     "matrix": {
@@ -381,7 +379,6 @@ $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'order
 
 </details>
 
-
 ### Ordering
 
 When searching text fields Elasticsearch uses an internal scoring to rank and sort by the most relevant results as a
@@ -420,8 +417,6 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
-
-
 Elasticsearch specific queries
 -----------------------------
 
@@ -443,21 +438,21 @@ UserLog::where('status',7)->filterGeoBox('agent.geo',[-10,10],[10,-10])->get();
 Filters results that fall within a radius distance from a `point[lat,lon]`
 
 - **Method**: `filterGeoPoint($field,$distance,$point)`
-- `$distance` is a string value of distance and distance-unit, see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
+- `$distance` is a string value of distance and distance-unit,
+  see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
 
 ```php
 UserLog::where('status',7)->filterGeoPoint('agent.geo','20km',[0,0])->get();
 ```
 
-**Note:** the field **must be of type geo otherwise your [shards will fail](#error-all-shards-failed) **, make sure to set the geo field in your [migration](#migrations), ex:
+**Note:** the field **must be of type geo otherwise your [shards will fail](#error-all-shards-failed) **, make sure to
+set the geo field in your [migration](#migrations), ex:
 
 ```php
 Schema::create('user_logs',function (IndexBlueprint $index){
 	$index->geo('agent.geo');
 });
 ```
-
-
 
 #### Regex (in where)
 
@@ -467,8 +462,6 @@ Schema::create('user_logs',function (IndexBlueprint $index){
 Product::whereRegex('color','bl(ue)?(ack)?')->get();   //Returns blue or black
 Product::whereRegex('color','bl...*')->get();           //Returns blue or black or blond or blush etc..
 ```
-
-
 
 Saving Models
 -------------
@@ -609,15 +602,15 @@ $product->forceDelete();
 
 ```
 
-
-
 Elasticsearching
 ===============
 
 The Search Query
 ----------------
 
-The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call off your model with `term()`, chain your ORM clauses, then end your chain with `search()` to perform your search, ie:
+The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in
+the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call
+off your model with `term()`, chain your ORM clauses, then end your chain with `search()` to perform your search, ie:
 
 ```php
 MyModel::term('XYZ')->.........->search()
@@ -627,8 +620,9 @@ MyModel::term('XYZ')->.........->search()
 
 **1.1 Simple example**
 
-- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is set), 
-- Results ordered by most relevant first (score in desc order) 
+- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is
+  set),
+- Results ordered by most relevant first (score in desc order)
 
 ```php
 Book::term('Eric')->search();
@@ -637,7 +631,8 @@ Book::term('Eric')->search();
 **1.2 Multiple terms**
 
 - To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
-- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or - **ordering matters***
+- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or
+  - **ordering matters***
 
 ```php
 Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
@@ -668,7 +663,7 @@ Book::term('Eric')->fields(['title','author','description'])->search();
 - **title** is boosted by a factor of 3, search hits here will be the most relevant
 - **author** is boosted by a factor of 2, search hits here will be the second most relevant
 - **description** has no boost, search hits here will be the least relevant
-- *The results, as per the default, are ordered by most relevant first (score in desc order)* 
+- *The results, as per the default, are ordered by most relevant first (score in desc order)*
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->search();
@@ -678,9 +673,9 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->s
 
 - Controls how many 'should' clauses the query should match
 - Caveats:
-  - Fields must be specified in your query
-  - You can have no standard clauses in your query (ex `where()`)
-  - Won't work on SoftDelete enabled models
+    - Fields must be specified in your query
+    - You can have no standard clauses in your query (ex `where()`)
+    - Won't work on SoftDelete enabled models
 - https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
 
 - Match at least 2 of the 3 terms:
@@ -692,13 +687,14 @@ Book::term('Eric')->orTerm('Lean')->orTerm('Startup')->field('title')->field('au
 **1.7 Min Score**
 
 - Sets a min_score filter for the search
-- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in the search results.
+- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in
+  the search results.
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->search();
 ```
 
-**1.8 Blend Search with [most] standard eloquent queries** 
+**1.8 Blend Search with [most] standard eloquent queries**
 
 - Search for 'david' where field `is_active` is `true`:
 
@@ -706,14 +702,12 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->m
 Book::term('David')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->where('is_active',true)->search();
 ```
 
-
-
 ### 2. FuzzyTerm:
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as 
-  - `fuzzyTerm()`
-  - `orFuzzyTerm()`
-  - `andFuzzyTerm()`
+- Same usage as `term()` `andTerm()` `orTerm()` but as
+    - `fuzzyTerm()`
+    - `orFuzzyTerm()`
+    - `andFuzzyTerm()`
 
 ```php
 Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
@@ -723,16 +717,14 @@ Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
 
 https://www.elastic.co/guide/en/elasticsearch/reference/current/regexp-syntax.html
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as 
-  - `regEx()`
-  - `orRegEx()`
-  - `andRegEx()`
+- Same usage as `term()` `andTerm()` `orTerm()` but as
+    - `regEx()`
+    - `orRegEx()`
+    - `andRegEx()`
 
 ```php
 Book::regEx('joh?n(ath[oa]n)')->andRegEx('doey*')->search();
 ```
-
-
 
 Mutators & Casting
 -------------
@@ -804,6 +796,7 @@ class Company extends Model
 }
 
 ```
+
 </details>
 
 
@@ -1107,7 +1100,6 @@ class UserProfile extends Model
 
 </details>
 
-
 - Company (as example before) where user has the field `company_id` as $company->_id
 - Avatar: (as before) having `imageable_id` as $user->id and `imageable_type` as 'App\Models\User'
 - Photo: (as before) having `photoable_id` as $user->id and `photoable_type` as 'App\Models\User'
@@ -1343,7 +1335,8 @@ values you have two options:
 
 Elasticsearch can not order by text fields due to how the values are indexed and tokenized. If you do not define a
 string value upfront in your [Schema](#Schema/index) then Elasticsearch will default to saving the field as a `text`
-field. If you try to sort by that field the database engine will fail with the error: [all shards failed](#a-error-all-shards-failed). Options:
+field. If you try to sort by that field the database engine will fail with the
+error: [all shards failed](#a-error-all-shards-failed). Options:
 
 1. If you do not need to search the text within the field and ordering is important, then use a `keyword` field type: To
    do so define your index upfront in the  [Schema](#Schema/index) and set `$index->keyword('email')`

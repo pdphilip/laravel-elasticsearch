@@ -98,6 +98,11 @@ class IndexBlueprint
         return $this->addField('alias', $field, ['path' => $path]);
     }
 
+    public function ip($field, $path): Definitions\FieldDefinition
+    {
+        return $this->addField('ip', $field, ['path' => $path]);
+    }
+
     public function mapProperty($field, $type): Definitions\FieldDefinition
     {
         return $this->addField($type, $field);
