@@ -158,7 +158,7 @@ class Connection extends BaseConnection
         $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
         $cb = ClientBuilder::create()->setHosts($hosts);
         if ($username && $pass) {
-            $cb->setBasicAuthentication($username, 'pass')->build();
+            $cb->setBasicAuthentication($username, $pass)->build();
         }
         if ($certPath) {
             $cb->setSSLVerification($certPath);
