@@ -113,11 +113,6 @@ class Bridge
 
     public function processFind($wheres, $options, $columns): Results
     {
-//        if (count($wheres) == 1) {
-//            if (!empty($wheres['_id'])) {
-//                return $this->processGet($wheres['_id'], $columns);
-//            }
-//        }
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
 
         return $this->_returnSearch($params, __FUNCTION__);
@@ -196,7 +191,9 @@ class Bridge
             $id = $data['_id'];
             unset($data['_id']);
         }
-//        $data = $this->cleanData($data);
+        if (isset($data['_index'])) {
+            unset($data['_index']);
+        }
         $params = [
             'index' => $this->index,
             'body'  => $data,
@@ -619,6 +616,7 @@ class Bridge
         if (!empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
+                $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
                 if (!empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {
