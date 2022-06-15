@@ -15,21 +15,9 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
     - [Migrations](#migrations)
     - ES features like [Geo Filtering](#geo) & [Regular Expressions](#regex-in-where)
 
-- No need to write your own DSL queries ([unless you want to](#raw-dsl)!)
+- [Dynamic Indices](#dynamic-indies)
+- No need to write your own DSL queries ([unless you want to](#raw-dsl))
 - [Eloquent style searching](#elasticsearching)
-
-> # Alpha release notice
-> This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included.
->
-> #### Versioning Schema: {plugin_version}.{laravel_version}.{iteration}
->
-> ex: 0.8.1
->
-> Version 0 will be alpha & beta    
-> Version 1 will be RC & stable     
-> Version 2+ will be next gen feature set
-
-____
 
 Installation
 ===============
@@ -632,7 +620,7 @@ Book::term('Eric')->search();
 
 - To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
 - ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or
-  - **ordering matters***
+    - **ordering matters***
 
 ```php
 Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
@@ -1273,6 +1261,53 @@ Queues
 ----------
 _[Coming]_
 
+
+Dynamic Indies
+==============
+In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable
+Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest.
+
+For example, let's imagine we're tracking page hits, the `PageHit.php` model could be
+
+```php
+<?php
+
+namespace App\Models;
+
+use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
+
+class PageHit extends Eloquent
+{
+    protected $connection = 'elasticsearch';
+    protected $index = 'page_hits_*'; //Dynamic index
+
+}
+```
+
+If you set a dynamic index you can read/search across all the indices that match the prefix `page_hits_`
+
+```php 
+$pageHits = PageHit::where('page_id',1)->get();
+```
+
+You will need to set the record's actual index when creating a new record, with `setIndex('value')`
+
+Create example:
+
+```php
+$pageHit = new PageHit
+$pageHit->page_id = 4;
+$pageHit->ip = $someIp;
+$pageHit->setIndex('page_hits_'.date('Y-m-d'));
+$pageHit->save(); 
+
+```
+
+Each eloquent model will have the current record's index embedded into it, to retrieve it simply call `getRecordIndex()`
+
+```php
+$pageHit->getRecordIndex();  //returns page_hits_2021-01-01
+```
 
 RAW DSL
 ========

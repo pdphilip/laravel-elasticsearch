@@ -119,18 +119,20 @@ class Bridge
 //            }
 //        }
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
-        return $this->_returnSearch($params,__FUNCTION__);
+
+        return $this->_returnSearch($params, __FUNCTION__);
 
     }
 
-    public function processSearch($searchParams,$searchOptions,$wheres,$opts,$fields,$cols)
+    public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
-        $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions,$wheres,$opts,$fields,$cols);
-        return $this->_returnSearch($params,__FUNCTION__);
+        $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
+
+        return $this->_returnSearch($params, __FUNCTION__);
 
     }
 
-    protected function _returnSearch($params,$source)
+    protected function _returnSearch($params, $source)
     {
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
@@ -151,7 +153,7 @@ class Bridge
         if (is_array($column)) {
             $col = $column[0];
         }
-        $params = $this->buildParams($this->index,$wheres);
+        $params = $this->buildParams($this->index, $wheres);
         $params['body']['aggs']['distinct_'.$col]['terms'] = [
             'field' => $col,
             'size'  => $this->maxSize,
@@ -177,7 +179,7 @@ class Bridge
 
     public function processShowQuery($wheres, $options, $columns)
     {
-        $params = $this->buildParams($this->index,$wheres, $options, $columns);
+        $params = $this->buildParams($this->index, $wheres, $options, $columns);
 
         return $params['body']['query']['query_string']['query'] ?? null;
     }
@@ -194,7 +196,9 @@ class Bridge
             $id = $data['_id'];
             unset($data['_id']);
         }
-//        $data = $this->cleanData($data);
+        if (isset($data['_index'])) {
+            unset($data['_index']);
+        }
         $params = [
             'index' => $this->index,
             'body'  => $data,
@@ -551,7 +555,7 @@ class Bridge
 
     private function _sumAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index,$wheres, $options);
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $agg = new SumAggregation('sum_value', $columns[0]);
             $params['body']['aggs']['sum_value'] = $agg->toArray();
@@ -583,7 +587,7 @@ class Bridge
 
     private function _matrixAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index,$wheres, $options);
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $agg = new MatrixAggregation('sum_value', $columns);
             $params['body']['aggs']['statistics'] = $agg->toArray();
@@ -617,6 +621,7 @@ class Bridge
         if (!empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
+                $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
                 if (!empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {

@@ -18,42 +18,42 @@ trait QueryBuilder
 
     protected static $equivalenceOperators = ['in', 'nin'];
 
-    protected static $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists','regex'];
+    protected static $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
 
 
     //======================================================================
     // Parameter builders
     //======================================================================
 
-    public static function buildSearchParams($index, $searchQuery, $searchOptions,$wheres = [],$options = [],$fields = [],$columns = [])
+    public static function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = [])
     {
         $params = [];
-        if ($index){
+        if ($index) {
             $params['index'] = $index;
         }
         $params['body'] = [];
 
 
         $queryString['query'] = $searchQuery;
-        if($wheres){
+        if ($wheres) {
             $wheres = self::_buildQuery($wheres);
             $whereQueryString = $wheres['query']['query_string']['query'] ?? null;
-            if ($whereQueryString){
+            if ($whereQueryString) {
                 $queryString['query'] = '('.$searchQuery.') AND '.$whereQueryString;
             }
         }
 
-        if ($fields){
+        if ($fields) {
             $queryString['fields'] = [];
-            foreach ($fields as $field => $boostLevel){
-                if($boostLevel > 1){
+            foreach ($fields as $field => $boostLevel) {
+                if ($boostLevel > 1) {
                     $field = $field.'^'.$boostLevel;
                 }
                 $queryString['fields'][] = $field;
             }
         }
-        if ($searchOptions){
-            foreach ($searchOptions as $searchOption => $searchOptionValue){
+        if ($searchOptions) {
+            foreach ($searchOptions as $searchOption => $searchOptionValue) {
                 $queryString[$searchOption] = $searchOptionValue;
             }
         }
@@ -63,7 +63,7 @@ trait QueryBuilder
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
         }
-        if ($options){
+        if ($options) {
             $opts = self::_buildOptions($options);
             if ($opts) {
                 foreach ($opts as $key => $value) {
@@ -75,17 +75,18 @@ trait QueryBuilder
                 }
             }
         }
-        if (self::$filter){
+        if (self::$filter) {
             $params = self::_parseFilterParameter($params, self::$filter);
         }
+
         return $params;
     }
 
     public static function buildParams($index, $wheres, $options = [], $columns = [], $_id = null)
     {
-        if ($index){
+        if ($index) {
             $params = [
-                'index' => $index
+                'index' => $index,
             ];
         }
 
@@ -108,7 +109,7 @@ trait QueryBuilder
                 }
             }
         }
-        if (self::$filter){
+        if (self::$filter) {
             $params = self::_parseFilterParameter($params, self::$filter);
         }
 
@@ -173,7 +174,7 @@ trait QueryBuilder
     private static function _parseParams($key, $value): string
     {
 
-        if ($key == 'and' || $key == 'or') {
+        if ($key === 'and' || $key === 'or') {
             return self::{'_'.$key.'QueryString'}($value);
         }
         if (is_array($value)) {
@@ -301,8 +302,8 @@ trait QueryBuilder
                         $return['body']['min_score'] = $value;
                         break;
                     case 'filters':
-                        foreach ($value as $filterType => $filerValues){
-                            self::_parseFilter($filterType,$filerValues);
+                        foreach ($value as $filterType => $filerValues) {
+                            self::_parseFilter($filterType, $filerValues);
                         }
                         break;
                     case 'multiple':
@@ -318,22 +319,22 @@ trait QueryBuilder
         return $return;
     }
 
-    public static function _parseFilter($filterType,$filterPayload)
+    public static function _parseFilter($filterType, $filterPayload)
     {
-        switch ($filterType){
+        switch ($filterType) {
             case 'filterGeoBox':
                 self::$filter['filter']['geo_bounding_box'][$filterPayload['field']] = [
-                    'top_left' => $filterPayload['topLeft'],
+                    'top_left'     => $filterPayload['topLeft'],
                     'bottom_right' => $filterPayload['bottomRight'],
                 ];
                 break;
             case 'filterGeoPoint':
                 self::$filter['filter']['geo_distance'] = [
-                    'distance' => $filterPayload['distance'],
+                    'distance'              => $filterPayload['distance'],
                     $filterPayload['field'] => [
                         'lat' => $filterPayload['geoPoint'][0],
                         'lon' => $filterPayload['geoPoint'][1],
-                    ]
+                    ],
 
                 ];
                 break;
@@ -354,35 +355,36 @@ trait QueryBuilder
         return $sort->toArray();
     }
 
-    public static function _parseFilterParameter($params,$filer)
+    public static function _parseFilterParameter($params, $filer)
     {
         $body = $params['body'];
-        if (!empty($body['query']['match_all'])){
+        if (!empty($body['query']['match_all'])) {
             $filteredBody = [
                 'query' => [
                     'bool' => [
-                        'must' => [
+                        'must'   => [
                             'match_all' => $body['query']['match_all'],
                         ],
-                        'filter' => $filer['filter']
-                    ]
-                ]
+                        'filter' => $filer['filter'],
+                    ],
+                ],
             ];
             $params['body'] = $filteredBody;
         }
-        if (!empty($body['query']['query_string'])){
+        if (!empty($body['query']['query_string'])) {
             $filteredBody = [
                 'query' => [
                     'bool' => [
-                        'must' => [
+                        'must'   => [
                             'query_string' => $body['query']['query_string'],
                         ],
-                        'filter' => $filer['filter']
-                    ]
-                ]
+                        'filter' => $filer['filter'],
+                    ],
+                ],
             ];
             $params['body'] = $filteredBody;
         }
+
         return $params;
     }
 }

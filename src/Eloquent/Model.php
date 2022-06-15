@@ -22,6 +22,8 @@ abstract class Model extends BaseModel
 
     protected $index;
 
+    protected $recordIndex;
+
     protected $primaryKey = '_id';
 
     protected $keyType = 'string';
@@ -33,14 +35,32 @@ abstract class Model extends BaseModel
     {
         parent::__construct($attributes);
         $this->setIndex();
+        $this->setRecordIndex();
         $this->forcePrimaryKey();
     }
 
 
-    public function setIndex()
+    public function setIndex($index = null)
     {
+        if ($index) {
+            return $this->index = $index;
+        }
         $this->index = $this->index ?? $this->getTable();
         unset($this->table);
+    }
+
+    public function setRecordIndex($recordIndex = null)
+    {
+        if ($recordIndex) {
+            return $this->recordIndex = $recordIndex;
+        }
+
+        return $this->recordIndex = $this->index;
+    }
+
+    public function getRecordIndex()
+    {
+        return $this->recordIndex;
     }
 
     public function setTable($index)
@@ -115,12 +135,17 @@ abstract class Model extends BaseModel
         return Carbon::now()->format($this->getDateFormat());
     }
 
+    public function getIndex()
+    {
+        return $this->index ? : parent::getTable();
+    }
+
     /**
      * @inheritdoc
      */
     public function getTable()
     {
-        return $this->index ? : parent::getTable();
+        return $this->getIndex();
     }
 
     /**

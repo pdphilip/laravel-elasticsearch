@@ -3,6 +3,8 @@
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 
 class Builder extends BaseEloquentBuilder
@@ -126,7 +128,7 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param  array $values
+     * @param    array    $values
      *
      * @return array
      */
@@ -145,6 +147,7 @@ class Builder extends BaseEloquentBuilder
     /**
      *
      * Fast create method for 'write and forget'
+     *
      * @param    array    $attributes
      *
      * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|mixed|Builder
@@ -161,7 +164,7 @@ class Builder extends BaseEloquentBuilder
     //----------------------------------------------------------------------
 
     /**
-     * @param    string   $field
+     * @param    string    $field
      * @param    array    $topLeft
      * @param    array    $bottomRight
      *
@@ -169,20 +172,22 @@ class Builder extends BaseEloquentBuilder
      */
     public function filterGeoBox(string $field, array $topLeft, array $bottomRight)
     {
-        $this->query->filterGeoBox($field,$topLeft,$bottomRight);
+        $this->query->filterGeoBox($field, $topLeft, $bottomRight);
+
         return $this;
     }
 
     /**
-     * @param    string   $field
-     * @param    string   $distance
+     * @param    string    $field
+     * @param    string    $distance
      * @param    array    $geoPoint
      *
      * @return $this
      */
     public function filterGeoPoint(string $field, string $distance, array $geoPoint)
     {
-        $this->query->filterGeoPoint($field,$distance,$geoPoint);
+        $this->query->filterGeoPoint($field, $distance, $geoPoint);
+
         return $this;
     }
 
@@ -192,109 +197,118 @@ class Builder extends BaseEloquentBuilder
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function term(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor);
+        $this->query->searchQuery($term, $boostFactor);
+
         return $this;
     }
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function andTerm(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor,'AND');
+        $this->query->searchQuery($term, $boostFactor, 'AND');
+
         return $this;
     }
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function orTerm(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor,'OR');
+        $this->query->searchQuery($term, $boostFactor, 'OR');
+
         return $this;
     }
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function fuzzyTerm(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor,null,'fuzzy');
+        $this->query->searchQuery($term, $boostFactor, null, 'fuzzy');
+
         return $this;
     }
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function andFuzzyTerm(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor,'AND','fuzzy');
+        $this->query->searchQuery($term, $boostFactor, 'AND', 'fuzzy');
+
         return $this;
     }
 
     /**
      * @param    string    $term
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function orFuzzyTerm(string $term, int $boostFactor = null)
     {
-        $this->query->searchQuery($term,$boostFactor,'OR','fuzzy');
+        $this->query->searchQuery($term, $boostFactor, 'OR', 'fuzzy');
+
         return $this;
     }
 
     /**
      * @param    string    $regEx
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function regEx(string $regEx, int $boostFactor = null)
     {
-        $this->query->searchQuery($regEx,$boostFactor,null,'regex');
+        $this->query->searchQuery($regEx, $boostFactor, null, 'regex');
+
         return $this;
     }
 
     /**
      * @param    string    $regEx
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
     public function andRegEx(string $regEx, int $boostFactor = null)
     {
-        $this->query->searchQuery($regEx,$boostFactor,'AND','regex');
+        $this->query->searchQuery($regEx, $boostFactor, 'AND', 'regex');
+
         return $this;
     }
 
     /**
      * @param    string    $regEx
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
-    public function orRegEx(string $regEx, int$boostFactor = null)
+    public function orRegEx(string $regEx, int $boostFactor = null)
     {
-        $this->query->searchQuery($regEx,$boostFactor,'OR','regex');
+        $this->query->searchQuery($regEx, $boostFactor, 'OR', 'regex');
+
         return $this;
     }
 
@@ -306,29 +320,32 @@ class Builder extends BaseEloquentBuilder
     public function minShouldMatch($value)
     {
         $this->query->minShouldMatch($value);
+
         return $this;
     }
 
     /**
-     * @param    float   $value
+     * @param    float    $value
      *
      * @return $this
      */
     public function minScore(float $value)
     {
         $this->query->minScore($value);
+
         return $this;
     }
 
     /**
      * @param    string    $field
-     * @param    int|null  $boostFactor
+     * @param    int|null    $boostFactor
      *
      * @return $this
      */
-    public function field(string $field, int$boostFactor = null)
+    public function field(string $field, int $boostFactor = null)
     {
-        $this->query->searchField($field,$boostFactor);
+        $this->query->searchField($field, $boostFactor);
+
         return $this;
     }
 
@@ -340,7 +357,34 @@ class Builder extends BaseEloquentBuilder
     public function fields(array $fields)
     {
         $this->query->searchFields($fields);
+
         return $this;
     }
 
+    public function hydrate(array $items)
+    {
+        $instance = $this->newModelInstance();
+
+        return $instance->newCollection(array_map(function ($item) use ($items, $instance) {
+            $recordIndex = null;
+            if (is_array($item)) {
+                $recordIndex = !empty($item['_index']) ? $item['_index'] : null;
+                if ($recordIndex) {
+                    unset($item['_index']);
+                }
+            }
+
+            $model = $instance->newFromBuilder($item);
+            if ($recordIndex) {
+                $model->setRecordIndex($recordIndex);
+                $model->setIndex($recordIndex);
+
+            }
+            if (count($items) > 1) {
+                $model->preventsLazyLoading = Model::preventsLazyLoading();
+            }
+
+            return $model;
+        }, $items));
+    }
 }
