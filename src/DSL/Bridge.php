@@ -194,6 +194,9 @@ class Bridge
             $id = $data['_id'];
             unset($data['_id']);
         }
+        if (isset($data['_index'])) {
+            unset($data['_index']);
+        }
 //        $data = $this->cleanData($data);
         $params = [
             'index' => $this->index,
@@ -209,7 +212,6 @@ class Bridge
 
         try {
             $response = $this->client->index($params);
-
             $savedData = ['_id' => $response['_id']] + $data;
 
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
@@ -613,10 +615,12 @@ class Bridge
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+
         $data = [];
         if (!empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
+                $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
                 if (!empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {
@@ -632,7 +636,6 @@ class Bridge
 
     private function _return($data, $meta, $params, $queryTag): Results
     {
-
         unset($meta['_source']);
 
         $results = new Results($data, $meta, $params, $queryTag);

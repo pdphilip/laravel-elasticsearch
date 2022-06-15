@@ -1213,6 +1213,53 @@ Queues
 _[Coming]_
 
 
+Dynamic Indies
+========
+In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest. 
+
+For example, let's imagine we're tracking page hits, the `PageHit.php` model could be
+
+```php
+<?php
+
+namespace App\Models;
+
+use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
+
+class PageHit extends Eloquent
+{
+    protected $connection = 'elasticsearch';
+    protected $index = 'page_hits_*'; //Dynamic index
+
+}
+```
+
+If you set a dynamic index you can read/search across all the indices that match the prefix `page_hits_`
+
+```php 
+$pageHits = PageHit::where('page_id',1)->get();
+```
+
+You will need to set the record's actual index when creating a new record, with `setIndex('value')` 
+
+Create example:
+```php
+$pageHit = new PageHit
+$pageHit->page_id = 4;
+$pageHit->ip = $someIp;
+$pageHit->setIndex('page_hits_'.date('Y-m-d'));
+$pageHit->save(); 
+
+```
+
+Each eloquent model will have the current record's index embedded into it, to retrieve it simply call `getRecordIndex()`
+```php
+$pageHit->getRecordIndex();  //returns page_hits_2021-01-01
+```
+
+
+```
+
 RAW DSL
 ========
 

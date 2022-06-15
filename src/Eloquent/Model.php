@@ -22,6 +22,8 @@ abstract class Model extends BaseModel
 
     protected $index;
 
+    protected $recordIndex;
+
     protected $primaryKey = '_id';
 
     protected $keyType = 'string';
@@ -33,12 +35,16 @@ abstract class Model extends BaseModel
     {
         parent::__construct($attributes);
         $this->setIndex();
+        $this->setRecordIndex();
         $this->forcePrimaryKey();
     }
 
 
-    public function setIndex()
+    public function setIndex($index = null)
     {
+        if ($index){
+            return $this->index = $index;
+        }
         $this->index = $this->index ?? $this->getTable();
         unset($this->table);
     }
@@ -50,6 +56,20 @@ abstract class Model extends BaseModel
 
         return $this;
     }
+
+    public function setRecordIndex($recordIndex = null)
+    {
+        if ($recordIndex){
+            return $this->recordIndex = $recordIndex;
+        }
+        return  $this->recordIndex = $this->index;
+    }
+
+    public function getRecordIndex()
+    {
+        return  $this->recordIndex;
+    }
+
 
 
     public function forcePrimaryKey()
@@ -119,6 +139,11 @@ abstract class Model extends BaseModel
      * @inheritdoc
      */
     public function getTable()
+    {
+        return $this->getIndex();
+    }
+
+    public function getIndex()
     {
         return $this->index ? : parent::getTable();
     }
