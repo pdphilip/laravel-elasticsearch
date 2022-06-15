@@ -174,7 +174,7 @@ trait QueryBuilder
     private static function _parseParams($key, $value): string
     {
 
-        if ($key == 'and' || $key == 'or') {
+        if ($key === 'and' || $key === 'or') {
             return self::{'_'.$key.'QueryString'}($value);
         }
         if (is_array($value)) {

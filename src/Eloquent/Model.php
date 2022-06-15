@@ -21,23 +21,48 @@ abstract class Model extends BaseModel
 
     protected $index;
 
+    protected $recordIndex;
+
     protected $primaryKey = '_id';
 
     protected $keyType = 'string';
 
     protected $parentRelation;
 
+    protected static $primitiveCastTypes = [
+        'array',
+        'bool',
+        'boolean',
+        'collection',
+        'custom_datetime',
+        'date',
+        'datetime',
+        'decimal',
+        'double',
+        'float',
+        'int',
+        'integer',
+        'json',
+        'object',
+        'real',
+        'string',
+        'timestamp',
+    ];
 
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
         $this->setIndex();
+        $this->setRecordIndex();
         $this->forcePrimaryKey();
     }
 
 
-    public function setIndex()
+    public function setIndex($index = null)
     {
+        if ($index) {
+            return $this->index = $index;
+        }
         $this->index = $this->index ?? $this->getTable();
         unset($this->table);
     }
@@ -50,6 +75,19 @@ abstract class Model extends BaseModel
         return $this;
     }
 
+    public function setRecordIndex($recordIndex = null)
+    {
+        if ($recordIndex) {
+            return $this->recordIndex = $recordIndex;
+        }
+
+        return $this->recordIndex = $this->index;
+    }
+
+    public function getRecordIndex()
+    {
+        return $this->recordIndex;
+    }
 
     public function forcePrimaryKey()
     {
@@ -123,6 +161,11 @@ abstract class Model extends BaseModel
      * @inheritdoc
      */
     public function getTable()
+    {
+        return $this->getIndex();
+    }
+
+    public function getIndex()
     {
         return $this->index ? : parent::getTable();
     }
@@ -205,8 +248,7 @@ abstract class Model extends BaseModel
         }
 
         if ($this->hasCast($key, static::$primitiveCastTypes)) {
-            return $this->castAttribute($key, $attribute) ===
-                $this->castAttribute($key, $original);
+            return $this->castAttribute($key, $attribute) === $this->castAttribute($key, $original);
         }
 
         return is_numeric($attribute) && is_numeric($original) && strcmp((string)$attribute, (string)$original) === 0;

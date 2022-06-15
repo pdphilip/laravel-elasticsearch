@@ -3,6 +3,8 @@
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 
 class Builder extends BaseEloquentBuilder
@@ -358,4 +360,27 @@ class Builder extends BaseEloquentBuilder
         return $this;
     }
 
+    public function hydrate(array $items)
+    {
+        $instance = $this->newModelInstance();
+
+        return $instance->newCollection(array_map(function ($item) use ($instance) {
+            $recordIndex = null;
+            if (is_array($item)) {
+                $recordIndex = !empty($item['_index']) ? $item['_index'] : null;
+                if ($recordIndex) {
+                    unset($item['_index']);
+                }
+            }
+            $model = $instance->newFromBuilder($item);
+
+            if ($recordIndex) {
+                $model->setRecordIndex($recordIndex);
+                $model->setIndex($recordIndex);
+
+            }
+
+            return $model;
+        }, $items));
+    }
 }

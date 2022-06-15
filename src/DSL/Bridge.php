@@ -196,7 +196,9 @@ class Bridge
             $id = $data['_id'];
             unset($data['_id']);
         }
-//        $data = $this->cleanData($data);
+        if (isset($data['_index'])) {
+            unset($data['_index']);
+        }
         $params = [
             'index' => $this->index,
             'body'  => $data,
@@ -620,6 +622,7 @@ class Bridge
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
                 $datum['_id'] = $hit['_id'];
+                $datum['_index'] = $hit['_index'];
                 if (!empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
