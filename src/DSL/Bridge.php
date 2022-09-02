@@ -436,6 +436,9 @@ class Bridge
 
         $params = $this->buildIndexMap($this->index, $settings);
         $params['body']['_source']['enabled'] = true;
+        $props = $params['body']['mappings']['properties'];
+        unset($params['body']['mappings']);
+        $params['body']['properties'] = $props;
 
         try {
             $response = $this->client->indices()->putMapping($params);
