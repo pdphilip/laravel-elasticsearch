@@ -142,7 +142,7 @@ class Connection extends BaseConnection
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
         $type = strtolower($type);
-        if (!in_array($type, ['https', 'cloud',])) {
+        if (!in_array($type, ['http', 'cloud'])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
         
@@ -150,7 +150,7 @@ class Connection extends BaseConnection
         
     }
     
-    protected function _httpsConnection()
+    protected function _httpConnection()
     {
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
