@@ -81,6 +81,13 @@ trait QueryBuilder
     }
     
     /**
+     * @param $index
+     * @param $wheres
+     * @param $options
+     * @param $columns
+     * @param $_id
+     *
+     * @return array
      * @throws Exception
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array

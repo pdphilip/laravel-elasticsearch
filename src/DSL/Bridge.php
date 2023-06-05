@@ -98,8 +98,6 @@ class Bridge
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
-
-//        dd($params);
         
         return $this->_returnSearch($params, __FUNCTION__);
         
@@ -116,7 +114,8 @@ class Bridge
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag($source));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
     }
     
@@ -127,10 +126,9 @@ class Bridge
         if (is_array($column)) {
             $col = $column[0];
         }
-        
-        
+        $params = $this->buildParams($this->index, $wheres);
         try {
-            $params = $this->buildParams($this->index, $wheres);
+            
             $params['body']['aggs']['distinct_'.$col]['terms'] = [
                 'field' => $col,
                 'size'  => $this->maxSize,
@@ -146,7 +144,8 @@ class Bridge
             return $this->_return($data, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
         
         
@@ -195,7 +194,9 @@ class Bridge
             
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
+            
         }
         
         
@@ -312,7 +313,8 @@ class Bridge
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
         
     }
