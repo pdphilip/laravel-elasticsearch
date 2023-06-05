@@ -116,7 +116,8 @@ class Bridge
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag($source));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
     }
     
@@ -146,7 +147,8 @@ class Bridge
             return $this->_return($data, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
         
         
@@ -195,7 +197,8 @@ class Bridge
             
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
         
         
@@ -291,11 +294,13 @@ class Bridge
     
     public function processDeleteAll($wheres, $options = []): Results
     {
+        $params = [
+            'index' => $this->index,
+            'id'    => $wheres['_id'],
+        ];
+        
         if (isset($wheres['_id'])) {
-            $params = [
-                'index' => $this->index,
-                'id'    => $wheres['_id'],
-            ];
+            
             try {
                 $response = $this->client->delete($params);
                 $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
@@ -312,7 +317,8 @@ class Bridge
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
         }
         
     }
@@ -524,70 +530,78 @@ class Bridge
     
     private function _maxAggregate($wheres, $options, $columns): Results
     {
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            $params = $this->buildParams($this->index, $wheres, $options);
+            
             $params['body']['aggs']['max_value'] = ParameterBuilder::maxAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['max_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
     private function _minAggregate($wheres, $options, $columns): Results
     {
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            $params = $this->buildParams($this->index, $wheres, $options);
+            
             $params['body']['aggs']['min_value'] = ParameterBuilder::minAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['min_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
     private function _sumAggregate($wheres, $options, $columns): Results
     {
         
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['sum_value'] = ParameterBuilder::sumAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['sum_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
     
     private function _avgAggregate($wheres, $options, $columns): Results
     {
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['avg_value'] = ParameterBuilder::avgAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['avg_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
     private function _matrixAggregate($wheres, $options, $columns): Results
     {
+        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['statistics'] = ParameterBuilder::matrixAggregation($columns);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['statistics'] ?? [], $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
