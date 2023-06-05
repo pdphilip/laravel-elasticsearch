@@ -3,7 +3,7 @@
 namespace PDPhilip\Elasticsearch;
 
 use PDPhilip\Elasticsearch\DSL\Bridge;
-use Elastic\Elasticsearch\ClientBuilder;
+use Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -142,7 +142,7 @@ class Connection extends BaseConnection
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
         $type = strtolower($type);
-        if (!in_array($type, ['https', 'cloud',])) {
+        if (!in_array($type, ['http', 'cloud', 'api'])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
         
@@ -150,7 +150,7 @@ class Connection extends BaseConnection
         
     }
     
-    protected function _httpsConnection()
+    protected function _httpConnection()
     {
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -161,7 +161,7 @@ class Connection extends BaseConnection
             $cb->setBasicAuthentication($username, $pass)->build();
         }
         if ($certPath) {
-            $cb->setCABundle($certPath);
+            $cb->setSSLVerification($certPath);
         }
         
         return $cb->build();
@@ -177,10 +177,24 @@ class Connection extends BaseConnection
         $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
         if ($apiId && $apiKey) {
-            $cb->setApiKey($apiKey, $apiId)->build();
+            $cb->setApiKey($apiId, $apiKey)->build();
         } elseif ($username && $pass) {
             $cb->setBasicAuthentication($username, $pass)->build();
         }
+        if ($certPath) {
+            $cb->setSSLVerification($certPath);
+        }
+        
+        return $cb->build();
+    }
+    
+    
+    protected function _apiConnection()
+    {
+        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
+        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
+        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        $cb = ClientBuilder::create()->setApiKey($apiId, $apiKey);
         if ($certPath) {
             $cb->setSSLVerification($certPath);
         }

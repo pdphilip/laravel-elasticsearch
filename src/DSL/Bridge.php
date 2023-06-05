@@ -3,7 +3,7 @@
 namespace PDPhilip\Elasticsearch\DSL;
 
 use Exception;
-use Elastic\Elasticsearch\Client;
+use Elasticsearch\Client;
 
 
 class Bridge
@@ -294,13 +294,13 @@ class Bridge
     
     public function processDeleteAll($wheres, $options = []): Results
     {
-        $params = [
-            'index' => $this->index,
-            'id'    => $wheres['_id'],
-        ];
+        
         
         if (isset($wheres['_id'])) {
-            
+            $params = [
+                'index' => $this->index,
+                'id'    => $wheres['_id'],
+            ];
             try {
                 $response = $this->client->delete($params);
                 $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
@@ -317,7 +317,7 @@ class Bridge
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
             throw new Exception($error->errorMessage);
         }
         
@@ -370,7 +370,7 @@ class Bridge
             $response = $this->client->indices()->getMapping($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data->asArray();
+            return $result->data;
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
@@ -387,7 +387,7 @@ class Bridge
             $response = $this->client->indices()->getSettings($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data->asArray();
+            return $result->data;
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);

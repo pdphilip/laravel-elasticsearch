@@ -22,7 +22,7 @@
         "illuminate/container": "^5.8|^6.0",
         "illuminate/database": "^5.8|^6.0",
         "illuminate/events": "^5.8|^6.0",
-        "elasticsearch/elasticsearch": "8.7"
+        "elasticsearch/elasticsearch": "^7.16"
     },
     "autoload": {
         "psr-4": {
