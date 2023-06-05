@@ -1,43 +1,42 @@
 {
-    "name": "pdphilip/elasticsearch",
-    "description": "An Elasticsearch implementation of Laravel's Eloquent ORM",
-    "keywords": [
-        "laravel",
-        "eloquent",
-        "elasticsearch",
-        "elastic",
-        "database",
-        "model"
-    ],
-    "homepage": "https://github.com/pdphilip/laravel-elasticsearch",
-    "authors": [
-        {
-            "name": "David Philip",
-            "email": "pd.philip@gmail.com",
-            "homepage": "https://github.com/pdphilip"
-        }
-    ],
-    "license": "MIT",
-    "require": {
-        "illuminate/support": "^7.0",
-        "illuminate/container": "^7.0",
-        "illuminate/database": "^7.0",
-        "illuminate/events": "^7.0",
-        "elasticsearch/elasticsearch": "^7.16",
-        "ongr/elasticsearch-dsl": "^7.2"
-    },
-    "require-dev": {
-    },
-    "autoload": {
-        "psr-4": {
-            "PDPhilip\\Elasticsearch\\": "src/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
-            ]
-        }
+  "name": "pdphilip/elasticsearch",
+  "description": "An Elasticsearch implementation of Laravel's Eloquent ORM",
+  "keywords": [
+    "laravel",
+    "eloquent",
+    "elasticsearch",
+    "elastic",
+    "database",
+    "model"
+  ],
+  "homepage": "https://github.com/pdphilip/laravel-elasticsearch",
+  "authors": [
+    {
+      "name": "David Philip",
+      "email": "pd.philip@gmail.com",
+      "homepage": "https://github.com/pdphilip"
     }
+  ],
+  "license": "MIT",
+  "require": {
+    "illuminate/support": "^7.0",
+    "illuminate/container": "^7.0",
+    "illuminate/database": "^7.0",
+    "illuminate/events": "^7.0",
+    "elasticsearch/elasticsearch": "8.7"
+  },
+  "require-dev": {
+  },
+  "autoload": {
+    "psr-4": {
+      "PDPhilip\\Elasticsearch\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
+      ]
+    }
+  }
 }
