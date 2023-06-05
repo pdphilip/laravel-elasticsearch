@@ -23,8 +23,7 @@
         "illuminate/container": "^8.0",
         "illuminate/database": "^8.0",
         "illuminate/events": "^8.0",
-        "elasticsearch/elasticsearch": "^7.16",
-        "ongr/elasticsearch-dsl": "^7.2"
+        "elasticsearch/elasticsearch": "^7.16"
     },
     "require-dev": {
     },
