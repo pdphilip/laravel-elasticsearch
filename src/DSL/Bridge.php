@@ -386,7 +386,7 @@ class Bridge
             $response = $this->client->indices()->getSettings($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data;
+            return $result->data->asArray();
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
