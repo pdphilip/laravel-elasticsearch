@@ -22,10 +22,7 @@
         "illuminate/container": "^5.8|^6.0",
         "illuminate/database": "^5.8|^6.0",
         "illuminate/events": "^5.8|^6.0",
-        "elasticsearch/elasticsearch": "^7.16",
-        "ongr/elasticsearch-dsl": "^7.2"
-    },
-    "require-dev": {
+        "elasticsearch/elasticsearch": "8.7"
     },
     "autoload": {
         "psr-4": {
@@ -37,6 +34,11 @@
             "providers": [
                 "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
             ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     }
 }

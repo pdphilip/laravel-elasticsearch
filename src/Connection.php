@@ -3,7 +3,7 @@
 namespace PDPhilip\Elasticsearch;
 
 use PDPhilip\Elasticsearch\DSL\Bridge;
-use Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -142,7 +142,7 @@ class Connection extends BaseConnection
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
         $type = strtolower($type);
-        if (!in_array($type, ['http', 'cloud', 'api'])) {
+        if (!in_array($type, ['https', 'cloud',])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
 
@@ -150,7 +150,7 @@ class Connection extends BaseConnection
 
     }
 
-    protected function _httpConnection()
+    protected function _httpsConnection()
     {
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -161,7 +161,7 @@ class Connection extends BaseConnection
             $cb->setBasicAuthentication($username, $pass)->build();
         }
         if ($certPath) {
-            $cb->setSSLVerification($certPath);
+            $cb->setCABundle($certPath);
         }
 
         return $cb->build();
@@ -187,21 +187,7 @@ class Connection extends BaseConnection
 
         return $cb->build();
     }
-
-
-    protected function _apiConnection()
-    {
-        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
-        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
-        $cb = ClientBuilder::create()->setApiKey($apiId, $apiKey);
-        if ($certPath) {
-            $cb->setSSLVerification($certPath);
-        }
-
-        return $cb->build();
-    }
-
+    
 
     //----------------------------------------------------------------------
     // Dynamic call routing to DSL bridge
