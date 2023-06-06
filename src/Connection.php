@@ -15,10 +15,10 @@ use RuntimeException;
 class Connection extends BaseConnection
 {
     
-    protected Client $client;
-    protected string $index;
+    protected $client;
+    protected $index;
     protected $maxSize;
-    protected string $indexPrefix;
+    protected $indexPrefix;
     
     
     public function __construct(array $config)
