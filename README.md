@@ -22,12 +22,7 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 Installation
 ===============
 
-[Known] Elasticsearch compatible versions:
-
-- 7.16
-- 8.0
-
-Install the package via Composer:
+## Elasticsearch 8.x
 
 Laravel 9.x:
 
@@ -38,19 +33,45 @@ $ composer require pdphilip/elasticsearch
 Laravel 8.x:
 
 ```bash
-$ composer require pdphilip/elasticsearch:~0.8
+$ composer require pdphilip/elasticsearch:~2.8
 ```
 
 Laravel 7.x:
 
 ```bash
-$ composer require pdphilip/elasticsearch:~0.7
+$ composer require pdphilip/elasticsearch:~2.7
 ```
 
 Laravel 6.x (and 5.8):
 
 ```bash
-$ composer require pdphilip/elasticsearch:~0.6
+$ composer require pdphilip/elasticsearch:~2.6
+```
+
+## Elasticsearch 7.x
+
+Laravel 9.x:
+
+```bash
+$ composer require pdphilip/elasticsearch:~1.9
+```
+
+Laravel 8.x:
+
+```bash
+$ composer require pdphilip/elasticsearch:~1.8
+```
+
+Laravel 7.x:
+
+```bash
+$ composer require pdphilip/elasticsearch:~1.7
+```
+
+Laravel 6.x (and 5.8):
+
+```bash
+$ composer require pdphilip/elasticsearch:~1.6
 ```
 
 Configuration
@@ -325,43 +346,43 @@ $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'order
 
 ```json
 {
-    "matrix": {
-        "doc_count": 24,
-        "fields": [
-            {
-                "name": "price",
-                "count": 24,
-                "mean": 944.1987476348877,
-                "variance": 392916.60523541126,
-                "skewness": 0.1301389603055256,
-                "kurtosis": 1.6419181162499876,
-                "covariance": {
-                    "price": 392916.60523541126,
-                    "orders": 5569.635773119718
-                },
-                "correlation": {
-                    "price": 1,
-                    "orders": 0.03421141805225852
-                }
-            },
-            {
-                "name": "orders",
-                "count": 24,
-                "mean": 501.79166666666663,
-                "variance": 67454.5199275362,
-                "skewness": 0.31085136523548346,
-                "kurtosis": 1.9897405370026835,
-                "covariance": {
-                    "price": 5569.635773119718,
-                    "orders": 67454.5199275362
-                },
-                "correlation": {
-                    "price": 0.03421141805225852,
-                    "orders": 1
-                }
-            }
-        ]
-    }
+  "matrix": {
+    "doc_count": 24,
+    "fields": [
+      {
+        "name": "price",
+        "count": 24,
+        "mean": 944.1987476348877,
+        "variance": 392916.60523541126,
+        "skewness": 0.1301389603055256,
+        "kurtosis": 1.6419181162499876,
+        "covariance": {
+          "price": 392916.60523541126,
+          "orders": 5569.635773119718
+        },
+        "correlation": {
+          "price": 1,
+          "orders": 0.03421141805225852
+        }
+      },
+      {
+        "name": "orders",
+        "count": 24,
+        "mean": 501.79166666666663,
+        "variance": 67454.5199275362,
+        "skewness": 0.31085136523548346,
+        "kurtosis": 1.9897405370026835,
+        "covariance": {
+          "price": 5569.635773119718,
+          "orders": 67454.5199275362
+        },
+        "correlation": {
+          "price": 0.03421141805225852,
+          "orders": 1
+        }
+      }
+    ]
+  }
 }
 ```
 
@@ -1181,6 +1202,9 @@ class MyIndexes extends Migration
           //Other Mappings
           $index->map('dynamic', false);
           $index->map('date_detection', false);
+          
+          //Custom Mapping
+          $index->mapProperty('purchase_history', 'flattened');
         });
         
         //Example analyzer builder

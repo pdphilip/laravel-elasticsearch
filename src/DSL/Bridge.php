@@ -2,8 +2,11 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
+use Elastic\Elasticsearch\Exception\ClientResponseException;
+use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
-use Elasticsearch\Client;
+use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\Client;
 
 
 class Bridge
@@ -98,8 +101,6 @@ class Bridge
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
-
-//        dd($params);
         
         return $this->_returnSearch($params, __FUNCTION__);
         
@@ -116,7 +117,8 @@ class Bridge
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag($source));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
@@ -146,7 +148,8 @@ class Bridge
             return $this->_return($data, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
         
@@ -195,7 +198,8 @@ class Bridge
             
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
         
@@ -312,7 +316,8 @@ class Bridge
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
@@ -364,7 +369,8 @@ class Bridge
             $response = $this->client->indices()->getMapping($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data;
+            
+            return $result->data->asArray();
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
@@ -381,7 +387,7 @@ class Bridge
             $response = $this->client->indices()->getSettings($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data;
+            return $result->data->asArray();
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
@@ -391,17 +397,18 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processIndexCreate($settings): true
+    public function processIndexCreate($settings)
     {
         
         try {
             $params = $this->buildIndexMap($this->index, $settings);
             $response = $this->client->indices()->create($params);
+            
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
             
             return true;
         } catch (Exception $e) {
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
         }
         
@@ -413,7 +420,6 @@ class Bridge
     public function processIndexDelete(): bool
     {
         $params = ['index' => $this->index];
-        
         try {
             $response = $this->client->indices()->delete($params);
             $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
@@ -517,7 +523,8 @@ class Bridge
             return $this->_return($process['count'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
@@ -532,7 +539,8 @@ class Bridge
             return $this->_return($process['aggregations']['max_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
@@ -545,7 +553,8 @@ class Bridge
             
             return $this->_return($process['aggregations']['min_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
@@ -560,7 +569,8 @@ class Bridge
             return $this->_return($process['aggregations']['sum_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
@@ -574,7 +584,8 @@ class Bridge
             
             return $this->_return($process['aggregations']['avg_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
     }
     
@@ -587,7 +598,8 @@ class Bridge
             
             return $this->_return($process['aggregations']['statistics'] ?? [], $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
         }
         
     }
@@ -628,7 +640,6 @@ class Bridge
     
     private function _return($data, $meta, $params, $queryTag): Results
     {
-        unset($meta['_source']);
         
         $results = new Results($data, $meta, $params, $queryTag);
         if ($this->queryLogger && !$this->queryLoggerOnErrorOnly) {

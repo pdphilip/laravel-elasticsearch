@@ -2,6 +2,9 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
+use Elastic\Elasticsearch\Response\Elasticsearch;
+
+
 class Results
 {
     private array $_meta;
@@ -12,6 +15,11 @@ class Results
     
     public function __construct($data, $meta, $params, $queryTag)
     {
+        
+        if (is_object($meta)) {
+            $meta = (array)$meta;
+        }
+        unset($meta['_source']);
         $this->data = $data;
         $this->_meta = ['query' => $queryTag] + $meta;
         $this->_meta['params'] = $params;
@@ -22,7 +30,9 @@ class Results
     
     public function setError($error, $errorCode): void
     {
+        
         if ($this->_isJson($error)) {
+            
             $jsonError = json_decode($error);
             if (!empty($jsonError->error->reason)) {
                 $error = $jsonError->error->reason;

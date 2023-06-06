@@ -2,55 +2,55 @@
 
 namespace PDPhilip\Elasticsearch;
 
+use Elastic\Elasticsearch\Client;
 use PDPhilip\Elasticsearch\DSL\Bridge;
-use Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use phpDocumentor\Reflection\Types\Scalar;
 use RuntimeException;
 
 
 class Connection extends BaseConnection
 {
-
-    protected $client;
-    protected $index;
+    
+    protected Client $client;
+    protected string $index;
     protected $maxSize;
-    protected $indexPrefix;
-
-
+    protected string $indexPrefix;
+    
+    
     public function __construct(array $config)
     {
         $this->config = $config;
-
+        
         if (!empty($config['index_prefix'])) {
             $this->indexPrefix = $config['index_prefix'];
         }
-
+        
         $this->client = $this->buildConnection();
-
+        
         $this->useDefaultPostProcessor();
-
+        
         $this->useDefaultSchemaGrammar();
-
+        
         $this->useDefaultQueryGrammar();
-
+        
     }
-
-    public function getIndexPrefix()
+    
+    public function getIndexPrefix(): string
     {
         return $this->indexPrefix;
     }
-
-
-    public function getTablePrefix()
+    
+    
+    public function getTablePrefix(): string
     {
         return $this->getIndexPrefix();
     }
-
-    public function setIndex($index)
+    
+    public function setIndex($index): string
     {
         $this->index = $index;
         if ($this->indexPrefix) {
@@ -58,31 +58,31 @@ class Connection extends BaseConnection
                 $this->index = $this->indexPrefix.'_'.$index;
             }
         }
-
+        
         return $this->getIndex();
     }
-
+    
     public function getSchemaGrammar()
     {
         return new Schema\Grammar($this);
     }
-
-    public function getIndex()
+    
+    public function getIndex(): string
     {
         return $this->index;
     }
-
+    
     public function setMaxSize($value)
     {
         $this->maxSize = $value;
     }
-
+    
     public function table($table, $as = null)
     {
         return $this->setIndex($table);
     }
-
-
+    
+    
     /**
      * @inheritdoc
      */
@@ -90,8 +90,8 @@ class Connection extends BaseConnection
     {
         return new Schema\Builder($this);
     }
-
-
+    
+    
     /**
      * @inheritdoc
      */
@@ -99,16 +99,16 @@ class Connection extends BaseConnection
     {
         unset($this->connection);
     }
-
-
+    
+    
     /**
      * @inheritdoc
      */
-    public function getDriverName()
+    public function getDriverName(): string
     {
         return 'elasticsearch';
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -116,7 +116,7 @@ class Connection extends BaseConnection
     {
         return new Query\Processor();
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -124,7 +124,7 @@ class Connection extends BaseConnection
     {
         return new Query\Grammar();
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -132,25 +132,25 @@ class Connection extends BaseConnection
     {
         return new Schema\Grammar();
     }
-
-
+    
+    
     //----------------------------------------------------------------------
     // Connection Builder
     //----------------------------------------------------------------------
-
-    protected function buildConnection()
+    
+    protected function buildConnection(): Client
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
         $type = strtolower($type);
-        if (!in_array($type, ['http', 'cloud', 'api'])) {
+        if (!in_array($type, ['http', 'cloud'])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
-
+        
         return $this->{'_'.$type.'Connection'}();
-
+        
     }
-
-    protected function _httpConnection()
+    
+    protected function _httpConnection(): Client
     {
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -161,13 +161,13 @@ class Connection extends BaseConnection
             $cb->setBasicAuthentication($username, $pass)->build();
         }
         if ($certPath) {
-            $cb->setSSLVerification($certPath);
+            $cb->setCABundle($certPath);
         }
-
+        
         return $cb->build();
     }
-
-    protected function _cloudConnection()
+    
+    protected function _cloudConnection(): Client
     {
         $cloudId = config('database.connections.elasticsearch.cloud_id') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -177,40 +177,26 @@ class Connection extends BaseConnection
         $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
         if ($apiId && $apiKey) {
-            $cb->setApiKey($apiId, $apiKey)->build();
+            $cb->setApiKey($apiKey, $apiId)->build();
         } elseif ($username && $pass) {
             $cb->setBasicAuthentication($username, $pass)->build();
         }
         if ($certPath) {
             $cb->setSSLVerification($certPath);
         }
-
+        
         return $cb->build();
     }
-
-
-    protected function _apiConnection()
-    {
-        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
-        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
-        $cb = ClientBuilder::create()->setApiKey($apiId, $apiKey);
-        if ($certPath) {
-            $cb->setSSLVerification($certPath);
-        }
-
-        return $cb->build();
-    }
-
-
+    
+    
     //----------------------------------------------------------------------
     // Dynamic call routing to DSL bridge
     //----------------------------------------------------------------------
-
+    
     public function __call($method, $parameters)
     {
         $bridge = new Bridge($this->client, $this->index, $this->maxSize);
-
+        
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }
 }
