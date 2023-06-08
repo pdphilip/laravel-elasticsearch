@@ -10,7 +10,7 @@ use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 class Builder extends BaseEloquentBuilder
 {
     use QueriesRelationships;
-
+    
     /**
      * The methods that should be returned from query builder.
      *
@@ -52,17 +52,47 @@ class Builder extends BaseEloquentBuilder
         'createIndex',
         'search',
     ];
-
-
+    
+    
     /**
      * @inheritdoc
      */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
+    public function chunkById($count, callable $callback, $column = null, $alias = null)
     {
-        return parent::chunkById($count, $callback, $column, $alias);
+        
+        $column = $column ?? $this->defaultKeyName();
+        
+        $alias = $alias ?? $column;
+        
+        $lastId = null;
+        
+        do {
+            $clone = clone $this;
+            
+            $results = $clone->forPageAfterId($count, $lastId, $column)->get();
+            
+            $countResults = $results->count();
+            
+            if ($countResults == 0) {
+                break;
+            }
+            if ($callback($results) === false) {
+                return false;
+            }
+            //if alias ends with .keyword then remove it
+            $aliasClean = $alias;
+            if (substr($aliasClean, -8) == '.keyword') {
+                $aliasClean = substr($aliasClean, 0, -8);
+            }
+            $lastId = $results->last()->{$aliasClean};
+            
+            unset($results);
+        } while ($countResults == $count);
+        
+        return true;
     }
-
-
+    
+    
     /**
      * @inheritDoc
      */
@@ -70,35 +100,35 @@ class Builder extends BaseEloquentBuilder
     {
         return $this->query->getConnection();
     }
-
+    
     /**
      * @inerhitDoc
      */
     public function getModels($columns = ['*'])
     {
-
+        
         $data = $this->query->get($columns);
         $results = $this->model->hydrate($data->all())->all();
-
+        
         return ['results' => $results];
-
+        
     }
-
-
+    
+    
     /**
      * @see getModels($columns = ['*'])
      */
     public function searchModels($columns = ['*'])
     {
-
+        
         $data = $this->query->search($columns);
         $results = $this->model->hydrate($data->all())->all();
-
+        
         return ['results' => $results];
-
+        
     }
-
-
+    
+    
     /**
      * @inerhitDoc
      */
@@ -109,12 +139,12 @@ class Builder extends BaseEloquentBuilder
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
-
+        
         return $builder->getModel()->newCollection($models);
-
+        
     }
-
-
+    
+    
     /**
      *
      * @see get($columns = ['*'])
@@ -123,15 +153,15 @@ class Builder extends BaseEloquentBuilder
     {
         $builder = $this->applyScopes();
         $fetch = $builder->searchModels($columns);
-
+        
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
-
+        
         return $builder->getModel()->newCollection($models);
     }
-
-
+    
+    
     /**
      *
      * @param    array    $values
@@ -143,25 +173,25 @@ class Builder extends BaseEloquentBuilder
         if (!$this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
             return $values;
         }
-
+        
         $column = $this->model->getUpdatedAtColumn();
         $values = array_merge([$column => $this->model->freshTimestampString()], $values);
-
+        
         return $values;
     }
-
+    
     public function createWithoutRefresh(array $attributes = [])
     {
         return tap($this->newModelInstance($attributes), function ($instance) {
             $instance->saveWithoutRefresh();
         });
     }
-
-
+    
+    
     //----------------------------------------------------------------------
     // ES Filters
     //----------------------------------------------------------------------
-
+    
     /**
      * @param    string    $field
      * @param    array    $topLeft
@@ -172,10 +202,10 @@ class Builder extends BaseEloquentBuilder
     public function filterGeoBox(string $field, array $topLeft, array $bottomRight)
     {
         $this->query->filterGeoBox($field, $topLeft, $bottomRight);
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $field
      * @param    string    $distance
@@ -186,14 +216,14 @@ class Builder extends BaseEloquentBuilder
     public function filterGeoPoint(string $field, string $distance, array $geoPoint)
     {
         $this->query->filterGeoPoint($field, $distance, $geoPoint);
-
+        
         return $this;
     }
-
+    
     //----------------------------------------------------------------------
     // ES Search query builders
     //----------------------------------------------------------------------
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -203,10 +233,10 @@ class Builder extends BaseEloquentBuilder
     public function term(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor);
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -216,10 +246,10 @@ class Builder extends BaseEloquentBuilder
     public function andTerm(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'AND');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -229,10 +259,10 @@ class Builder extends BaseEloquentBuilder
     public function orTerm(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'OR');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -242,10 +272,10 @@ class Builder extends BaseEloquentBuilder
     public function fuzzyTerm(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, null, 'fuzzy');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -255,10 +285,10 @@ class Builder extends BaseEloquentBuilder
     public function andFuzzyTerm(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'AND', 'fuzzy');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $term
      * @param    int|null    $boostFactor
@@ -268,10 +298,10 @@ class Builder extends BaseEloquentBuilder
     public function orFuzzyTerm(string $term, int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'OR', 'fuzzy');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $regEx
      * @param    int|null    $boostFactor
@@ -281,10 +311,10 @@ class Builder extends BaseEloquentBuilder
     public function regEx(string $regEx, int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, null, 'regex');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $regEx
      * @param    int|null    $boostFactor
@@ -294,10 +324,10 @@ class Builder extends BaseEloquentBuilder
     public function andRegEx(string $regEx, int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, 'AND', 'regex');
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $regEx
      * @param    int|null    $boostFactor
@@ -307,10 +337,10 @@ class Builder extends BaseEloquentBuilder
     public function orRegEx(string $regEx, int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, 'OR', 'regex');
-
+        
         return $this;
     }
-
+    
     /**
      * @param $value
      *
@@ -319,10 +349,10 @@ class Builder extends BaseEloquentBuilder
     public function minShouldMatch($value)
     {
         $this->query->minShouldMatch($value);
-
+        
         return $this;
     }
-
+    
     /**
      * @param    float    $value
      *
@@ -331,10 +361,10 @@ class Builder extends BaseEloquentBuilder
     public function minScore(float $value)
     {
         $this->query->minScore($value);
-
+        
         return $this;
     }
-
+    
     /**
      * @param    string    $field
      * @param    int|null    $boostFactor
@@ -344,10 +374,10 @@ class Builder extends BaseEloquentBuilder
     public function field(string $field, int $boostFactor = null)
     {
         $this->query->searchField($field, $boostFactor);
-
+        
         return $this;
     }
-
+    
     /**
      * @param    array    $fields
      *
@@ -356,14 +386,14 @@ class Builder extends BaseEloquentBuilder
     public function fields(array $fields)
     {
         $this->query->searchFields($fields);
-
+        
         return $this;
     }
-
+    
     public function hydrate(array $items)
     {
         $instance = $this->newModelInstance();
-
+        
         return $instance->newCollection(array_map(function ($item) use ($instance) {
             $recordIndex = null;
             if (is_array($item)) {
@@ -373,13 +403,13 @@ class Builder extends BaseEloquentBuilder
                 }
             }
             $model = $instance->newFromBuilder($item);
-
+            
             if ($recordIndex) {
                 $model->setRecordIndex($recordIndex);
                 $model->setIndex($recordIndex);
-
+                
             }
-
+            
             return $model;
         }, $items));
     }
