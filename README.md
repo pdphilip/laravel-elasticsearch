@@ -1288,7 +1288,7 @@ If you need to run a query that will return a large number of results, you can u
 results in chunks. You can chunk as you normally do in Laravel:
 
 ```php
-Product::chunk(1000, function ($products) use (&$prodIds) {
+Product::chunk(1000, function ($products) {
     foreach ($products as $product) {
         //Increase price by 10%
         $currentPrice = $product->price;
@@ -1309,7 +1309,7 @@ To counter this you have two options:
    field that's unique for each record.
 
 ```php
-Product::chunkById(1000, function ($products) use (&$prodIds) {
+Product::chunkById(1000, function ($products) {
     foreach ($products as $product) {
         //Increase price by 10%
         $currentPrice = $product->price;
