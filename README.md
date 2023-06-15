@@ -1281,6 +1281,44 @@ Schema::dsl('open',['index' => 'my_index'])
 Behind the scenes it uses the official elasticsearch PHP client, it will call `$client->indices()->{$method}($params);`
 
 
+Chunking
+--------
+
+If you need to run a query that will return a large number of results, you can use the `chunk()` method to retrieve the
+results in chunks. You can chunk as you normally do in Laravel:
+
+```php
+Product::chunk(1000, function ($products) use (&$prodIds) {
+    foreach ($products as $product) {
+        //Increase price by 10%
+        $currentPrice = $product->price;
+        $product->price = $currentPrice * 1.1;
+        $product->save();
+    }
+});
+```
+
+**Note**: Elasticsearch's default settings will fail when you try to chunk with the following
+error: `Fielddata access on the _id field is disallowed`
+
+To counter this you have two options:
+
+1. Update Elasticsearch's settings to allow fielddata access on the _id field: Set the value
+   of `indices.id_field_data.enable` to `true` in elasticsearch.yml
+2. Use the `chunkById()` method instead of `chunk()` - This will chunk on a field other than `_id`, but you would need a
+   field that's unique for each record.
+
+```php
+Product::chunkById(1000, function ($products) use (&$prodIds) {
+    foreach ($products as $product) {
+        //Increase price by 10%
+        $currentPrice = $product->price;
+        $product->price = $currentPrice * 1.1;
+        $product->save();
+    }
+}, 'product_sku.keyword');
+```
+
 Queues
 ----------
 _[Coming]_
