@@ -300,7 +300,8 @@ class Bridge
                 'id'    => $wheres['_id'],
             ];
             try {
-                $response = $this->client->delete($params);
+                $responseObject = $this->client->delete($params);
+                $response = $responseObject->asArray();
                 $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
                 
                 return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
@@ -310,7 +311,8 @@ class Bridge
         }
         try {
             $params = $this->buildParams($this->index, $wheres, $options);
-            $response = $this->client->deleteByQuery($params);
+            $responseObject = $this->client->deleteByQuery($params);
+            $response = $responseObject->asArray();
             $response['deleteCount'] = $response['deleted'] ?? 0;
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
@@ -365,11 +367,13 @@ class Bridge
     {
         $params = ['index' => $index];
         try {
-            $response = $this->client->indices()->getMapping($params);
             
+            $responseObject = $this->client->indices()->getMapping($params);
+            $response = $responseObject->asArray();
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data->asArray();
+            return $result->data;
+            
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
@@ -383,10 +387,12 @@ class Bridge
     {
         $params = ['index' => $index];
         try {
-            $response = $this->client->indices()->getSettings($params);
+            
+            $responseObject = $this->client->indices()->getSettings($params);
+            $response = $responseObject->asArray();
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
-            return $result->data->asArray();
+            return $result->data;
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
