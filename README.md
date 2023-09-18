@@ -94,6 +94,7 @@ ES_CLOUD_ID=
 ES_API_ID=
 ES_API_KEY=
 ES_SSL_CERT=
+ES_INDEX_PREFIX=
 ```
 
 <details>
@@ -132,7 +133,7 @@ Add the `elasticsearch` connection in `config/database.php`
             'api_id'       => env('ES_API_ID', ''),
             'api_key'      => env('ES_API_KEY', ''),
             'ssl_cert'     => env('ES_SSL_CERT', ''),
-            'index_prefix' => false, //prefix all Laravel administered indices
+            'index_prefix' => env('ES_INDEX_PREFIX', false),
             'query_log'    => [
                 'index'      => 'laravel_query_logs', //Or false to disable query logging
                 'error_only' => true, //If false, the all queries are logged
