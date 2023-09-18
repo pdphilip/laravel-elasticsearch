@@ -24,10 +24,16 @@ Installation
 
 ## Elasticsearch 8.x
 
-Laravel 9.x:
+Laravel 10.x:
 
 ```bash
 $ composer require pdphilip/elasticsearch
+```
+
+Laravel 9.x:
+
+```bash
+$ composer require pdphilip/elasticsearch:~2.9
 ```
 
 Laravel 8.x:
