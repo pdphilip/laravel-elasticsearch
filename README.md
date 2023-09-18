@@ -27,7 +27,7 @@ Installation
 Laravel 9.x:
 
 ```bash
-$ composer require pdphilip/elasticsearch
+$ composer require pdphilip/elasticsearch:~2.9
 ```
 
 Laravel 8.x:
