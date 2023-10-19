@@ -248,7 +248,7 @@ trait QueryBuilder
     }
     
     
-    private static function _escape($value)
+    public static function _escape($value)
     {
         $specialChars = ['+', '-', '=', '&&', '||', '>', '<', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', '\\'];
         foreach ($specialChars as $char) {
