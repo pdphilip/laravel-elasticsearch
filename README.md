@@ -1468,9 +1468,3 @@ once and not update immediately or won't need to search for the record immediate
 ### Unsupported Eloquent methods
 
 `upsert()`, `distinct()`, `groupBy()`, `groupByRaw()`
-
-Acknowledgements
--------------
-
-This package was inspired by [jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb), a MongoDB
-implementation of Laravel's Eloquent ORM - Thank you!
