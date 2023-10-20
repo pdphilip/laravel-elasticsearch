@@ -247,19 +247,13 @@ trait QueryBuilder
         
     }
     
-    public static function _escape($string): string
+    public static function _escape($value): string
     {
-        //+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /
-        $stripped = preg_replace('/\W/', '\\\\$0', $string);
-        
-        //Put the spaces back;
-        $stripped = str_replace('\ ', ' ', $stripped);
-        //Edge cases
-        $stripped = str_replace('\&\&', '\&&', $stripped);
-        $stripped = str_replace('\|\|', '\||', $stripped);
-        
-        return $stripped;
-        
+        $specialChars = ['"', '\\', '~', '^'];
+        foreach ($specialChars as $char) {
+            $value = str_replace($char, "\\".$char, $value);
+        }
+        return $value;
     }
     
     private function _buildQuery($wheres): array
