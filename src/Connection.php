@@ -6,9 +6,7 @@ use Elastic\Elasticsearch\Client;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 use RuntimeException;
 
 
@@ -44,6 +42,11 @@ class Connection extends BaseConnection
         return $this->indexPrefix;
     }
     
+    public function setIndexPrefix($newPrefix): void
+    {
+        $this->indexPrefix = $newPrefix;
+    }
+    
     
     public function getTablePrefix(): string
     {
@@ -77,11 +80,13 @@ class Connection extends BaseConnection
         $this->maxSize = $value;
     }
     
+    
     public function table($table, $as = null)
     {
-        return $this->setIndex($table);
+        $query = new Query\Builder($this, new Query\Processor());
+        
+        return $query->from($table);
     }
-    
     
     /**
      * @inheritdoc
@@ -195,6 +200,10 @@ class Connection extends BaseConnection
     
     public function __call($method, $parameters)
     {
+        if (!$this->index) {
+            $this->index = $this->indexPrefix.'*';
+        }
+        
         $bridge = new Bridge($this->client, $this->index, $this->maxSize);
         
         return $bridge->{'process'.Str::studly($method)}(...$parameters);

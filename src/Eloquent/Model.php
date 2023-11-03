@@ -16,21 +16,21 @@ use RuntimeException;
 abstract class Model extends BaseModel
 {
     use HybridRelations, ModelDocs;
-
-
+    
+    
     const MAX_SIZE = 1000;
-
+    
     protected $index;
-
+    
     protected $recordIndex;
-
+    
     protected $primaryKey = '_id';
-
+    
     protected $keyType = 'string';
-
+    
     protected $parentRelation;
-
-
+    
+    
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -38,8 +38,8 @@ abstract class Model extends BaseModel
         $this->setRecordIndex();
         $this->forcePrimaryKey();
     }
-
-
+    
+    
     public function setIndex($index = null)
     {
         if ($index) {
@@ -48,51 +48,51 @@ abstract class Model extends BaseModel
         $this->index = $this->index ?? $this->getTable();
         unset($this->table);
     }
-
+    
     public function setRecordIndex($recordIndex = null)
     {
         if ($recordIndex) {
             return $this->recordIndex = $recordIndex;
         }
-
+        
         return $this->recordIndex = $this->index;
     }
-
+    
     public function getRecordIndex()
     {
         return $this->recordIndex;
     }
-
+    
     public function setTable($index)
     {
         $this->index = $index;
         unset($this->table);
-
+        
         return $this;
     }
-
-
+    
+    
     public function forcePrimaryKey()
     {
         $this->primaryKey = '_id';
     }
-
-
+    
+    
     public function getMaxSize()
     {
         return static::MAX_SIZE;
     }
-
+    
     public function getIdAttribute($value = null)
     {
         // If no value for id, then set ES's _id
         if (!$value && array_key_exists('_id', $this->attributes)) {
             $value = $this->attributes['_id'];
         }
-
+        
         return $value;
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -100,7 +100,7 @@ abstract class Model extends BaseModel
     {
         return $this->getKeyName();
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -108,16 +108,16 @@ abstract class Model extends BaseModel
     {
         return parent::asDateTime($value);
     }
-
+    
     /**
      * @inheritdoc
      */
     protected function asDateTime($value)
     {
-
+        
         return parent::asDateTime($value);
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -125,7 +125,7 @@ abstract class Model extends BaseModel
     {
         return $this->dateFormat ? : 'Y-m-d H:i:s';
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -134,12 +134,12 @@ abstract class Model extends BaseModel
 //        return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
     }
-
+    
     public function getIndex()
     {
         return $this->index ? : parent::getTable();
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -147,7 +147,7 @@ abstract class Model extends BaseModel
     {
         return $this->getIndex();
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -156,15 +156,15 @@ abstract class Model extends BaseModel
         if (!$key) {
             return;
         }
-
+        
         // Dot notation support.
         if (Str::contains($key, '.') && Arr::has($this->attributes, $key)) {
             return $this->getAttributeValue($key);
         }
-
+        
         return parent::getAttribute($key);
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -174,29 +174,29 @@ abstract class Model extends BaseModel
         if (Str::contains($key, '.')) {
             return Arr::get($this->attributes, $key);
         }
-
+        
         return parent::getAttributeFromArray($key);
     }
-
+    
     /**
      * @inheritdoc
      */
     public function setAttribute($key, $value)
     {
-
+        
         if (Str::contains($key, '.')) {
             if (in_array($key, $this->getDates()) && $value) {
                 $value = $this->fromDateTime($value);
             }
-
+            
             Arr::set($this->attributes, $key, $value);
-
+            
             return;
         }
-
+        
         return parent::setAttribute($key, $value);
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -204,7 +204,7 @@ abstract class Model extends BaseModel
     {
         return $this->casts;
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -213,27 +213,27 @@ abstract class Model extends BaseModel
         if (!array_key_exists($key, $this->original)) {
             return false;
         }
-
+        
         $attribute = Arr::get($this->attributes, $key);
         $original = Arr::get($this->original, $key);
-
+        
         if ($attribute === $original) {
             return true;
         }
-
+        
         if (null === $attribute) {
             return false;
         }
-
+        
         if ($this->hasCast($key, static::$primitiveCastTypes)) {
             return $this->castAttribute($key, $attribute) ===
                 $this->castAttribute($key, $original);
         }
-
+        
         return is_numeric($attribute) && is_numeric($original) && strcmp((string)$attribute, (string)$original) === 0;
     }
-
-
+    
+    
     /**
      * Append one or more values to the underlying attribute value and sync with original.
      *
@@ -244,21 +244,21 @@ abstract class Model extends BaseModel
     protected function pushAttributeValues($column, array $values, $unique = false)
     {
         $current = $this->getAttributeFromArray($column) ? : [];
-
+        
         foreach ($values as $value) {
             // Don't add duplicate values when we only want unique values.
             if ($unique && (!is_array($current) || in_array($value, $current))) {
                 continue;
             }
-
+            
             $current[] = $value;
         }
-
+        
         $this->attributes[$column] = $current;
-
+        
         $this->syncOriginalAttribute($column);
     }
-
+    
     /**
      * Remove one or more values to the underlying attribute value and sync with original.
      *
@@ -268,22 +268,22 @@ abstract class Model extends BaseModel
     protected function pullAttributeValues($column, array $values)
     {
         $current = $this->getAttributeFromArray($column) ? : [];
-
+        
         if (is_array($current)) {
             foreach ($values as $value) {
                 $keys = array_keys($current, $value);
-
+                
                 foreach ($keys as $key) {
                     unset($current[$key]);
                 }
             }
         }
-
+        
         $this->attributes[$column] = array_values($current);
-
+        
         $this->syncOriginalAttribute($column);
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -291,7 +291,7 @@ abstract class Model extends BaseModel
     {
         return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
     }
-
+    
     /**
      * Set the parent relation.
      *
@@ -301,7 +301,7 @@ abstract class Model extends BaseModel
     {
         $this->parentRelation = $relation;
     }
-
+    
     /**
      * Get the parent relation.
      *
@@ -311,17 +311,17 @@ abstract class Model extends BaseModel
     {
         return $this->parentRelation;
     }
-
+    
     /**
      * @inheritdoc
      */
     public function newEloquentBuilder($query)
     {
         $builder = new Builder($query);
-
+        
         return $builder;
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -336,13 +336,14 @@ abstract class Model extends BaseModel
                 throw new RuntimeException('Invalid connection settings; expected "elasticsearch"');
             }
         }
-
+        
         $connection->setIndex($this->getTable());
         $connection->setMaxSize($this->getMaxSize());
-
+        
+        
         return new QueryBuilder($connection, $connection->getPostProcessor());
     }
-
+    
     /**
      * @inheritdoc
      */
@@ -350,8 +351,8 @@ abstract class Model extends BaseModel
     {
         return $key;
     }
-
-
+    
+    
     /**
      * Get loaded relations for the instance without parent.
      *
@@ -360,40 +361,39 @@ abstract class Model extends BaseModel
     protected function getRelationsWithoutParent()
     {
         $relations = $this->getRelations();
-
+        
         if ($parentRelation = $this->getParentRelation()) {
             unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
         }
-
+        
         return $relations;
     }
-
-
+    
+    
     protected function isGuardableColumn($key)
     {
         return true;
     }
-
-
+    
+    
     public function saveWithoutRefresh(array $options = [])
     {
         $this->mergeAttributesFromCachedCasts();
-
+        
         $query = $this->newModelQuery();
         $query->setRefresh(false);
-
+        
         if ($this->exists) {
             $saved = $this->isDirty() ? $this->performUpdate($query) : true;
         } else {
             $saved = $this->performInsert($query);
         }
-
+        
         if ($saved) {
             $this->finishSave($options);
         }
-
+        
         return $saved;
     }
-
-
+    
 }

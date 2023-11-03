@@ -49,6 +49,10 @@ trait QueryBuilder
                 }
                 $queryString['fields'][] = $field;
             }
+            if (count($queryString['fields']) > 1) {
+                $queryString['type'] = 'cross_fields';
+            }
+            
         }
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
@@ -58,7 +62,7 @@ trait QueryBuilder
         
         $params['body']['query']['query_string'] = $queryString;
         
-        if ($columns && $columns != '*') {
+        if ($columns && $columns != ['*']) {
             $params['body']['_source'] = $columns;
         }
         if ($options) {
@@ -75,6 +79,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -99,7 +104,6 @@ trait QueryBuilder
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
         }
-        
         $opts = $this->_buildOptions($options);
         if ($opts) {
             foreach ($opts as $key => $value) {
@@ -112,6 +116,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -359,7 +364,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         if (!empty($body['query']['query_string'])) {
             $filteredBody = [
@@ -372,7 +377,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         
         return $params;

@@ -18,20 +18,21 @@ class Builder extends BaseEloquentBuilder
      * @var array
      */
     protected $passthru = [
+        
         'average',
         'avg',
         'count',
         'dd',
-        'doesntExist',
+        'doesntexist',
         'dump',
         'exists',
-        'getBindings',
-        'getConnection',
-        'getGrammar',
+        'getbindings',
+        'getconnection',
+        'getgrammar',
         'insert',
-        'insertGetId',
-        'insertOrIgnore',
-        'insertUsing',
+        'insertgetid',
+        'insertorignore',
+        'insertusing',
         'max',
         'min',
         'pluck',
@@ -43,17 +44,16 @@ class Builder extends BaseEloquentBuilder
         //ES only:
         'matrix',
         'query',
-        'rawSearch',
-        'getIndexSettings',
-        'getIndexMappings',
-        'deleteIndexIfExists',
-        'deleteIndex',
+        'rawsearch',
+        'getindexsettings',
+        'getindexmappings',
+        'deleteindexifexists',
+        'deleteindex',
         'truncate',
-        'indexExists',
-        'createIndex',
+        'indexexists',
+        'createindex',
         'search',
     ];
-    
     
     /**
      * @inheritdoc
@@ -149,7 +149,6 @@ class Builder extends BaseEloquentBuilder
     {
         $builder = $this->applyScopes();
         $fetch = $builder->searchModels($columns);
-        
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
@@ -187,6 +186,14 @@ class Builder extends BaseEloquentBuilder
         return tap($this->newModelInstance($attributes), function ($instance) {
             $instance->saveWithoutRefresh();
         });
+    }
+    
+    public function updateWithoutRefresh(array $attributes = [])
+    {
+        $query = $this->toBase();
+        $query->setRefresh(false);
+        
+        return $query->update($this->addUpdatedAtColumn($attributes));
     }
     
     //----------------------------------------------------------------------
@@ -417,4 +424,5 @@ class Builder extends BaseEloquentBuilder
             return $model;
         }, $items));
     }
+    
 }

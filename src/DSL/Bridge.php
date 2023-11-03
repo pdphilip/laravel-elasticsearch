@@ -3,9 +3,9 @@
 namespace PDPhilip\Elasticsearch\DSL;
 
 use Elastic\Elasticsearch\Exception\ClientResponseException;
+use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
-use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Client;
 
 
@@ -90,6 +90,7 @@ class Bridge
      */
     public function processFind($wheres, $options, $columns): Results
     {
+        
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         
         return $this->_returnSearch($params, __FUNCTION__);
@@ -100,6 +101,7 @@ class Bridge
      */
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
+        
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
         
         return $this->_returnSearch($params, __FUNCTION__);
@@ -115,6 +117,7 @@ class Bridge
             $process = $this->client->search($params);
             
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
+            
         } catch (Exception $e) {
             
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
@@ -347,18 +350,34 @@ class Bridge
     // Index administration
     //----------------------------------------------------------------------
     
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
     public function processGetIndices($all): array
     {
-        $response = $this->client->cat()->indices();
+        $index = $this->index;
+        if ($all) {
+            $index = '*';
+        }
+        $response = $this->client->indices()->get(['index' => $index]);
         
-        return $this->catIndices($response, $all);
+        return $response->asArray();
     }
     
     public function processIndexExists($index): bool
     {
         $params = ['index' => $index];
         
-        return $this->client->indices()->exists($params);
+        try {
+            $test = $this->client->indices()->exists($params);
+            
+            return $test->getStatusCode() == 200;
+        } catch (Exception $e) {
+            return false;
+        }
+        
     }
     
     /**
@@ -401,9 +420,8 @@ class Bridge
      */
     public function processIndexCreate($settings)
     {
-        
+        $params = $this->buildIndexMap($this->index, $settings);
         try {
-            $params = $this->buildIndexMap($this->index, $settings);
             $response = $this->client->indices()->create($params);
             
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
@@ -462,15 +480,32 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processReIndex($newIndex, $oldIndex): bool
+    public function processReIndex($oldIndex, $newIndex): Results
     {
-        $params['source']['index'] = $oldIndex;
-        $params['dest']['index'] = $newIndex;
+        $prefix = str_replace('*', '', $this->index);
+        if ($prefix) {
+            $oldIndex = $prefix.'_'.$oldIndex;
+            $newIndex = $prefix.'_'.$newIndex;
+        }
+        $params['body']['source']['index'] = $oldIndex;
+        $params['body']['dest']['index'] = $newIndex;
         try {
             $response = $this->client->reindex($params);
-            $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
+            $result = $response->asArray();
+            $resultData = [
+                'took'              => $result['took'],
+                'total'             => $result['total'],
+                'created'           => $result['created'],
+                'updated'           => $result['updated'],
+                'deleted'           => $result['deleted'],
+                'batches'           => $result['batches'],
+                'version_conflicts' => $result['version_conflicts'],
+                'noops'             => $result['noops'],
+                'retries'           => $result['retries'],
+            ];
             
-            return true;
+            return $this->_return($resultData, $result, $params, $this->_queryTag(__FUNCTION__));
+            
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);

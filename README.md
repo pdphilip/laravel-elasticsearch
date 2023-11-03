@@ -320,7 +320,8 @@ You can use these values in a normal [where](#where) clause, or use the built-in
 $products = Product::whereDate('created_at', '2022-01-29')->get();
 ```
 
-**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has disabled for the current version of
+**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has been disabled for the current version
+of
 this plugin
 
 ### Aggregation
@@ -532,8 +533,8 @@ $updates = Product::where('status', 1)->update(['status' => 4]); //Updates all s
 **Saving 'without refresh'**
 
 Elasticsearch will write a new document and return the `_id` before it has been indexed. This means that there could be
-a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to *
-write a new document and wait until it has been indexed* - If you know that you won't need to look up or manipulate the
+a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to
+*write a new document and wait until it has been indexed* - If you know that you won't need to look up or manipulate the
 new document immediately, then you can leverage the speed benefit of `write and move on` with `saveWithoutRefresh()`
 and `createWithoutRefresh()`
 
@@ -1185,7 +1186,7 @@ class MyIndexes extends Migration
 
           //Disk space considerations ::
           //Not indexed and not searchable:
-          $index->text('internal_notes')->docValues(false);  
+          $index->keyword('internal_notes')->docValues(false);  
           //Remove scoring for search:
           $index->array('tags')->norms(false);  
           //Remove from index, can't search by this field but can still use for aggregations:
@@ -1242,20 +1243,90 @@ class MyIndexes extends Migration
 ```
 
 All methods
+Note: If you have configured a prefix in your config file, then all schema methods will be scoped to that prefix.
+
+Index look-ups.
 
 ```php
-Schema::getIndices();
-Schema::getMappings('my_index')
-Schema::getSettings('my_index')
+Schema::getIndex('my_index');
+/**
+return [
+    "my_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+
+Schema::getIndex('page_hits_*');
+/**
+return [
+    "my_prefix_page_hits_2023-01-01" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    "my_prefix_page_hits_2023-01-02" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    ....
+];
+ **/
+Schema::getIndex('my_non_existing_index'); //returns [];
+ 
+Schema::getIndices();  //Equivalent to Schema::getIndex('*');
+ 
+Schema::getMappings('my_index');
+Schema::getSettings('my_index');
+
+//Booleans
+Schema::hasField('my_index','my_field');
+Schema::hasFields('my_index',['field_a','field_b','field_c']);
+Schema::hasIndex('my_index');
+
+```
+
+Overriding the prefix:
+
+```php
+Schema::overridePrefix(null)->getIndex('my_index');
+/**
+return [
+    "my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+Schema::overridePrefix('some_other_prefix')->getIndex('my_index');
+/**
+return [
+    "some_other_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+```
+
+Index Creation, Modification, Deletion
+
+```php
+
 Schema::create('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::createIfNotExists('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::reIndex('from_index','to_index') {
     //......
-})
+});
 Schema::modify('my_index',function (IndexBlueprint $index) {
     //......
 });
@@ -1264,12 +1335,62 @@ Schema::deleteIfExists('my_index')
 Schema::setAnalyser('my_index',function (AnalyzerBlueprint $settings) {
 	//......
 });
-//Booleans
-Schema::hasField('my_index','my_field')
-Schema::hasFields('my_index',['field_a','field_b','field_c'])
-Schema::hasIndex('my_index')
+
 //DIY
-Schema::dsl('indexMethod',$dslParams)
+Schema::dsl('indexMethod',$dslParams);
+```
+
+Re-indexing example:
+
+```php
+//create a new index
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+});
+
+//Create a record assuming you have a model for this index
+SiteLog::create([
+    'url' => 'https://example.com/contact-us',
+    'user_ip' => '0.0.0.0',
+    'location' => ['lat' => -7.3,'lon' => 3.1]
+]);
+//'location' index will be created by elasticsearch as an object
+
+//Trying to filter by location will fail due to the incorrect mapping
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
+
+//Step 1: Create a temporary index with the correct mapping
+Schema::create('temp_site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 2: Re-index the data from the original index to the temporary index
+//This will copy all the records from site_logs to temp_site_logs
+$result = Schema::reIndex('site_logs','temp_site_logs');
+dd($result->data); //confirm that the re-indexing was successful 
+$copiedRecords = DB::connection('elasticsearch')->table('my_prefix_temp_site_logs')->count(); //count the records in the new index, make sure everything is there
+
+//Step 3: Once deemed safe; delete the original index
+Schema::delete('site_logs');
+
+//Step 4: Recreate the original index with the correct mapping
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 5: Re-index the data from the temporary index to the original index
+$result = Schema::reIndex('temp_site_logs','site_logs');
+
+//Step 6: Delete the temporary index
+Schema::delete('temp_site_logs');
+
+//Now you can filter by location
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
 
 ```
 
@@ -1364,7 +1485,7 @@ You will need to set the record's actual index when creating a new record, with 
 Create example:
 
 ```php
-$pageHit = new PageHit
+$pageHit = new PageHit;
 $pageHit->page_id = 4;
 $pageHit->ip = $someIp;
 $pageHit->setIndex('page_hits_'.date('Y-m-d'));
@@ -1376,6 +1497,16 @@ Each eloquent model will have the current record's index embedded into it, to re
 
 ```php
 $pageHit->getRecordIndex();  //returns page_hits_2021-01-01
+```
+
+You can search within a specific index of your dynamic indices model by calling `setIndex('value')` before building
+your query:
+
+```php
+//Search within the index page_hits_2023-01-01 for page_id = 3
+$model = new PageHit;
+$model->setIndex('page_hits_2023-01-01');
+$pageHits = $model->where('page_id', 3)->get();
 ```
 
 RAW DSL
