@@ -2,13 +2,11 @@
 
 namespace PDPhilip\Elasticsearch;
 
+use Elastic\Elasticsearch\Client;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
-use phpDocumentor\Reflection\Types\Scalar;
 use RuntimeException;
 
 
@@ -39,18 +37,23 @@ class Connection extends BaseConnection
         
     }
     
-    public function getIndexPrefix()
+    public function getIndexPrefix(): string
     {
         return $this->indexPrefix;
     }
     
+    public function setIndexPrefix($newPrefix): void
+    {
+        $this->indexPrefix = $newPrefix;
+    }
     
-    public function getTablePrefix()
+    
+    public function getTablePrefix(): string
     {
         return $this->getIndexPrefix();
     }
     
-    public function setIndex($index)
+    public function setIndex($index): string
     {
         $this->index = $index;
         if ($this->indexPrefix) {
@@ -67,7 +70,7 @@ class Connection extends BaseConnection
         return new Schema\Grammar($this);
     }
     
-    public function getIndex()
+    public function getIndex(): string
     {
         return $this->index;
     }
@@ -77,11 +80,13 @@ class Connection extends BaseConnection
         $this->maxSize = $value;
     }
     
+    
     public function table($table, $as = null)
     {
-        return $this->setIndex($table);
+        $query = new Query\Builder($this, new Query\Processor());
+        
+        return $query->from($table);
     }
-    
     
     /**
      * @inheritdoc
@@ -104,7 +109,7 @@ class Connection extends BaseConnection
     /**
      * @inheritdoc
      */
-    public function getDriverName()
+    public function getDriverName(): string
     {
         return 'elasticsearch';
     }
@@ -138,7 +143,7 @@ class Connection extends BaseConnection
     // Connection Builder
     //----------------------------------------------------------------------
     
-    protected function buildConnection()
+    protected function buildConnection(): Client
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
         $type = strtolower($type);
@@ -150,7 +155,7 @@ class Connection extends BaseConnection
         
     }
     
-    protected function _httpConnection()
+    protected function _httpConnection(): Client
     {
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -167,7 +172,7 @@ class Connection extends BaseConnection
         return $cb->build();
     }
     
-    protected function _cloudConnection()
+    protected function _cloudConnection(): Client
     {
         $cloudId = config('database.connections.elasticsearch.cloud_id') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
@@ -195,6 +200,10 @@ class Connection extends BaseConnection
     
     public function __call($method, $parameters)
     {
+        if (!$this->index) {
+            $this->index = $this->indexPrefix.'*';
+        }
+        
         $bridge = new Bridge($this->client, $this->index, $this->maxSize);
         
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
