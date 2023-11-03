@@ -23,7 +23,7 @@
     "illuminate/container": "^7.0",
     "illuminate/database": "^7.0",
     "illuminate/events": "^7.0",
-    "elasticsearch/elasticsearch": "8.7"
+    "elasticsearch/elasticsearch": "8.10"
   },
   "require-dev": {
   },
