@@ -18,26 +18,29 @@ class Builder extends BaseEloquentBuilder
      * @var array
      */
     protected $passthru = [
+        'aggregate',
         'average',
         'avg',
         'count',
         'dd',
         'doesntExist',
+        'doesntExistOr',
         'dump',
         'exists',
+        'existsOr',
+        'explain',
         'getBindings',
         'getConnection',
         'getGrammar',
+        'implode',
         'insert',
         'insertGetId',
         'insertOrIgnore',
         'insertUsing',
         'max',
         'min',
-        'pluck',
-        'pull',
-        'push',
         'raw',
+        'rawValue',
         'sum',
         'toSql',
         //ES only:
@@ -53,7 +56,6 @@ class Builder extends BaseEloquentBuilder
         'createIndex',
         'search',
     ];
-    
     
     /**
      * @inheritdoc
@@ -149,7 +151,6 @@ class Builder extends BaseEloquentBuilder
     {
         $builder = $this->applyScopes();
         $fetch = $builder->searchModels($columns);
-        
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
@@ -187,6 +188,14 @@ class Builder extends BaseEloquentBuilder
         return tap($this->newModelInstance($attributes), function ($instance) {
             $instance->saveWithoutRefresh();
         });
+    }
+    
+    public function updateWithoutRefresh(array $attributes = [])
+    {
+        $query = $this->toBase();
+        $query->setRefresh(false);
+        
+        return $query->update($this->addUpdatedAtColumn($attributes));
     }
     
     //----------------------------------------------------------------------
@@ -417,4 +426,5 @@ class Builder extends BaseEloquentBuilder
             return $model;
         }, $items));
     }
+    
 }

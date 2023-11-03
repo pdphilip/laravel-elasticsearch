@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 trait IndexInterpreter
 {
-    public static function buildIndexMap($index, $raw): array
+    public function buildIndexMap($index, $raw): array
     {
         $params = [];
         if ($index) {
@@ -45,7 +45,7 @@ trait IndexInterpreter
         return $params;
     }
     
-    public static function buildAnalyzerSettings($index, $raw): array
+    public function buildAnalyzerSettings($index, $raw): array
     {
         $params = [];
         $params['index'] = $index;
@@ -70,7 +70,7 @@ trait IndexInterpreter
     }
     
     
-    public static function catIndices($data, $all = false): array
+    public function catIndices($data, $all = false): array
     {
         if (!$all && $data) {
             $indices = $data;
@@ -85,7 +85,7 @@ trait IndexInterpreter
         return $data;
     }
     
-    public static function cleanData($data): array
+    public function cleanData($data): array
     {
         if ($data) {
             array_walk_recursive($data, function (&$item) {
