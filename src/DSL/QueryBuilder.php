@@ -9,11 +9,11 @@ trait QueryBuilder
     
     protected static $filter;
     
-    protected static $bucketOperators = ['and', 'or'];
+    protected static array $bucketOperators = ['and', 'or'];
     
-    protected static $equivalenceOperators = ['in', 'nin'];
+    protected static array $equivalenceOperators = ['in', 'nin'];
     
-    protected static $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
+    protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
     
     
     //======================================================================
@@ -49,6 +49,10 @@ trait QueryBuilder
                 }
                 $queryString['fields'][] = $field;
             }
+            if (count($queryString['fields']) > 1) {
+                $queryString['type'] = 'cross_fields';
+            }
+            
         }
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
@@ -58,7 +62,7 @@ trait QueryBuilder
         
         $params['body']['query']['query_string'] = $queryString;
         
-        if ($columns && $columns != '*') {
+        if ($columns && $columns != ['*']) {
             $params['body']['_source'] = $columns;
         }
         if ($options) {
@@ -75,6 +79,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -99,7 +104,6 @@ trait QueryBuilder
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
         }
-        
         $opts = $this->_buildOptions($options);
         if ($opts) {
             foreach ($opts as $key => $value) {
@@ -112,6 +116,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -247,8 +252,7 @@ trait QueryBuilder
         
     }
     
-    
-    public static function _escape($value)
+    public static function _escape($value): string
     {
         $specialChars = ['"', '\\', '~', '^'];
         foreach ($specialChars as $char) {
@@ -257,7 +261,6 @@ trait QueryBuilder
         
         return $value;
     }
-    
     
     private function _buildQuery($wheres): array
     {
@@ -361,7 +364,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         if (!empty($body['query']['query_string'])) {
             $filteredBody = [
@@ -374,7 +377,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         
         return $params;

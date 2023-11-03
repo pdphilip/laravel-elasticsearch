@@ -11,15 +11,15 @@ class Bridge
     
     use QueryBuilder, IndexInterpreter;
     
-    protected $client;
+    protected Client $client;
     
-    protected $queryLogger = false;
+    protected mixed $queryLogger = false;
     
-    protected $queryLoggerOnErrorOnly = true;
+    protected mixed $queryLoggerOnErrorOnly = true;
     
-    protected $maxSize = 10; //ES default
+    protected int|null $maxSize = 10; //ES default
     
-    private $index;
+    private string|null $index;
     
     
     public function __construct(Client $client, $index, $maxSize)
@@ -98,8 +98,6 @@ class Bridge
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
-
-//        dd($params);
         
         return $this->_returnSearch($params, __FUNCTION__);
         
@@ -110,6 +108,7 @@ class Bridge
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
         }
+//        dd($params);
         try {
             $process = $this->client->search($params);
             
@@ -128,10 +127,9 @@ class Bridge
         if (is_array($column)) {
             $col = $column[0];
         }
-        
-        
+        $params = $this->buildParams($this->index, $wheres);
         try {
-            $params = $this->buildParams($this->index, $wheres);
+            
             $params['body']['aggs']['distinct_'.$col]['terms'] = [
                 'field' => $col,
                 'size'  => $this->maxSize,
@@ -190,15 +188,16 @@ class Bridge
         if ($refresh) {
             $params['refresh'] = $refresh;
         }
+        
         try {
             $response = $this->client->index($params);
-            
             $savedData = ['_id' => $response['_id']] + $data;
             
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($error->errorMessage);
+            
         }
         
         
@@ -294,8 +293,6 @@ class Bridge
     
     public function processDeleteAll($wheres, $options = []): Results
     {
-        
-        
         if (isset($wheres['_id'])) {
             $params = [
                 'index' => $this->index,
@@ -348,9 +345,14 @@ class Bridge
     
     public function processGetIndices($all): array
     {
-        $response = $this->client->cat()->indices();
         
-        return $this->catIndices($response, $all);
+        $index = $this->index;
+        if ($all) {
+            $index = '*';
+        }
+        
+        return $this->client->indices()->get(['index' => $index]);
+        
     }
     
     public function processIndexExists($index): bool
@@ -363,7 +365,7 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processIndexMappings($index)
+    public function processIndexMappings($index): mixed
     {
         $params = ['index' => $index];
         try {
@@ -380,7 +382,7 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processIndexSettings($index)
+    public function processIndexSettings($index): mixed
     {
         $params = ['index' => $index];
         try {
@@ -397,12 +399,12 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processIndexCreate($settings)
+    public function processIndexCreate($settings): true
     {
+        
         try {
             $params = $this->buildIndexMap($this->index, $settings);
             $response = $this->client->indices()->create($params);
-            
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
             
             return true;
@@ -460,15 +462,31 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processReIndex($newIndex, $oldIndex): bool
+    public function processReIndex($oldIndex, $newIndex): Results
     {
-        $params['source']['index'] = $oldIndex;
-        $params['dest']['index'] = $newIndex;
+        $prefix = str_replace('*', '', $this->index);
+        if ($prefix) {
+            $oldIndex = $prefix.'_'.$oldIndex;
+            $newIndex = $prefix.'_'.$newIndex;
+        }
+        $params['body']['source']['index'] = $oldIndex;
+        $params['body']['dest']['index'] = $newIndex;
         try {
             $response = $this->client->reindex($params);
-            $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
+            $result = $response;
+            $resultData = [
+                'took'              => $result['took'],
+                'total'             => $result['total'],
+                'created'           => $result['created'],
+                'updated'           => $result['updated'],
+                'deleted'           => $result['deleted'],
+                'batches'           => $result['batches'],
+                'version_conflicts' => $result['version_conflicts'],
+                'noops'             => $result['noops'],
+                'retries'           => $result['retries'],
+            ];
             
-            return true;
+            return $this->_return($resultData, $result, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
@@ -530,78 +548,70 @@ class Bridge
     
     private function _maxAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            
+            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['max_value'] = ParameterBuilder::maxAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['max_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
-            throw new Exception($result->errorMessage);
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
         }
     }
     
     private function _minAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            
+            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['min_value'] = ParameterBuilder::minAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['min_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
-            throw new Exception($result->errorMessage);
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
         }
     }
     
     private function _sumAggregate($wheres, $options, $columns): Results
     {
         
-        $params = $this->buildParams($this->index, $wheres, $options);
         try {
+            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['sum_value'] = ParameterBuilder::sumAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['sum_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
-            throw new Exception($result->errorMessage);
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
         }
         
     }
     
     private function _avgAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index, $wheres, $options);
         try {
+            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['avg_value'] = ParameterBuilder::avgAggregation($columns[0]);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['avg_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
-            throw new Exception($result->errorMessage);
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
         }
     }
     
     private function _matrixAggregate($wheres, $options, $columns): Results
     {
-        $params = $this->buildParams($this->index, $wheres, $options);
         try {
+            $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs']['statistics'] = ParameterBuilder::matrixAggregation($columns);
             $process = $this->client->search($params);
             
             return $this->_return($process['aggregations']['statistics'] ?? [], $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
-            throw new Exception($result->errorMessage);
+            return $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
         }
         
     }
@@ -640,8 +650,9 @@ class Bridge
         return $this->_return($data, $meta, $params, $queryTag);
     }
     
-    private function _return($data, $meta, $params, $queryTag)
+    private function _return($data, $meta, $params, $queryTag): Results
     {
+        unset($meta['_source']);
         
         $results = new Results($data, $meta, $params, $queryTag);
         if ($this->queryLogger && !$this->queryLoggerOnErrorOnly) {
@@ -650,7 +661,6 @@ class Bridge
         
         return $results;
     }
-    
     
     private function _returnError($errorMsg, $errorCode, $params, $queryTag): Results
     {
