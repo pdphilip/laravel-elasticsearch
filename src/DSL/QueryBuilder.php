@@ -9,11 +9,11 @@ trait QueryBuilder
     
     protected static $filter;
     
-    protected static $bucketOperators = ['and', 'or'];
+    protected static array $bucketOperators = ['and', 'or'];
     
-    protected static $equivalenceOperators = ['in', 'nin'];
+    protected static array $equivalenceOperators = ['in', 'nin'];
     
-    protected static $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
+    protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
     
     
     //======================================================================
@@ -49,6 +49,10 @@ trait QueryBuilder
                 }
                 $queryString['fields'][] = $field;
             }
+            if (count($queryString['fields']) > 1) {
+                $queryString['type'] = 'cross_fields';
+            }
+            
         }
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
@@ -58,7 +62,7 @@ trait QueryBuilder
         
         $params['body']['query']['query_string'] = $queryString;
         
-        if ($columns && $columns != '*') {
+        if ($columns && $columns != ['*']) {
             $params['body']['_source'] = $columns;
         }
         if ($options) {
@@ -75,6 +79,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -83,7 +88,7 @@ trait QueryBuilder
     /**
      * @throws Exception
      */
-    public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null)
+    public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
         if ($index) {
             $params = [
@@ -99,7 +104,6 @@ trait QueryBuilder
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
         }
-        
         $opts = $this->_buildOptions($options);
         if ($opts) {
             foreach ($opts as $key => $value) {
@@ -112,6 +116,7 @@ trait QueryBuilder
         }
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
+            self::$filter = [];
         }
         
         return $params;
@@ -121,7 +126,7 @@ trait QueryBuilder
     // Parsers
     //----------------------------------------------------------------------
     
-    private function _buildQueryString($wheres)
+    private function _buildQueryString($wheres): string
     {
         if ($wheres) {
             foreach ($wheres as $key => $value) {
@@ -132,7 +137,7 @@ trait QueryBuilder
         return '';
     }
     
-    private static function _andQueryString($values)
+    private static function _andQueryString($values): string
     {
         $strings = [];
         foreach ($values as $key => $val) {
@@ -142,7 +147,7 @@ trait QueryBuilder
         return '('.implode(' AND ', $strings).')';
     }
     
-    private static function _orQueryString($values)
+    private static function _orQueryString($values): string
     {
         $strings = [];
         foreach ($values as $key => $val) {
@@ -152,7 +157,7 @@ trait QueryBuilder
         return '('.implode(' OR ', $strings).')';
     }
     
-    private static function _inQueryString($key, $values)
+    private static function _inQueryString($key, $values): string
     {
         $strings = [];
         foreach ($values as $val) {
@@ -162,7 +167,7 @@ trait QueryBuilder
         return '('.$key.':('.implode(' OR ', $strings).'))';
     }
     
-    private static function _ninQueryString($key, $values)
+    private static function _ninQueryString($key, $values): string
     {
         $strings = [];
         foreach ($values as $val) {
@@ -172,7 +177,7 @@ trait QueryBuilder
         return '(NOT '.$key.':('.implode(' OR ', $strings).'))';
     }
     
-    private static function _parseParams($key, $value)
+    private static function _parseParams($key, $value): string
     {
         
         if ($key === 'and' || $key === 'or') {
@@ -257,7 +262,7 @@ trait QueryBuilder
         return $value;
     }
     
-    private function _buildQuery($wheres)
+    private function _buildQuery($wheres): array
     {
         if (!$wheres) {
             return ParameterBuilder::matchAll();
@@ -270,7 +275,7 @@ trait QueryBuilder
     /**
      * @throws Exception
      */
-    private function _buildOptions($options)
+    private function _buildOptions($options): array
     {
         $return = [];
         if ($options) {
@@ -310,7 +315,7 @@ trait QueryBuilder
         return $return;
     }
     
-    public function _parseFilter($filterType, $filterPayload)
+    public function _parseFilter($filterType, $filterPayload): void
     {
         switch ($filterType) {
             case 'filterGeoBox':
@@ -332,7 +337,7 @@ trait QueryBuilder
         }
     }
     
-    private function _parseSortOrder($value)
+    private function _parseSortOrder($value): array
     {
         $field = array_key_first($value);
         $direction = $value[$field];
@@ -359,7 +364,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         if (!empty($body['query']['query_string'])) {
             $filteredBody = [
@@ -372,7 +377,7 @@ trait QueryBuilder
                     ],
                 ],
             ];
-            $params['body'] = $filteredBody;
+            $params['body']['query'] = $filteredBody['query'];
         }
         
         return $params;

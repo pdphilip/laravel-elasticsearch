@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use RuntimeException;
 
-
 class Builder extends BaseEloquentBuilder
 {
     use QueriesRelationships;
@@ -19,26 +18,29 @@ class Builder extends BaseEloquentBuilder
      * @var array
      */
     protected $passthru = [
+        'aggregate',
         'average',
         'avg',
         'count',
         'dd',
         'doesntExist',
+        'doesntExistOr',
         'dump',
         'exists',
+        'existsOr',
+        'explain',
         'getBindings',
         'getConnection',
         'getGrammar',
+        'implode',
         'insert',
         'insertGetId',
         'insertOrIgnore',
         'insertUsing',
         'max',
         'min',
-        'pluck',
-        'pull',
-        'push',
         'raw',
+        'rawValue',
         'sum',
         'toSql',
         //ES only:
@@ -55,35 +57,30 @@ class Builder extends BaseEloquentBuilder
         'search',
     ];
     
-    
     /**
      * @inheritdoc
      */
     public function chunkById($count, callable $callback, $column = '_id', $alias = null)
     {
-        $column = $column ?? $this->defaultKeyName();
-        $alias = $alias ?? $column;
+        $column ??= $this->defaultKeyName();
+        $alias ??= $column;
         $lastId = null;
         $page = 1;
-        
         do {
             $clone = clone $this;
             $results = $clone->forPageAfterId($count, $lastId, $column)->get();
             $countResults = $results->count();
-            
             if ($countResults == 0) {
                 break;
             }
-            
             if ($callback($results, $page) === false) {
                 return false;
             }
-            //if alias ends with .keyword then remove it
             $aliasClean = $alias;
             if (substr($aliasClean, -8) == '.keyword') {
                 $aliasClean = substr($aliasClean, 0, -8);
             }
-            $lastId = $results->last()->{$aliasClean};
+            $lastId = data_get($results->last(), $aliasClean);
             
             if ($lastId === null) {
                 throw new RuntimeException("The chunkById operation was aborted because the [{$aliasClean}] column is not present in the query result.");
@@ -154,7 +151,6 @@ class Builder extends BaseEloquentBuilder
     {
         $builder = $this->applyScopes();
         $fetch = $builder->searchModels($columns);
-        
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
@@ -192,6 +188,14 @@ class Builder extends BaseEloquentBuilder
         return tap($this->newModelInstance($attributes), function ($instance) {
             $instance->saveWithoutRefresh();
         });
+    }
+    
+    public function updateWithoutRefresh(array $attributes = [])
+    {
+        $query = $this->toBase();
+        $query->setRefresh(false);
+        
+        return $query->update($this->addUpdatedAtColumn($attributes));
     }
     
     //----------------------------------------------------------------------
@@ -395,7 +399,6 @@ class Builder extends BaseEloquentBuilder
         
         return $this;
     }
-    
     
     public function hydrate(array $items)
     {

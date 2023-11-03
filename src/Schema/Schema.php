@@ -2,20 +2,23 @@
 
 namespace PDPhilip\Elasticsearch\Schema;
 
+use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static Builder getIndices(bool $includeSystem = false)
- * @method static Builder getMappings(string $index, $forceIndexName = false)
- * @method static Builder getSettings(string $index, $forceIndexName = false)
- * @method static Builder create(string $index, \Closure $callback)
- * @method static Builder createIfNotExists(string $index, \Closure $callback)
+ * @method static Builder overridePrefix(string|null $value)
+ * @method static array getIndex(string $index)
+ * @method static array getIndices()
+ * @method static array getMappings(string $index)
+ * @method static array getSettings(string $index)
+ * @method static array create(string $index, \Closure $callback)
+ * @method static array createIfNotExists(string $index, \Closure $callback)
  * @method static Builder reIndex(string $from, string $to)
  * @wip static Builder rename(string $from, string $to)
  * @method static Builder modify(string $index, \Closure $callback)
- * @method static Builder delete(string $index)
- * @method static Builder deleteIfExists(string $index)
- * @method static Builder setAnalyser(string $index, \Closure $callback)
+ * @method static bool delete(string $index)
+ * @method static bool deleteIfExists(string $index)
+ * @method static array setAnalyser(string $index, \Closure $callback)
  *
  * @wip static Builder createTemplate(string $name, \Closure $callback)
  * @method static bool hasField(string $index, string $field)
@@ -29,6 +32,12 @@ use Illuminate\Support\Facades\Facade;
  */
 class Schema extends Facade
 {
+//    protected static $app;
+//
+//    protected static $resolvedInstance;
+//
+//
+//    protected static $cached = false;
     /**
      * Get a schema builder instance for a connection.
      *
@@ -40,7 +49,7 @@ class Schema extends Facade
     {
         return static::$app['db']->connection($name)->getSchemaBuilder();
     }
-
+    
     /**
      * Get a schema builder instance for the default connection.
      *
@@ -50,4 +59,13 @@ class Schema extends Facade
     {
         return static::$app['db']->connection('elasticsearch')->getSchemaBuilder();
     }
+
+//
+    public static function __callStatic($method, $args)
+    {
+        $instance = static::getFacadeAccessor();
+        
+        return $instance->$method(...$args);
+    }
+    
 }

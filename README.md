@@ -19,7 +19,11 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 - [Eloquent style searching](#elasticsearching)
 
 > # Alpha release notice
-> This package is being released prematurely to an interested community of testers. It is not ready for production just yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic on its own and there are many native features that have not yet been included. I built this because I needed it but this plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to submit pull requests.
+> This package is being released prematurely to an interested community of testers. It is not ready for production just
+> yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic
+> on its own and there are many native features that have not yet been included. I built this because I needed it but this
+> plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to
+> submit pull requests.
 >
 > #### Versioning Schema: {plugin_version}.{laravel_version}.{iteration}
 >
@@ -306,7 +310,9 @@ Elasticsearch [Matrix](https://www.elastic.co/guide/en/elasticsearch/reference/c
 $stats = Product::whereNotIn('color', ['red','green'])->matrix('price');
 $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'orders']);
 ```
+
 Matrix results return as (example):
+
 ```json
 {
     "matrix": {
@@ -388,8 +394,6 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
-
-
 Elasticsearch specific queries
 -----------------------------
 
@@ -411,21 +415,21 @@ UserLog::where('status',7)->filterGeoBox('agent.geo',[-10,10],[10,-10])->get();
 Filters results that fall within a radius distance from a `point[lat,lon]`
 
 - **Method**: `filterGeoPoint($field,$distance,$point)`
-- `$distance` is a string value of distance and distance-unit, see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
+- `$distance` is a string value of distance and distance-unit,
+  see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
 
 ```php
 UserLog::where('status',7)->filterGeoPoint('agent.geo','20km',[0,0])->get();
 ```
 
-**Note:** the field **must be of type geo otherwise your [shards will fail](#error-all-shards-failed) **, make sure to set the geo field in your [migration](#migrations), ex:
+**Note:** the field **must be of type geo otherwise your [shards will fail](#error-all-shards-failed) **, make sure to
+set the geo field in your [migration](#migrations), ex:
 
 ```php
 Schema::create('user_logs',function (IndexBlueprint $index){
 	$index->geo('agent.geo');
 });
 ```
-
-
 
 #### Regex (in where)
 
@@ -435,8 +439,6 @@ Schema::create('user_logs',function (IndexBlueprint $index){
 Product::whereRegex('color','bl(ue)?(ack)?')->get();   //Returns blue or black
 Product::whereRegex('color','bl...*')->get();           //Returns blue or black or blond or blush etc..
 ```
-
-
 
 Saving Models
 -------------
@@ -577,15 +579,15 @@ $product->forceDelete();
 
 ```
 
-
-
 Elasticsearching
 ===============
 
 The Search Query
 ----------------
 
-The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call off your model with `term()`, chain your ORM clauses, then end your chain with `search()` to perform your search, ie:
+The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in
+the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call
+off your model with `term()`, chain your ORM clauses, then end your chain with `search()` to perform your search, ie:
 
 ```php
 MyModel::term('XYZ')->.........->search()
@@ -595,8 +597,9 @@ MyModel::term('XYZ')->.........->search()
 
 **1.1 Simple example**
 
-- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is set), 
-- Results ordered by most relevant first (score in desc order) 
+- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is
+  set),
+- Results ordered by most relevant first (score in desc order)
 
 ```php
 Book::term('Eric')->search();
@@ -605,7 +608,8 @@ Book::term('Eric')->search();
 **1.2 Multiple terms**
 
 - To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
-- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or - **ordering matters***
+- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without
+  and/or - **ordering matters***
 
 ```php
 Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
@@ -636,7 +640,7 @@ Book::term('Eric')->fields(['title','author','description'])->search();
 - **title** is boosted by a factor of 3, search hits here will be the most relevant
 - **author** is boosted by a factor of 2, search hits here will be the second most relevant
 - **description** has no boost, search hits here will be the least relevant
-- *The results, as per the default, are ordered by most relevant first (score in desc order)* 
+- *The results, as per the default, are ordered by most relevant first (score in desc order)*
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->search();
@@ -646,9 +650,9 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->s
 
 - Controls how many 'should' clauses the query should match
 - Caveats:
-  - Fields must be specified in your query
-  - You can have no standard clauses in your query (ex `where()`)
-  - Won't work on SoftDelete enabled models
+    - Fields must be specified in your query
+    - You can have no standard clauses in your query (ex `where()`)
+    - Won't work on SoftDelete enabled models
 - https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
 
 - Match at least 2 of the 3 terms:
@@ -660,13 +664,14 @@ Book::term('Eric')->orTerm('Lean')->orTerm('Startup')->field('title')->field('au
 **1.7 Min Score**
 
 - Sets a min_score filter for the search
-- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in the search results.
+- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in
+  the search results.
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->search();
 ```
 
-**1.8 Blend Search with [most] standard eloquent queries** 
+**1.8 Blend Search with [most] standard eloquent queries**
 
 - Search for 'david' where field `is_active` is `true`:
 
@@ -674,14 +679,12 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->m
 Book::term('David')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->where('is_active',true)->search();
 ```
 
-
-
 ### 2. FuzzyTerm:
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as 
-  - `fuzzyTerm()`
-  - `orFuzzyTerm()`
-  - `andFuzzyTerm()`
+- Same usage as `term()` `andTerm()` `orTerm()` but as
+    - `fuzzyTerm()`
+    - `orFuzzyTerm()`
+    - `andFuzzyTerm()`
 
 ```php
 Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
@@ -691,16 +694,14 @@ Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
 
 https://www.elastic.co/guide/en/elasticsearch/reference/current/regexp-syntax.html
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as 
-  - `regEx()`
-  - `orRegEx()`
-  - `andRegEx()`
+- Same usage as `term()` `andTerm()` `orTerm()` but as
+    - `regEx()`
+    - `orRegEx()`
+    - `andRegEx()`
 
 ```php
 Book::regEx('joh?n(ath[oa]n)')->andRegEx('doey*')->search();
 ```
-
-
 
 Mutators & Casting
 -------------
@@ -1215,7 +1216,8 @@ _[Coming]_
 
 Dynamic Indies
 ========
-In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest. 
+In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable
+Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest.
 
 For example, let's imagine we're tracking page hits, the `PageHit.php` model could be
 
@@ -1240,9 +1242,10 @@ If you set a dynamic index you can read/search across all the indices that match
 $pageHits = PageHit::where('page_id',1)->get();
 ```
 
-You will need to set the record's actual index when creating a new record, with `setIndex('value')` 
+You will need to set the record's actual index when creating a new record, with `setIndex('value')`
 
 Create example:
+
 ```php
 $pageHit = new PageHit
 $pageHit->page_id = 4;
@@ -1253,10 +1256,10 @@ $pageHit->save();
 ```
 
 Each eloquent model will have the current record's index embedded into it, to retrieve it simply call `getRecordIndex()`
+
 ```php
 $pageHit->getRecordIndex();  //returns page_hits_2021-01-01
 ```
-
 
 ```
 
