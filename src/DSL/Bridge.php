@@ -108,6 +108,7 @@ class Bridge
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
         }
+//        dd($params);
         try {
             $process = $this->client->search($params);
             
@@ -344,9 +345,14 @@ class Bridge
     
     public function processGetIndices($all): array
     {
-        $response = $this->client->cat()->indices();
         
-        return $this->catIndices($response, $all);
+        $index = $this->index;
+        if ($all) {
+            $index = '*';
+        }
+        
+        return $this->client->indices()->get(['index' => $index]);
+        
     }
     
     public function processIndexExists($index): bool
@@ -456,15 +462,31 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processReIndex($newIndex, $oldIndex): bool
+    public function processReIndex($oldIndex, $newIndex): Results
     {
-        $params['source']['index'] = $oldIndex;
-        $params['dest']['index'] = $newIndex;
+        $prefix = str_replace('*', '', $this->index);
+        if ($prefix) {
+            $oldIndex = $prefix.'_'.$oldIndex;
+            $newIndex = $prefix.'_'.$newIndex;
+        }
+        $params['body']['source']['index'] = $oldIndex;
+        $params['body']['dest']['index'] = $newIndex;
         try {
             $response = $this->client->reindex($params);
-            $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
+            $result = $response;
+            $resultData = [
+                'took'              => $result['took'],
+                'total'             => $result['total'],
+                'created'           => $result['created'],
+                'updated'           => $result['updated'],
+                'deleted'           => $result['deleted'],
+                'batches'           => $result['batches'],
+                'version_conflicts' => $result['version_conflicts'],
+                'noops'             => $result['noops'],
+                'retries'           => $result['retries'],
+            ];
             
-            return true;
+            return $this->_return($resultData, $result, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $result = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
