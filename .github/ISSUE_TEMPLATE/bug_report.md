@@ -7,23 +7,31 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+## Describe the bug
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+
+
+## To Reproduce
 Steps to reproduce the behavior:
 
-**Expected behavior**
+
+
+## Expected behavior
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
+
+
+---
+**Screenshots**:
 If applicable, add screenshots to help explain your problem.
 
-**Component Versions (please complete the following information):**
- - Laravel [e.g. 10.30.2] :
- - Elasticsearch [e.g. 8.8] :
- - Plugin Version [e.g. 2.10.2] :
+**Component Versions (Paste in the `require` section from your composer.json file):**
+```json
+  "require": {
+  
+  },
+```
 
-
-**Additional context**
+**Additional context**:
 Add any other context about the problem here.
