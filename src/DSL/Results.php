@@ -12,13 +12,11 @@ class Results
     
     public function __construct($data, $meta, $params, $queryTag)
     {
-        $this->data = $data;
         
-        //ensure meta is an array and not an object
-        if (is_object($meta)) {
-            $meta = (array)$meta;
-        }
         unset($meta['_source']);
+        unset($meta['hits']);
+        unset($meta['aggregations']);
+        $this->data = $data;
         $this->_meta = ['query' => $queryTag] + $meta;
         $this->_meta['params'] = $params;
         $this->_meta['_id'] = $data['_id'] ?? null;

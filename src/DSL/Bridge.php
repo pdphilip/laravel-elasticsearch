@@ -126,35 +126,41 @@ class Bridge
     }
     
     
-    public function processDistinct($column, $wheres): Results
+    public function processDistinct($wheres, $options, $columns, $includeDocCount = false): Results
     {
-        $col = $column;
-        if (is_array($column)) {
-            $col = $column[0];
-        }
-        
-        
         try {
-            $params = $this->buildParams($this->index, $wheres);
-            $params['body']['aggs']['distinct_'.$col]['terms'] = [
-                'field' => $col,
-                'size'  => $this->maxSize,
-            ];
-            $process = $this->client->search($params);
+            if ($columns && !is_array($columns)) {
+                $columns = [$columns];
+            }
+            $sort = $options['sort'] ?? [];
+            $skip = $options['skip'] ?? false;
+            $limit = $options['limit'] ?? false;
+            unset($options['sort']);
+            unset($options['skip']);
+            unset($options['limit']);
+            
+            $params = $this->buildParams($this->index, $wheres, $options);
+            $params['body']['aggs'] = $this->createNestedAggs($columns, $sort);
+            
+            $response = $this->client->search($params);
+            
+            
             $data = [];
-            if (!empty($process['aggregations']['distinct_'.$col]['buckets'])) {
-                foreach ($process['aggregations']['distinct_'.$col]['buckets'] as $bucket) {
-                    $data[] = $bucket['key'];
-                }
+            if (!empty($response['aggregations'])) {
+                $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
             }
             
-            return $this->_return($data, $process, $params, $this->_queryTag(__FUNCTION__));
+            //process limit and skip from all results
+            if ($skip || $limit) {
+                $data = array_slice($data, $skip, $limit);
+            }
+            
+            return $this->_return($data, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
             $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
             throw new Exception($result->errorMessage);
         }
-        
         
     }
     
@@ -640,6 +646,146 @@ class Bridge
         }
         
     }
+    //----------------------------------------------------------------------
+    // Distinct Aggregates
+    //----------------------------------------------------------------------
+    
+    public function processDistinctAggregate($function, $wheres, $options, $columns): Results
+    {
+        return $this->{'_'.$function.'DistinctAggregate'}($wheres, $options, $columns);
+    }
+    
+    private function _countDistinctAggregate($wheres, $options, $columns): Results
+    {
+        try {
+            $params = $this->buildParams($this->index, $wheres);
+            $process = $this->processDistinct($wheres, $options, $columns);
+            $count = count($process->data);
+            
+            return $this->_return($count, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
+        }
+        
+    }
+    
+    
+    private function _minDistinctAggregate($wheres, $options, $columns): Results
+    {
+        try {
+            $params = $this->buildParams($this->index, $wheres);
+            $process = $this->processDistinct($wheres, $options, $columns);
+            
+            $min = 0;
+            $hasBeenSet = false;
+            if (!empty($process->data)) {
+                foreach ($process->data as $datum) {
+                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                        if (!$hasBeenSet) {
+                            $min = $datum[$columns[0]];
+                            $hasBeenSet = true;
+                        } else {
+                            $min = min($min, $datum[$columns[0]]);
+                        }
+                        
+                    }
+                }
+            }
+            
+            return $this->_return($min, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
+        }
+        
+    }
+    
+    private function _maxDistinctAggregate($wheres, $options, $columns): Results
+    {
+        try {
+            $params = $this->buildParams($this->index, $wheres);
+            $process = $this->processDistinct($wheres, $options, $columns);
+            
+            $max = 0;
+            if (!empty($process->data)) {
+                foreach ($process->data as $datum) {
+                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                        $max = max($max, $datum[$columns[0]]);
+                    }
+                }
+            }
+            
+            
+            return $this->_return($max, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
+        }
+        
+    }
+    
+    
+    private function _sumDistinctAggregate($wheres, $options, $columns): Results
+    {
+        try {
+            $params = $this->buildParams($this->index, $wheres);
+            $process = $this->processDistinct($wheres, $options, $columns);
+            $sum = 0;
+            if (!empty($process->data)) {
+                foreach ($process->data as $datum) {
+                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                        $sum += $datum[$columns[0]];
+                    }
+                }
+            }
+            
+            return $this->_return($sum, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
+        }
+        
+    }
+    
+    private function _avgDistinctAggregate($wheres, $options, $columns)
+    {
+        try {
+            $params = $this->buildParams($this->index, $wheres);
+            $process = $this->processDistinct($wheres, $options, $columns);
+            $sum = 0;
+            $count = 0;
+            $avg = 0;
+            if (!empty($process->data)) {
+                foreach ($process->data as $datum) {
+                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                        $count++;
+                        $sum += $datum[$columns[0]];
+                    }
+                }
+            }
+            if ($count > 0) {
+                $avg = $sum / $count;
+            }
+            
+            
+            return $this->_return($avg, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $result = $this->_returnError($e->getMessage(), $e->getCode(), [], $this->_queryTag(__FUNCTION__));
+            throw new Exception($result->errorMessage);
+        }
+        
+    }
+    
+    private function _matrixDistinctAggregate($wheres, $options, $columns): Results
+    {
+        return $this->_returnError('Matrix distinct aggregate not supported', 500, [], $this->_queryTag(__FUNCTION__));
+    }
     
     
     //======================================================================
@@ -675,10 +821,58 @@ class Bridge
         return $this->_return($data, $meta, $params, $queryTag);
     }
     
+    private function _sanitizeDistinctResponse($response, $columns, $includeDocCount)
+    {
+        $keys = [];
+        foreach ($columns as $column) {
+            $keys[] = 'by_'.$column;
+        }
+        
+        return $this->processBuckets($columns, $keys, $response, 0, $includeDocCount);
+        
+    }
+    
+    private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = [])
+    {
+        $data = [];
+        
+        if (!empty($response[$keys[$index]]['buckets'])) {
+            foreach ($response[$keys[$index]]['buckets'] as $res) {
+                $datum = $currentData;
+                $datum[$columns[$index]] = $res['key'];
+                if ($includeDocCount) {
+                    $datum[$columns[$index].'_count'] = $res['doc_count'];
+                }
+                
+                if (isset($columns[$index + 1])) {
+                    $nestedData = $this->processBuckets($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
+                    
+                    if (!empty($nestedData)) {
+                        $data = array_merge($data, $nestedData);
+                    } else {
+                        $data[] = $datum;
+                    }
+                } else {
+                    $data[] = $datum;
+                }
+            }
+        }
+        
+        return $data;
+    }
+    
     private function _return($data, $meta, $params, $queryTag): Results
     {
+        if (is_object($meta)) {
+            $metaAsArray = [];
+            if (method_exists($meta, 'asArray')) {
+                $metaAsArray = $meta->asArray();
+            }
+            $results = new Results($data, $metaAsArray, $params, $queryTag);
+        } else {
+            $results = new Results($data, $meta, $params, $queryTag);
+        }
         
-        $results = new Results($data, $meta, $params, $queryTag);
         if ($this->queryLogger && !$this->queryLoggerOnErrorOnly) {
             $this->_logQuery($results);
         }
