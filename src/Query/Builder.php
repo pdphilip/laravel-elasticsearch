@@ -16,6 +16,8 @@ use LogicException;
 class Builder extends BaseBuilder
 {
     
+    use QueryBuilder;
+    
     protected $index;
     
     protected $refresh = 'wait_for';
@@ -290,19 +292,32 @@ class Builder extends BaseBuilder
         
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
+        $columns = $this->prepareColumns($columns);
         
         if ($this->groups) {
-            throw new RuntimeException('Group By is not available yet');
+            throw new RuntimeException('Groups are not used');
         }
         
         if ($this->aggregate) {
             $function = $this->aggregate['function'];
+            $aggColumns = $this->aggregate['columns'];
+            if (in_array('*', $aggColumns)) {
+                $aggColumns = null;
+                
+            }
+            if ($aggColumns) {
+                $columns = $aggColumns;
+            }
             
-            $totalResults = $this->connection->aggregate($function, $wheres, $options, $columns);
+            if ($this->distinct) {
+                $totalResults = $this->connection->distinctAggregate($function, $wheres, $options, $columns);
+            } else {
+                $totalResults = $this->connection->aggregate($function, $wheres, $options, $columns);
+            }
+            
             if (!$totalResults->isSuccessful()) {
                 throw new RuntimeException($totalResults->errorMessage);
             }
-            
             $results = [
                 [
                     '_id'       => null,
@@ -316,12 +331,22 @@ class Builder extends BaseBuilder
         }
         
         if ($this->distinct) {
-            throw new RuntimeException('Distinct is not available yet');
+            if (empty($columns[0]) || $columns[0] == '*') {
+                throw new RuntimeException('Columns are required for term aggregation when using distinct()');
+            } else {
+                if ($this->distinct == 2) {
+                    $find = $this->connection->distinct($wheres, $options, $columns, true);
+                } else {
+                    $find = $this->connection->distinct($wheres, $options, $columns);
+                }
+                
+            }
+            
+        } else {
+            $find = $this->connection->find($wheres, $options, $columns);
         }
         
         //Else Normal find query
-        $find = $this->connection->find($wheres, $options, $columns);
-        
         if ($find->isSuccessful()) {
             $data = $find->data;
             if ($returnLazy) {
@@ -334,7 +359,6 @@ class Builder extends BaseBuilder
                 }
                 
             }
-            
             
             return new Collection($data);
         } else {
@@ -431,6 +455,64 @@ class Builder extends BaseBuilder
         return $this;
     }
     
+    /**
+     * @inheritdoc
+     */
+    public function select($columns = ['*'])
+    {
+        $columns = is_array($columns) ? $columns : [$columns];
+        $this->columns = $columns;
+        
+        return $this;
+    }
+    
+    public function addSelect($column)
+    {
+        if (!is_array($column)) {
+            $column = [$column];
+        }
+        
+        $currentColumns = $this->columns;
+        if ($currentColumns) {
+            return $this->select(array_merge($currentColumns, $column));
+        }
+        
+        return $this->select($column);
+        
+    }
+    
+    /**
+     * @inheritdoc
+     */
+    
+    public function distinct($includeCount = false)
+    {
+        $this->distinct = 1;
+        if ($includeCount) {
+            $this->distinct = 2;
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * @param ...$groups
+     *
+     * GroupBy will be passed on to distinct
+     *
+     * @return $this|Builder
+     */
+    public function groupBy(...$groups)
+    {
+        if (is_array($groups[0])) {
+            $groups = $groups[0];
+        }
+        
+        $this->addSelect($groups);
+        $this->distinct = 1;
+        
+        return $this;
+    }
     
     //Filters
     
@@ -478,6 +560,39 @@ class Builder extends BaseBuilder
     public function newQuery()
     {
         return new self($this->connection, $this->processor);
+    }
+    
+    protected function prepareColumns($columns)
+    {
+        $final = [];
+        if ($this->columns) {
+            foreach ($this->columns as $col) {
+                $final[] = $col;
+            }
+            
+        }
+        
+        if ($columns) {
+            if (!is_array($columns)) {
+                $columns = [$columns];
+            }
+            
+            foreach ($columns as $col) {
+                $final[] = $col;
+            }
+        }
+        if (!$final) {
+            return ['*'];
+        }
+        
+        $final = array_values(array_unique($final));
+        if (($key = array_search('*', $final)) !== false) {
+            unset($final[$key]);
+        }
+        
+        return $final;
+        
+        
     }
     
     protected function compileOptions()
@@ -880,6 +995,31 @@ class Builder extends BaseBuilder
         
     }
     
+    //----------------------------------------------------------------------
+    // Pagination overrides
+    //----------------------------------------------------------------------
+    
+    
+    protected function runPaginationCountQuery($columns = ['*'])
+    {
+        if ($this->distinct) {
+            $clone = $this->cloneForPaginationCount();
+            $currentCloneCols = $clone->columns;
+            if ($columns && $columns !== ['*']) {
+                $currentCloneCols = array_merge($currentCloneCols, $columns);
+            }
+            
+            return $clone->setAggregate('count', $currentCloneCols)->get()->all();
+        }
+        
+        $without = $this->unions ? ['orders', 'limit', 'offset'] : ['columns', 'orders', 'limit', 'offset'];
+        
+        return $this->cloneWithout($without)
+            ->cloneWithoutBindings($this->unions ? ['order'] : ['select', 'order'])
+            ->setAggregate('count', $this->withoutSelectAliases($columns))
+            ->get()->all();
+    }
+    
     
     //----------------------------------------------------------------------
     // Disabled features (for now)
@@ -893,21 +1033,6 @@ class Builder extends BaseBuilder
         throw new LogicException('The upsert feature for Elasticsearch is currently not supported. Please use updateAll()');
     }
     
-    /**
-     * @inheritdoc
-     */
-    public function distinct($column = false)
-    {
-        throw new LogicException('distinct() is currently not supported');
-    }
-    
-    /**
-     * @inheritdoc
-     */
-    public function groupBy(...$groups)
-    {
-        throw new LogicException('groupBy() is currently not supported');
-    }
     
     /**
      * @inheritdoc
@@ -995,13 +1120,13 @@ class Builder extends BaseBuilder
         }
         switch ($type) {
             case 'fuzzy':
-                $nextTerm = '('.QueryBuilder::_escape($term).'~)';
+                $nextTerm = '('.self::_escape($term).'~)';
                 break;
             case 'regex':
                 $nextTerm = '(/'.$term.'/)';
                 break;
             default:
-                $nextTerm = '('.QueryBuilder::_escape($term).')';
+                $nextTerm = '('.self::_escape($term).')';
                 break;
         }
         

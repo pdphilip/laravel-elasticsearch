@@ -122,6 +122,41 @@ trait QueryBuilder
         return $params;
     }
     
+    public function createNestedAggs($columns, $sort)
+    {
+        $aggs = [];
+        $terms = [
+            'terms' => [
+                'field' => $columns[0],
+                'size'  => 10000,
+            ],
+        ];
+        if (isset($sort['_count'])) {
+            if (!isset($terms['terms']['order'])) {
+                $terms['terms']['order'] = [];
+            }
+            if ($sort['_count'] == 1) {
+                $terms['terms']['order'][] = ['_count' => 'asc'];
+            } else {
+                $terms['terms']['order'][] = ['_count' => 'desc'];
+            }
+        }
+        if (isset($sort[$columns[0]])) {
+            if ($sort[$columns[0]] == 1) {
+                $terms['terms']['order'][] = ['_key' => 'asc'];
+            } else {
+                $terms['terms']['order'][] = ['_key' => 'desc'];
+            }
+        }
+        $aggs['by_'.$columns[0]] = $terms;
+        if (count($columns) > 1) {
+            $aggs['by_'.$columns[0]]['aggs'] = $this->createNestedAggs(array_slice($columns, 1), $sort);
+        }
+        
+        return $aggs;
+    }
+    
+    
     //----------------------------------------------------------------------
     // Parsers
     //----------------------------------------------------------------------
