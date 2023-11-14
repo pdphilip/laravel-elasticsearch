@@ -33,11 +33,9 @@
     "doctrine/coding-standard": "12.0.x-dev"
   },
   "autoload-dev": {
-    "classmap": [
-      "tests/TestCase.php",
-      "tests/models",
-      "tests/seeds"
-    ]
+    "psr-4": {
+      "PDPhilip\\Elasticsearch\\Tests\\": "tests/"
+    }
   },
   "autoload": {
     "psr-4": {

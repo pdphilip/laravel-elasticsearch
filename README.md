@@ -19,66 +19,97 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 - No need to write your own DSL queries ([unless you want to](#raw-dsl))
 - [Eloquent style searching](#elasticsearching)
 
+# Table of Contents
+
+- [Laravel x Elasticsearch](#laravel-x-elasticsearch)
+    - [Features](#features)
+    - [Installation](#installation)
+    - [Configuration](#configuration)
+- [Eloquent](#eloquent)
+    - [Extending the Base Model](#extending-the-base-model)
+    - [Querying Models](#querying-models)
+        - [ALL](#all)
+        - [Find](#find)
+        - [First](#first)
+        - [Where](#where)
+        - [Where LIKE](#where-like)
+        - [OR Statements](#or-statements)
+        - [Chaining OR/AND Statements](#chaining-orand-statements)
+        - [WhereIn](#wherein)
+        - [WhereNotIn](#wherenotin)
+        - [WhereNotNull](#wherenotnull)
+        - [WhereNull](#wherenull)
+        - [WhereBetween](#wherebetween)
+        - [Dates](#dates)
+    - [Aggregation](#aggregation)
+    - [Ordering](#ordering)
+        - [OrderBy](#orderby)
+        - [OrderByDesc](#orderbydesc)
+        - [Offset & Limit](#offset--limit)
+        - [Pagination](#pagination)
+    - [Distinct and GroupBy](#distinct-and-groupby)
+        - [Basic Usage](#basic-usage)
+        - [Working with Collections](#working-with-collections)
+        - [Multiple Fields Aggregation](#multiple-fields-aggregation)
+        - [Ordering by Aggregation Count](#ordering-by-aggregation-count)
+        - [Returning Count with Distinct Results](#returning-count-with-distinct-results)
+        - [Pagination Support](#pagination-support)
+- [Elasticsearch Specific Queries](#elasticsearch-specific-queries)
+    - [Geo](#geo)
+    - [Regex in Where](#regex-in-where)
+- [Saving Models](#saving-models)
+    - [Save](#save)
+    - [Create](#create)
+    - [Update](#update)
+    - [Mass Updating](#mass-updating)
+    - [Fast Saves](#fast-saves)
+- [Deleting Models](#deleting-models)
+    - [Delete](#delete)
+    - [Truncate](#truncate)
+    - [Destroy by ID](#destroy-by-id)
+- [Soft Deletes](#soft-deletes)
+- [Elasticsearching](#elasticsearching)
+    - [The Search Query](#the-search-query)
+    - [FuzzyTerm](#fuzzyterm)
+    - [RegEx in Search](#regex-in-search)
+- [Mutators & Casting](#mutators--casting)
+- [Relationships](#relationships)
+    - [Elasticsearch <-> Elasticsearch](#elasticsearch---elasticsearch)
+    - [Elasticsearch <-> MySQL](#elasticsearch---mysql)
+- [Schema/Index](#schemaindex)
+    - [Migrations](#migrations)
+    - [Dynamic Indies](#dynamic-indies)
+- [RAW DSL](#raw-dsl)
+- [Elasticsearchisms](#elasticsearchisms)
+- [Unsupported Eloquent Methods](#unsupported-eloquent-methods)
+
 Installation
 ===============
 
 ## Elasticsearch 8.x
 
-Laravel 10.x:
+Laravel 10.x (Latest):
 
 ```bash
 $ composer require pdphilip/elasticsearch
 ```
 
-Laravel 9.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.9
-```
-
-Laravel 8.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.8
-```
-
-Laravel 7.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.7
-```
-
-Laravel 6.x (and 5.8):
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.6
-```
+| Laravel Version   | Command                                          | Maintained |
+|-------------------|--------------------------------------------------|------------|
+| Laravel 10.x      | `$ composer require pdphilip/elasticsearch`      | ✅          |
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~2.9` | ✅          |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~2.8` | ✅          |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~2.7` | ✅          |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~2.6` | ❌          |
 
 ## Elasticsearch 7.x
 
-Laravel 9.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.9
-```
-
-Laravel 8.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.8
-```
-
-Laravel 7.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.7
-```
-
-Laravel 6.x (and 5.8):
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.6
-```
+| Laravel Version   | Command                                          | Maintained |
+|-------------------|--------------------------------------------------|------------|
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~1.9` | ❌          |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~1.8` | ❌          |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~1.7` | ❌          |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~1.6` | ❌          |
 
 Configuration
 ===============
@@ -432,6 +463,117 @@ Pagination links (Blade)
 
 ```php+HTML
 {{ $products->appends(request()->query())->links() }}
+```
+
+Distinct and GroupBy
+-----------------------------
+This section covers the implementation of `distinct()` and `groupBy()` methods in the Elasticsearch Eloquent model.
+These methods are interchangeable and use term aggregation under the hood.
+
+This tends to be a core use case for Elasticsearch, for example, to get all the unique user_ids of the users who have
+been
+logged in the last 30 days:
+
+#### Basic Usage
+
+- **Distinct**:
+
+ ```php
+// Unique user_ids of users logged in the last 30 days
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+//or:
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->select('user_id')->distinct()->get();
+```
+
+- **GroupBy**:
+
+```php
+// Equivalent to the above distinct query
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->groupBy('user_id')->get();
+
+```
+
+#### Working with Collections
+
+- The results from these queries are returned as collections, allowing use of standard collection methods.
+- Example of loading related user data:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+return $users->load('user');
+```
+
+#### Multiple Fields Aggregation
+
+- You can pass multiple fields to perform term aggregation.
+- Example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get(['user_id', 'log_title']);
+/** returns: 
+{
+    "user_id": "1",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_OUT"
+},
+ **/
+```
+
+#### Ordering by Aggregation Count
+
+- Results can be sorted based on the count of the aggregated field.
+- Example of ordering by the most logged users:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('_count')->get('user_id');
+```
+
+- Or you can order by the distinct field, example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('user_id')->get('user_id');
+```
+
+#### Returning Count with Distinct Results
+
+- To include the count of distinct values in the results, use `distinct(true)`:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct(true)->orderBy('_count')->get(['user_id']);
+/** returns: 
+{
+    "user_id": "5",
+    "user_id_count": 65
+},
+{
+    "user_id": "1",
+    "user_id_count": 61
+},
+{
+    "user_id": "9",
+    "user_id_count": 54
+},
+ **/
+```
+
+#### Pagination Support
+
+- The `distinct()` and `groupBy()` methods support pagination.
+- Example:
+
+```php
+
+$users = UserLog::where('log_title', 'LOGGED_IN')->select('user_id')->distinct()->orderBy('_count')->paginate(20);
+//or
+$users = UserLog::where('log_title', 'LOGGED_IN')->groupBy('user_id')->orderBy('_count')->paginate(20);
+
 ```
 
 Elasticsearch specific queries
@@ -1355,7 +1497,7 @@ SiteLog::create([
     'user_ip' => '0.0.0.0',
     'location' => ['lat' => -7.3,'lon' => 3.1]
 ]);
-//'location' index will be created by elasticsearch as an object
+//'location' field will be indexed by elasticsearch as an object
 
 //Trying to filter by location will fail due to the incorrect mapping
 $logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
@@ -1446,11 +1588,6 @@ Product::chunkById(1000, function ($products) {
     }
 }, 'product_sku.keyword');
 ```
-
-Queues
-----------
-_[Coming]_
-
 
 Dynamic Indies
 ==============
@@ -1598,4 +1735,4 @@ once and not update immediately or won't need to search for the record immediate
 
 ### Unsupported Eloquent methods
 
-`upsert()`, `distinct()`, `groupBy()`, `groupByRaw()`
+`upsert()`, `groupByRaw()`
