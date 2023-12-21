@@ -290,7 +290,7 @@ trait QueryBuilder
     
     public static function _escape($value): string
     {
-        $specialChars = ['"', '\\', '~', '^'];
+        $specialChars = ['"', '\\', '~', '^', '/'];
         foreach ($specialChars as $char) {
             $value = str_replace($char, "\\".$char, $value);
         }
