@@ -14,7 +14,7 @@ use PDPhilip\Elasticsearch\Relations\MorphMany;
 use PDPhilip\Elasticsearch\Relations\MorphTo;
 use PDPhilip\Elasticsearch\Relations\MorphOne;
 use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
-
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
 trait HybridRelations
 {
@@ -185,6 +185,6 @@ trait HybridRelations
             return new Builder($query);
         }
 
-        return new Builder($query);
+        return new EloquentBuilder($query);
     }
 }
