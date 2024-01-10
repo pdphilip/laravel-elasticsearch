@@ -204,7 +204,7 @@ class Connection extends BaseConnection
             $this->index = $this->indexPrefix.'*';
         }
         
-        $bridge = new Bridge($this->client, $this->index, $this->maxSize);
+        $bridge = new Bridge($this->client, $this->index, $this->maxSize, $this->indexPrefix);
         
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }

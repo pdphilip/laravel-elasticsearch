@@ -14,22 +14,25 @@ class Bridge
     
     use QueryBuilder, IndexInterpreter;
     
-    protected Client $client;
+    protected $client;
     
-    protected mixed $queryLogger = false;
+    protected $queryLogger = false;
     
-    protected mixed $queryLoggerOnErrorOnly = true;
+    protected $queryLoggerOnErrorOnly = true;
     
-    protected int|null $maxSize = 10; //ES default
+    protected $maxSize = 10; //ES default
     
-    private string|null $index;
+    private $index;
+    
+    private $indexPrefix;
     
     
-    public function __construct(Client $client, $index, $maxSize)
+    public function __construct(Client $client, $index, $maxSize, $indexPrefix = null)
     {
         $this->client = $client;
         $this->index = $index;
         $this->maxSize = $maxSize;
+        $this->indexPrefix = $indexPrefix;
         
         if (!empty(config('database.connections.elasticsearch.logging.index'))) {
             $this->queryLogger = config('database.connections.elasticsearch.logging.index');
@@ -488,7 +491,7 @@ class Bridge
      */
     public function processReIndex($oldIndex, $newIndex): Results
     {
-        $prefix = str_replace('*', '', $this->index);
+        $prefix = $this->indexPrefix;
         if ($prefix) {
             $oldIndex = $prefix.'_'.$oldIndex;
             $newIndex = $prefix.'_'.$newIndex;
