@@ -6,6 +6,9 @@ labels: bug
 assignees: ''
 
 ---
+## Package version
+ex: v2.10.3
+
 
 ## Describe the bug
 A clear and concise description of what the bug is.
