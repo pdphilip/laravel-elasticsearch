@@ -6,8 +6,8 @@ labels: bug
 assignees: ''
 
 ---
-## Package version (NB)
-ex: v2.10.3
+## Package version 
+ex: v2.10.3  (NB!)
 
 
 ## Describe the bug
