@@ -236,7 +236,7 @@ trait QueryBuilder
                                 return '(_exists_:'.$key.')';
                             }
                             
-                            return '(NOT '.$key.':'.self::_escape($opVal).')';
+                            return '(NOT '.$key.':"'.self::_escape($opVal).'")';
                         case 'lt':
                             return '('.$key.':{* TO '.$opVal.'})';
                         case 'lte':
@@ -289,9 +289,12 @@ trait QueryBuilder
     
     public static function _escape($value): string
     {
-        $specialChars = ['"', '\\', '~', '^'];
+        $specialChars = ['"', '\\', '~', '^', '/'];
         foreach ($specialChars as $char) {
             $value = str_replace($char, "\\".$char, $value);
+        }
+        if (str_starts_with($value, '-')) {
+            $value = '\\'.$value;
         }
         
         return $value;
@@ -303,6 +306,8 @@ trait QueryBuilder
             return ParameterBuilder::matchAll();
         }
         $string = $this->_buildQueryString($wheres);
+
+//        dd($string);
         
         return ParameterBuilder::queryStringQuery($string);
     }
