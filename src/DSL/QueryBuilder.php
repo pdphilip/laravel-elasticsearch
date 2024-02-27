@@ -294,6 +294,9 @@ trait QueryBuilder
         foreach ($specialChars as $char) {
             $value = str_replace($char, "\\".$char, $value);
         }
+        if (str_starts_with($value, '-')) {
+            $value = '\\'.$value;
+        }
         
         return $value;
     }
