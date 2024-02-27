@@ -30,17 +30,7 @@ trait QueryBuilder
             $params['index'] = $index;
         }
         $params['body'] = [];
-        
-        
         $queryString['query'] = $searchQuery;
-        if ($wheres) {
-            $wheres = $this->_buildQuery($wheres);
-            $whereQueryString = $wheres['query']['query_string']['query'] ?? null;
-            if ($whereQueryString) {
-                $queryString['query'] = '('.$searchQuery.') AND '.$whereQueryString;
-            }
-        }
-        
         if ($fields) {
             $queryString['fields'] = [];
             foreach ($fields as $field => $boostLevel) {
@@ -60,7 +50,10 @@ trait QueryBuilder
             }
         }
         
-        $params['body']['query']['query_string'] = $queryString;
+        $wheres = $this->addSearchToWheres($wheres, $queryString);
+        $dsl = $this->_buildQuery($wheres);
+        
+        $params['body']['query'] = $dsl['query'];
         
         if ($columns && $columns != ['*']) {
             $params['body']['_source'] = $columns;
@@ -158,137 +151,163 @@ trait QueryBuilder
     }
     
     
+    public function addSearchToWheres($wheres, $queryString)
+    {
+        $clause = ['_' => ['search' => $queryString]];
+        if (!$wheres) {
+            return $clause;
+        }
+        if (!empty($wheres['and'])) {
+            $wheres['and'][] = $clause;
+            
+            return $wheres;
+        }
+        if (!empty($wheres['or'])) {
+            $newOrs = [];
+            foreach ($wheres['or'] as $cond) {
+                $cond['and'][] = $clause;
+                $newOrs[] = $cond;
+            }
+            $wheres['or'] = $newOrs;
+            
+            return $wheres;
+        }
+        
+        return ['and' => [$wheres, $clause]];
+    }
+    
+    
     //----------------------------------------------------------------------
     // Parsers
     //----------------------------------------------------------------------
-    
-    private function _buildQueryString($wheres): string
-    {
-        if ($wheres) {
-            foreach ($wheres as $key => $value) {
-                return $this->_parseParams($key, $value);
-            }
-        }
-        
-        return '';
-    }
-    
-    private static function _andQueryString($values): string
-    {
-        $strings = [];
-        foreach ($values as $key => $val) {
-            $strings[] = self::_parseParams($key, $val);
-        }
-        
-        return '('.implode(' AND ', $strings).')';
-    }
-    
-    private static function _orQueryString($values): string
-    {
-        $strings = [];
-        foreach ($values as $key => $val) {
-            $strings[] = self::_parseParams($key, $val);
-        }
-        
-        return '('.implode(' OR ', $strings).')';
-    }
-    
-    private static function _inQueryString($key, $values): string
-    {
-        $strings = [];
-        foreach ($values as $val) {
-            $strings[] = self::_parseParams(null, $val);
-        }
-        
-        return '('.$key.':('.implode(' OR ', $strings).'))';
-    }
-    
-    private static function _ninQueryString($key, $values): string
-    {
-        $strings = [];
-        foreach ($values as $val) {
-            $strings[] = self::_parseParams(null, $val);
-        }
-        
-        return '(NOT '.$key.':('.implode(' OR ', $strings).'))';
-    }
-    
-    private static function _parseParams($key, $value): string
-    {
-        
-        if ($key === 'and' || $key === 'or') {
-            return self::{'_'.$key.'QueryString'}($value);
-        }
-        if (is_array($value)) {
-            
-            foreach ($value as $op => $opVal) {
-                
-                if (in_array($op, self::$bucketOperators)) {
-                    return self::{'_'.$op.'QueryString'}($opVal);
-                }
-                if (in_array($op, self::$equivalenceOperators)) {
-                    return self::{'_'.$op.'QueryString'}($key, $opVal);
-                }
-                if (in_array($op, self::$clauseOperators)) {
-                    switch ($op) {
-                        case 'ne':
-                            if (!$opVal) {
-                                // Is not equal to null => exists and has a value
-                                return '(_exists_:'.$key.')';
-                            }
-                            
-                            return '(NOT '.$key.':'.self::_escape($opVal).')';
-                        case 'lt':
-                            return '('.$key.':{* TO '.$opVal.'})';
-                        case 'lte':
-                            return '('.$key.':[* TO '.$opVal.'])';
-                        case 'gt':
-                            return '('.$key.':{'.$opVal.' TO *})';
-                        case 'gte':
-                            return '('.$key.':['.$opVal.' TO *])';
-                        case 'between':
-                            return '('.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-                        case 'not_between':
-                            return '(NOT '.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-                        case 'like':
-                            return '('.$key.':*'.self::_escape($opVal).'*)';
-                        case 'not_like':
-                            return '(NOT '.$key.':*'.self::_escape($opVal).'*)';
-                        case 'regex':
-                            return '('.$key.':/'.$opVal.'/)';
-                        case 'exists':
-                            if ($opVal) {
-                                return '(_exists_:'.$key.')';
-                            }
-                            
-                            return '(NOT _exists_:'.$key.')';
-                        
-                    }
-                    
-                }
-                
-                return self::_parseParams($op, $opVal);
-            }
-        }
-        
-        if (!$key) {
-            return self::_escape($value);
-        }
-        if ($value === true) {
-            return '('.$key.':true)';
-        }
-        if ($value === false) {
-            return '('.$key.':false)';
-        }
-        if ($value === null) {
-            return '(NOT _exists_:'.$key.')';
-        }
-        
-        return '('.$key.':"'.self::_escape($value).'")';
-        
-    }
-    
-    public static function _escape($value): string
+
+//    private function _buildQueryString($wheres): string
+//    {
+//        if ($wheres) {
+//            foreach ($wheres as $key => $value) {
+//                return $this->_parseParams($key, $value);
+//            }
+//        }
+//
+//        return '';
+//    }
+//
+//    private static function _andQueryString($values): string
+//    {
+//        $strings = [];
+//        foreach ($values as $key => $val) {
+//            $strings[] = self::_parseParams($key, $val);
+//        }
+//
+//        return '('.implode(' AND ', $strings).')';
+//    }
+//
+//    private static function _orQueryString($values): string
+//    {
+//        $strings = [];
+//        foreach ($values as $key => $val) {
+//            $strings[] = self::_parseParams($key, $val);
+//        }
+//
+//        return '('.implode(' OR ', $strings).')';
+//    }
+//
+//    private static function _inQueryString($key, $values): string
+//    {
+//        $strings = [];
+//        foreach ($values as $val) {
+//            $strings[] = self::_parseParams(null, $val);
+//        }
+//
+//        return '('.$key.':('.implode(' OR ', $strings).'))';
+//    }
+//
+//    private static function _ninQueryString($key, $values): string
+//    {
+//        $strings = [];
+//        foreach ($values as $val) {
+//            $strings[] = self::_parseParams(null, $val);
+//        }
+//
+//        return '(NOT '.$key.':('.implode(' OR ', $strings).'))';
+//    }
+//
+//    private static function _parseParams($key, $value): string
+//    {
+//
+//        if ($key === 'and' || $key === 'or') {
+//            return self::{'_'.$key.'QueryString'}($value);
+//        }
+//        if (is_array($value)) {
+//
+//            foreach ($value as $op => $opVal) {
+//
+//                if (in_array($op, self::$bucketOperators)) {
+//                    return self::{'_'.$op.'QueryString'}($opVal);
+//                }
+//                if (in_array($op, self::$equivalenceOperators)) {
+//                    return self::{'_'.$op.'QueryString'}($key, $opVal);
+//                }
+//                if (in_array($op, self::$clauseOperators)) {
+//                    switch ($op) {
+//                        case 'ne':
+//                            if (!$opVal) {
+//                                // Is not equal to null => exists and has a value
+//                                return '(_exists_:'.$key.')';
+//                            }
+//
+//                            return '(NOT '.$key.':'.self::_escape($opVal).')';
+//                        case 'lt':
+//                            return '('.$key.':{* TO '.$opVal.'})';
+//                        case 'lte':
+//                            return '('.$key.':[* TO '.$opVal.'])';
+//                        case 'gt':
+//                            return '('.$key.':{'.$opVal.' TO *})';
+//                        case 'gte':
+//                            return '('.$key.':['.$opVal.' TO *])';
+//                        case 'between':
+//                            return '('.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
+//                        case 'not_between':
+//                            return '(NOT '.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
+//                        case 'like':
+//                            return '('.$key.':*'.self::_escape($opVal).'*)';
+//                        case 'not_like':
+//                            return '(NOT '.$key.':*'.self::_escape($opVal).'*)';
+//                        case 'regex':
+//                            return '('.$key.':/'.$opVal.'/)';
+//                        case 'exists':
+//                            if ($opVal) {
+//                                return '(_exists_:'.$key.')';
+//                            }
+//
+//                            return '(NOT _exists_:'.$key.')';
+//
+//                    }
+//
+//                }
+//
+//                return self::_parseParams($op, $opVal);
+//            }
+//        }
+//
+//        if (!$key) {
+//            return self::_escape($value);
+//        }
+//        if ($value === true) {
+//            return '('.$key.':true)';
+//        }
+//        if ($value === false) {
+//            return '('.$key.':false)';
+//        }
+//        if ($value === null) {
+//            return '(NOT _exists_:'.$key.')';
+//        }
+//
+//        return '('.$key.':"'.self::_escape($value).'")';
+//
+//    }
+//
+    public function _escape($value): string
     {
         $specialChars = ['"', '\\', '~', '^', '/'];
         foreach ($specialChars as $char) {
@@ -306,9 +325,129 @@ trait QueryBuilder
         if (!$wheres) {
             return ParameterBuilder::matchAll();
         }
-        $string = $this->_buildQueryString($wheres);
+        $dsl = $this->_convertWheresToDSL($wheres);
+
+//        dd($dsl);
         
-        return ParameterBuilder::queryStringQuery($string);
+        return ParameterBuilder::query($dsl);
+    }
+    
+    
+    public function _convertWheresToDSL($wheres): array
+    {
+        $dsl = ['bool' => []];
+        
+        foreach ($wheres as $logicalOperator => $conditions) {
+            switch ($logicalOperator) {
+                case 'and':
+                    $dsl['bool']['must'] = [];
+                    foreach ($conditions as $condition) {
+                        $parsedCondition = $this->_parseCondition($condition);
+                        if (!empty($parsedCondition)) {
+                            $dsl['bool']['must'][] = $parsedCondition;
+                        }
+                    }
+                    break;
+                case 'or':
+                    $dsl['bool']['should'] = [];
+                    foreach ($conditions as $conditionGroup) {
+                        $boolClause = ['bool' => ['must' => []]];
+                        foreach ($conditionGroup as $subConditions) {
+                            foreach ($subConditions as $subCondition) {
+                                $parsedCondition = $this->_parseCondition($subCondition);
+                                if (!empty($parsedCondition)) {
+                                    $boolClause['bool']['must'][] = $parsedCondition;
+                                }
+                            }
+                        }
+                        if (!empty($boolClause['bool']['must'])) {
+                            $dsl['bool']['should'][] = $boolClause;
+                        }
+                    }
+                    break;
+                default:
+                    return $this->_parseCondition($wheres);
+            }
+        }
+        
+        return $dsl;
+    }
+    
+    private function _parseCondition($condition): array
+    {
+//        dd($condition);
+        $field = key($condition);
+        $value = current($condition);
+        
+        
+        if (!is_array($value)) {
+            
+            return ['match' => [$field => $value]];
+        } else {
+            $operator = key($value);
+            $operand = current($value);
+            $queryPart = [];
+            
+            switch ($operator) {
+                case 'lt':
+                    $queryPart = ['range' => [$field => ['lt' => $operand]]];
+                    break;
+                case 'lte':
+                    $queryPart = ['range' => [$field => ['lte' => $operand]]];
+                    break;
+                case 'gt':
+                    $queryPart = ['range' => [$field => ['gt' => $operand]]];
+                    break;
+                case 'gte':
+                    $queryPart = ['range' => [$field => ['gte' => $operand]]];
+                    break;
+                case 'search':
+                    $queryPart = ['query_string' => $operand];
+                    break;
+                case 'like':
+                    $queryPart = [
+                        'query_string' => [
+                            'query' => $field.':*'.$this->_escape($operand).'*',
+                        ],
+                    ];
+                    break;
+                case 'not_like':
+                    $queryPart = [
+                        'query_string' => [
+                            'query' => '(NOT '.$field.':*'.self::_escape($operand).'*)',
+                        ],
+                    ];
+                    break;
+                case 'regex':
+                    $queryPart = ['regexp' => [$field => ['value' => $operand]]];
+                    break;
+                case 'exists':
+                    $queryPart = ['exists' => ['field' => $field]];
+                    break;
+                case 'not_exists':
+                    $queryPart = ['bool' => ['must_not' => [['exists' => ['field' => $field]]]]];
+                    break;
+                case 'ne':
+                    $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
+                    break;
+                case 'in':
+                    $queryPart = ['terms' => [$field => $operand]];
+                    break;
+                case 'nin':
+                    $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
+                    break;
+                case 'between':
+                    $queryPart = ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]];
+                    break;
+                case 'not_between':
+                    $queryPart = ['bool' => ['must_not' => ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]]]];
+                    break;
+                default:
+                    abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
+            }
+            
+            return $queryPart;
+        }
     }
     
     /**
@@ -392,33 +531,48 @@ trait QueryBuilder
     public function _parseFilterParameter($params, $filer)
     {
         $body = $params['body'];
-        if (!empty($body['query']['match_all'])) {
-            $filteredBody = [
-                'query' => [
-                    'bool' => [
-                        'must'   => [
-                            'match_all' => $body['query']['match_all'],
-                        ],
-                        'filter' => $filer['filter'],
+        $currentQuery = $body['query'];
+        
+        $filteredBody = [
+            'query' => [
+                'bool' => [
+                    'must'   => [
+                        $currentQuery,
                     ],
+                    'filter' => $filer['filter'],
                 ],
-            ];
-            $params['body']['query'] = $filteredBody['query'];
-        }
-        if (!empty($body['query']['query_string'])) {
-            $filteredBody = [
-                'query' => [
-                    'bool' => [
-                        'must'   => [
-                            'query_string' => $body['query']['query_string'],
-                        ],
-                        'filter' => $filer['filter'],
-                    ],
-                ],
-            ];
-            $params['body']['query'] = $filteredBody['query'];
-        }
+            ],
+        ];
+        $params['body']['query'] = $filteredBody['query'];
         
         return $params;
+//        if (!empty($body['query']['match_all'])) {
+//            $filteredBody = [
+//                'query' => [
+//                    'bool' => [
+//                        'must'   => [
+//                            'match_all' => $body['query']['match_all'],
+//                        ],
+//                        'filter' => $filer['filter'],
+//                    ],
+//                ],
+//            ];
+//            $params['body']['query'] = $filteredBody['query'];
+//        }
+//        if (!empty($body['query']['query_string'])) {
+//            $filteredBody = [
+//                'query' => [
+//                    'bool' => [
+//                        'must'   => [
+//                            'query_string' => $body['query']['query_string'],
+//                        ],
+//                        'filter' => $filer['filter'],
+//                    ],
+//                ],
+//            ];
+//            $params['body']['query'] = $filteredBody['query'];
+//        }
+//
+//        return $params;
     }
 }

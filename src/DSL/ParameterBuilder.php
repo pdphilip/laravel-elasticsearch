@@ -8,8 +8,8 @@ class ParameterBuilder
     {
         return [
             'query' => [
-                'match_all' => new \stdClass()
-            ]
+                'match_all' => new \stdClass(),
+            ],
         ];
     }
     
@@ -19,9 +19,16 @@ class ParameterBuilder
         return [
             'query' => [
                 'query_string' => [
-                    'query' => $string
-                ]
-            ]
+                    'query' => $string,
+                ],
+            ],
+        ];
+    }
+    
+    public static function query($dsl): array
+    {
+        return [
+            'query' => $dsl,
         ];
     }
     
@@ -30,8 +37,8 @@ class ParameterBuilder
     {
         return [
             $field => [
-                'order' => $order
-            ]
+                'order' => $order,
+            ],
         ];
     }
     
@@ -39,8 +46,8 @@ class ParameterBuilder
     {
         return [
             'max' => [
-                'field' => $field
-            ]
+                'field' => $field,
+            ],
         ];
     }
     
@@ -48,8 +55,8 @@ class ParameterBuilder
     {
         return [
             'min' => [
-                'field' => $field
-            ]
+                'field' => $field,
+            ],
         ];
     }
     
@@ -57,8 +64,8 @@ class ParameterBuilder
     {
         return [
             'avg' => [
-                'field' => $field
-            ]
+                'field' => $field,
+            ],
         ];
     }
     
@@ -66,8 +73,8 @@ class ParameterBuilder
     {
         return [
             'sum' => [
-                'field' => $field
-            ]
+                'field' => $field,
+            ],
         ];
     }
     
@@ -75,10 +82,10 @@ class ParameterBuilder
     {
         return [
             'matrix_stats' => [
-                'fields' => $fields
-            ]
+                'fields' => $fields,
+            ],
         ];
     }
-
+    
     
 }

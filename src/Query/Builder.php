@@ -684,7 +684,10 @@ class Builder extends BaseBuilder
         $operator = $where['operator'];
         $column = $where['column'];
         $value = $where['value'];
-        
+        $boolean = $where['boolean'] ?? null;
+        if ($boolean === 'and not') {
+            $operator = '!=';
+        }
         if ($operator === 'not like') {
             $operator = 'not_like';
         }
@@ -725,6 +728,7 @@ class Builder extends BaseBuilder
         return [$column => ['in' => array_values($values)]];
     }
     
+    
     /**
      * @param    array    $where
      *
@@ -745,7 +749,8 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNull(array $where)
     {
-        $where['operator'] = '=';
+//        $where['operator'] = '=';
+        $where['operator'] = 'not_exists';
         $where['value'] = null;
         
         return $this->_parseWhereBasic($where);
@@ -758,7 +763,8 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNotNull(array $where)
     {
-        $where['operator'] = 'ne';
+//        $where['operator'] = 'ne';
+        $where['operator'] = 'exists';
         $where['value'] = null;
         
         return $this->_parseWhereBasic($where);
