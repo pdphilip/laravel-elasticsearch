@@ -93,6 +93,7 @@ class Bridge
      */
     public function processFind($wheres, $options, $columns): Results
     {
+        
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         
         return $this->_returnSearch($params, __FUNCTION__);

@@ -275,6 +275,56 @@ class Builder extends BaseBuilder
         return null;
     }
     
+    /**
+     * @param $column
+     * @param $callBack
+     * @param $scoreMode
+     *
+     * @return $this
+     */
+    public function whereNestedObject($column, $callBack, $scoreMode = 'avg')
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column'     => $column,
+            'type'       => 'NestedObject',
+            'wheres'     => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean'    => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $callBack
+     * @param $scoreMode
+     *
+     * @return $this
+     */
+    public function whereNotNestedObject($column, $callBack, $scoreMode = 'avg')
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column'     => $column,
+            'type'       => 'NotNestedObject',
+            'wheres'     => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean'    => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    
+    
     
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
@@ -710,9 +760,7 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNested(array $where)
     {
-        $query = $where['query'];
-        
-        return $query->compileWheres();
+        throw new LogicException('whereNested clause is not available yet');
     }
     
     /**
@@ -749,7 +797,6 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNull(array $where)
     {
-//        $where['operator'] = '=';
         $where['operator'] = 'not_exists';
         $where['value'] = null;
         
@@ -763,7 +810,6 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNotNull(array $where)
     {
-//        $where['operator'] = 'ne';
         $where['operator'] = 'exists';
         $where['value'] = null;
         
@@ -806,6 +852,7 @@ class Builder extends BaseBuilder
         //Just a normal where query.....
         return $this->_parseWhereBasic($where);
     }
+    
     
     /**
      * @param    array    $where
@@ -879,6 +926,41 @@ class Builder extends BaseBuilder
         
         return [$column => ['regex' => $value]];
         
+    }
+    
+    /**
+     * @param    array    $where
+     *
+     * @return array[]
+     */
+    protected function _parseWhereNestedObject(array $where)
+    {
+        $wheres = $where['wheres'];
+        $column = $where['column'];
+        $scoreMode = $where['score_mode'];
+        
+        
+        return [
+            $column => ['nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
+        ];
+    }
+    
+    
+    /**
+     * @param    array    $where
+     *
+     * @return array[]
+     */
+    protected function _parseWhereNotNestedObject(array $where)
+    {
+        $wheres = $where['wheres'];
+        $column = $where['column'];
+        $scoreMode = $where['score_mode'];
+        
+        
+        return [
+            $column => ['not_nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
+        ];
     }
     
     /**

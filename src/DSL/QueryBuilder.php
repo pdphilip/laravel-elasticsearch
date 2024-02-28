@@ -180,133 +180,7 @@ trait QueryBuilder
     //----------------------------------------------------------------------
     // Parsers
     //----------------------------------------------------------------------
-
-//    private function _buildQueryString($wheres): string
-//    {
-//        if ($wheres) {
-//            foreach ($wheres as $key => $value) {
-//                return $this->_parseParams($key, $value);
-//            }
-//        }
-//
-//        return '';
-//    }
-//
-//    private static function _andQueryString($values): string
-//    {
-//        $strings = [];
-//        foreach ($values as $key => $val) {
-//            $strings[] = self::_parseParams($key, $val);
-//        }
-//
-//        return '('.implode(' AND ', $strings).')';
-//    }
-//
-//    private static function _orQueryString($values): string
-//    {
-//        $strings = [];
-//        foreach ($values as $key => $val) {
-//            $strings[] = self::_parseParams($key, $val);
-//        }
-//
-//        return '('.implode(' OR ', $strings).')';
-//    }
-//
-//    private static function _inQueryString($key, $values): string
-//    {
-//        $strings = [];
-//        foreach ($values as $val) {
-//            $strings[] = self::_parseParams(null, $val);
-//        }
-//
-//        return '('.$key.':('.implode(' OR ', $strings).'))';
-//    }
-//
-//    private static function _ninQueryString($key, $values): string
-//    {
-//        $strings = [];
-//        foreach ($values as $val) {
-//            $strings[] = self::_parseParams(null, $val);
-//        }
-//
-//        return '(NOT '.$key.':('.implode(' OR ', $strings).'))';
-//    }
-//
-//    private static function _parseParams($key, $value): string
-//    {
-//
-//        if ($key === 'and' || $key === 'or') {
-//            return self::{'_'.$key.'QueryString'}($value);
-//        }
-//        if (is_array($value)) {
-//
-//            foreach ($value as $op => $opVal) {
-//
-//                if (in_array($op, self::$bucketOperators)) {
-//                    return self::{'_'.$op.'QueryString'}($opVal);
-//                }
-//                if (in_array($op, self::$equivalenceOperators)) {
-//                    return self::{'_'.$op.'QueryString'}($key, $opVal);
-//                }
-//                if (in_array($op, self::$clauseOperators)) {
-//                    switch ($op) {
-//                        case 'ne':
-//                            if (!$opVal) {
-//                                // Is not equal to null => exists and has a value
-//                                return '(_exists_:'.$key.')';
-//                            }
-//
-//                            return '(NOT '.$key.':'.self::_escape($opVal).')';
-//                        case 'lt':
-//                            return '('.$key.':{* TO '.$opVal.'})';
-//                        case 'lte':
-//                            return '('.$key.':[* TO '.$opVal.'])';
-//                        case 'gt':
-//                            return '('.$key.':{'.$opVal.' TO *})';
-//                        case 'gte':
-//                            return '('.$key.':['.$opVal.' TO *])';
-//                        case 'between':
-//                            return '('.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-//                        case 'not_between':
-//                            return '(NOT '.$key.':['.$opVal[0].' TO '.$opVal[1].'])';
-//                        case 'like':
-//                            return '('.$key.':*'.self::_escape($opVal).'*)';
-//                        case 'not_like':
-//                            return '(NOT '.$key.':*'.self::_escape($opVal).'*)';
-//                        case 'regex':
-//                            return '('.$key.':/'.$opVal.'/)';
-//                        case 'exists':
-//                            if ($opVal) {
-//                                return '(_exists_:'.$key.')';
-//                            }
-//
-//                            return '(NOT _exists_:'.$key.')';
-//
-//                    }
-//
-//                }
-//
-//                return self::_parseParams($op, $opVal);
-//            }
-//        }
-//
-//        if (!$key) {
-//            return self::_escape($value);
-//        }
-//        if ($value === true) {
-//            return '('.$key.':true)';
-//        }
-//        if ($value === false) {
-//            return '('.$key.':false)';
-//        }
-//        if ($value === null) {
-//            return '(NOT _exists_:'.$key.')';
-//        }
-//
-//        return '('.$key.':"'.self::_escape($value).'")';
-//
-//    }
-//
+    
     public function _escape($value): string
     {
         $specialChars = ['"', '\\', '~', '^', '/'];
@@ -326,8 +200,6 @@ trait QueryBuilder
             return ParameterBuilder::matchAll();
         }
         $dsl = $this->_convertWheresToDSL($wheres);
-
-//        dd($dsl);
         
         return ParameterBuilder::query($dsl);
     }
@@ -336,7 +208,6 @@ trait QueryBuilder
     public function _convertWheresToDSL($wheres): array
     {
         $dsl = ['bool' => []];
-        
         foreach ($wheres as $logicalOperator => $conditions) {
             switch ($logicalOperator) {
                 case 'and':
@@ -442,6 +313,31 @@ trait QueryBuilder
                 case 'not_between':
                     $queryPart = ['bool' => ['must_not' => ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]]]];
                     break;
+                case 'nested':
+                    $queryPart = [
+                        'nested' => [
+                            'path'       => $field,
+                            'query'      => $this->_convertWheresToDSL($operand['wheres']),
+                            'score_mode' => $operand['score_mode'],
+                        ],
+                    ];
+                    break;
+                case 'not_nested':
+                    $queryPart = [
+                        'bool' => [
+                            'must_not' => [
+                                [
+                                    'nested' => [
+                                        'path'       => $field,
+                                        'query'      => $this->_convertWheresToDSL($operand['wheres']),
+                                        'score_mode' => $operand['score_mode'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    
+                    ];
+                    break;
                 default:
                     abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
             }
@@ -546,33 +442,6 @@ trait QueryBuilder
         $params['body']['query'] = $filteredBody['query'];
         
         return $params;
-//        if (!empty($body['query']['match_all'])) {
-//            $filteredBody = [
-//                'query' => [
-//                    'bool' => [
-//                        'must'   => [
-//                            'match_all' => $body['query']['match_all'],
-//                        ],
-//                        'filter' => $filer['filter'],
-//                    ],
-//                ],
-//            ];
-//            $params['body']['query'] = $filteredBody['query'];
-//        }
-//        if (!empty($body['query']['query_string'])) {
-//            $filteredBody = [
-//                'query' => [
-//                    'bool' => [
-//                        'must'   => [
-//                            'query_string' => $body['query']['query_string'],
-//                        ],
-//                        'filter' => $filer['filter'],
-//                    ],
-//                ],
-//            ];
-//            $params['body']['query'] = $filteredBody['query'];
-//        }
-//
-//        return $params;
+        
     }
 }
