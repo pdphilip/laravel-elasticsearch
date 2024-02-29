@@ -269,6 +269,15 @@ class Builder
         return $fields;
     }
     
+    //----------------------------------------------------------------------
+    // Internal Laravel init migration catchers
+    // *Case for when ES is the only datasource
+    //----------------------------------------------------------------------
+    public function hasTable($table)
+    {
+        return $this->getIndex($table);
+    }
+    
     
     //----------------------------------------------------------------------
     // Builders

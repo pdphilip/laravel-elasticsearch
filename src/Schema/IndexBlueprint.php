@@ -166,6 +166,21 @@ class IndexBlueprint
     }
     
     //----------------------------------------------------------------------
+    // Internal Laravel init migration catchers
+    // *Case for when ES is the only datasource
+    //----------------------------------------------------------------------
+    
+    public function increments($column)
+    {
+        return $this->addField('keyword', $column);
+    }
+    
+    public function string($column)
+    {
+        return $this->addField('keyword', $column);
+    }
+    
+    //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
     private function _formatParams()

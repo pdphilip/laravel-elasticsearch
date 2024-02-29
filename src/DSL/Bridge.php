@@ -844,9 +844,15 @@ class Bridge
         if (!empty($response[$keys[$index]]['buckets'])) {
             foreach ($response[$keys[$index]]['buckets'] as $res) {
                 $datum = $currentData;
-                $datum[$columns[$index]] = $res['key'];
+                //clear keyword from column name
+                $col = $columns[$index];
+                if (str_contains($col, '.keyword')) {
+                    $col = str_replace('.keyword', '', $col);
+                }
+                
+                $datum[$col] = $res['key'];
                 if ($includeDocCount) {
-                    $datum[$columns[$index].'_count'] = $res['doc_count'];
+                    $datum[$col.'_count'] = $res['doc_count'];
                 }
                 
                 if (isset($columns[$index + 1])) {
