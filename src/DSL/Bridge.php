@@ -92,7 +92,6 @@ class Bridge
      */
     public function processFind($wheres, $options, $columns): Results
     {
-        
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         
         return $this->_returnSearch($params, __FUNCTION__);
@@ -838,17 +837,18 @@ class Bridge
     private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = [])
     {
         $data = [];
-        
         if (!empty($response[$keys[$index]]['buckets'])) {
             foreach ($response[$keys[$index]]['buckets'] as $res) {
+                
                 $datum = $currentData;
-                //clear keyword from column name
+                
                 $col = $columns[$index];
                 if (str_contains($col, '.keyword')) {
                     $col = str_replace('.keyword', '', $col);
                 }
                 
                 $datum[$col] = $res['key'];
+                
                 if ($includeDocCount) {
                     $datum[$col.'_count'] = $res['doc_count'];
                 }
