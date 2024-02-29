@@ -173,12 +173,12 @@ class IndexBlueprint
     
     public function increments($column)
     {
-        return $this->addField('text', $column);
+        return $this->addField('keyword', $column);
     }
     
     public function string($column)
     {
-        return $this->addField('text', $column);
+        return $this->addField('keyword', $column);
     }
     
     
