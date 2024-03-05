@@ -19,60 +19,97 @@ Elasticsearch in laravel as if it were native to Laravel, meaning:
 - No need to write your own DSL queries ([unless you want to](#raw-dsl))
 - [Eloquent style searching](#elasticsearching)
 
+# Table of Contents
+
+- [Laravel x Elasticsearch](#laravel-x-elasticsearch)
+    - [Features](#features)
+    - [Installation](#installation)
+    - [Configuration](#configuration)
+- [Eloquent](#eloquent)
+    - [Extending the Base Model](#extending-the-base-model)
+    - [Querying Models](#querying-models)
+        - [ALL](#all)
+        - [Find](#find)
+        - [First](#first)
+        - [Where](#where)
+        - [Where LIKE](#where-like)
+        - [OR Statements](#or-statements)
+        - [Chaining OR/AND Statements](#chaining-orand-statements)
+        - [WhereIn](#wherein)
+        - [WhereNotIn](#wherenotin)
+        - [WhereNotNull](#wherenotnull)
+        - [WhereNull](#wherenull)
+        - [WhereBetween](#wherebetween)
+        - [Dates](#dates)
+    - [Aggregation](#aggregation)
+    - [Ordering](#ordering)
+        - [OrderBy](#orderby)
+        - [OrderByDesc](#orderbydesc)
+        - [Offset & Limit](#offset--limit)
+        - [Pagination](#pagination)
+    - [Distinct and GroupBy](#distinct-and-groupby)
+        - [Basic Usage](#basic-usage)
+        - [Working with Collections](#working-with-collections)
+        - [Multiple Fields Aggregation](#multiple-fields-aggregation)
+        - [Ordering by Aggregation Count](#ordering-by-aggregation-count)
+        - [Returning Count with Distinct Results](#returning-count-with-distinct-results)
+        - [Pagination Support](#pagination-support)
+- [Elasticsearch Specific Queries](#elasticsearch-specific-queries)
+    - [Geo](#geo)
+    - [Regex in Where](#regex-in-where)
+- [Saving Models](#saving-models)
+    - [Save](#save)
+    - [Create](#create)
+    - [Update](#update)
+    - [Mass Updating](#mass-updating)
+    - [Fast Saves](#fast-saves)
+- [Deleting Models](#deleting-models)
+    - [Delete](#delete)
+    - [Truncate](#truncate)
+    - [Destroy by ID](#destroy-by-id)
+- [Soft Deletes](#soft-deletes)
+- [Elasticsearching](#elasticsearching)
+    - [The Search Query](#the-search-query)
+    - [FuzzyTerm](#fuzzyterm)
+    - [RegEx in Search](#regex-in-search)
+- [Mutators & Casting](#mutators--casting)
+- [Relationships](#relationships)
+    - [Elasticsearch <-> Elasticsearch](#elasticsearch---elasticsearch)
+    - [Elasticsearch <-> MySQL](#elasticsearch---mysql)
+- [Schema/Index](#schemaindex)
+    - [Migrations](#migrations)
+    - [Dynamic Indies](#dynamic-indies)
+- [RAW DSL](#raw-dsl)
+- [Elasticsearchisms](#elasticsearchisms)
+- [Unsupported Eloquent Methods](#unsupported-eloquent-methods)
+
 Installation
 ===============
 
 ## Elasticsearch 8.x
 
-Laravel 9.x:
+Laravel 10.x (Latest):
 
 ```bash
 $ composer require pdphilip/elasticsearch:~2.9
 ```
 
-Laravel 8.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.8
-```
-
-Laravel 7.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.7
-```
-
-Laravel 6.x (and 5.8):
-
-```bash
-$ composer require pdphilip/elasticsearch:~2.6
-```
+| Laravel Version   | Command                                          | Maintained |
+|-------------------|--------------------------------------------------|------------|
+| Laravel 10.x      | `$ composer require pdphilip/elasticsearch`      | ✅          |
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~2.9` | ✅          |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~2.8` | ✅          |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~2.7` | ✅          |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~2.6` | ❌          |
 
 ## Elasticsearch 7.x
 
-Laravel 9.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.9
-```
-
-Laravel 8.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.8
-```
-
-Laravel 7.x:
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.7
-```
-
-Laravel 6.x (and 5.8):
-
-```bash
-$ composer require pdphilip/elasticsearch:~1.6
-```
+| Laravel Version   | Command                                          | Maintained |
+|-------------------|--------------------------------------------------|------------|
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~1.9` | ❌          |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~1.8` | ❌          |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~1.7` | ❌          |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~1.6` | ❌          |
 
 Configuration
 ===============
@@ -88,6 +125,7 @@ ES_CLOUD_ID=
 ES_API_ID=
 ES_API_KEY=
 ES_SSL_CERT=
+ES_INDEX_PREFIX=
 ```
 
 <details>
@@ -126,7 +164,7 @@ Add the `elasticsearch` connection in `config/database.php`
             'api_id'       => env('ES_API_ID', ''),
             'api_key'      => env('ES_API_KEY', ''),
             'ssl_cert'     => env('ES_SSL_CERT', ''),
-            'index_prefix' => false, //prefix all Laravel administered indices
+            'index_prefix' => env('ES_INDEX_PREFIX', false),
             'query_log'    => [
                 'index'      => 'laravel_query_logs', //Or false to disable query logging
                 'error_only' => true, //If false, the all queries are logged
@@ -313,7 +351,8 @@ You can use these values in a normal [where](#where) clause, or use the built-in
 $products = Product::whereDate('created_at', '2022-01-29')->get();
 ```
 
-**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has disabled for the current version of
+**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has been disabled for the current version
+of
 this plugin
 
 ### Aggregation
@@ -426,6 +465,117 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
+Distinct and GroupBy
+-----------------------------
+This section covers the implementation of `distinct()` and `groupBy()` methods in the Elasticsearch Eloquent model.
+These methods are interchangeable and use term aggregation under the hood.
+
+This tends to be a core use case for Elasticsearch, for example, to get all the unique user_ids of the users who have
+been
+logged in the last 30 days:
+
+#### Basic Usage
+
+- **Distinct**:
+
+ ```php
+// Unique user_ids of users logged in the last 30 days
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+//or:
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->select('user_id')->distinct()->get();
+```
+
+- **GroupBy**:
+
+```php
+// Equivalent to the above distinct query
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->groupBy('user_id')->get();
+
+```
+
+#### Working with Collections
+
+- The results from these queries are returned as collections, allowing use of standard collection methods.
+- Example of loading related user data:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+return $users->load('user');
+```
+
+#### Multiple Fields Aggregation
+
+- You can pass multiple fields to perform term aggregation.
+- Example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get(['user_id', 'log_title']);
+/** returns: 
+{
+    "user_id": "1",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_OUT"
+},
+ **/
+```
+
+#### Ordering by Aggregation Count
+
+- Results can be sorted based on the count of the aggregated field.
+- Example of ordering by the most logged users:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('_count')->get('user_id');
+```
+
+- Or you can order by the distinct field, example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('user_id')->get('user_id');
+```
+
+#### Returning Count with Distinct Results
+
+- To include the count of distinct values in the results, use `distinct(true)`:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct(true)->orderBy('_count')->get(['user_id']);
+/** returns: 
+{
+    "user_id": "5",
+    "user_id_count": 65
+},
+{
+    "user_id": "1",
+    "user_id_count": 61
+},
+{
+    "user_id": "9",
+    "user_id_count": 54
+},
+ **/
+```
+
+#### Pagination Support
+
+- The `distinct()` and `groupBy()` methods support pagination.
+- Example:
+
+```php
+
+$users = UserLog::where('log_title', 'LOGGED_IN')->select('user_id')->distinct()->orderBy('_count')->paginate(20);
+//or
+$users = UserLog::where('log_title', 'LOGGED_IN')->groupBy('user_id')->orderBy('_count')->paginate(20);
+
+```
+
 Elasticsearch specific queries
 -----------------------------
 
@@ -525,8 +675,8 @@ $updates = Product::where('status', 1)->update(['status' => 4]); //Updates all s
 **Saving 'without refresh'**
 
 Elasticsearch will write a new document and return the `_id` before it has been indexed. This means that there could be
-a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to *
-write a new document and wait until it has been indexed* - If you know that you won't need to look up or manipulate the
+a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to
+*write a new document and wait until it has been indexed* - If you know that you won't need to look up or manipulate the
 new document immediately, then you can leverage the speed benefit of `write and move on` with `saveWithoutRefresh()`
 and `createWithoutRefresh()`
 
@@ -1178,7 +1328,7 @@ class MyIndexes extends Migration
 
           //Disk space considerations ::
           //Not indexed and not searchable:
-          $index->text('internal_notes')->docValues(false);  
+          $index->keyword('internal_notes')->docValues(false);  
           //Remove scoring for search:
           $index->array('tags')->norms(false);  
           //Remove from index, can't search by this field but can still use for aggregations:
@@ -1235,20 +1385,90 @@ class MyIndexes extends Migration
 ```
 
 All methods
+Note: If you have configured a prefix in your config file, then all schema methods will be scoped to that prefix.
+
+Index look-ups.
 
 ```php
-Schema::getIndices();
-Schema::getMappings('my_index')
-Schema::getSettings('my_index')
+Schema::getIndex('my_index');
+/**
+return [
+    "my_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+
+Schema::getIndex('page_hits_*');
+/**
+return [
+    "my_prefix_page_hits_2023-01-01" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    "my_prefix_page_hits_2023-01-02" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    ....
+];
+ **/
+Schema::getIndex('my_non_existing_index'); //returns [];
+ 
+Schema::getIndices();  //Equivalent to Schema::getIndex('*');
+ 
+Schema::getMappings('my_index');
+Schema::getSettings('my_index');
+
+//Booleans
+Schema::hasField('my_index','my_field');
+Schema::hasFields('my_index',['field_a','field_b','field_c']);
+Schema::hasIndex('my_index');
+
+```
+
+Overriding the prefix:
+
+```php
+Schema::overridePrefix(null)->getIndex('my_index');
+/**
+return [
+    "my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+Schema::overridePrefix('some_other_prefix')->getIndex('my_index');
+/**
+return [
+    "some_other_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+```
+
+Index Creation, Modification, Deletion
+
+```php
+
 Schema::create('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::createIfNotExists('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::reIndex('from_index','to_index') {
     //......
-})
+});
 Schema::modify('my_index',function (IndexBlueprint $index) {
     //......
 });
@@ -1257,12 +1477,62 @@ Schema::deleteIfExists('my_index')
 Schema::setAnalyser('my_index',function (AnalyzerBlueprint $settings) {
 	//......
 });
-//Booleans
-Schema::hasField('my_index','my_field')
-Schema::hasFields('my_index',['field_a','field_b','field_c'])
-Schema::hasIndex('my_index')
+
 //DIY
-Schema::dsl('indexMethod',$dslParams)
+Schema::dsl('indexMethod',$dslParams);
+```
+
+Re-indexing example:
+
+```php
+//create a new index
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+});
+
+//Create a record assuming you have a model for this index
+SiteLog::create([
+    'url' => 'https://example.com/contact-us',
+    'user_ip' => '0.0.0.0',
+    'location' => ['lat' => -7.3,'lon' => 3.1]
+]);
+//'location' field will be indexed by elasticsearch as an object
+
+//Trying to filter by location will fail due to the incorrect mapping
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
+
+//Step 1: Create a temporary index with the correct mapping
+Schema::create('temp_site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 2: Re-index the data from the original index to the temporary index
+//This will copy all the records from site_logs to temp_site_logs
+$result = Schema::reIndex('site_logs','temp_site_logs');
+dd($result->data); //confirm that the re-indexing was successful 
+$copiedRecords = DB::connection('elasticsearch')->table('my_prefix_temp_site_logs')->count(); //count the records in the new index, make sure everything is there
+
+//Step 3: Once deemed safe; delete the original index
+Schema::delete('site_logs');
+
+//Step 4: Recreate the original index with the correct mapping
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 5: Re-index the data from the temporary index to the original index
+$result = Schema::reIndex('temp_site_logs','site_logs');
+
+//Step 6: Delete the temporary index
+Schema::delete('temp_site_logs');
+
+//Now you can filter by location
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
 
 ```
 
@@ -1319,11 +1589,6 @@ Product::chunkById(1000, function ($products) {
 }, 'product_sku.keyword');
 ```
 
-Queues
-----------
-_[Coming]_
-
-
 Dynamic Indies
 ==============
 In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable
@@ -1357,7 +1622,7 @@ You will need to set the record's actual index when creating a new record, with 
 Create example:
 
 ```php
-$pageHit = new PageHit
+$pageHit = new PageHit;
 $pageHit->page_id = 4;
 $pageHit->ip = $someIp;
 $pageHit->setIndex('page_hits_'.date('Y-m-d'));
@@ -1369,6 +1634,16 @@ Each eloquent model will have the current record's index embedded into it, to re
 
 ```php
 $pageHit->getRecordIndex();  //returns page_hits_2021-01-01
+```
+
+You can search within a specific index of your dynamic indices model by calling `setIndex('value')` before building
+your query:
+
+```php
+//Search within the index page_hits_2023-01-01 for page_id = 3
+$model = new PageHit;
+$model->setIndex('page_hits_2023-01-01');
+$pageHits = $model->where('page_id', 3)->get();
 ```
 
 RAW DSL
@@ -1460,10 +1735,4 @@ once and not update immediately or won't need to search for the record immediate
 
 ### Unsupported Eloquent methods
 
-`upsert()`, `distinct()`, `groupBy()`, `groupByRaw()`
-
-Acknowledgements
--------------
-
-This package was inspired by [jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb), a MongoDB
-implementation of Laravel's Eloquent ORM - Thank you!
+`upsert()`, `groupByRaw()`

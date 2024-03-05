@@ -105,6 +105,7 @@ class Bridge
         
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
         
+        
         return $this->_returnSearch($params, __FUNCTION__);
         
     }
@@ -115,6 +116,7 @@ class Bridge
             $params['size'] = $this->maxSize;
         }
         try {
+            
             $process = $this->client->search($params);
             
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
@@ -888,6 +890,7 @@ class Bridge
         
         return $results;
     }
+    
     
     private function _returnError($errorMsg, $errorCode, $params, $queryTag): Results
     {

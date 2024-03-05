@@ -15,7 +15,6 @@ class Results
     
     public function __construct($data, $meta, $params, $queryTag)
     {
-        
         unset($meta['_source']);
         unset($meta['hits']);
         unset($meta['aggregations']);

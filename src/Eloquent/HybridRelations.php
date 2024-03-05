@@ -184,7 +184,6 @@ trait HybridRelations
         if (is_subclass_of($this, ParentModel::class)) {
             return new Builder($query);
         }
-        
         return new EloquentBuilder($query);
     }
 }
