@@ -2,17 +2,19 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
+use Elastic\Elasticsearch\Response\Elasticsearch;
+
+
 class Results
 {
-    private $_meta;
+    private array $_meta;
     
-    public $data;
-    public $errorMessage;
+    public mixed $data;
+    public mixed $errorMessage;
     
     
     public function __construct($data, $meta, $params, $queryTag)
     {
-        
         unset($meta['_source']);
         unset($meta['hits']);
         unset($meta['aggregations']);
@@ -24,9 +26,11 @@ class Results
         
     }
     
-    public function setError($error, $errorCode)
+    public function setError($error, $errorCode): void
     {
+        
         if ($this->_isJson($error)) {
+            
             $jsonError = json_decode($error);
             if (!empty($jsonError->error->reason)) {
                 $error = $jsonError->error->reason;
@@ -39,17 +43,17 @@ class Results
         
     }
     
-    public function isSuccessful()
+    public function isSuccessful(): bool
     {
         return $this->_meta['success'] ?? false;
     }
     
-    public function getMetaData()
+    public function getMetaData(): array
     {
         return $this->_meta;
     }
     
-    public function getLogFormattedMetaData()
+    public function getLogFormattedMetaData(): array
     {
         $return = [];
         foreach ($this->_meta as $key => $value) {
@@ -59,23 +63,23 @@ class Results
         return $return;
     }
     
-    public function getInsertedId()
+    public function getInsertedId(): string|null
     {
         return $this->_meta['_id'] ?? null;
     }
     
     
-    public function getModifiedCount()
+    public function getModifiedCount(): int
     {
         return $this->_meta['modified'] ?? 0;
     }
     
-    public function getDeletedCount()
+    public function getDeletedCount(): int
     {
         return $this->_meta['deleted'] ?? 0;
     }
     
-    private function _isJson($string)
+    private function _isJson($string): bool
     {
         json_decode($string);
         

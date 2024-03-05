@@ -88,9 +88,9 @@ class IndexBlueprint
         return $this->addField('geo_point', $field);
     }
     
-    public function nested($field): Definitions\FieldDefinition
+    public function nested($field, $params = []): Definitions\FieldDefinition
     {
-        return $this->addField('nested', $field);
+        return $this->addField('nested', $field, $params);
     }
     
     public function alias($field, $path): Definitions\FieldDefinition
@@ -118,6 +118,10 @@ class IndexBlueprint
         $this->parameters['map'][$key] = $value;
     }
     
+    public function field($type, $field, array $parameters = [])
+    {
+        return $this->addField($type, $field, $parameters);
+    }
     
     //----------------------------------------------------------------------
     // Definitions
@@ -165,6 +169,7 @@ class IndexBlueprint
         }
     }
     
+    
     //----------------------------------------------------------------------
     // Internal Laravel init migration catchers
     // *Case for when ES is the only datasource
@@ -179,6 +184,7 @@ class IndexBlueprint
     {
         return $this->addField('keyword', $column);
     }
+    
     
     //----------------------------------------------------------------------
     // Helpers

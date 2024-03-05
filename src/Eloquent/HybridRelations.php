@@ -16,7 +16,6 @@ use PDPhilip\Elasticsearch\Relations\MorphOne;
 use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 
-
 trait HybridRelations
 {
     /**
@@ -185,7 +184,6 @@ trait HybridRelations
         if (is_subclass_of($this, ParentModel::class)) {
             return new Builder($query);
         }
-        
         return new EloquentBuilder($query);
     }
 }

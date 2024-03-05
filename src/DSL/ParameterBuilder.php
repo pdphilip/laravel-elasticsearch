@@ -4,7 +4,7 @@ namespace PDPhilip\Elasticsearch\DSL;
 
 class ParameterBuilder
 {
-    public static function matchAll()
+    public static function matchAll(): array
     {
         return [
             'query' => [
@@ -14,7 +14,7 @@ class ParameterBuilder
     }
     
     
-    public static function queryStringQuery($string)
+    public static function queryStringQuery($string): array
     {
         return [
             'query' => [
@@ -25,8 +25,15 @@ class ParameterBuilder
         ];
     }
     
+    public static function query($dsl): array
+    {
+        return [
+            'query' => $dsl,
+        ];
+    }
     
-    public static function fieldSort($field, $order = 'asc')
+    
+    public static function fieldSort($field, $order = 'asc'): array
     {
         return [
             $field => [
@@ -35,7 +42,7 @@ class ParameterBuilder
         ];
     }
     
-    public static function maxAggregation($field)
+    public static function maxAggregation($field): array
     {
         return [
             'max' => [
@@ -44,7 +51,7 @@ class ParameterBuilder
         ];
     }
     
-    public static function minAggregation($field)
+    public static function minAggregation($field): array
     {
         return [
             'min' => [
@@ -53,7 +60,7 @@ class ParameterBuilder
         ];
     }
     
-    public static function avgAggregation($field)
+    public static function avgAggregation($field): array
     {
         return [
             'avg' => [
@@ -62,7 +69,7 @@ class ParameterBuilder
         ];
     }
     
-    public static function sumAggregation($field)
+    public static function sumAggregation($field): array
     {
         return [
             'sum' => [
@@ -71,7 +78,7 @@ class ParameterBuilder
         ];
     }
     
-    public static function matrixAggregation($fields)
+    public static function matrixAggregation(array $fields): array
     {
         return [
             'matrix_stats' => [

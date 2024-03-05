@@ -1,67 +1,115 @@
-Laravel x Elasticsearch
-=======================
+# Laravel x Elasticsearch
 
 This package extends Laravel's Eloquent model and query builder for Elasticsearch. The goal of this package is to use
 Elasticsearch in laravel as if it were native to Laravel, meaning:
 
-- Work with your [Eloquent](#eloquent) models the way you're used to, including:
+-   Work with your [Eloquent](#eloquent) models the way you're used to, including:
 
-    - Standard query building: `Model::where('status','>',3)->orderByDesc('created_at')->get()`
-    - Model [Relationships](#relationships) (Including cross-database)
-    - [Mutators & Casting](#mutators--casting)
-    - Data returned as Collections
-    - [Soft Deletes](#soft-deletes)
-    - [Aggregations](#aggregation)
-    - [Migrations](#schema/index)
-    - ES features like [Geo Filtering](#geo) & [Regular Expressions](#regex-in-where)
+    -   Standard query building: `Model::where('status','>',3)->orderByDesc('created_at')->get()`
+    -   Model [Relationships](#relationships) (Including cross-database)
+    -   [Mutators & Casting](#mutators--casting)
+    -   Data returned as Collections
+    -   [Soft Deletes](#soft-deletes)
+    -   [Aggregations](#aggregation)
+    -   [Migrations](#migrations)
+    -   ES features like [Geo Filtering](#geo) & [Regular Expressions](#regex-in-where)
 
-- No need to write your own DSL queries ([unless you want to](#raw-dsl)!)
-- [Eloquent style searching](#elasticsearching)
+-   [Dynamic Indices](#dynamic-indies)
+-   No need to write your own DSL queries ([unless you want to](#raw-dsl))
+-   [Eloquent style searching](#elasticsearching)
 
-> # Alpha release notice
-> This package is being released prematurely to an interested community of testers. It is not ready for production just
-> yet only due to a lack of testing mileage. Once deemed stable, the plugin will move to V1. Elasticsearch is a deep topic
-> on its own and there are many native features that have not yet been included. I built this because I needed it but this
-> plugin is for everyone; submit issues (there's no way I could have found all the edge cases on my own) and feel free to
-> submit pull requests.
->
-> #### Versioning Schema: {plugin_version}.{laravel_version}.{iteration}
->
-> ex: 0.8.1
->
-> Version 0 will be alpha & beta    
-> Version 1 will be RC & stable     
-> Version 2+ will be next gen feature set
+# Table of Contents
 
-____
+-   [Laravel x Elasticsearch](#laravel-x-elasticsearch)
+    -   [Features](#features)
+    -   [Installation](#installation)
+    -   [Configuration](#configuration)
+-   [Eloquent](#eloquent)
+    -   [Extending the Base Model](#extending-the-base-model)
+    -   [Querying Models](#querying-models)
+        -   [ALL](#all)
+        -   [Find](#find)
+        -   [First](#first)
+        -   [Where](#where)
+        -   [Where LIKE](#where-like)
+        -   [OR Statements](#or-statements)
+        -   [Chaining OR/AND Statements](#chaining-orand-statements)
+        -   [WhereIn](#wherein)
+        -   [WhereNotIn](#wherenotin)
+        -   [WhereNotNull](#wherenotnull)
+        -   [WhereNull](#wherenull)
+        -   [WhereBetween](#wherebetween)
+        -   [Dates](#dates)
+    -   [Aggregation](#aggregation)
+    -   [Ordering](#ordering)
+        -   [OrderBy](#orderby)
+        -   [OrderByDesc](#orderbydesc)
+        -   [Offset & Limit](#offset--limit)
+        -   [Pagination](#pagination)
+    -   [Distinct and GroupBy](#distinct-and-groupby)
+        -   [Basic Usage](#basic-usage)
+        -   [Working with Collections](#working-with-collections)
+        -   [Multiple Fields Aggregation](#multiple-fields-aggregation)
+        -   [Ordering by Aggregation Count](#ordering-by-aggregation-count)
+        -   [Returning Count with Distinct Results](#returning-count-with-distinct-results)
+        -   [Pagination Support](#pagination-support)
+-   [Elasticsearch Specific Queries](#elasticsearch-specific-queries)
+    -   [Geo](#geo)
+    -   [Regex in Where](#regex-in-where)
+-   [Saving Models](#saving-models)
+    -   [Save](#save)
+    -   [Create](#create)
+    -   [Update](#update)
+    -   [Mass Updating](#mass-updating)
+    -   [Fast Saves](#fast-saves)
+-   [Deleting Models](#deleting-models)
+    -   [Delete](#delete)
+    -   [Truncate](#truncate)
+    -   [Destroy by ID](#destroy-by-id)
+-   [Soft Deletes](#soft-deletes)
+-   [Elasticsearching](#elasticsearching)
+    -   [The Search Query](#the-search-query)
+    -   [FuzzyTerm](#fuzzyterm)
+    -   [RegEx in Search](#regex-in-search)
+-   [Mutators & Casting](#mutators--casting)
+-   [Relationships](#relationships)
+    -   [Elasticsearch <-> Elasticsearch](#elasticsearch---elasticsearch)
+    -   [Elasticsearch <-> MySQL](#elasticsearch---mysql)
+-   [Schema/Index](#schemaindex)
+    -   [Migrations](#migrations)
+    -   [Dynamic Indies](#dynamic-indies)
+-   [RAW DSL](#raw-dsl)
+-   [Elasticsearchisms](#elasticsearchisms)
+-   [Unsupported Eloquent Methods](#unsupported-eloquent-methods)
 
-Installation
-===============
+# Installation
 
-#### (Current Alphas)
+## Elasticsearch 8.x
 
-Install the package via Composer:
-
-Laravel 8:
+Laravel 10.x (Latest):
 
 ```bash
-$ composer require pdphilip/elasticsearch
+$ composer require pdphilip/elasticsearch:~2.9
 ```
 
-Laravel 7:
+| Laravel Version   | Command                                          | Maintained |
+| ----------------- | ------------------------------------------------ | ---------- |
+| Laravel 10.x      | `$ composer require pdphilip/elasticsearch`      | ✅         |
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~2.9` | ✅         |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~2.8` | ✅         |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~2.7` | ✅         |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~2.6` | ❌         |
 
-```bash
-$ composer require pdphilip/elasticsearch:~0.7
-```
+## Elasticsearch 7.x
 
-Laravel 6 (and 5.8):
+| Laravel Version   | Command                                          | Maintained |
+| ----------------- | ------------------------------------------------ | ---------- |
+| Laravel 9.x       | `$ composer require pdphilip/elasticsearch:~1.9` | ❌         |
+| Laravel 8.x       | `$ composer require pdphilip/elasticsearch:~1.8` | ❌         |
+| Laravel 7.x       | `$ composer require pdphilip/elasticsearch:~1.7` | ❌         |
+| Laravel 6.x (5.8) | `$ composer require pdphilip/elasticsearch:~1.6` | ❌         |
 
-```bash
-$ composer require pdphilip/elasticsearch:~0.6
-```
-
-Configuration
-===============
+# Configuration
 
 Proposed .env settings:
 
@@ -74,7 +122,24 @@ ES_CLOUD_ID=
 ES_API_ID=
 ES_API_KEY=
 ES_SSL_CERT=
+ES_INDEX_PREFIX=
 ```
+
+<details>
+<summary>Example cloud config .env: (Click to expand)</summary>
+
+```dotenv
+ES_AUTH_TYPE=cloud
+ES_HOSTS="https://xxxxx-xxxxxx.es.europe-west1.gcp.cloud.es.io:9243"
+ES_USERNAME=elastic
+ES_PASSWORD=XXXXXXXXXXXXXXXXXXXX
+ES_CLOUD_ID=XXXXX:ZXVyb3BlLXdl.........SQwYzM1YzU5ODI5MTE0NjQ3YmEyNDZlYWUzOGNkN2Q1Yg==
+ES_API_ID=
+ES_API_KEY=
+ES_SSL_CERT=
+```
+
+</details>
 
 For multiple nodes, pass in as comma separated:
 
@@ -96,7 +161,7 @@ Add the `elasticsearch` connection in `config/database.php`
             'api_id'       => env('ES_API_ID', ''),
             'api_key'      => env('ES_API_KEY', ''),
             'ssl_cert'     => env('ES_SSL_CERT', ''),
-            'index_prefix' => false, //prefix all Laravel administered indices
+            'index_prefix' => env('ES_INDEX_PREFIX', false),
             'query_log'    => [
                 'index'      => 'laravel_query_logs', //Or false to disable query logging
                 'error_only' => true, //If false, the all queries are logged
@@ -117,8 +182,7 @@ Add the service provider to `config/app.php` (If your Laravel version does not a
 
 ```
 
-Eloquent
-===============
+# Eloquent
 
 ### Extending the base model
 
@@ -148,12 +212,11 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
  */
 class Product extends Model
 {
-    protected $index = 'my_products';	    
+    protected $index = 'my_products';
 }
 ```
 
-Querying Models
--------------
+## Querying Models
 
 #### ALL
 
@@ -165,7 +228,7 @@ $products = Product::all();
 
 #### Find
 
-Retrieving a record by primary key** (_id)
+Retrieving a record by primary key\*\* (\_id)
 
 ```php
 $product = Product::find('IiLKG38BCOXW3U9a4zcn');
@@ -183,11 +246,11 @@ $product = Product::where('status',1)->first();
 ```php
 $products = Product::where('status',1)->take(10)->get();
 $products = Product::where('manufacturer.country', 'England')->take(10)->get();
-$products = Product::where('status','>=', 3)->take(10)->get();  
+$products = Product::where('status','>=', 3)->take(10)->get();
 $products = Product::where('color','!=', 'red')->take(10)->get(); //*See notes
 ```
 
-*Note: this query will also include collections where the color field does not exist, to exclude these,
+\*Note: this query will also include collections where the color field does not exist, to exclude these,
 use [whereNotNull()](#whereNotNull)
 
 #### Where LIKE
@@ -263,11 +326,11 @@ $products = Product::whereBetween('orders', [1, 20])->orWhereBetween('orders', [
 Elasticsearch by default converts a date into a timestamp, and applies the `strict_date_optional_time||epoch_millis`
 format. If you have not changed the format at the index then acceptable values are:
 
-- 2022-01-29
-- 2022-01-29T13:05:59
-- 2022-01-29T13:05:59+0:00
-- 2022-01-29T12:10:30Z
-- 1643500799 (timestamp)
+-   2022-01-29
+-   2022-01-29T13:05:59
+-   2022-01-29T13:05:59+0:00
+-   2022-01-29T12:10:30Z
+-   1643500799 (timestamp)
 
 With Carbon
 
@@ -283,7 +346,8 @@ You can use these values in a normal [where](#where) clause, or use the built-in
 $products = Product::whereDate('created_at', '2022-01-29')->get();
 ```
 
-**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has disabled for the current version of
+**Note:** The usage for `whereMonth` / `whereDay` / `whereYear` / `whereTime` has been disabled for the current version
+of
 this plugin
 
 ### Aggregation
@@ -311,7 +375,8 @@ $stats = Product::whereNotIn('color', ['red','green'])->matrix('price');
 $stats = Product::whereNotIn('color', ['red', 'green'])->matrix(['price', 'orders']);
 ```
 
-Matrix results return as (example):
+<details>
+  <summary>Matrix results return as: (Click to expand)</summary>
 
 ```json
 {
@@ -353,8 +418,9 @@ Matrix results return as (example):
         ]
     }
 }
-
 ```
+
+</details>
 
 ### Ordering
 
@@ -385,7 +451,7 @@ $products = Product::skip(10)->take(5)->get();
 
 ```php
 $products = Product::where('is_active',true)
-$products = $products->paginate(50)  
+$products = $products->paginate(50)
 ```
 
 Pagination links (Blade)
@@ -394,8 +460,118 @@ Pagination links (Blade)
 {{ $products->appends(request()->query())->links() }}
 ```
 
-Elasticsearch specific queries
------------------------------
+## Distinct and GroupBy
+
+This section covers the implementation of `distinct()` and `groupBy()` methods in the Elasticsearch Eloquent model.
+These methods are interchangeable and use term aggregation under the hood.
+
+This tends to be a core use case for Elasticsearch, for example, to get all the unique user_ids of the users who have
+been
+logged in the last 30 days:
+
+#### Basic Usage
+
+-   **Distinct**:
+
+```php
+// Unique user_ids of users logged in the last 30 days
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+//or:
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->select('user_id')->distinct()->get();
+```
+
+-   **GroupBy**:
+
+```php
+// Equivalent to the above distinct query
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->groupBy('user_id')->get();
+
+```
+
+#### Working with Collections
+
+-   The results from these queries are returned as collections, allowing use of standard collection methods.
+-   Example of loading related user data:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get('user_id');
+return $users->load('user');
+```
+
+#### Multiple Fields Aggregation
+
+-   You can pass multiple fields to perform term aggregation.
+-   Example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->get(['user_id', 'log_title']);
+/** returns:
+{
+    "user_id": "1",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_IN"
+},
+{
+    "user_id": "2",
+    "log_title": "LOGGED_OUT"
+},
+ **/
+```
+
+#### Ordering by Aggregation Count
+
+-   Results can be sorted based on the count of the aggregated field.
+-   Example of ordering by the most logged users:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('_count')->get('user_id');
+```
+
+-   Or you can order by the distinct field, example:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct()->orderBy('user_id')->get('user_id');
+```
+
+#### Returning Count with Distinct Results
+
+-   To include the count of distinct values in the results, use `distinct(true)`:
+
+```php
+$users = UserLog::where('created_at', '>=', Carbon::now()->subDays(30))->distinct(true)->orderBy('_count')->get(['user_id']);
+/** returns:
+{
+    "user_id": "5",
+    "user_id_count": 65
+},
+{
+    "user_id": "1",
+    "user_id_count": 61
+},
+{
+    "user_id": "9",
+    "user_id_count": 54
+},
+ **/
+```
+
+#### Pagination Support
+
+-   The `distinct()` and `groupBy()` methods support pagination.
+-   Example:
+
+```php
+
+$users = UserLog::where('log_title', 'LOGGED_IN')->select('user_id')->distinct()->orderBy('_count')->paginate(20);
+//or
+$users = UserLog::where('log_title', 'LOGGED_IN')->groupBy('user_id')->orderBy('_count')->paginate(20);
+
+```
+
+## Elasticsearch specific queries
 
 #### Geo:
 
@@ -403,8 +579,8 @@ Elasticsearch specific queries
 
 Filters results of all geo points that fall within a box drawn from `topleft[lat,lon]` to `bottomRight[lat,lon]`
 
-- **Method**: `filterGeoBox($field,$topleft,$bottomRight)`
-- `$topleft` and `$bottomRight`  are arrays that hold [$lat,$lon] coordinates
+-   **Method**: `filterGeoBox($field,$topleft,$bottomRight)`
+-   `$topleft` and `$bottomRight` are arrays that hold [$lat,$lon] coordinates
 
 ```php
 UserLog::where('status',7)->filterGeoBox('agent.geo',[-10,10],[10,-10])->get();
@@ -414,9 +590,9 @@ UserLog::where('status',7)->filterGeoBox('agent.geo',[-10,10],[10,-10])->get();
 
 Filters results that fall within a radius distance from a `point[lat,lon]`
 
-- **Method**: `filterGeoPoint($field,$distance,$point)`
-- `$distance` is a string value of distance and distance-unit,
-  see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
+-   **Method**: `filterGeoPoint($field,$distance,$point)`
+-   `$distance` is a string value of distance and distance-unit,
+    see [https://www.elastic.co/guide/en/elasticsearch/reference/current/api-conventions.html#distance-units](distance units)
 
 ```php
 UserLog::where('status',7)->filterGeoPoint('agent.geo','20km',[0,0])->get();
@@ -440,8 +616,7 @@ Product::whereRegex('color','bl(ue)?(ack)?')->get();   //Returns blue or black
 Product::whereRegex('color','bl...*')->get();           //Returns blue or black or blond or blush etc..
 ```
 
-Saving Models
--------------
+## Saving Models
 
 The same as you always have with Laravel:
 
@@ -493,8 +668,8 @@ $updates = Product::where('status', 1)->update(['status' => 4]); //Updates all s
 **Saving 'without refresh'**
 
 Elasticsearch will write a new document and return the `_id` before it has been indexed. This means that there could be
-a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to *
-write a new document and wait until it has been indexed* - If you know that you won't need to look up or manipulate the
+a delay in looking up the document that has just been created. To keep the indexed data consistent, the default is to
+_write a new document and wait until it has been indexed_ - If you know that you won't need to look up or manipulate the
 new document immediately, then you can leverage the speed benefit of `write and move on` with `saveWithoutRefresh()`
 and `createWithoutRefresh()`
 
@@ -534,17 +709,17 @@ $product = Product::whereNull('color')->delete(); //Delete all records that does
 
 #### Truncate
 
-Removes all records in index, *but keeps the index*, to remove index completely
+Removes all records in index, _but keeps the index_, to remove index completely
 use [Schema: Index Delete](#index-delete)
 
 ```php
-Product::truncate(); 
+Product::truncate();
 ```
 
 #### Destroy by ID
 
 ```php
-Product::destroy('9iKKHH8BCOXW3U9ag1_4'); //as single _id 
+Product::destroy('9iKKHH8BCOXW3U9ag1_4'); //as single _id
 Product::destroy('4yKKHH8BCOXW3U9ag1-8', '_iKKHH8BCOXW3U9ahF8Q'); //as multiple _ids
 Product::destroy(['7CKKHH8BCOXW3U9ag1_a', '7iKKHH8BCOXW3U9ag1_h']); //as array of _ids
 ```
@@ -561,7 +736,7 @@ use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 class Product extends Model
 {
     use SoftDeletes;
-		
+
 }
 ```
 
@@ -579,11 +754,9 @@ $product->forceDelete();
 
 ```
 
-Elasticsearching
-===============
+# Elasticsearching
 
-The Search Query
-----------------
+## The Search Query
 
 The search query is different from the `where()->get()` methods as search is performed over all (or selected) fields in
 the index. Building a search query is easy and intuitive to seasoned Eloquenters with a slight twist; simply static call
@@ -597,9 +770,9 @@ MyModel::term('XYZ')->.........->search()
 
 **1.1 Simple example**
 
-- To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is
-  set),
-- Results ordered by most relevant first (score in desc order)
+-   To search across all the fields in the **books** index for '**eric**' (case-insensitive if the default analyser is
+    set),
+-   Results ordered by most relevant first (score in desc order)
 
 ```php
 Book::term('Eric')->search();
@@ -607,9 +780,9 @@ Book::term('Eric')->search();
 
 **1.2 Multiple terms**
 
-- To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
-- ***Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without
-  and/or - **ordering matters***
+-   To search across all the fields in the **books** index for: **eric OR (lean AND startup)**
+-   **\*Note**: You can't start a search query chain with and/or and you can't have subsequent chained terms without and/or
+    -   **ordering matters\***
 
 ```php
 Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
@@ -617,10 +790,10 @@ Book::term('Eric')->orTerm('Lean')->andTerm('Startup')->search();
 
 **1.3 Boosting Terms**
 
-- **Boosting terms: `term(string $term, int $boostFactor)`**
-- To search across all fields for **eric OR lean OR startup** but 'eric' is boosted by a factor of 2; **(eric)^2**
-- Boosting affects the score and thus the ordering of the results for relevance
-- Also note, spaces in terms are treated as OR's between each word
+-   **Boosting terms: `term(string $term, int $boostFactor)`**
+-   To search across all fields for **eric OR lean OR startup** but 'eric' is boosted by a factor of 2; **(eric)^2**
+-   Boosting affects the score and thus the ordering of the results for relevance
+-   Also note, spaces in terms are treated as OR's between each word
 
 ```php
 Book::term('Eric',2)->orTerm('Lean Startup')->search();
@@ -628,7 +801,7 @@ Book::term('Eric',2)->orTerm('Lean Startup')->search();
 
 **1.4 Searching over selected fields**
 
-- To search across fields [**title, author and description**] for **eric**.
+-   To search across fields [**title, author and description**] for **eric**.
 
 ```php
 Book::term('Eric')->fields(['title','author','description'])->search();
@@ -636,11 +809,11 @@ Book::term('Eric')->fields(['title','author','description'])->search();
 
 **1.5 Boosting fields**
 
-- To search across fields [**title, author and description**] for **eric**.
-- **title** is boosted by a factor of 3, search hits here will be the most relevant
-- **author** is boosted by a factor of 2, search hits here will be the second most relevant
-- **description** has no boost, search hits here will be the least relevant
-- *The results, as per the default, are ordered by most relevant first (score in desc order)*
+-   To search across fields [**title, author and description**] for **eric**.
+-   **title** is boosted by a factor of 3, search hits here will be the most relevant
+-   **author** is boosted by a factor of 2, search hits here will be the second most relevant
+-   **description** has no boost, search hits here will be the least relevant
+-   _The results, as per the default, are ordered by most relevant first (score in desc order)_
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->search();
@@ -648,14 +821,14 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->s
 
 **1.6 Minimum should match**
 
-- Controls how many 'should' clauses the query should match
-- Caveats:
-    - Fields must be specified in your query
-    - You can have no standard clauses in your query (ex `where()`)
-    - Won't work on SoftDelete enabled models
-- https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
+-   Controls how many 'should' clauses the query should match
+-   Caveats:
+    -   Fields must be specified in your query
+    -   You can have no standard clauses in your query (ex `where()`)
+    -   Won't work on SoftDelete enabled models
+-   https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
 
-- Match at least 2 of the 3 terms:
+-   Match at least 2 of the 3 terms:
 
 ```php
 Book::term('Eric')->orTerm('Lean')->orTerm('Startup')->field('title')->field('author')->minShouldMatch(2)->search();
@@ -663,9 +836,9 @@ Book::term('Eric')->orTerm('Lean')->orTerm('Startup')->field('title')->field('au
 
 **1.7 Min Score**
 
-- Sets a min_score filter for the search
-- (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in
-  the search results.
+-   Sets a min_score filter for the search
+-   (Optional, float) Minimum 'relevance score' for matching documents. Documents with a lower 'score' are not included in
+    the search results.
 
 ```php
 Book::term('Eric')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->search();
@@ -673,7 +846,7 @@ Book::term('Eric')->field('title',3)->field('author',2)->field('description')->m
 
 **1.8 Blend Search with [most] standard eloquent queries**
 
-- Search for 'david' where field `is_active` is `true`:
+-   Search for 'david' where field `is_active` is `true`:
 
 ```php
 Book::term('David')->field('title',3)->field('author',2)->field('description')->minScore(2.1)->where('is_active',true)->search();
@@ -681,10 +854,10 @@ Book::term('David')->field('title',3)->field('author',2)->field('description')->
 
 ### 2. FuzzyTerm:
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as
-    - `fuzzyTerm()`
-    - `orFuzzyTerm()`
-    - `andFuzzyTerm()`
+-   Same usage as `term()` `andTerm()` `orTerm()` but as
+    -   `fuzzyTerm()`
+    -   `orFuzzyTerm()`
+    -   `andFuzzyTerm()`
 
 ```php
 Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
@@ -694,17 +867,16 @@ Book::fuzzyTerm('quikc')->orFuzzyTerm('brwn')->andFuzzyTerm('foks')->search();
 
 https://www.elastic.co/guide/en/elasticsearch/reference/current/regexp-syntax.html
 
-- Same usage as `term()` `andTerm()` `orTerm()` but as
-    - `regEx()`
-    - `orRegEx()`
-    - `andRegEx()`
+-   Same usage as `term()` `andTerm()` `orTerm()` but as
+    -   `regEx()`
+    -   `orRegEx()`
+    -   `andRegEx()`
 
 ```php
 Book::regEx('joh?n(ath[oa]n)')->andRegEx('doey*')->search();
 ```
 
-Mutators & Casting
--------------
+## Mutators & Casting
 
 All Laravel's Mutating and casting features are inherited:
 
@@ -712,8 +884,7 @@ See [https://laravel.com/docs/8.x/eloquent-mutators](https://laravel.com/docs/8.
 
 Cool!
 
-Relationships
-==============
+# Relationships
 
 Model Relationships are the lifeblood of any Laravel App, for that you can use them with `belongsTo` , `hasMany`
 , `hasOne`, `morphOne` and `morphMany` as you have before:
@@ -722,7 +893,8 @@ Model Relationships are the lifeblood of any Laravel App, for that you can use t
 
 Full Example:
 
-Company:
+<details>
+<summary>Company: (Click to expand)</summary>
 
 ```php
 /**
@@ -734,6 +906,7 @@ Company:
  * @property integer $status
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read CompanyLog $companyLogs
  * @property-read CompanyProfile $companyProfile
@@ -746,7 +919,7 @@ Company:
 class Company extends Model
 {
     protected $connection = 'elasticsearch';
-  
+
     //Relationships  =====================================
 
     public function companyLogs()
@@ -772,7 +945,10 @@ class Company extends Model
 
 ```
 
-CompanyLog:
+</details>
+
+<details>
+<summary>CompanyLog: (Click to expand)</summary>
 
 ```php
 /**
@@ -786,6 +962,7 @@ CompanyLog:
  * @property mixed $meta
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read Company $company
  *
@@ -797,7 +974,7 @@ class CompanyLog extends Model
     protected $connection = 'elasticsearch';
 
     //Relationships  =====================================
-  
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -805,7 +982,10 @@ class CompanyLog extends Model
 }
 ```
 
-CompanyProfile:
+</details>
+
+<details>
+<summary>CompanyProfile: (Click to expand)</summary>
 
 ```php
 /**
@@ -818,6 +998,7 @@ CompanyProfile:
  * @property string $website
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read Company $company
  *
@@ -829,7 +1010,7 @@ class CompanyProfile extends Model
     protected $connection = 'elasticsearch';
 
     //Relationships  =====================================
-  
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -838,7 +1019,10 @@ class CompanyProfile extends Model
 }
 ```
 
-Avatar:
+</details>
+
+<details>
+<summary>Avatar: (Click to expand)</summary>
 
 ```php
 /**
@@ -851,6 +1035,7 @@ Avatar:
  * @property string $imageable_type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read Company $company
  *
@@ -870,11 +1055,15 @@ class Avatar extends Model
 }
 ```
 
-Photo:
+</details>
+
+<details>
+<summary>Photo: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\Photo
+ *
  ******Fields*******
  * @property string $_id
  * @property string $url
@@ -882,6 +1071,7 @@ Photo:
  * @property string $photoable_type
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read Company $company
  *
@@ -900,6 +1090,8 @@ class Photo extends Model
     }
 }
 ```
+
+</details>
 
 Example Usage:
 
@@ -922,6 +1114,9 @@ use**: `use PDPhilip\Elasticsearch\Eloquent\HybridRelations`
 
 Example, mysql User model:
 
+<details>
+<summary>MySQL => User: (Click to expand)</summary>
+
 ```php
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
@@ -930,49 +1125,57 @@ use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
  * App\Models\User
  *
  * *****Relationships*******
- * @property-read User $user
+ * @property-read UserLog $userLogs
+ * @property-read UserProfile $userProfile
+ * @property-read Company $company
+ * @property-read Avatar $avatar
+ * @property-read Photo $photos
  */
 class User extends Authenticatable
 {
-  use HybridRelations;
-  
-  protected $connection = 'mysql'; 
+    use HybridRelations;
 
-  //Relationships  =====================================
-  // With Elasticsearch models
-  
-  public function userLogs()
-  {
-    return $this->hasMany(UserLog::class);
-  }
-  
-  public function userProfile()
-  {
-    return $this->hasOne(UserProfile::class);
-  }
-  
-  public function company()
-  {
-    return $this->belongsTo(Company::class);
-  }
- 
-  public function avatar()
-  {
-		return $this->morphOne(Avatar::class, 'imageable');
-  }
+    protected $connection = 'mysql';
 
-  public function photos()
-  {
-		return $this->morphMany(Photo::class, 'photoable');
-	}
+    //Relationships  =====================================
+    // With Elasticsearch models
+
+    public function userLogs()
+    {
+        return $this->hasMany(UserLog::class);
+    }
+
+    public function userProfile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function avatar()
+    {
+        return $this->morphOne(Avatar::class, 'imageable');
+    }
+
+    public function photos()
+    {
+        return $this->morphMany(Photo::class, 'photoable');
+    }
 }
 ```
 
-UserLog
+</details>
+
+<details>
+<summary>ES => UserLog: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\UserLog
+ *
  ******Fields*******
  * @property string $_id
  * @property string $company_id
@@ -981,6 +1184,7 @@ UserLog
  * @property mixed $meta
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
  ******Relationships*******
  * @property-read User $user
  *
@@ -999,14 +1203,16 @@ class UserLog extends Model
 }
 ```
 
-UserProfile
+</details>
+
+<details>
+<summary>ES => UserProfile: (Click to expand)</summary>
 
 ```php
 /**
  * App\Models\UserProfile
  *
  ******Fields*******
- *
  * @property string $_id
  * @property string $user_id
  * @property string $twitter
@@ -1018,10 +1224,6 @@ UserProfile
  ******Relationships*******
  * @property-read User $user
  *
- ******Attributes*******
- * @property-read mixed $status_name
- * @property-read mixed $status_color
- *
  * @mixin \Eloquent
  *
  */
@@ -1029,20 +1231,22 @@ class UserProfile extends Model
 {
 
     protected $connection = 'elasticsearch';
-    
+
     //Relationships  =====================================
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-    
+
 }
 ```
 
-- Company (as example before) where user has the filed `company_id` as $company->_id
-- Avatar: (as before) having `imageable_id` as $user->id and `imageable_type` as 'App\Models\User'
-- Photo: (as before) having `photoable_id` as $user->id and `photoable_type` as 'App\Models\User'
+</details>
+
+-   Company (as example before) where user has the field `company_id` as $company->\_id
+-   Avatar: (as before) having `imageable_id` as $user->id and `imageable_type` as 'App\Models\User'
+-   Photo: (as before) having `photoable_id` as $user->id and `photoable_type` as 'App\Models\User'
 
 Example usage:
 
@@ -1054,13 +1258,12 @@ $user->avatar->url; //Link to Avatar
 $user->photos->toArray(); //Array of photos
 
 $userLog = UserLog::first();
-$userLog->user->name; 
+$userLog->user->name;
 ```
 
-Schema/Index
-==========
-Migrations
-----------
+# Schema/Index
+
+## Migrations
 
 Since there is very little overlap with how Elasticsearch handles index management to how MySQL and related technologies
 handle Schema manipulation; the schema feature of this plugin has been written from the ground up to work 100% with
@@ -1069,9 +1272,9 @@ Elasticsearch.
 You can still create a migration class as normal (and it's recommended that you do), however the `up()` and `down()`
 methods will need to encapsulate the following:
 
-- **Schema** via `PDPhilip\Elasticsearch\Schema\Schema`
-- **IndexBlueprint** via `PDPhilip\Elasticsearch\Schema\IndexBlueprint`
-- **AnalyzerBlueprint** via `PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint`
+-   **Schema** via `PDPhilip\Elasticsearch\Schema\Schema`
+-   **IndexBlueprint** via `PDPhilip\Elasticsearch\Schema\IndexBlueprint`
+-   **AnalyzerBlueprint** via `PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint`
 
 Full example:
 
@@ -1088,35 +1291,35 @@ class MyIndexes extends Migration
     public function up()
     {
         Schema::create('contacts', function (IndexBlueprint $index) {
-          //first_name & last_name is automatically added to this field, 
-          //you can search by full_name without ever writing to full_name  
+          //first_name & last_name is automatically added to this field,
+          //you can search by full_name without ever writing to full_name
           $index->text('first_name')->copyTo('full_name');
           $index->text('last_name')->copyTo('full_name');
           $index->text('full_name');
 
           //Multiple types => Order matters ::
           //Top level `email` will be a searchable text field
-          //Sub Property will be a keyword type which can be sorted using orderBy('email.keyword')            
+          //Sub Property will be a keyword type which can be sorted using orderBy('email.keyword')
           $index->text('email');
           $index->keyword('email');
 
           //Dates have an optional formatting as second parameter
           $index->date('first_contact', 'epoch_second');
-            
+
           //Objects are defined with dot notation:
           $index->text('products.name');
           $index->float('products.price')->coerce(false);
 
           //Disk space considerations ::
           //Not indexed and not searchable:
-          $index->text('internal_notes')->docValues(false);  
+          $index->keyword('internal_notes')->docValues(false);
           //Remove scoring for search:
-          $index->array('tags')->norms(false);  
+          $index->array('tags')->norms(false);
           //Remove from index, can't search by this field but can still use for aggregations:
-          $index->integer('score')->index(false);  
+          $index->integer('score')->index(false);
 
           //If null is passed as value, then it will be saved as 'NA' which is searchable
-          $index->keyword('favorite_color')->nullValue('NA');  
+          $index->keyword('favorite_color')->nullValue('NA');
 
           //Alias Example
           $index->text('notes');
@@ -1133,8 +1336,11 @@ class MyIndexes extends Migration
           //Other Mappings
           $index->map('dynamic', false);
           $index->map('date_detection', false);
+
+          //Custom Mapping
+          $index->mapProperty('purchase_history', 'flattened');
         });
-        
+
         //Example analyzer builder
         Schema::setAnalyser('contacts', function (AnalyzerBlueprint $settings) {
             $settings->analyzer('my_custom_analyzer')
@@ -1153,7 +1359,7 @@ class MyIndexes extends Migration
                 ->stopwords('_english_');
         });
     }
-    
+
     public function down()
     {
         Schema::deleteIfExists('contacts');
@@ -1163,20 +1369,90 @@ class MyIndexes extends Migration
 ```
 
 All methods
+Note: If you have configured a prefix in your config file, then all schema methods will be scoped to that prefix.
+
+Index look-ups.
 
 ```php
-Schema::getIndices();
-Schema::getMappings('my_index')
-Schema::getSettings('my_index')
+Schema::getIndex('my_index');
+/**
+return [
+    "my_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+
+Schema::getIndex('page_hits_*');
+/**
+return [
+    "my_prefix_page_hits_2023-01-01" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    "my_prefix_page_hits_2023-01-02" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+    ....
+];
+ **/
+Schema::getIndex('my_non_existing_index'); //returns [];
+
+Schema::getIndices();  //Equivalent to Schema::getIndex('*');
+
+Schema::getMappings('my_index');
+Schema::getSettings('my_index');
+
+//Booleans
+Schema::hasField('my_index','my_field');
+Schema::hasFields('my_index',['field_a','field_b','field_c']);
+Schema::hasIndex('my_index');
+
+```
+
+Overriding the prefix:
+
+```php
+Schema::overridePrefix(null)->getIndex('my_index');
+/**
+return [
+    "my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+Schema::overridePrefix('some_other_prefix')->getIndex('my_index');
+/**
+return [
+    "some_other_prefix_my_index" => [
+        "aliases"  => [],
+        "mappings" => [],
+        "settings" => [],
+    ],
+];
+ **/
+```
+
+Index Creation, Modification, Deletion
+
+```php
+
 Schema::create('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::createIfNotExists('my_index',function (IndexBlueprint $index) {
     //......
-})
+});
 Schema::reIndex('from_index','to_index') {
     //......
-})
+});
 Schema::modify('my_index',function (IndexBlueprint $index) {
     //......
 });
@@ -1185,12 +1461,62 @@ Schema::deleteIfExists('my_index')
 Schema::setAnalyser('my_index',function (AnalyzerBlueprint $settings) {
 	//......
 });
-//Booleans
-Schema::hasField('my_index','my_field')
-Schema::hasFields('my_index',['field_a','field_b','field_c'])
-Schema::hasIndex('my_index')
+
 //DIY
-Schema::dsl('indexMethod',$dslParams)
+Schema::dsl('indexMethod',$dslParams);
+```
+
+Re-indexing example:
+
+```php
+//create a new index
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+});
+
+//Create a record assuming you have a model for this index
+SiteLog::create([
+    'url' => 'https://example.com/contact-us',
+    'user_ip' => '0.0.0.0',
+    'location' => ['lat' => -7.3,'lon' => 3.1]
+]);
+//'location' field will be indexed by elasticsearch as an object
+
+//Trying to filter by location will fail due to the incorrect mapping
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
+
+//Step 1: Create a temporary index with the correct mapping
+Schema::create('temp_site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 2: Re-index the data from the original index to the temporary index
+//This will copy all the records from site_logs to temp_site_logs
+$result = Schema::reIndex('site_logs','temp_site_logs');
+dd($result->data); //confirm that the re-indexing was successful
+$copiedRecords = DB::connection('elasticsearch')->table('my_prefix_temp_site_logs')->count(); //count the records in the new index, make sure everything is there
+
+//Step 3: Once deemed safe; delete the original index
+Schema::delete('site_logs');
+
+//Step 4: Recreate the original index with the correct mapping
+Schema::create('site_logs',function (IndexBlueprint $index) {
+    $index->keyword('url');
+    $index->ip('user_ip');
+    $index->geo('location');
+});
+
+//Step 5: Re-index the data from the temporary index to the original index
+$result = Schema::reIndex('temp_site_logs','site_logs');
+
+//Step 6: Delete the temporary index
+Schema::delete('temp_site_logs');
+
+//Now you can filter by location
+$logs = SiteLog::filterGeoBox('location',[-10,10],[10,-10])->get();
 
 ```
 
@@ -1208,14 +1534,45 @@ Schema::dsl('open',['index' => 'my_index'])
 
 Behind the scenes it uses the official elasticsearch PHP client, it will call `$client->indices()->{$method}($params);`
 
+## Chunking
 
-Queues
-----------
-_[Coming]_
+If you need to run a query that will return a large number of results, you can use the `chunk()` method to retrieve the
+results in chunks. You can chunk as you normally do in Laravel:
 
+```php
+Product::chunk(1000, function ($products) {
+    foreach ($products as $product) {
+        //Increase price by 10%
+        $currentPrice = $product->price;
+        $product->price = $currentPrice * 1.1;
+        $product->save();
+    }
+});
+```
 
-Dynamic Indies
-========
+**Note**: Elasticsearch's default settings will fail when you try to chunk with the following
+error: `Fielddata access on the _id field is disallowed`
+
+To counter this you have two options:
+
+1. Update Elasticsearch's settings to allow fielddata access on the \_id field: Set the value
+   of `indices.id_field_data.enable` to `true` in elasticsearch.yml
+2. Use the `chunkById()` method instead of `chunk()` - This will chunk on a field other than `_id`, but you would need a
+   field that's unique for each record.
+
+```php
+Product::chunkById(1000, function ($products) {
+    foreach ($products as $product) {
+        //Increase price by 10%
+        $currentPrice = $product->price;
+        $product->price = $currentPrice * 1.1;
+        $product->save();
+    }
+}, 'product_sku.keyword');
+```
+
+# Dynamic Indies
+
 In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable
 Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest.
 
@@ -1238,7 +1595,64 @@ class PageHit extends Eloquent
 
 If you set a dynamic index you can read/search across all the indices that match the prefix `page_hits_`
 
-```php 
+```php
+$pageHits = PageHit::where('page_id',1)->get();
+```
+
+You will need to set the record's actual index when creating a new record, with `setIndex('value')`
+
+Create example:
+
+```php
+$pageHit = new PageHit;
+$pageHit->page_id = 4;
+$pageHit->ip = $someIp;
+$pageHit->setIndex('page_hits_'.date('Y-m-d'));
+$pageHit->save();
+
+```
+
+Each eloquent model will have the current record's index embedded into it, to retrieve it simply call `getRecordIndex()`
+
+```php
+$pageHit->getRecordIndex();  //returns page_hits_2021-01-01
+```
+
+You can search within a specific index of your dynamic indices model by calling `setIndex('value')` before building
+your query:
+
+```php
+//Search within the index page_hits_2023-01-01 for page_id = 3
+$model = new PageHit;
+$model->setIndex('page_hits_2023-01-01');
+$pageHits = $model->where('page_id', 3)->get();
+```
+
+# Dynamic Indies
+
+In some cases you will need to split a model into different indices. There are limits to this to keep within reasonable
+Laravel ORM bounds, but if you keep the index prefix consistent then the plugin can manage the rest.
+
+For example, let's imagine we're tracking page hits, the `PageHit.php` model could be
+
+```php
+<?php
+
+namespace App\Models;
+
+use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
+
+class PageHit extends Eloquent
+{
+    protected $connection = 'elasticsearch';
+    protected $index = 'page_hits_*'; //Dynamic index
+
+}
+```
+
+If you set a dynamic index you can read/search across all the indices that match the prefix `page_hits_`
+
+```php
 $pageHits = PageHit::where('page_id',1)->get();
 ```
 
@@ -1251,7 +1665,7 @@ $pageHit = new PageHit
 $pageHit->page_id = 4;
 $pageHit->ip = $someIp;
 $pageHit->setIndex('page_hits_'.date('Y-m-d'));
-$pageHit->save(); 
+$pageHit->save();
 
 ```
 
@@ -1261,7 +1675,7 @@ Each eloquent model will have the current record's index embedded into it, to re
 $pageHit->getRecordIndex();  //returns page_hits_2021-01-01
 ```
 
-```
+````
 
 RAW DSL
 ========
@@ -1280,19 +1694,18 @@ $bodyParams = [
 ];
 
 return Product::rawSearch($bodyParams); //Will search within the products index
-```
+````
 
-Elasticsearchisms
-=================
+# Elasticsearchisms
 
-#### Error: all shards failed
+#### [A] Error: all shards failed
 
 This error usually points to an index mapping issue, ex:
 
-- Trying to order on a TEXT field
-- Trying a get filter on a field that is not explicitly set as one
+-   Trying to order on a TEXT field
+-   Trying a get filter on a field that is not explicitly set as one
 
-#### Elasticsearch's default search limit is to return 10 collections
+#### [B] Elasticsearch's default search limit is to return 10 collections
 
 This plugin sets the default limit to 1000, however you can set your own with `MAX_SIZE`:
 
@@ -1311,7 +1724,7 @@ class Product extends Model
 
 **Remember, you can use chunking if you need to cycle through all the records**
 
-#### Empty Text Fields
+#### [C] Empty Text Fields
 
 By default, empty text fields are not searchable as they are not indexed. If you need to be able to search for empty
 values you have two options:
@@ -1320,28 +1733,29 @@ values you have two options:
 2. Create an index where the field is set to have a null value see [Schema](#Schema/index)
    where `$index->keyword('favorite_color')->nullValue('NA');  `
 
-#### Ordering by Text field
+#### [D] Ordering by Text field
 
 Elasticsearch can not order by text fields due to how the values are indexed and tokenized. If you do not define a
 string value upfront in your [Schema](#Schema/index) then Elasticsearch will default to saving the field as a `text`
-field. If you try to sort by that field the database engine will fail. Options:
+field. If you try to sort by that field the database engine will fail with the
+error: [all shards failed](#a-error-all-shards-failed). Options:
 
 1. If you do not need to search the text within the field and ordering is important, then use a `keyword` field type: To
-   do so define your index upfront in the  [Schema](#Schema/index) and set `$index->keyword('email')`
+   do so define your index upfront in the [Schema](#Schema/index) and set `$index->keyword('email')`
 
 2. If you need to have the field both searchable and sortable, then you'll need to have a multi type definition upfront
    in your [Schema](#Schema/index) , ex:
 
-   ```php
-   $index->text('description')
-   $index->keyword('description')
-   ```
+    ```php
+    $index->text('description')
+    $index->keyword('description')
+    ```
 
-   The order matters, the field will primarily be a text field, required for searching with a keyword sub-type. To be
-   able to order by this field you would have to use `orderBy('description.keyword')` to tell elasticsearch which type
-   to use.
+    The order matters, the field will primarily be a text field, required for searching with a keyword sub-type. To be
+    able to order by this field you would have to use `orderBy('description.keyword')` to tell elasticsearch which type
+    to use.
 
-#### Saving and refresh
+#### [E] Saving and refresh
 
 Refresh requests are synchronous and do not return a response until the refresh operation completes.
 
@@ -1351,10 +1765,4 @@ once and not update immediately or won't need to search for the record immediate
 
 ### Unsupported Eloquent methods
 
-`upsert()`, `distinct()`, `groupBy()`, `groupByRaw()`
-
-Acknowledgements
--------------
-
-This package was inspired by [jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb), a MongoDB
-implementation of Laravel's Eloquent ORM - Thank you!
+`upsert()`, `groupByRaw()`

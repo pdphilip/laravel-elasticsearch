@@ -268,6 +268,7 @@ class Builder
         
         return $fields;
     }
+    
     //----------------------------------------------------------------------
     // Internal Laravel init migration catchers
     // *Case for when ES is the only datasource
@@ -276,7 +277,6 @@ class Builder
     {
         return $this->getIndex($table);
     }
-    
     
     //----------------------------------------------------------------------
     // Builders
