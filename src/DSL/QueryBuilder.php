@@ -316,6 +316,10 @@ trait QueryBuilder
                 case 'phrase':
                     $queryPart = ['match_phrase' => [$field => $operand]];
                     break;
+                case 'group':
+                    $must = $field;
+                    $queryPart = ['bool' => [$must => $this->_convertWheresToDSL($operand['wheres'])]];
+                    break;
                 case 'nested':
                     $queryPart = [
                         'nested' => [
