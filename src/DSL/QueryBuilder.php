@@ -313,6 +313,9 @@ trait QueryBuilder
                 case 'not_between':
                     $queryPart = ['bool' => ['must_not' => ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]]]];
                     break;
+                case 'phrase':
+                    $queryPart = ['match_phrase' => [$field => $operand]];
+                    break;
                 case 'nested':
                     $queryPart = [
                         'nested' => [

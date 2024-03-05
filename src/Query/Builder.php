@@ -323,7 +323,25 @@ class Builder extends BaseBuilder
         return $this;
     }
     
-    
+    /**
+     * @param $column
+     * @param $value
+     *
+     * @return $this
+     */
+    public function wherePhrase($column, $value)
+    {
+        $boolean = 'and';
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Basic',
+            'value'    => $value,
+            'operator' => 'phrase',
+            'boolean'  => $boolean,
+        ];
+        
+        return $this;
+    }
     
     
     //----------------------------------------------------------------------
