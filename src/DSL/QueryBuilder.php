@@ -302,10 +302,37 @@ trait QueryBuilder
                     $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
                     break;
                 case 'in':
+//                    if (!str_contains($field, '.keyword')) {
+//                        $field = $field.'.keyword';
+//                    }
                     $queryPart = ['terms' => [$field => $operand]];
+//                    $queryPart = ['bool' => ['must' => ['terms' => [$field => $operand]]]];
+//                    $queryPart = [
+//                        'match' => [
+//                            $field => [
+//                                'query'    => implode(' ', $operand),
+//                                'operator' => 'or',
+//                            ],
+//                        ],
+//                    ];
                     break;
                 case 'nin':
+//                    if (!str_contains($field, '.keyword')) {
+//                        $field = $field.'.keyword';
+//                    }
                     $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
+//                    $queryPart = [
+//                        'bool' => [
+//                            'must_not' => [
+//                                'match' => [
+//                                    $field => [
+//                                        'query'    => implode(' ', $operand),
+//                                        'operator' => 'and',
+//                                    ],
+//                                ],
+//                            ],
+//                        ],
+//                    ];
                     break;
                 case 'between':
                     $queryPart = ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]];
