@@ -302,37 +302,18 @@ trait QueryBuilder
                     $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
                     break;
                 case 'in':
-//                    if (!str_contains($field, '.keyword')) {
-//                        $field = $field.'.keyword';
-//                    }
-                    $queryPart = ['terms' => [$field => $operand]];
-//                    $queryPart = ['bool' => ['must' => ['terms' => [$field => $operand]]]];
-//                    $queryPart = [
-//                        'match' => [
-//                            $field => [
-//                                'query'    => implode(' ', $operand),
-//                                'operator' => 'or',
-//                            ],
-//                        ],
-//                    ];
+                    $keywordField = $this->parseRequiredKeywordMapping($field);
+                    if (!$keywordField) {
+                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
+                    }
+                    $queryPart = ['terms' => [$keywordField => $operand]];
                     break;
                 case 'nin':
-//                    if (!str_contains($field, '.keyword')) {
-//                        $field = $field.'.keyword';
-//                    }
-                    $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
-//                    $queryPart = [
-//                        'bool' => [
-//                            'must_not' => [
-//                                'match' => [
-//                                    $field => [
-//                                        'query'    => implode(' ', $operand),
-//                                        'operator' => 'and',
-//                                    ],
-//                                ],
-//                            ],
-//                        ],
-//                    ];
+                    $keywordField = $this->parseRequiredKeywordMapping($field);
+                    if (!$keywordField) {
+                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
+                    }
+                    $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
                     break;
                 case 'between':
                     $queryPart = ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]];
