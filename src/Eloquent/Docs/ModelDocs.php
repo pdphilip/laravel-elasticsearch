@@ -20,6 +20,7 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method query(array $columns = '*')
  *
  * @method  $this whereIn(string $column, array $values)
+ * @method  $this whereExact(string $column, string $value)
  * @method  $this wherePhrase(string $column, string $value)
  * @method  $this filterGeoBox(string $column, array $topLeftCoords, array $bottomRightCoords)
  * @method  $this filterGeoPoint(string $column, string $distance, array $point)
