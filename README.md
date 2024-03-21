@@ -1,4 +1,4 @@
-<img align="left" width="80" height="80" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
+<img align="left" width="70" height="70" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
 
 # Laravel x Elasticsearch
 
