@@ -173,6 +173,18 @@ class Builder extends BaseEloquentBuilder
         return $values;
     }
     
+    
+    public function firstOrCreate(array $attributes = [], array $values = [])
+    {
+        $instance = $this->_instanceBuilder($attributes);
+        if (!is_null($instance)) {
+            return $instance;
+        }
+        
+        return $this->createOrFirst($attributes, $values);
+    }
+    
+    
     /**
      *
      * Fast create method for 'write and forget'
@@ -194,6 +206,17 @@ class Builder extends BaseEloquentBuilder
         $query->setRefresh(false);
         
         return $query->update($this->addUpdatedAtColumn($attributes));
+    }
+    
+    
+    public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
+    {
+        $instance = $this->_instanceBuilder($attributes);
+        if (!is_null($instance)) {
+            return $instance;
+        }
+        
+        return $this->createWithoutRefresh(array_merge($attributes, $values));
     }
     
     //----------------------------------------------------------------------
@@ -425,4 +448,29 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
     
+    
+    
+    //----------------------------------------------------------------------
+    // Private methods
+    //----------------------------------------------------------------------
+    
+    private function _instanceBuilder(array $attributes = [])
+    {
+        $instance = clone $this;
+        
+        foreach ($attributes as $field => $value) {
+            $method = is_string($value) ? 'whereExact' : 'where';
+            
+            if (is_array($value)) {
+                foreach ($value as $v) {
+                    $specificMethod = is_string($v) ? 'whereExact' : 'where';
+                    $instance = $instance->$specificMethod($field, $v);
+                }
+            } else {
+                $instance = $instance->$method($field, $value);
+            }
+        }
+        
+        return $instance->first();
+    }
 }
