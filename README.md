@@ -1,5 +1,4 @@
-![Laravel x Elasticsearch](https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png)
-
+<img align="right" width="100" height="100" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
 Laravel x Elasticsearch
 =======================
 
