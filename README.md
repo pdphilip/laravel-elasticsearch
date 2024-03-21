@@ -44,6 +44,8 @@ composer require pdphilip/elasticsearch
 | Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌          |
 | Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌          |
 
+Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
+
 ---
 
 # New in version 3
