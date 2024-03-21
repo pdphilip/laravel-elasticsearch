@@ -651,6 +651,25 @@ class Bridge
         
     }
     
+    public function parseRequiredKeywordMapping($field)
+    {
+        $mappings = $this->processIndexMappings($this->index);
+        $map = reset($mappings);
+        if (!empty($map['mappings']['properties'][$field])) {
+            $fieldMap = $map['mappings']['properties'][$field];
+            if (!empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
+                //primary Map is field. Use as is
+                return $field;
+            }
+            if (!empty($fieldMap['fields']['keyword'])) {
+                return $field.'.keyword';
+            }
+        }
+        
+        return false;
+        
+    }
+    
     //----------------------------------------------------------------------
     // Distinct Aggregates
     //----------------------------------------------------------------------

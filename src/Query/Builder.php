@@ -343,6 +343,26 @@ class Builder extends BaseBuilder
         return $this;
     }
     
+    /**
+     * @param $column
+     * @param $value
+     *
+     * @return $this
+     */
+    public function whereExact($column, $value)
+    {
+        $boolean = 'and';
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Basic',
+            'value'    => $value,
+            'operator' => 'exact',
+            'boolean'  => $boolean,
+        ];
+        
+        return $this;
+    }
+    
     
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
@@ -756,6 +776,9 @@ class Builder extends BaseBuilder
         if ($boolean === 'and not') {
             $operator = '!=';
         }
+        if ($boolean === 'or not') {
+            $operator = '!=';
+        }
         if ($operator === 'not like') {
             $operator = 'not_like';
         }
@@ -765,6 +788,9 @@ class Builder extends BaseBuilder
         } elseif (array_key_exists($operator, $this->conversion)) {
             $query = [$column => [$this->conversion[$operator] => $value]];
         } else {
+            if (is_callable($column)) {
+                throw new RuntimeException('Invalid closure for where clause');
+            }
             $query = [$column => [$operator => $value]];
         }
         
@@ -778,7 +804,29 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNested(array $where)
     {
-        throw new LogicException('whereNested clause is not available yet');
+        
+        $boolean = $where['boolean'];
+//        if ($boolean !== 'and') {
+//            throw new RuntimeException('Nested where clause with boolean other than "and" is not supported');
+//        }
+        if ($boolean === 'and not') {
+            $boolean = 'not';
+        }
+        $must = match ($boolean) {
+            'and' => 'must',
+            'not', 'or not' => 'must_not',
+            'or' => 'should',
+            default => throw new RuntimeException($boolean.' is not supported for parameter grouping'),
+        };
+        
+        $query = $where['query'];
+        $wheres = $query->compileWheres();
+        
+        return [
+            $must => ['group' => ['wheres' => $wheres]],
+        ];
+        
+        
     }
     
     /**
@@ -880,8 +928,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereMonth(array $where)
     {
         throw new LogicException('whereMonth clause is not available yet');
-
-//        return $this->_parseWhereBasic($where);
+        
     }
     
     /**
@@ -893,7 +940,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereDay clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -905,7 +951,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereYear clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -917,7 +962,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereTime clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -929,8 +973,18 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereRaw clause is not available yet');
         
-        return $where['sql'];
     }
+    
+    public function _parseWhereExists(array $where)
+    {
+        throw new LogicException('SQL type "where exists" query is not valid for Elasticsearch. Use whereNotNull() or whereNull() to query the existence of a field');
+    }
+    
+    public function _parseWhereNotExists(array $where)
+    {
+        throw new LogicException('SQL type "where exists" query is not valid for Elasticsearch. Use whereNotNull() or whereNull() to query the existence of a field');
+    }
+    
     
     /**
      * @param    array    $where

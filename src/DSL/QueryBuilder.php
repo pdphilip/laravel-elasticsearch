@@ -302,10 +302,24 @@ trait QueryBuilder
                     $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
                     break;
                 case 'in':
-                    $queryPart = ['terms' => [$field => $operand]];
+                    $keywordField = $this->parseRequiredKeywordMapping($field);
+                    if (!$keywordField) {
+                        $queryPart = ['terms' => [$field => $operand]];
+//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
+                    } else {
+                        $queryPart = ['terms' => [$keywordField => $operand]];
+                    }
+                    
                     break;
                 case 'nin':
-                    $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
+                    $keywordField = $this->parseRequiredKeywordMapping($field);
+                    if (!$keywordField) {
+                        $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
+//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
+                    } else {
+                        $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
+                    }
+                    
                     break;
                 case 'between':
                     $queryPart = ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]];
@@ -315,6 +329,17 @@ trait QueryBuilder
                     break;
                 case 'phrase':
                     $queryPart = ['match_phrase' => [$field => $operand]];
+                    break;
+                case 'exact':
+                    $keywordField = $this->parseRequiredKeywordMapping($field);
+                    if (!$keywordField) {
+                        throw new Exception('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+                    }
+                    $queryPart = ['term' => [$keywordField => $operand]];
+                    break;
+                case 'group':
+                    $must = $field;
+                    $queryPart = ['bool' => [$must => $this->_convertWheresToDSL($operand['wheres'])]];
                     break;
                 case 'nested':
                     $queryPart = [
@@ -365,8 +390,9 @@ trait QueryBuilder
                         if (!isset($return['body']['sort'])) {
                             $return['body']['sort'] = [];
                         }
-                        $sortBy = $this->_parseSortOrder($value);
-                        $return['body']['sort'][] = $sortBy;
+                        foreach ($value as $field => $direction) {
+                            $return['body']['sort'][] = $this->_parseSortOrder($field, $direction);
+                        }
                         break;
                     case 'skip':
                         $return['from'] = $value;
@@ -414,11 +440,8 @@ trait QueryBuilder
         }
     }
     
-    private function _parseSortOrder($value): array
+    private function _parseSortOrder($field, $direction): array
     {
-        $field = array_key_first($value);
-        $direction = $value[$field];
-        
         $dir = 'desc';
         if ($direction == 1) {
             $dir = 'asc';
