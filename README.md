@@ -2,8 +2,8 @@
 
 # Laravel x Elasticsearch
 
-This package extends Laravel's Eloquent model and query builder for Elasticsearch. The goal of this package is to use
-Elasticsearch in laravel as if it were native to Laravel.
+This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this plugin enables you to work with Eloquent models while leveraging the
+powerful search and analytics capabilities of Elasticsearch.
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
 
