@@ -27,6 +27,8 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this whereRegex(string $column, string $regex)
  * @method  $this whereNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
  * @method  $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
+ * @method  $this firstOrCreate(array $attributes, array $values = [])
+ * @method  $this firstOrCreateWithoutRefresh(array $attributes, array $values = [])
  * @method  $this  deleteIndexIfExists()
  *
  *
