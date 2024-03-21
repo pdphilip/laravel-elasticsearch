@@ -13,9 +13,9 @@ Elasticsearch in laravel as if it were native to Laravel.
 
 ### Maintained versions (Elasticsearch 8.x):
 
-Please note: Only [version 3](#version-3-update-overview) of the package will be maintained.
+Please note: Only **version 3** of the package will be maintained.
 
-**Laravel 11.x (Latest v3.11.x):**
+**Laravel 11.x (main):**
 
 ```bash
 composer require pdphilip/elasticsearch
