@@ -1,7 +1,6 @@
-<img align="left" width="100" height="100" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
+<img align="right" width="100" height="100" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
 
-Laravel x Elasticsearch
-=======================
+# Laravel x Elasticsearch
 
 This package extends Laravel's Eloquent model and query builder for Elasticsearch. The goal of this package is to use
 Elasticsearch in laravel as if it were native to Laravel.
