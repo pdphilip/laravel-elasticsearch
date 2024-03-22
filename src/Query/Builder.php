@@ -519,15 +519,29 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function orderBy($column, $direction = 'asc')
+    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null)
     {
         if (is_string($direction)) {
-            $direction = (strtolower($direction) == 'asc' ? 1 : -1);
+            $direction = (strtolower($direction) == 'asc' ? 'asc' : 'desc');
         }
         
-        $this->orders[$column] = $direction;
+        $this->orders[$column] = [
+            'order'   => $direction,
+            'mode'    => $mode,
+            'missing' => $missing,
+        ];
+
+//        dd($this->orders);
         
         return $this;
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function orderByDesc($column, $mode = null, $missing = null)
+    {
+        return $this->orderBy($column, 'desc', $mode, $missing);
     }
     
     /**
@@ -1252,6 +1266,7 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // ES Search query methods
     //----------------------------------------------------------------------
+    
     
     public function searchQuery($term, $boostFactor = null, $clause = null, $type = 'term')
     {

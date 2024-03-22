@@ -33,14 +33,23 @@ class ParameterBuilder
     }
     
     
-    public static function fieldSort($field, $order = 'asc'): array
+    public static function fieldSort($field, $payload): array
     {
+        
+        $sort = [];
+        $sort['order'] = $payload['order'] ?? 'asc';
+        if (!empty($payload['mode'])) {
+            $sort['mode'] = $payload['mode'];
+        }
+        if (!empty($payload['missing'])) {
+            $sort['missing'] = $payload['missing'];
+        }
+        
         return [
-            $field => [
-                'order' => $order,
-            ],
+            $field => $sort,
         ];
     }
+    
     
     public static function maxAggregation($field): array
     {
