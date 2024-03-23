@@ -371,6 +371,21 @@ trait QueryBuilder
                     
                     ];
                     break;
+                case 'innerNested':
+                    $options = $this->_buildNestedOptions($operand['options'], $field);
+                    $query = ParameterBuilder::matchAll()['query'];
+                    if (!empty($operand['wheres'])) {
+                        $query = $this->_convertWheresToDSL($operand['wheres'], $field);
+                    }
+                    $queryPart = [
+                        'nested' => [
+                            'path'       => $field,
+                            'query'      => $query,
+                            'inner_hits' => $options,
+                        ],
+                    ];
+                    
+                    break;
                 default:
                     abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
             }
@@ -423,6 +438,32 @@ trait QueryBuilder
         }
         
         return $return;
+    }
+    
+    private function _buildNestedOptions($options, $field)
+    {
+        $options = $this->_buildOptions($options);
+        if (!empty($options['body'])) {
+            $body = $options['body'];
+            unset($options['body']);
+            $options = array_merge($options, $body);
+        }
+        if (!empty($options['sort'])) {
+            //ensure that the sort field is prefixed with the nested field
+            $sorts = [];
+            foreach ($options['sort'] as $sort) {
+                foreach ($sort as $sortField => $sortPayload) {
+                    if (!str_starts_with($sortField, $field.'.')) {
+                        $sortField = $field.'.'.$sortField;
+                    }
+                    $sorts[] = [$sortField => $sortPayload];
+                }
+            }
+            
+            $options['sort'] = $sorts;
+        }
+        
+        return $options;
     }
     
     public function _parseFilter($filterType, $filterPayload): void
