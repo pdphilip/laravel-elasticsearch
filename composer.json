@@ -48,5 +48,11 @@
         "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
       ]
     }
+  },
+  "config": {
+    "allow-plugins": {
+      "php-http/discovery": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
   }
 }
