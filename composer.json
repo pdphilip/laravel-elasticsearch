@@ -20,10 +20,10 @@
   "license": "MIT",
   "require": {
     "php": "^8.2",
-    "illuminate/support": "^11.0",
-    "illuminate/container": "^11.0",
-    "illuminate/database": "^11.0",
-    "illuminate/events": "^11.0",
+    "illuminate/support": "^10.0",
+    "illuminate/container": "^10.0",
+    "illuminate/database": "^10.0",
+    "illuminate/events": "^10.0",
     "elasticsearch/elasticsearch": "^8.12"
   },
   "require-dev": {
