@@ -275,6 +275,119 @@ class Builder extends BaseBuilder
         return null;
     }
     
+    /**
+     * @param $column
+     * @param $callBack
+     * @param $scoreMode
+     *
+     * @return $this
+     */
+    public function whereNestedObject($column, $callBack, $scoreMode = 'avg')
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column'     => $column,
+            'type'       => 'NestedObject',
+            'wheres'     => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean'    => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $callBack
+     * @param $scoreMode
+     *
+     * @return $this
+     */
+    public function whereNotNestedObject($column, $callBack, $scoreMode = 'avg')
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column'     => $column,
+            'type'       => 'NotNestedObject',
+            'wheres'     => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean'    => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $value
+     *
+     * @return $this
+     */
+    public function wherePhrase($column, $value)
+    {
+        $boolean = 'and';
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Basic',
+            'value'    => $value,
+            'operator' => 'phrase',
+            'boolean'  => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $value
+     *
+     * @return $this
+     */
+    public function whereExact($column, $value)
+    {
+        $boolean = 'and';
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Basic',
+            'value'    => $value,
+            'operator' => 'exact',
+            'boolean'  => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    
+    /**
+     * @param $column
+     * @param $callBack
+     *
+     * @return $this
+     */
+    public function queryNested($column, $callBack)
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $options = $query->compileOptions();
+        $this->wheres[] = [
+            'column'  => $column,
+            'type'    => 'QueryNested',
+            'wheres'  => $wheres,
+            'options' => $options,
+            'boolean' => $boolean,
+        ];
+        
+        return $this;
+    }
+    
     
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
@@ -431,16 +544,89 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function orderBy($column, $direction = 'asc')
+    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null)
     {
         if (is_string($direction)) {
-            $direction = (strtolower($direction) == 'asc' ? 1 : -1);
+            $direction = (strtolower($direction) == 'asc' ? 'asc' : 'desc');
         }
         
-        $this->orders[$column] = $direction;
+        $this->orders[$column] = [
+            'order'   => $direction,
+            'mode'    => $mode,
+            'missing' => $missing,
+        ];
+
+//        dd($this->orders);
         
         return $this;
     }
+    
+    /**
+     * @inheritDoc
+     */
+    public function orderByDesc($column, $mode = null, $missing = null)
+    {
+        return $this->orderBy($column, 'desc', $mode, $missing);
+    }
+    
+    /**
+     * @param $column
+     * @param $pin
+     * @param $direction    @values: 'asc', 'desc'
+     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
+     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
+     * @param $type    @values: 'arc', 'plane'
+     *
+     * @return $this
+     */
+    public function orderByGeo($column, $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = null)
+    {
+        $this->orders[$column] = [
+            'is_geo' => true,
+            'order'  => $direction,
+            'pin'    => $pin,
+            'unit'   => $unit,
+            'mode'   => $mode,
+            'type'   => $type,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $pin
+     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
+     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
+     * @param $type    @values: 'arc', 'plane'
+     *
+     * @return $this
+     */
+    public function orderByGeoDesc($column, $pin, $unit = 'km', $mode = null, $type = null)
+    {
+        return $this->orderByGeo($column, $pin, 'desc', $unit, $mode, $type);
+    }
+    
+    
+    /**
+     * @param $column
+     * @param $direction
+     * @param $mode
+     *
+     * @return $this
+     */
+    public function orderByNested($column, $direction = 'asc', $mode = null)
+    {
+        $this->orders[$column] = [
+            'is_nested' => true,
+            'order'     => $direction,
+            'mode'      => $mode,
+        
+        ];
+        
+        return $this;
+    }
+    
     
     /**
      * @inheritdoc
@@ -684,7 +870,13 @@ class Builder extends BaseBuilder
         $operator = $where['operator'];
         $column = $where['column'];
         $value = $where['value'];
-        
+        $boolean = $where['boolean'] ?? null;
+        if ($boolean === 'and not') {
+            $operator = '!=';
+        }
+        if ($boolean === 'or not') {
+            $operator = '!=';
+        }
         if ($operator === 'not like') {
             $operator = 'not_like';
         }
@@ -694,6 +886,9 @@ class Builder extends BaseBuilder
         } elseif (array_key_exists($operator, $this->conversion)) {
             $query = [$column => [$this->conversion[$operator] => $value]];
         } else {
+            if (is_callable($column)) {
+                throw new RuntimeException('Invalid closure for where clause');
+            }
             $query = [$column => [$operator => $value]];
         }
         
@@ -707,9 +902,41 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNested(array $where)
     {
-        $query = $where['query'];
         
-        return $query->compileWheres();
+        $boolean = $where['boolean'];
+//        if ($boolean !== 'and') {
+//            throw new RuntimeException('Nested where clause with boolean other than "and" is not supported');
+//        }
+        if ($boolean === 'and not') {
+            $boolean = 'not';
+        }
+        $must = match ($boolean) {
+            'and' => 'must',
+            'not', 'or not' => 'must_not',
+            'or' => 'should',
+            default => throw new RuntimeException($boolean.' is not supported for parameter grouping'),
+        };
+        
+        $query = $where['query'];
+        $wheres = $query->compileWheres();
+        
+        return [
+            $must => ['group' => ['wheres' => $wheres]],
+        ];
+        
+        
+    }
+    
+    protected function _parseWhereQueryNested(array $where)
+    {
+        return [
+            $where['column'] => [
+                'innerNested' => [
+                    'wheres'  => $where['wheres'],
+                    'options' => $where['options'],
+                ],
+            ],
+        ];
     }
     
     /**
@@ -724,6 +951,7 @@ class Builder extends BaseBuilder
         
         return [$column => ['in' => array_values($values)]];
     }
+    
     
     /**
      * @param    array    $where
@@ -745,7 +973,7 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNull(array $where)
     {
-        $where['operator'] = '=';
+        $where['operator'] = 'not_exists';
         $where['value'] = null;
         
         return $this->_parseWhereBasic($where);
@@ -758,7 +986,7 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereNotNull(array $where)
     {
-        $where['operator'] = 'ne';
+        $where['operator'] = 'exists';
         $where['value'] = null;
         
         return $this->_parseWhereBasic($where);
@@ -801,6 +1029,7 @@ class Builder extends BaseBuilder
         return $this->_parseWhereBasic($where);
     }
     
+    
     /**
      * @param    array    $where
      *
@@ -809,8 +1038,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereMonth(array $where)
     {
         throw new LogicException('whereMonth clause is not available yet');
-
-//        return $this->_parseWhereBasic($where);
+        
     }
     
     /**
@@ -822,7 +1050,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereDay clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -834,7 +1061,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereYear clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -846,7 +1072,6 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereTime clause is not available yet');
         
-        return $this->_parseWhereBasic($where);
     }
     
     /**
@@ -858,8 +1083,18 @@ class Builder extends BaseBuilder
     {
         throw new LogicException('whereRaw clause is not available yet');
         
-        return $where['sql'];
     }
+    
+    public function _parseWhereExists(array $where)
+    {
+        throw new LogicException('SQL type "where exists" query is not valid for Elasticsearch. Use whereNotNull() or whereNull() to query the existence of a field');
+    }
+    
+    public function _parseWhereNotExists(array $where)
+    {
+        throw new LogicException('SQL type "where exists" query is not valid for Elasticsearch. Use whereNotNull() or whereNull() to query the existence of a field');
+    }
+    
     
     /**
      * @param    array    $where
@@ -873,6 +1108,41 @@ class Builder extends BaseBuilder
         
         return [$column => ['regex' => $value]];
         
+    }
+    
+    /**
+     * @param    array    $where
+     *
+     * @return array[]
+     */
+    protected function _parseWhereNestedObject(array $where)
+    {
+        $wheres = $where['wheres'];
+        $column = $where['column'];
+        $scoreMode = $where['score_mode'];
+        
+        
+        return [
+            $column => ['nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
+        ];
+    }
+    
+    
+    /**
+     * @param    array    $where
+     *
+     * @return array[]
+     */
+    protected function _parseWhereNotNestedObject(array $where)
+    {
+        $wheres = $where['wheres'];
+        $column = $where['column'];
+        $scoreMode = $where['score_mode'];
+        
+        
+        return [
+            $column => ['not_nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
+        ];
     }
     
     /**
@@ -1092,6 +1362,7 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // ES Search query methods
     //----------------------------------------------------------------------
+    
     
     public function searchQuery($term, $boostFactor = null, $clause = null, $type = 'term')
     {
