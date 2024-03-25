@@ -63,7 +63,7 @@ Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
 - [Deleting Models](https://elasticsearch.pdphilip.com/deleting-models)
 - [Ordering and Pagination](https://elasticsearch.pdphilip.com/ordering-and-pagination)
 - [Distinct and GroupBy](https://elasticsearch.pdphilip.com/distinct)
-- [Aggregations](https://elasticsearch.pdphilip.com/aggregations)
+- [Aggregations](https://elasticsearch.pdphilip.com/aggregation)
 - [Chunking](https://elasticsearch.pdphilip.com/chunking)
 - [Nested Queries](https://elasticsearch.pdphilip.com/nested-queries) **New in Version 3**
 - [Elasticsearch Specific Queries](https://elasticsearch.pdphilip.com/es-specific)
