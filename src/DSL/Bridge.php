@@ -143,6 +143,13 @@ class Bridge
             unset($options['skip']);
             unset($options['limit']);
             
+            if ($sort) {
+                $sortField = key($sort);
+                $sortDir = $sort[$sortField]['order'] ?? 'asc';
+                $sort = [$sortField => $sortDir];
+            }
+            
+            
             $params = $this->buildParams($this->index, $wheres, $options);
             $params['body']['aggs'] = $this->createNestedAggs($columns, $sort);
             
@@ -827,6 +834,7 @@ class Bridge
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['sorts'] = [];
         $data = [];
         if (!empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
@@ -838,11 +846,53 @@ class Bridge
                         $datum[$key] = $value;
                     }
                 }
-                $data[] = $datum;
+                if (!empty($hit['inner_hits'])) {
+                    foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
+                        $datum[$innerKey] = $this->_filterInnerHits($innerHit);
+                    }
+                }
+                
+                //------------------------  later, maybe  ------------------------------
+                // if (!empty($hit['sort'])) {
+                //      $datum['_meta']['sort'] = $this->_parseSort($hit['sort'], $params['body']['sort'] ?? []);
+                // }
+                //----------------------------------------------------------------------
+                
+                
+                {
+                    $data[] = $datum;
+                }
             }
         }
         
         return $this->_return($data, $meta, $params, $queryTag);
+    }
+    
+    private function _filterInnerHits($innerHit)
+    {
+        $hits = [];
+        foreach ($innerHit['hits']['hits'] as $inner) {
+            $innerDatum = [];
+            if (!empty($inner['_source'])) {
+                foreach ($inner['_source'] as $innerSourceKey => $innerSourceValue) {
+                    $innerDatum[$innerSourceKey] = $innerSourceValue;
+                }
+            }
+            $hits[] = $innerDatum;
+        }
+        
+        return $hits;
+    }
+    
+    
+    private function _parseSort($sort, $sortParams)
+    {
+        $sortValues = [];
+        foreach ($sort as $key => $value) {
+            $sortValues[array_key_first($sortParams[$key])] = $value;
+        }
+        
+        return $sortValues;
     }
     
     private function _sanitizeDistinctResponse($response, $columns, $includeDocCount)

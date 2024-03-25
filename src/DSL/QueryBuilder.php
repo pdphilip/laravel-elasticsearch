@@ -129,14 +129,14 @@ trait QueryBuilder
             if (!isset($terms['terms']['order'])) {
                 $terms['terms']['order'] = [];
             }
-            if ($sort['_count'] == 1) {
+            if ($sort['_count'] == 'asc') {
                 $terms['terms']['order'][] = ['_count' => 'asc'];
             } else {
                 $terms['terms']['order'][] = ['_count' => 'desc'];
             }
         }
         if (isset($sort[$columns[0]])) {
-            if ($sort[$columns[0]] == 1) {
+            if ($sort[$columns[0]] == 'asc') {
                 $terms['terms']['order'][] = ['_key' => 'asc'];
             } else {
                 $terms['terms']['order'][] = ['_key' => 'desc'];
@@ -205,7 +205,7 @@ trait QueryBuilder
     }
     
     
-    public function _convertWheresToDSL($wheres): array
+    public function _convertWheresToDSL($wheres, $parentField = false): array
     {
         $dsl = ['bool' => []];
         foreach ($wheres as $logicalOperator => $conditions) {
@@ -213,7 +213,7 @@ trait QueryBuilder
                 case 'and':
                     $dsl['bool']['must'] = [];
                     foreach ($conditions as $condition) {
-                        $parsedCondition = $this->_parseCondition($condition);
+                        $parsedCondition = $this->_parseCondition($condition, $parentField);
                         if (!empty($parsedCondition)) {
                             $dsl['bool']['must'][] = $parsedCondition;
                         }
@@ -225,7 +225,7 @@ trait QueryBuilder
                         $boolClause = ['bool' => ['must' => []]];
                         foreach ($conditionGroup as $subConditions) {
                             foreach ($subConditions as $subCondition) {
-                                $parsedCondition = $this->_parseCondition($subCondition);
+                                $parsedCondition = $this->_parseCondition($subCondition, $parentField);
                                 if (!empty($parsedCondition)) {
                                     $boolClause['bool']['must'][] = $parsedCondition;
                                 }
@@ -237,17 +237,22 @@ trait QueryBuilder
                     }
                     break;
                 default:
-                    return $this->_parseCondition($wheres);
+                    return $this->_parseCondition($wheres, $parentField);
             }
         }
         
         return $dsl;
     }
     
-    private function _parseCondition($condition): array
+    private function _parseCondition($condition, $parentField = null): array
     {
-//        dd($condition);
         $field = key($condition);
+        if ($parentField) {
+            if (!str_starts_with($field, $parentField.'.')) {
+                $field = $parentField.'.'.$field;
+            }
+        }
+        
         $value = current($condition);
         
         
@@ -345,7 +350,7 @@ trait QueryBuilder
                     $queryPart = [
                         'nested' => [
                             'path'       => $field,
-                            'query'      => $this->_convertWheresToDSL($operand['wheres']),
+                            'query'      => $this->_convertWheresToDSL($operand['wheres'], $field),
                             'score_mode' => $operand['score_mode'],
                         ],
                     ];
@@ -365,6 +370,21 @@ trait QueryBuilder
                         ],
                     
                     ];
+                    break;
+                case 'innerNested':
+                    $options = $this->_buildNestedOptions($operand['options'], $field);
+                    $query = ParameterBuilder::matchAll()['query'];
+                    if (!empty($operand['wheres'])) {
+                        $query = $this->_convertWheresToDSL($operand['wheres'], $field);
+                    }
+                    $queryPart = [
+                        'nested' => [
+                            'path'       => $field,
+                            'query'      => $query,
+                            'inner_hits' => $options,
+                        ],
+                    ];
+                    
                     break;
                 default:
                     abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
@@ -390,8 +410,8 @@ trait QueryBuilder
                         if (!isset($return['body']['sort'])) {
                             $return['body']['sort'] = [];
                         }
-                        foreach ($value as $field => $direction) {
-                            $return['body']['sort'][] = $this->_parseSortOrder($field, $direction);
+                        foreach ($value as $field => $sortPayload) {
+                            $return['body']['sort'][] = ParameterBuilder::fieldSort($field, $sortPayload);
                         }
                         break;
                     case 'skip':
@@ -405,8 +425,10 @@ trait QueryBuilder
                             $this->_parseFilter($filterType, $filerValues);
                         }
                         break;
+                    
                     case 'multiple':
                     case 'searchOptions':
+                        
                         //Pass through
                         break;
                     default:
@@ -416,6 +438,32 @@ trait QueryBuilder
         }
         
         return $return;
+    }
+    
+    private function _buildNestedOptions($options, $field)
+    {
+        $options = $this->_buildOptions($options);
+        if (!empty($options['body'])) {
+            $body = $options['body'];
+            unset($options['body']);
+            $options = array_merge($options, $body);
+        }
+        if (!empty($options['sort'])) {
+            //ensure that the sort field is prefixed with the nested field
+            $sorts = [];
+            foreach ($options['sort'] as $sort) {
+                foreach ($sort as $sortField => $sortPayload) {
+                    if (!str_starts_with($sortField, $field.'.')) {
+                        $sortField = $field.'.'.$sortField;
+                    }
+                    $sorts[] = [$sortField => $sortPayload];
+                }
+            }
+            
+            $options['sort'] = $sorts;
+        }
+        
+        return $options;
     }
     
     public function _parseFilter($filterType, $filterPayload): void
@@ -440,15 +488,6 @@ trait QueryBuilder
         }
     }
     
-    private function _parseSortOrder($field, $direction): array
-    {
-        $dir = 'desc';
-        if ($direction == 1) {
-            $dir = 'asc';
-        }
-        
-        return ParameterBuilder::fieldSort($field, $dir);
-    }
     
     public function _parseFilterParameter($params, $filer)
     {

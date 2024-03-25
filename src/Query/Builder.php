@@ -364,6 +364,31 @@ class Builder extends BaseBuilder
     }
     
     
+    /**
+     * @param $column
+     * @param $callBack
+     *
+     * @return $this
+     */
+    public function queryNested($column, $callBack)
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $options = $query->compileOptions();
+        $this->wheres[] = [
+            'column'  => $column,
+            'type'    => 'QueryNested',
+            'wheres'  => $wheres,
+            'options' => $options,
+            'boolean' => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
     //----------------------------------------------------------------------
@@ -519,16 +544,89 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function orderBy($column, $direction = 'asc')
+    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null)
     {
         if (is_string($direction)) {
-            $direction = (strtolower($direction) == 'asc' ? 1 : -1);
+            $direction = (strtolower($direction) == 'asc' ? 'asc' : 'desc');
         }
         
-        $this->orders[$column] = $direction;
+        $this->orders[$column] = [
+            'order'   => $direction,
+            'mode'    => $mode,
+            'missing' => $missing,
+        ];
+
+//        dd($this->orders);
         
         return $this;
     }
+    
+    /**
+     * @inheritDoc
+     */
+    public function orderByDesc($column, $mode = null, $missing = null)
+    {
+        return $this->orderBy($column, 'desc', $mode, $missing);
+    }
+    
+    /**
+     * @param $column
+     * @param $pin
+     * @param $direction    @values: 'asc', 'desc'
+     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
+     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
+     * @param $type    @values: 'arc', 'plane'
+     *
+     * @return $this
+     */
+    public function orderByGeo($column, $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = null)
+    {
+        $this->orders[$column] = [
+            'is_geo' => true,
+            'order'  => $direction,
+            'pin'    => $pin,
+            'unit'   => $unit,
+            'mode'   => $mode,
+            'type'   => $type,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $pin
+     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
+     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
+     * @param $type    @values: 'arc', 'plane'
+     *
+     * @return $this
+     */
+    public function orderByGeoDesc($column, $pin, $unit = 'km', $mode = null, $type = null)
+    {
+        return $this->orderByGeo($column, $pin, 'desc', $unit, $mode, $type);
+    }
+    
+    
+    /**
+     * @param $column
+     * @param $direction
+     * @param $mode
+     *
+     * @return $this
+     */
+    public function orderByNested($column, $direction = 'asc', $mode = null)
+    {
+        $this->orders[$column] = [
+            'is_nested' => true,
+            'order'     => $direction,
+            'mode'      => $mode,
+        
+        ];
+        
+        return $this;
+    }
+    
     
     /**
      * @inheritdoc
@@ -827,6 +925,18 @@ class Builder extends BaseBuilder
         ];
         
         
+    }
+    
+    protected function _parseWhereQueryNested(array $where)
+    {
+        return [
+            $where['column'] => [
+                'innerNested' => [
+                    'wheres'  => $where['wheres'],
+                    'options' => $where['options'],
+                ],
+            ],
+        ];
     }
     
     /**
@@ -1252,6 +1362,7 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // ES Search query methods
     //----------------------------------------------------------------------
+    
     
     public function searchQuery($term, $boostFactor = null, $clause = null, $type = 'term')
     {

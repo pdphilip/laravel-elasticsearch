@@ -33,12 +33,63 @@ class ParameterBuilder
     }
     
     
-    public static function fieldSort($field, $order = 'asc'): array
+    public static function fieldSort($field, $payload): array
     {
+        if (!empty($payload['is_geo'])) {
+            return self::fieldSortGeo($field, $payload);
+        }
+        if (!empty($payload['is_nested'])) {
+            return self::filterNested($field, $payload);
+        }
+        $sort = [];
+        $sort['order'] = $payload['order'] ?? 'asc';
+        if (!empty($payload['mode'])) {
+            $sort['mode'] = $payload['mode'];
+        }
+        if (!empty($payload['missing'])) {
+            $sort['missing'] = $payload['missing'];
+        }
+        
         return [
-            $field => [
-                'order' => $order,
-            ],
+            $field => $sort,
+        ];
+    }
+    
+    public static function fieldSortGeo($field, $payload): array
+    {
+        $sort = [];
+        $sort[$field] = $payload['pin'];
+        $sort['order'] = $payload['order'] ?? 'asc';
+        $sort['unit'] = $payload['unit'] ?? 'km';
+        
+        if (!empty($payload['mode'])) {
+            $sort['mode'] = $payload['mode'];
+        }
+        if (!empty($payload['type'])) {
+            $sort['distance_type'] = $payload['type'];
+        }
+        
+        return [
+            '_geo_distance' => $sort,
+        ];
+    }
+    
+    public static function filterNested($field, $payload)
+    {
+        $sort = [];
+        $pathParts = explode('.', $field);
+        $path = $pathParts[0];
+        $sort['order'] = $payload['order'] ?? 'asc';
+        if (!empty($payload['mode'])) {
+            $sort['mode'] = $payload['mode'];
+        }
+        $sort['nested'] = [
+            'path' => $path,
+        ];
+        
+        
+        return [
+            $field => $sort,
         ];
     }
     
