@@ -29,6 +29,14 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
  * @method  $this firstOrCreate(array $attributes, array $values = [])
  * @method  $this firstOrCreateWithoutRefresh(array $attributes, array $values = [])
+ * @method  $this orderBy(string $column, string $direction = 'asc', string $mode = null, array $missing = '_last')
+ * @method  $this orderByDesc(string $column, string $mode = null, array $missing = '_last')
+ * @method  $this orderByGeo(string $column, array $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = 'arc')
+ * @method  $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
+ * @method  $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
+ *
+ * @method  $this queryNested(string $column, Callable $callback)
+ *
  * @method  $this  deleteIndexIfExists()
  *
  *
