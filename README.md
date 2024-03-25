@@ -48,18 +48,6 @@ Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
 
 ---
 
-# New in version 3
-
-- [whereExact()](https://elasticsearch.pdphilip.com/es-specific#where-exact)
-- [wherePhrase()](https://elasticsearch.pdphilip.com/es-specific#where-phrase)
-- [whereNestedObject()](https://elasticsearch.pdphilip.com/es-specific#where-nested-object)
-- [whereNotNestedObject()](https://elasticsearch.pdphilip.com/es-specific#where-not-nested-object)
-- [firstOrCreate()](https://elasticsearch.pdphilip.com/saving-models#first-or-create)
-- [firstOrCreateWithoutRefresh()](https://elasticsearch.pdphilip.com/saving-models#first-or-create-without-refresh)
-- [whereNested()](https://elasticsearch.pdphilip.com/querying-models#where-nested)
-
----
-
 # Documentation Links
 
 ## Getting Started
@@ -90,3 +78,36 @@ Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
 
 - [Migrations](https://elasticsearch.pdphilip.com/migrations)
 - [Re-indexing Process](https://elasticsearch.pdphilip.com/re-indexing)
+
+---
+
+### Nested Queries [(see)](https://elasticsearch.pdphilip.com//nested-queries)
+
+This update introduces support for querying, sorting and filtering nested data
+
+- [Nested Object Queries](https://elasticsearch.pdphilip.com//nested-queries#where-nested-object)
+- [Order By Nested](https://elasticsearch.pdphilip.com//nested-queries#order-by-nested-field)
+- [Filter Nested Values](https://elasticsearch.pdphilip.com//nested-queries#filtering-nested-values): Filters nested values of the parent collection
+
+### New `Where` clauses
+
+- [Phrase Matching](https://elasticsearch.pdphilip.com//es-specific#where-phrase): The enhancement in phrase matching capabilities allows for refined search precision, facilitating the targeting of exact word sequences within textual
+  fields, thus improving search specificity
+  and relevance.
+- [Exact Matching](https://elasticsearch.pdphilip.com//es-specific#where-exact): Strengthening exact match queries enables more stringent search criteria, ensuring the retrieval of documents that precisely align with specified parameters.
+
+### Sorting Enhancements
+
+- [Ordering with ES features](https://elasticsearch.pdphilip.com//ordering-and-pagination#extending-ordering-for-elasticsearch-features): Includes modes and missing values for sorting fields.
+- [Order by Geo Distance](https://elasticsearch.pdphilip.com//ordering-and-pagination#order-by-geo-distance)
+
+### Saving Updates
+
+- [First Or Create](https://elasticsearch.pdphilip.com//saving-models#first-or-create)
+- [First Or Create without Refresh](https://elasticsearch.pdphilip.com//saving-models#first-or-create-without-refresh)
+
+### Grouped Queries
+
+- [Grouped Queries](https://elasticsearch.pdphilip.com//querying-models#grouped-queries): Queries can be grouped allowing multiple conditions to be nested within a single query block.
+
+---
