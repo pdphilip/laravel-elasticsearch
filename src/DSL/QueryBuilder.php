@@ -111,6 +111,8 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
+
+//        dd($params);
         
         return $params;
     }
@@ -373,9 +375,14 @@ trait QueryBuilder
                     break;
                 case 'innerNested':
                     $options = $this->_buildNestedOptions($operand['options'], $field);
+                    if (!$options) {
+                        $options['size'] = 100;
+                    }
                     $query = ParameterBuilder::matchAll()['query'];
                     if (!empty($operand['wheres'])) {
                         $query = $this->_convertWheresToDSL($operand['wheres'], $field);
+//                        $options['query'] = $query;
+//                        dd($query);
                     }
                     $queryPart = [
                         'nested' => [
