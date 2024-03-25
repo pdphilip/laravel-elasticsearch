@@ -65,6 +65,7 @@ Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
 - [Distinct and GroupBy](https://elasticsearch.pdphilip.com/distinct)
 - [Aggregations](https://elasticsearch.pdphilip.com/aggregations)
 - [Chunking](https://elasticsearch.pdphilip.com/chunking)
+- [Nested Queries](https://elasticsearch.pdphilip.com/nested-queries) **New in Version 3**
 - [Elasticsearch Specific Queries](https://elasticsearch.pdphilip.com/es-specific)
 - [Full-Text Search](https://elasticsearch.pdphilip.com/full-text-search)
 - [Dynamic Indices](https://elasticsearch.pdphilip.com/dynamic-indices)
