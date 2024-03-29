@@ -1,8 +1,8 @@
-<img align="left" width="70" height="70" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
+<img align="left" width="50" height="50" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
 
-# Laravel x Elasticsearch
+## Elasticsearch implementation of Laravel's Eloquent ORM
 
-This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this plugin enables you to work with Eloquent models while leveraging the
+This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
@@ -44,7 +44,96 @@ composer require pdphilip/elasticsearch
 | Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌          |
 | Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌          |
 
-Next, [Configuration](https://elasticsearch.pdphilip.com/#configuration)
+## Configuration
+
+1.  Set up your `.env` with the following Elasticsearch settings:
+
+```ini
+ES_AUTH_TYPE=http
+ES_HOSTS="http://localhost:9200"
+ES_USERNAME=
+ES_PASSWORD=
+ES_CLOUD_ID=
+ES_API_ID=
+ES_API_KEY=
+ES_SSL_CERT=
+ES_INDEX_PREFIX=my_app
+# prefix will be added to all indexes created by the package with an underscore
+# ex: my_app_user_logs for UserLog.php model
+```
+
+For multiple nodes, pass in as comma-separated:
+
+```ini
+ES_HOSTS="http://es01:9200,http://es02:9200,http://es03:9200"
+```
+
+<details>
+<summary>Example cloud config .env: (Click to expand)</summary>
+
+```ini
+ES_AUTH_TYPE=cloud
+ES_HOSTS="https://xxxxx-xxxxxx.es.europe-west1.gcp.cloud.es.io:9243"
+ES_USERNAME=elastic
+ES_PASSWORD=XXXXXXXXXXXXXXXXXXXX
+ES_CLOUD_ID=XXXXX:ZXVyb3BlLXdl.........SQwYzM1YzU5ODI5MTE0NjQ3YmEyNDZlYWUzOGNkN2Q1Yg==
+ES_API_ID=
+ES_API_KEY=
+ES_SSL_CERT=
+```
+
+</details>
+
+
+2. In `config/database.php`, add the elasticsearch connection:
+
+```php
+'elasticsearch' => [
+    'driver'       => 'elasticsearch',
+    'auth_type'    => env('ES_AUTH_TYPE', 'http'), //http, cloud or api
+    'hosts'        => explode(',', env('ES_HOSTS', 'http://localhost:9200')),
+    'username'     => env('ES_USERNAME', ''),
+    'password'     => env('ES_PASSWORD', ''),
+    'cloud_id'     => env('ES_CLOUD_ID', ''),
+    'api_id'       => env('ES_API_ID', ''),
+    'api_key'      => env('ES_API_KEY', ''),
+    'ssl_cert'     => env('ES_SSL_CERT', ''),
+    'index_prefix' => env('ES_INDEX_PREFIX', false),
+    'query_log'    => [
+        'index'      => false, //Or provide a name for the logging index ex: 'laravel_query_logs'
+        'error_only' => true, //If false, then all queries are logged if the query_log index is set
+    ],
+],
+```
+
+### 3. If packages are not autoloaded, add the service provider:
+
+For **Laravel 10 and below**:
+```php
+//config/app.php
+'providers' => [
+    ...
+    ...
+    PDPhilip\Elasticsearch\ElasticServiceProvider::class,
+    ...
+
+```
+
+For **Laravel 11**:
+```php
+//bootstrap/providers.php
+<?php
+return [
+    App\Providers\AppServiceProvider::class,
+    PDPhilip\Elasticsearch\ElasticServiceProvider::class,
+];
+```
+
+Now, you're all set to use Elasticsearch with Laravel as if it were native to the framework, ex:
+
+```php
+$products = Product::where('manufacturer.country', 'England')->take(10)->get();
+```
 
 ---
 
