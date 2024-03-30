@@ -1,9 +1,14 @@
-<img align="left" width="50" height="50" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
+<img align="left" width="70" height="70" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
 
-## Elasticsearch implementation of Laravel's Eloquent ORM
+# Laravel-Elasticsearch
 
+### An Elasticsearch implementation of Laravel's Eloquent ORM
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
+
+```php
+$logs = UserLog::where('type', UserLogType::LOGIN)->where('created_at','>=',Carbon::now()->subDays(30))->get();
+```
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
 
@@ -129,11 +134,7 @@ return [
 ];
 ```
 
-Now, you're all set to use Elasticsearch with Laravel as if it were native to the framework, ex:
-
-```php
-$products = Product::where('manufacturer.country', 'England')->take(10)->get();
-```
+Now, you're all set to use Elasticsearch with Laravel as if it were native to the framework.
 
 ---
 
