@@ -2,6 +2,11 @@
 
 # Laravel-Elasticsearch
 
+[![Latest Stable Version](http://img.shields.io/github/release/pdphilip/laravel-elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
+[![Total Downloads](http://img.shields.io/packagist/dm/pdphilip/elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
+
+
+
 ### An Elasticsearch implementation of Laravel's Eloquent ORM
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
