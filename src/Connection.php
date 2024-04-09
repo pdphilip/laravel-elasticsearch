@@ -160,10 +160,14 @@ class Connection extends BaseConnection
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
         $pass = config('database.connections.elasticsearch.password') ?? null;
+        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
         $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
         $cb = ClientBuilder::create()->setHosts($hosts);
         if ($username && $pass) {
             $cb->setBasicAuthentication($username, $pass)->build();
+        } elseif ($apiKey) {
+            // Local deployment can also access via APIKEY
+            $cb->setApiKey($apiKey)->build();
         }
         if ($certPath) {
             $cb->setCABundle($certPath);
