@@ -58,6 +58,16 @@ class Bridge
         ];
         try {
             $process = $this->client->search($params);
+
+            // rawSearch() seems to be the only way to perform date_histogram
+            // so please enhance this to sanitize aggregations as well.
+            if (! empty($process['aggregations'])) {
+                $meta['timed_out'] = $process['timed_out'];
+                $meta['total'] = $process['hits']['total']['value'] ?? 0;
+                $meta['max_score'] = $process['hits']['max_score'] ?? 0;
+
+                return $this->_return($process['aggregations'], $meta, $params, $this->_queryTag(__FUNCTION__));
+            }
             
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
