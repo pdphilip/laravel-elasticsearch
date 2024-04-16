@@ -2,6 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Query;
 
+use Carbon\Carbon;
 use PDPhilip\Elasticsearch\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
@@ -383,6 +384,25 @@ class Builder extends BaseBuilder
             'wheres'  => $wheres,
             'options' => $options,
             'boolean' => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    public function whereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
+    {
+        [$value, $operator] = $this->prepareValueAndOperator(
+            $value, $operator, func_num_args() === 2
+        );
+        if ($this->invalidOperator($operator)) {
+            [$value, $operator] = [$operator, '='];
+        }
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Timestamp',
+            'value'    => $value,
+            'operator' => $operator,
+            'boolean'  => $boolean,
         ];
         
         return $this;
@@ -1025,10 +1045,21 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereDate(array $where)
     {
-        //Just a normal where query.....
+        //convert value to Carbon if it's not
+        $where['value'] = $this->_formatCarbon($where['value']);
+        
         return $this->_parseWhereBasic($where);
     }
     
+    protected function _parseWhereTimestamp(array $where)
+    {
+        $where['value'] = $this->_formatTimestamp($where['value']);
+
+//        dd($where);
+        
+        return $this->_parseWhereBasic($where);
+        
+    }
     
     /**
      * @param    array    $where
@@ -1144,6 +1175,7 @@ class Builder extends BaseBuilder
             $column => ['not_nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
         ];
     }
+    
     
     /**
      * Set custom options for the query.
@@ -1531,6 +1563,45 @@ class Builder extends BaseBuilder
     public function closePit($id)
     {
         return $this->connection->closePit($id);
+    }
+    
+    
+    //----------------------------------------------------------------------
+    // Helpers
+    //----------------------------------------------------------------------
+    
+    private function _formatCarbon($value)
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+        try {
+            return Carbon::parse($value);
+        } catch (\Exception $e) {
+            throw new LogicException('Invalid date or timestamp');
+        }
+    }
+    
+    private function _formatTimestamp($value)
+    {
+        if (is_numeric($value)) {
+            // Convert to integer in case it's a string
+            $value = (int)$value;
+            // Check for milliseconds
+            if ($value > 10000000000) {
+                return $value;
+            }
+            
+            // ES expects seconds as a string
+            return (string)Carbon::createFromTimestamp($value)->timestamp;
+        }
+        
+        // If it's not numeric, assume it's a date string and try to return TS as a string
+        try {
+            return (string)Carbon::parse($value)->timestamp;
+        } catch (\Exception $e) {
+            throw new LogicException('Invalid date or timestamp');
+        }
     }
     
     

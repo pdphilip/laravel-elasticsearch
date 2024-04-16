@@ -19,6 +19,8 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method search(array $columns = '*')
  * @method query(array $columns = '*')
  *
+ * @method  $this WhereDate($column, $operator = null, $value = null, $boolean = 'and')
+ * @method  $this WhereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
  * @method  $this whereIn(string $column, array $values)
  * @method  $this whereExact(string $column, string $value)
  * @method  $this wherePhrase(string $column, string $value)
