@@ -1264,7 +1264,14 @@ class Builder extends BaseBuilder
         
     }
     
-    
+    public function rawAggregation(array $bodyParams)
+    {
+        $find = $this->connection->aggregationRaw($bodyParams);
+        $data = $find->data;
+        
+        return new Collection($data);
+        
+    }
     //----------------------------------------------------------------------
     // Pagination overrides
     //----------------------------------------------------------------------
@@ -1439,6 +1446,42 @@ class Builder extends BaseBuilder
         $this->fields[$field] = $boostFactor ?? 1;
     }
     
+    public function highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
+    {
+        $highlightFields = [
+            '*' => (object)[],
+        ];
+        if (!empty($fields)) {
+            $highlightFields = [];
+            foreach ($fields as $field => $payload) {
+                if (is_int($field)) {
+                    $highlightFields[$payload] = (object)[];
+                } else {
+                    $highlightFields[$field] = $payload;
+                }
+                
+            }
+        }
+        if (!is_array($preTag)) {
+            $preTag = [$preTag];
+        }
+        if (!is_array($postTag)) {
+            $postTag = [$postTag];
+        }
+        
+        $highlight = [];
+        if ($globalOptions) {
+            $highlight = $globalOptions;
+        }
+        $highlight['pre_tags'] = $preTag;
+        $highlight['post_tags'] = $postTag;
+        $highlight['fields'] = $highlightFields;
+        
+        
+        $this->searchOptions['highlight'] = $highlight;
+    }
+    
+    
     public function search($columns = '*')
     {
         
@@ -1455,6 +1498,7 @@ class Builder extends BaseBuilder
         if ($search->isSuccessful()) {
             $data = $search->data;
             
+            
             return new Collection($data);
             
             
@@ -1463,6 +1507,30 @@ class Builder extends BaseBuilder
         }
         
         
+    }
+    
+    //----------------------------------------------------------------------
+    // PIT API
+    //----------------------------------------------------------------------
+    
+    public function openPit($keepAlive = '5m')
+    {
+        return $this->connection->openPit($keepAlive);
+    }
+    
+    public function pitFind($count, $pitId, $after = null)
+    {
+        $wheres = $this->compileWheres();
+        $options = $this->compileOptions();
+        $fields = $this->fields;
+        $options['limit'] = $count;
+        
+        return $this->connection->pitFind($wheres, $options, $fields, $pitId, $after);
+    }
+    
+    public function closePit($id)
+    {
+        return $this->connection->closePit($id);
     }
     
     

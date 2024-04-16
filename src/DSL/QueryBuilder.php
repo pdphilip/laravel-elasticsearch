@@ -44,12 +44,16 @@ trait QueryBuilder
             }
             
         }
+        if (!empty($searchOptions['highlight'])) {
+            $params['body']['highlight'] = $searchOptions['highlight'];
+            unset($searchOptions['highlight']);
+        }
+        
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
                 $queryString[$searchOption] = $searchOptionValue;
             }
         }
-        
         $wheres = $this->addSearchToWheres($wheres, $queryString);
         $dsl = $this->_buildQuery($wheres);
         
@@ -111,8 +115,6 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
-
-//        dd($params);
         
         return $params;
     }
@@ -381,8 +383,6 @@ trait QueryBuilder
                     $query = ParameterBuilder::matchAll()['query'];
                     if (!empty($operand['wheres'])) {
                         $query = $this->_convertWheresToDSL($operand['wheres'], $field);
-//                        $options['query'] = $query;
-//                        dd($query);
                     }
                     $queryPart = [
                         'nested' => [

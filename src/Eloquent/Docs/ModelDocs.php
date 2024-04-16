@@ -36,6 +36,10 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
  *
  * @method  $this queryNested(string $column, Callable $callback)
+ * @method  $this rawSearch(array $bodyParams)
+ * @method  $this rawAggregation(array $bodyParams)
+ *
+ * @method  $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
  *
  * @method  $this  deleteIndexIfExists()
  *

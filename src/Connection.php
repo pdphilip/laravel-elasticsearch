@@ -161,9 +161,13 @@ class Connection extends BaseConnection
         $username = config('database.connections.elasticsearch.username') ?? null;
         $pass = config('database.connections.elasticsearch.password') ?? null;
         $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
         $cb = ClientBuilder::create()->setHosts($hosts);
         if ($username && $pass) {
             $cb->setBasicAuthentication($username, $pass)->build();
+        } elseif ($apiKey) {
+            // credit @kenken-vpl
+            $cb->setApiKey($apiKey)->build();
         }
         if ($certPath) {
             $cb->setCABundle($certPath);

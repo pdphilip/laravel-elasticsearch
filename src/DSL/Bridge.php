@@ -41,6 +41,83 @@ class Bridge
         
     }
     
+    //----------------------------------------------------------------------
+    // PIT
+    //----------------------------------------------------------------------
+    
+    public function processOpenPit($keepAlive = '5m'): string
+    {
+        $params = [
+            'index'      => $this->index,
+            'keep_alive' => $keepAlive,
+        
+        ];
+        try {
+            $process = $this->client->openPointInTime($params);
+            $res = $process->asArray();
+            if (!empty($res['id'])) {
+                return $res['id'];
+            }
+            
+            throw new Exception('Error on PIT creation. No ID returned.');
+        } catch (Exception $e) {
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
+        }
+    }
+    
+    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false)
+    {
+        $params = $this->buildParams($this->index, $wheres, $options, $columns);
+        unset($params['index']);
+        
+        $params['body']['pit'] = [
+            'id'         => $pitId,
+            'keep_alive' => '5m',
+        ];
+        // Remove sort if present
+        $params['body']['sort'] = [];
+        $params['body']['sort'][] = ['_shard_doc' => 'desc'];
+        
+        if ($searchAfter) {
+            $params['body']['search_after'] = $searchAfter;
+        }
+        try {
+            $process = $this->client->search($params);
+            
+            return $this->_sanitizePitSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
+            
+            
+        } catch (Exception $e) {
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
+        }
+        
+        
+    }
+    
+    
+    public function processClosePit($id): bool
+    {
+        
+        $params = [
+            'index' => $this->index,
+            'body'  => [
+                'id' => $id,
+            ],
+        
+        ];
+        try {
+            $process = $this->client->closePointInTime($params);
+            $res = $process->asArray();
+            
+            return $res['succeeded'];
+            
+        } catch (Exception $e) {
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
+        }
+    }
     
     //----------------------------------------------------------------------
     //  BYO Query
@@ -60,6 +137,24 @@ class Bridge
             $process = $this->client->search($params);
             
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            
+            $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
+            throw new Exception($error->errorMessage);
+        }
+    }
+    
+    public function processAggregationRaw($bodyParams): Results
+    {
+        $params = [
+            'index' => $this->index,
+            'body'  => $bodyParams,
+        
+        ];
+        try {
+            $process = $this->client->search($params);
+            
+            return $this->_sanitizeAggsResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             
             $error = $this->_returnError($e->getMessage(), $e->getCode(), $params, $this->_queryTag(__FUNCTION__));
@@ -104,7 +199,6 @@ class Bridge
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
-        
         
         return $this->_returnSearch($params, __FUNCTION__);
         
@@ -198,6 +292,7 @@ class Bridge
         if (isset($data['_index'])) {
             unset($data['_index']);
         }
+        
         $params = [
             'index' => $this->index,
             'body'  => $data,
@@ -828,10 +923,12 @@ class Bridge
     
     private function _sanitizeSearchResponse($response, $params, $queryTag)
     {
+        
+        $meta['took'] = $response['took'] ?? 0;
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
-        $meta['sorts'] = [];
+        $meta['shards'] = $response['_shards'] ?? [];
         $data = [];
         if (!empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
@@ -839,9 +936,11 @@ class Bridge
                 $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
                 if (!empty($hit['_source'])) {
+                    
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
                     }
+                    
                 }
                 if (!empty($hit['inner_hits'])) {
                     foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
@@ -849,20 +948,59 @@ class Bridge
                     }
                 }
                 
-                //------------------------  later, maybe  ------------------------------
-                // if (!empty($hit['sort'])) {
-                //      $datum['_meta']['sort'] = $this->_parseSort($hit['sort'], $params['body']['sort'] ?? []);
-                // }
-                //----------------------------------------------------------------------
-                
-                
-                {
-                    $data[] = $datum;
+                //Meta data
+                if (!empty($hit['highlight'])) {
+                    $datum['_meta']['highlights'] = $hit['highlight'];
                 }
+                
+                $datum['_meta']['_index'] = $hit['_index'];
+                $datum['_meta']['_id'] = $hit['_id'];
+                if (!empty($hit['_score'])) {
+                    $datum['_meta']['_score'] = $hit['_score'];
+                }
+                $datum['_meta']['_query'] = $meta;
+                
+                $data[] = $datum;
             }
         }
         
         return $this->_return($data, $meta, $params, $queryTag);
+    }
+    
+    private function _sanitizeAggsResponse($response, $params, $queryTag)
+    {
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['sorts'] = [];
+        $data = [];
+        if (!empty($response['aggregations'])) {
+            foreach ($response['aggregations'] as $key => $values) {
+                $data = $this->_formatAggs($key, $values);
+            }
+        }
+        
+        return $this->_return($data, $meta, $params, $queryTag);
+    }
+    
+    private function _formatAggs($key, $values)
+    {
+        $data[$key] = [];
+        $aggTypes = ['buckets', 'values'];
+        
+        foreach ($values as $subKey => $value) {
+            if (in_array($subKey, $aggTypes)) {
+                $data[$key] = $this->_formatAggs($subKey, $value)[$subKey];
+            } elseif (is_array($value)) {
+                $data[$key][$subKey] = $this->_formatAggs($subKey, $value)[$subKey];
+            } else {
+                $data[$key][$subKey] = $value;
+            }
+            
+        }
+        
+        return $data;
+        
     }
     
     private function _filterInnerHits($innerHit)
@@ -879,6 +1017,35 @@ class Bridge
         }
         
         return $hits;
+    }
+    
+    private function _sanitizePitSearchResponse($response, $params, $queryTag)
+    {
+        
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['last_sort'] = null;
+        $data = [];
+        if (!empty($response['hits']['hits'])) {
+            foreach ($response['hits']['hits'] as $hit) {
+                $datum = [];
+                $datum['_index'] = $hit['_index'];
+                $datum['_id'] = $hit['_id'];
+                if (!empty($hit['_source'])) {
+                    foreach ($hit['_source'] as $key => $value) {
+                        $datum[$key] = $value;
+                    }
+                }
+                if (!empty($hit['sort'][0])) {
+                    $meta['last_sort'] = $hit['sort'];
+                }
+                $data[] = $datum;
+                
+            }
+        }
+        
+        return $this->_return($data, $meta, $params, $queryTag);
     }
     
     

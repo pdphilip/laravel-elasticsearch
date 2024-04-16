@@ -30,6 +30,7 @@ abstract class Model extends BaseModel
     
     protected $parentRelation;
     
+    protected $_meta = [];
     
     public function __construct(array $attributes = [])
     {
@@ -124,6 +125,18 @@ abstract class Model extends BaseModel
     public function getDateFormat()
     {
         return $this->dateFormat ? : 'Y-m-d H:i:s';
+    }
+    
+    public function setMeta($meta)
+    {
+        $this->_meta = $meta;
+        
+        return $this;
+    }
+    
+    public function getMeta()
+    {
+        return (object)$this->_meta;
     }
     
     /**
