@@ -2,9 +2,11 @@
 
 namespace PDPhilip\Elasticsearch;
 
-use Elastic\Elasticsearch\Client;
+
+use OpenSearch\Client;
+use OpenSearch\ClientBuilder;
 use PDPhilip\Elasticsearch\DSL\Bridge;
-use Elastic\Elasticsearch\ClientBuilder;
+
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Str;
 use RuntimeException;

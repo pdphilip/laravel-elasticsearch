@@ -2,12 +2,11 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
-use Elastic\Elasticsearch\Exception\ClientResponseException;
-use Elastic\Elasticsearch\Exception\MissingParameterException;
-use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
-use Elastic\Elasticsearch\Client;
-
+use OpenSearch\Client;
+use OpenSearch\Common\Exceptions\ClientErrorResponseException;
+use OpenSearch\Common\Exceptions\Missing404Exception;
+use OpenSearch\Common\Exceptions\ServerErrorResponseException;
 
 class Bridge
 {
@@ -366,9 +365,9 @@ class Bridge
     //----------------------------------------------------------------------
     
     /**
-     * @throws ClientResponseException
-     * @throws ServerResponseException
-     * @throws MissingParameterException
+     * @throws ClientErrorResponseException
+     * @throws ServerErrorResponseException
+     * @throws Missing404Exception
      */
     public function processGetIndices($all): array
     {

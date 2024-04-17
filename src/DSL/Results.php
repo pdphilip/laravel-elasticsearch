@@ -2,9 +2,6 @@
 
 namespace PDPhilip\Elasticsearch\DSL;
 
-use Elastic\Elasticsearch\Response\Elasticsearch;
-
-
 class Results
 {
     private array $_meta;
