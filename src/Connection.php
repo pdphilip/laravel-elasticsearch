@@ -169,6 +169,9 @@ class Connection extends BaseConnection
         }
         if ($certPath) {
             $cb->setCABundle($certPath);
+        } else {
+            $verifySsl = config('database.connections.elasticsearch.ssl_verify') ?? true;
+            $cb->setSSLVerification($verifySsl);
         }
         
         return $cb->build();
