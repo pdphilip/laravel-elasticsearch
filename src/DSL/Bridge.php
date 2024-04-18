@@ -318,8 +318,8 @@ class Bridge
                 'id'    => $wheres['_id'],
             ];
             try {
-                $responseObject = $this->client->delete($params);
-                $response = $responseObject->asArray();
+                $response = $this->client->delete($params);
+                
                 $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
                 
                 return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
@@ -329,8 +329,8 @@ class Bridge
         }
         try {
             $params = $this->buildParams($this->index, $wheres, $options);
-            $responseObject = $this->client->deleteByQuery($params);
-            $response = $responseObject->asArray();
+            $response = $this->client->deleteByQuery($params);
+            
             $response['deleteCount'] = $response['deleted'] ?? 0;
             
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
@@ -375,9 +375,10 @@ class Bridge
         if ($all) {
             $index = '*';
         }
-        $response = $this->client->indices()->get(['index' => $index]);
         
-        return $response->asArray();
+        return $this->client->indices()->get(['index' => $index]);
+        
+        
     }
     
     public function processIndexExists($index): bool
@@ -385,9 +386,7 @@ class Bridge
         $params = ['index' => $index];
         
         try {
-            $test = $this->client->indices()->exists($params);
-            
-            return $test->getStatusCode() == 200;
+            return $this->client->indices()->exists($params);
         } catch (Exception $e) {
             return false;
         }
@@ -401,8 +400,8 @@ class Bridge
     {
         $params = ['index' => $index];
         try {
-            $responseObject = $this->client->indices()->getMapping($params);
-            $response = $responseObject->asArray();
+            $response = $this->client->indices()->getMapping($params);
+            
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
             
             return $result->data;

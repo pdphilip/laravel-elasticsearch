@@ -147,8 +147,9 @@ class Connection extends BaseConnection
     
     protected function buildConnection(): Client
     {
-        $type = config('database.connections.elasticsearch.auth_type') ?? null;
+        $type = $this->config['auth_type'] ?? null;
         $type = strtolower($type);
+        
         if (!in_array($type, ['http', 'cloud'])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
@@ -159,33 +160,52 @@ class Connection extends BaseConnection
     
     protected function _httpConnection(): Client
     {
-        $hosts = config('database.connections.elasticsearch.hosts') ?? null;
-        $username = config('database.connections.elasticsearch.username') ?? null;
-        $pass = config('database.connections.elasticsearch.password') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
-        $cb = ClientBuilder::create()->setHosts($hosts);
-        if ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass)->build();
-        }
-        if ($certPath) {
-            $cb->setCABundle($certPath);
-        } else {
-            $verifySsl = config('database.connections.elasticsearch.ssl_verify') ?? true;
-            $cb->setSSLVerification($verifySsl);
-        }
+        $hosts = $this->config['hosts'] ?? null;
+        $username = $this->config['username'] ?? null;
+        $pass = $this->config['password'] ?? null;
+        $certPath = $this->config['ssl_cert'] ?? null;
         
+        $cb = ClientBuilder::create()->setHosts($hosts);
+
+        if ($this->config['curl_options'] ?? false) {
+            $curlOptions = $this->config['curl_options'];
+            
+            if ($username && $pass) {
+                $curlOptions += [
+                    CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+                    CURLOPT_USERPWD  => $username.':'.$pass
+                ];
+            }
+            
+            $cb->setConnectionParams([
+                'client' => [
+                    'curl' => $curlOptions
+                ]
+            ]);    
+        } else {
+            if ($username && $pass) {
+                $cb->setBasicAuthentication($username, $pass)->build();
+            }
+            if ($certPath) {
+                $cb->setSSLCert($certPath);
+            } else {
+                $verifySsl = $this->config['ssl_verify'] ?? true;
+                $cb->setSSLVerification($verifySsl);
+            }
+        }
         return $cb->build();
     }
     
     protected function _cloudConnection(): Client
     {
-        $cloudId = config('database.connections.elasticsearch.cloud_id') ?? null;
-        $username = config('database.connections.elasticsearch.username') ?? null;
-        $pass = config('database.connections.elasticsearch.password') ?? null;
-        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
-        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        $cloudId = $this->config['cloud_id'] ?? null;
+        $username = $this->config['username'] ?? null;
+        $pass = $this->config['password'] ?? null;
+        $apiId = $this->config['api_id'] ?? null;
+        $apiKey = $this->config['api_key'] ?? null;
+        $certPath = $this->config['ssl_cert'] ?? null;
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
+        
         if ($apiId && $apiKey) {
             $cb->setApiKey($apiKey, $apiId)->build();
         } elseif ($username && $pass) {
