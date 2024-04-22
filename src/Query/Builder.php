@@ -1045,17 +1045,13 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereDate(array $where)
     {
-        //convert value to Carbon if it's not
-        $where['value'] = $this->_formatCarbon($where['value']);
-        
+        //return a normal where clause
         return $this->_parseWhereBasic($where);
     }
     
     protected function _parseWhereTimestamp(array $where)
     {
         $where['value'] = $this->_formatTimestamp($where['value']);
-
-//        dd($where);
         
         return $this->_parseWhereBasic($where);
         
@@ -1569,18 +1565,6 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
-    
-    private function _formatCarbon($value)
-    {
-        if ($value instanceof Carbon) {
-            return $value;
-        }
-        try {
-            return Carbon::parse($value);
-        } catch (\Exception $e) {
-            throw new LogicException('Invalid date or timestamp');
-        }
-    }
     
     private function _formatTimestamp($value)
     {

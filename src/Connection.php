@@ -17,7 +17,7 @@ class Connection extends BaseConnection
     protected $index;
     protected $maxSize;
     protected $indexPrefix;
-    
+    protected $rebuild = false;
     
     public function __construct(array $config)
     {
@@ -138,6 +138,21 @@ class Connection extends BaseConnection
         return new Schema\Grammar();
     }
     
+    public function rebuildConnection()
+    {
+        $this->rebuild = true;
+    }
+    
+    public function getClient()
+    {
+        return $this->client;
+    }
+    
+    public function getMaxSize()
+    {
+        return $this->maxSize;
+    }
+    
     
     //----------------------------------------------------------------------
     // Connection Builder
@@ -207,8 +222,11 @@ class Connection extends BaseConnection
         if (!$this->index) {
             $this->index = $this->indexPrefix.'*';
         }
-        
-        $bridge = new Bridge($this->client, $this->index, $this->maxSize, $this->indexPrefix);
+        if ($this->rebuild) {
+            $this->client = $this->buildConnection();
+            $this->rebuild = false;
+        }
+        $bridge = new Bridge($this);
         
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }

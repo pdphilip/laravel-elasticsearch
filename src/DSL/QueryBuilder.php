@@ -3,6 +3,7 @@
 namespace PDPhilip\Elasticsearch\DSL;
 
 use Exception;
+use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 
 trait QueryBuilder
 {
@@ -21,7 +22,7 @@ trait QueryBuilder
     //======================================================================
     
     /**
-     * @throws Exception
+     * @throws ParameterException
      */
     public function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = []): array
     {
@@ -83,7 +84,7 @@ trait QueryBuilder
     }
     
     /**
-     * @throws Exception
+     * @throws ParameterException
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
@@ -155,7 +156,7 @@ trait QueryBuilder
     }
     
     
-    public function addSearchToWheres($wheres, $queryString)
+    public function addSearchToWheres($wheres, $queryString): array
     {
         $clause = ['_' => ['search' => $queryString]];
         if (!$wheres) {
@@ -198,6 +199,9 @@ trait QueryBuilder
         return $value;
     }
     
+    /**
+     * @throws ParameterException
+     */
     private function _buildQuery($wheres): array
     {
         if (!$wheres) {
@@ -209,6 +213,9 @@ trait QueryBuilder
     }
     
     
+    /**
+     * @throws ParameterException
+     */
     public function _convertWheresToDSL($wheres, $parentField = false): array
     {
         $dsl = ['bool' => []];
@@ -248,6 +255,9 @@ trait QueryBuilder
         return $dsl;
     }
     
+    /**
+     * @throws ParameterException
+     */
     private function _parseCondition($condition, $parentField = null): array
     {
         $field = key($condition);
@@ -342,7 +352,7 @@ trait QueryBuilder
                 case 'exact':
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
-                        throw new Exception('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+                        throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
                     }
                     $queryPart = ['term' => [$keywordField => $operand]];
                     break;
@@ -402,7 +412,7 @@ trait QueryBuilder
     }
     
     /**
-     * @throws Exception
+     * @throws ParameterException
      */
     private function _buildOptions($options): array
     {
@@ -439,7 +449,7 @@ trait QueryBuilder
                         //Pass through
                         break;
                     default:
-                        throw new Exception('Unexpected option: '.$key);
+                        throw new ParameterException('Unexpected option: '.$key);
                 }
             }
         }
@@ -447,6 +457,9 @@ trait QueryBuilder
         return $return;
     }
     
+    /**
+     * @throws ParameterException
+     */
     private function _buildNestedOptions($options, $field)
     {
         $options = $this->_buildOptions($options);
