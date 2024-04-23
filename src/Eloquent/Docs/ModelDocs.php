@@ -37,6 +37,8 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
  * @method  $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
  *
+ * @method  $this chunk(string $column, Callable $callback, string $keepAlive = '5m')
+ * @method  $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
  * @method  $this queryNested(string $column, Callable $callback)
  * @method  $this rawSearch(array $bodyParams)
  * @method  $this rawAggregation(array $bodyParams)

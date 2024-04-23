@@ -1541,14 +1541,14 @@ class Builder extends BaseBuilder
         return $this->connection->openPit($keepAlive);
     }
     
-    public function pitFind($count, $pitId, $after = null)
+    public function pitFind($count, $pitId, $after = null, $keepAlive = '5m')
     {
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
         $fields = $this->fields;
         $options['limit'] = $count;
         
-        return $this->connection->pitFind($wheres, $options, $fields, $pitId, $after);
+        return $this->connection->pitFind($wheres, $options, $fields, $pitId, $after, $keepAlive);
     }
     
     public function closePit($id)

@@ -187,14 +187,18 @@ class Builder extends BaseEloquentBuilder
     /**
      * @inheritdoc
      */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
+    public function chunkById($count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
     {
         $column ??= $this->defaultKeyName();
         $alias ??= $column;
+        //remove sort
+        $this->query->orders = [];
         
         if ($column === '_id') {
             //Use PIT
-            return $this->_chunkByPit($count, $callback);
+            
+            
+            return $this->_chunkByPit($count, $callback, $keepAlive);
         } else {
             $lastId = null;
             $page = 1;
@@ -230,10 +234,10 @@ class Builder extends BaseEloquentBuilder
     }
     
     
-    public function chunk($count, callable $callback)
+    public function chunk($count, callable $callback, $keepAlive = '5m')
     {
         //default to using PIT
-        return $this->_chunkByPit($count, $callback);
+        return $this->_chunkByPit($count, $callback, $keepAlive);
     }
     
     
@@ -502,15 +506,15 @@ class Builder extends BaseEloquentBuilder
     }
     
     
-    private function _chunkByPit($count, callable $callback)
+    private function _chunkByPit($count, callable $callback, $keepAlive = '5m')
     {
-        $pitId = $this->query->openPit();
+        $pitId = $this->query->openPit($keepAlive);
         
         $searchAfter = null;
         $page = 1;
         do {
             $clone = clone $this;
-            $search = $clone->query->pitFind($count, $pitId, $searchAfter);
+            $search = $clone->query->pitFind($count, $pitId, $searchAfter, $keepAlive);
             $meta = $search->getMetaData();
             $searchAfter = $meta['last_sort'];
             $results = $this->hydrate($search->data);

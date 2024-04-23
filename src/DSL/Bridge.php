@@ -79,20 +79,20 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false)
+    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false, $keepAlive = '5m')
     {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         unset($params['index']);
         
         $params['body']['pit'] = [
             'id'         => $pitId,
-            'keep_alive' => '5m',
+            'keep_alive' => $keepAlive,
         ];
         if (empty($params['body']['sort'])) {
             $params['body']['sort'] = [];
         }
         //order catch by shard doc
-        $params['body']['sort'][] = ['_shard_doc' => ['order' => 'desc']];
+        $params['body']['sort'][] = ['_shard_doc' => ['order' => 'asc']];
         
         if ($searchAfter) {
             $params['body']['search_after'] = $searchAfter;
