@@ -139,6 +139,11 @@ abstract class Model extends BaseModel
         return (object)$this->_meta;
     }
     
+    public function getHighlights()
+    {
+        return $this->_meta['highlights'] ?? [];
+    }
+    
     /**
      * @inheritdoc
      */
