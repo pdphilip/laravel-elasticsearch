@@ -215,14 +215,9 @@ class Builder extends BaseBuilder
     {
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
-    
-    /**
-     * @inheritdoc
-     */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
-    {
-        return parent::chunkById($count, $callback, $column, $alias);
-    }
+
+
+//
     
     /**
      * @inheritdoc

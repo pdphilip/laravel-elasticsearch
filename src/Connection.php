@@ -18,6 +18,7 @@ class Connection extends BaseConnection
     protected $maxSize;
     protected $indexPrefix;
     protected $rebuild = false;
+    protected $allowIdSort = false;
     
     public function __construct(array $config)
     {
@@ -25,6 +26,9 @@ class Connection extends BaseConnection
         
         if (!empty($config['index_prefix'])) {
             $this->indexPrefix = $config['index_prefix'];
+        }
+        if (!empty($config['options']['allow_id_sort'])) {
+            $this->allowIdSort = $config['options']['allow_id_sort'];
         }
         
         $this->client = $this->buildConnection();
@@ -151,6 +155,11 @@ class Connection extends BaseConnection
     public function getMaxSize()
     {
         return $this->maxSize;
+    }
+    
+    public function getAllowIdSort()
+    {
+        return $this->allowIdSort;
     }
     
     

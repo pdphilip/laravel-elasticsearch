@@ -57,76 +57,6 @@ class Builder extends BaseEloquentBuilder
         'search',
     ];
     
-    /**
-     * @inheritdoc
-     */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
-    {
-        $column ??= $this->defaultKeyName();
-        $alias ??= $column;
-        
-        if ($column === '_id') {
-            //Use PIT
-            $pitId = $this->query->openPit();
-            
-            $searchAfter = null;
-            $page = 1;
-            do {
-                $clone = clone $this;
-                $search = $clone->query->pitFind($count, $pitId, $searchAfter);
-                $meta = $search->getMetaData();
-                $searchAfter = $meta['last_sort'];
-                $results = $this->hydrate($search->data);
-                $countResults = $results->count();
-                
-                if ($countResults == 0) {
-                    break;
-                }
-                
-                if ($callback($results, $page) === false) {
-                    return false;
-                }
-                
-                unset($results);
-                
-                $page++;
-            } while ($countResults == $count);
-            
-            $this->query->closePit($pitId);
-        } else {
-            $lastId = null;
-            $page = 1;
-            do {
-                $clone = clone $this;
-                $results = $clone->forPageAfterId($count, $lastId, $column)->get();
-                $countResults = $results->count();
-                if ($countResults == 0) {
-                    break;
-                }
-                if ($callback($results, $page) === false) {
-                    return false;
-                }
-                $aliasClean = $alias;
-                if (substr($aliasClean, -8) == '.keyword') {
-                    $aliasClean = substr($aliasClean, 0, -8);
-                }
-                $lastId = data_get($results->last(), $aliasClean);
-                
-                if ($lastId === null) {
-                    throw new RuntimeException("The chunkById operation was aborted because the [{$aliasClean}] column is not present in the query result.");
-                }
-                
-                unset($results);
-                
-                $page++;
-            } while ($countResults == $count);
-            
-            return true;
-        }
-        
-        
-    }
-    
     
     /**
      * @inheritDoc
@@ -253,6 +183,61 @@ class Builder extends BaseEloquentBuilder
         
         return $this->createWithoutRefresh(array_merge($attributes, $values));
     }
+    
+    /**
+     * @inheritdoc
+     */
+    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
+    {
+        $column ??= $this->defaultKeyName();
+        $alias ??= $column;
+        
+        if ($column === '_id') {
+            //Use PIT
+            return $this->_chunkByPit($count, $callback);
+        } else {
+            $lastId = null;
+            $page = 1;
+            do {
+                $clone = clone $this;
+                $results = $clone->forPageAfterId($count, $lastId, $column)->get();
+                $countResults = $results->count();
+                if ($countResults == 0) {
+                    break;
+                }
+                if ($callback($results, $page) === false) {
+                    return false;
+                }
+                $aliasClean = $alias;
+                if (substr($aliasClean, -8) == '.keyword') {
+                    $aliasClean = substr($aliasClean, 0, -8);
+                }
+                $lastId = data_get($results->last(), $aliasClean);
+                
+                if ($lastId === null) {
+                    throw new RuntimeException("The chunkById operation was aborted because the [{$aliasClean}] column is not present in the query result.");
+                }
+                
+                unset($results);
+                
+                $page++;
+            } while ($countResults == $count);
+            
+            return true;
+        }
+        
+        
+    }
+    
+    
+    public function chunk($count, callable $callback)
+    {
+        //default to using PIT
+        return $this->_chunkByPit($count, $callback);
+    }
+    
+    
+    
     
     //----------------------------------------------------------------------
     // ES Filters
@@ -514,5 +499,36 @@ class Builder extends BaseEloquentBuilder
         }
         
         return $instance->first();
+    }
+    
+    
+    private function _chunkByPit($count, callable $callback)
+    {
+        $pitId = $this->query->openPit();
+        
+        $searchAfter = null;
+        $page = 1;
+        do {
+            $clone = clone $this;
+            $search = $clone->query->pitFind($count, $pitId, $searchAfter);
+            $meta = $search->getMetaData();
+            $searchAfter = $meta['last_sort'];
+            $results = $this->hydrate($search->data);
+            $countResults = $results->count();
+            
+            if ($countResults == 0) {
+                break;
+            }
+            
+            if ($callback($results, $page) === false) {
+                return false;
+            }
+            
+            unset($results);
+            
+            $page++;
+        } while ($countResults == $count);
+        
+        $this->query->closePit($pitId);
     }
 }

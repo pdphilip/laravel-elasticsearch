@@ -88,9 +88,11 @@ class Bridge
             'id'         => $pitId,
             'keep_alive' => '5m',
         ];
-        // Remove sort if present
-        $params['body']['sort'] = [];
-        $params['body']['sort'][] = ['_shard_doc' => 'desc'];
+        if (empty($params['body']['sort'])) {
+            $params['body']['sort'] = [];
+        }
+        //order catch by shard doc
+        $params['body']['sort'][] = ['_shard_doc' => ['order' => 'desc']];
         
         if ($searchAfter) {
             $params['body']['search_after'] = $searchAfter;

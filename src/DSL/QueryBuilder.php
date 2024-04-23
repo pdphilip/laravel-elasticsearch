@@ -4,6 +4,7 @@ namespace PDPhilip\Elasticsearch\DSL;
 
 use Exception;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
+use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 
 trait QueryBuilder
 {
@@ -23,6 +24,7 @@ trait QueryBuilder
     
     /**
      * @throws ParameterException
+     * @throws QueryException
      */
     public function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = []): array
     {
@@ -85,6 +87,7 @@ trait QueryBuilder
     
     /**
      * @throws ParameterException
+     * @throws QueryException
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
@@ -201,6 +204,7 @@ trait QueryBuilder
     
     /**
      * @throws ParameterException
+     * @throws QueryException
      */
     private function _buildQuery($wheres): array
     {
@@ -215,6 +219,7 @@ trait QueryBuilder
     
     /**
      * @throws ParameterException
+     * @throws QueryException
      */
     public function _convertWheresToDSL($wheres, $parentField = false): array
     {
@@ -257,6 +262,7 @@ trait QueryBuilder
     
     /**
      * @throws ParameterException
+     * @throws QueryException
      */
     private function _parseCondition($condition, $parentField = null): array
     {
@@ -324,7 +330,6 @@ trait QueryBuilder
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
                         $queryPart = ['terms' => [$field => $operand]];
-//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
                     } else {
                         $queryPart = ['terms' => [$keywordField => $operand]];
                     }
@@ -334,7 +339,6 @@ trait QueryBuilder
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
-//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
                     } else {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
                     }
@@ -428,7 +432,10 @@ trait QueryBuilder
                             $return['body']['sort'] = [];
                         }
                         foreach ($value as $field => $sortPayload) {
-                            $return['body']['sort'][] = ParameterBuilder::fieldSort($field, $sortPayload);
+                            $sort = ParameterBuilder::fieldSort($field, $sortPayload, $this->connection->getAllowIdSort());
+                            if ($sort) {
+                                $return['body']['sort'][] = $sort;
+                            }
                         }
                         break;
                     case 'skip':
