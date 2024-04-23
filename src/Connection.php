@@ -37,7 +37,7 @@ class Connection extends BaseConnection
         
     }
     
-    public function getIndexPrefix(): string
+    public function getIndexPrefix(): string|null
     {
         return $this->indexPrefix;
     }
@@ -48,7 +48,7 @@ class Connection extends BaseConnection
     }
     
     
-    public function getTablePrefix(): string
+    public function getTablePrefix(): string|null
     {
         return $this->getIndexPrefix();
     }
