@@ -403,6 +403,12 @@ class Builder extends BaseBuilder
         return $this;
     }
     
+    // Adding whereNot() as not native to Laravel 8
+    public function whereNot($column, $value)
+    {
+        return $this->where($column, '!=', $value);
+    }
+    
     
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
