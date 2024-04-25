@@ -42,10 +42,11 @@ class Results
         $return['msg'] = $error;
         $return['data'] = [];
         $jsonStartPos = strpos($error, ': ') + 2;
-        $response = stripslashes($error);
+        $response = ($error);
         $title = substr($response, 0, $jsonStartPos);
         $jsonString = substr($response, $jsonStartPos);
         $errorArray = json_decode($jsonString, true);
+        
         if (json_last_error() === JSON_ERROR_NONE) {
             $errorReason = $errorArray['error']['reason'] ?? null;
             if (!$errorReason) {

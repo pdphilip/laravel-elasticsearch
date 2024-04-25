@@ -1015,7 +1015,7 @@ class Bridge
                 
                 //Meta data
                 if (!empty($hit['highlight'])) {
-                    $datum['_meta']['highlights'] = $hit['highlight'];
+                    $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
                 }
                 
                 $datum['_meta']['_index'] = $hit['_index'];
@@ -1030,6 +1030,23 @@ class Bridge
         }
         
         return $this->_return($data, $meta, $params, $queryTag);
+    }
+    
+    private function _sanitizeHighlights($highlights)
+    {
+        //remove keyword results
+        foreach ($highlights as $field => $vals) {
+            if (str_contains($field, '.keyword')) {
+                $cleanField = str_replace('.keyword', '', $field);
+                if (isset($highlights[$cleanField])) {
+                    unset($highlights[$field]);
+                } else {
+                    $highlights[$cleanField] = $vals;
+                }
+            }
+        }
+        
+        return $highlights;
     }
     
     private function _sanitizeAggsResponse($response, $params, $queryTag)
