@@ -28,19 +28,41 @@ class Results
     
     public function setError($error, $errorCode): void
     {
-        
-        if ($this->_isJson($error)) {
-            
-            $jsonError = json_decode($error);
-            if (!empty($jsonError->error->reason)) {
-                $error = $jsonError->error->reason;
-            }
-        }
-        $this->_meta['error']['msg'] = $error;
+        $details = $this->_decodeError($error);
+        $this->_meta['error']['msg'] = $details['msg'];
+        $this->_meta['error']['data'] = $details['data'];
         $this->_meta['error']['code'] = $errorCode;
         $this->_meta['success'] = false;
         $this->errorMessage = $error;
         
+    }
+    
+    private function _decodeError($error)
+    {
+        $return['msg'] = $error;
+        $return['data'] = [];
+        $jsonStartPos = strpos($error, ': ') + 2;
+        $response = ($error);
+        $title = substr($response, 0, $jsonStartPos);
+        $jsonString = substr($response, $jsonStartPos);
+        $errorArray = json_decode($jsonString, true);
+        
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $errorReason = $errorArray['error']['reason'] ?? null;
+            if (!$errorReason) {
+                return $return;
+            }
+            $return['msg'] = $title.$errorReason;
+            $cause = $errorArray['error']['root_cause'][0]['reason'] ?? null;
+            if ($cause) {
+                $return['msg'] .= ' - '.$cause;
+            }
+            
+            $return['data'] = $errorArray;
+            
+        }
+        
+        return $return;
     }
     
     public function isSuccessful(): bool
