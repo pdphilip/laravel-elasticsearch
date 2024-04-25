@@ -3,6 +3,8 @@
 namespace PDPhilip\Elasticsearch\DSL;
 
 use Exception;
+use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
+use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 
 trait QueryBuilder
 {
@@ -21,7 +23,8 @@ trait QueryBuilder
     //======================================================================
     
     /**
-     * @throws Exception
+     * @throws ParameterException
+     * @throws QueryException
      */
     public function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = []): array
     {
@@ -44,12 +47,16 @@ trait QueryBuilder
             }
             
         }
+        if (!empty($searchOptions['highlight'])) {
+            $params['body']['highlight'] = $searchOptions['highlight'];
+            unset($searchOptions['highlight']);
+        }
+        
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
                 $queryString[$searchOption] = $searchOptionValue;
             }
         }
-        
         $wheres = $this->addSearchToWheres($wheres, $queryString);
         $dsl = $this->_buildQuery($wheres);
         
@@ -79,7 +86,8 @@ trait QueryBuilder
     }
     
     /**
-     * @throws Exception
+     * @throws ParameterException
+     * @throws QueryException
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
@@ -111,8 +119,6 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
-
-//        dd($params);
         
         return $params;
     }
@@ -153,7 +159,7 @@ trait QueryBuilder
     }
     
     
-    public function addSearchToWheres($wheres, $queryString)
+    public function addSearchToWheres($wheres, $queryString): array
     {
         $clause = ['_' => ['search' => $queryString]];
         if (!$wheres) {
@@ -196,6 +202,10 @@ trait QueryBuilder
         return $value;
     }
     
+    /**
+     * @throws ParameterException
+     * @throws QueryException
+     */
     private function _buildQuery($wheres): array
     {
         if (!$wheres) {
@@ -207,6 +217,10 @@ trait QueryBuilder
     }
     
     
+    /**
+     * @throws ParameterException
+     * @throws QueryException
+     */
     public function _convertWheresToDSL($wheres, $parentField = false): array
     {
         $dsl = ['bool' => []];
@@ -246,6 +260,10 @@ trait QueryBuilder
         return $dsl;
     }
     
+    /**
+     * @throws ParameterException
+     * @throws QueryException
+     */
     private function _parseCondition($condition, $parentField = null): array
     {
         $field = key($condition);
@@ -312,7 +330,6 @@ trait QueryBuilder
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
                         $queryPart = ['terms' => [$field => $operand]];
-//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
                     } else {
                         $queryPart = ['terms' => [$keywordField => $operand]];
                     }
@@ -322,7 +339,6 @@ trait QueryBuilder
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
-//                        throw new Exception('Field ['.$field.'] is not a keyword field and cannot be used with the [in] operator.');
                     } else {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
                     }
@@ -340,7 +356,7 @@ trait QueryBuilder
                 case 'exact':
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {
-                        throw new Exception('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+                        throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
                     }
                     $queryPart = ['term' => [$keywordField => $operand]];
                     break;
@@ -381,8 +397,6 @@ trait QueryBuilder
                     $query = ParameterBuilder::matchAll()['query'];
                     if (!empty($operand['wheres'])) {
                         $query = $this->_convertWheresToDSL($operand['wheres'], $field);
-//                        $options['query'] = $query;
-//                        dd($query);
                     }
                     $queryPart = [
                         'nested' => [
@@ -402,7 +416,7 @@ trait QueryBuilder
     }
     
     /**
-     * @throws Exception
+     * @throws ParameterException
      */
     private function _buildOptions($options): array
     {
@@ -418,7 +432,10 @@ trait QueryBuilder
                             $return['body']['sort'] = [];
                         }
                         foreach ($value as $field => $sortPayload) {
-                            $return['body']['sort'][] = ParameterBuilder::fieldSort($field, $sortPayload);
+                            $sort = ParameterBuilder::fieldSort($field, $sortPayload, $this->connection->getAllowIdSort());
+                            if ($sort) {
+                                $return['body']['sort'][] = $sort;
+                            }
                         }
                         break;
                     case 'skip':
@@ -439,7 +456,7 @@ trait QueryBuilder
                         //Pass through
                         break;
                     default:
-                        throw new Exception('Unexpected option: '.$key);
+                        throw new ParameterException('Unexpected option: '.$key);
                 }
             }
         }
@@ -447,6 +464,9 @@ trait QueryBuilder
         return $return;
     }
     
+    /**
+     * @throws ParameterException
+     */
     private function _buildNestedOptions($options, $field)
     {
         $options = $this->_buildOptions($options);

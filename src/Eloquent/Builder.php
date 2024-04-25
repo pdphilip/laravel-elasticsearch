@@ -4,6 +4,7 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use RuntimeException;
@@ -47,6 +48,7 @@ class Builder extends BaseEloquentBuilder
         'matrix',
         'query',
         'rawSearch',
+        'rawAggregation',
         'getIndexSettings',
         'getIndexMappings',
         'deleteIndexIfExists',
@@ -56,43 +58,6 @@ class Builder extends BaseEloquentBuilder
         'createIndex',
         'search',
     ];
-    
-    /**
-     * @inheritdoc
-     */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
-    {
-        $column ??= $this->defaultKeyName();
-        $alias ??= $column;
-        $lastId = null;
-        $page = 1;
-        do {
-            $clone = clone $this;
-            $results = $clone->forPageAfterId($count, $lastId, $column)->get();
-            $countResults = $results->count();
-            if ($countResults == 0) {
-                break;
-            }
-            if ($callback($results, $page) === false) {
-                return false;
-            }
-            $aliasClean = $alias;
-            if (substr($aliasClean, -8) == '.keyword') {
-                $aliasClean = substr($aliasClean, 0, -8);
-            }
-            $lastId = data_get($results->last(), $aliasClean);
-            
-            if ($lastId === null) {
-                throw new RuntimeException("The chunkById operation was aborted because the [{$aliasClean}] column is not present in the query result.");
-            }
-            
-            unset($results);
-            
-            $page++;
-        } while ($countResults == $count);
-        
-        return true;
-    }
     
     
     /**
@@ -220,6 +185,65 @@ class Builder extends BaseEloquentBuilder
         
         return $this->createWithoutRefresh(array_merge($attributes, $values));
     }
+    
+    /**
+     * @inheritdoc
+     */
+    public function chunkById($count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
+    {
+        $column ??= $this->defaultKeyName();
+        $alias ??= $column;
+        //remove sort
+        $this->query->orders = [];
+        
+        if ($column === '_id') {
+            //Use PIT
+            
+            
+            return $this->_chunkByPit($count, $callback, $keepAlive);
+        } else {
+            $lastId = null;
+            $page = 1;
+            do {
+                $clone = clone $this;
+                $results = $clone->forPageAfterId($count, $lastId, $column)->get();
+                $countResults = $results->count();
+                if ($countResults == 0) {
+                    break;
+                }
+                if ($callback($results, $page) === false) {
+                    return false;
+                }
+                $aliasClean = $alias;
+                if (substr($aliasClean, -8) == '.keyword') {
+                    $aliasClean = substr($aliasClean, 0, -8);
+                }
+                $lastId = data_get($results->last(), $aliasClean);
+                
+                if ($lastId === null) {
+                    throw new RuntimeException("The chunkById operation was aborted because the [{$aliasClean}] column is not present in the query result.");
+                }
+                
+                unset($results);
+                
+                $page++;
+            } while ($countResults == $count);
+            
+            return true;
+        }
+        
+        
+    }
+    
+    
+    public function chunk($count, callable $callback, $keepAlive = '5m')
+    {
+        //default to using PIT
+        return $this->_chunkByPit($count, $callback, $keepAlive);
+    }
+    
+    
+    
     
     //----------------------------------------------------------------------
     // ES Filters
@@ -435,12 +459,19 @@ class Builder extends BaseEloquentBuilder
                     unset($item['_index']);
                 }
             }
-            
+            $meta = [];
+            if (isset($item['_meta'])) {
+                $meta = $item['_meta'];
+                unset($item['_meta']);
+            }
             $model = $instance->newFromBuilder($item);
             if ($recordIndex) {
                 $model->setRecordIndex($recordIndex);
                 $model->setIndex($recordIndex);
                 
+            }
+            if ($meta) {
+                $model->setMeta($meta);
             }
             if (count($items) > 1) {
                 $model->preventsLazyLoading = Model::preventsLazyLoading();
@@ -474,5 +505,36 @@ class Builder extends BaseEloquentBuilder
         }
         
         return $instance->first();
+    }
+    
+    
+    private function _chunkByPit($count, callable $callback, $keepAlive = '5m')
+    {
+        $pitId = $this->query->openPit($keepAlive);
+        
+        $searchAfter = null;
+        $page = 1;
+        do {
+            $clone = clone $this;
+            $search = $clone->query->pitFind($count, $pitId, $searchAfter, $keepAlive);
+            $meta = $search->getMetaData();
+            $searchAfter = $meta['last_sort'];
+            $results = $this->hydrate($search->data);
+            $countResults = $results->count();
+            
+            if ($countResults == 0) {
+                break;
+            }
+            
+            if ($callback($results, $page) === false) {
+                return false;
+            }
+            
+            unset($results);
+            
+            $page++;
+        } while ($countResults == $count);
+        
+        $this->query->closePit($pitId);
     }
 }

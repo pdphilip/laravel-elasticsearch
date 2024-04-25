@@ -17,15 +17,17 @@ class Connection extends BaseConnection
     protected $index;
     protected $maxSize;
     protected $indexPrefix;
-    
+    protected $retires = null; //null will use default
+    protected $sslVerification = true;
+    protected $elasticMetaHeader = true;
+    protected $rebuild = false;
+    protected $allowIdSort = false;
     
     public function __construct(array $config)
     {
         $this->config = $config;
         
-        if (!empty($config['index_prefix'])) {
-            $this->indexPrefix = $config['index_prefix'];
-        }
+        $this->setOptions($config);
         
         $this->client = $this->buildConnection();
         
@@ -37,7 +39,26 @@ class Connection extends BaseConnection
         
     }
     
-    public function getIndexPrefix(): string
+    public function setOptions($config)
+    {
+        if (!empty($config['index_prefix'])) {
+            $this->indexPrefix = $config['index_prefix'];
+        }
+        if (!empty($config['options']['allow_id_sort'])) {
+            $this->allowIdSort = $config['options']['allow_id_sort'];
+        }
+        if (!empty($config['options']['ssl_verification'])) {
+            $this->sslVerification = $config['options']['ssl_verification'];
+        }
+        if (!empty($config['options']['retires'])) {
+            $this->retires = $config['options']['retires'];
+        }
+        if (!empty($config['options']['meta_header'])) {
+            $this->elasticMetaHeader = $config['options']['meta_header'];
+        }
+    }
+    
+    public function getIndexPrefix(): string|null
     {
         return $this->indexPrefix;
     }
@@ -48,7 +69,7 @@ class Connection extends BaseConnection
     }
     
     
-    public function getTablePrefix(): string
+    public function getTablePrefix(): string|null
     {
         return $this->getIndexPrefix();
     }
@@ -57,7 +78,7 @@ class Connection extends BaseConnection
     {
         $this->index = $index;
         if ($this->indexPrefix) {
-            if (!(strpos($this->index, $this->indexPrefix.'_') !== false)) {
+            if (!(str_contains($this->index, $this->indexPrefix.'_'))) {
                 $this->index = $this->indexPrefix.'_'.$index;
             }
         }
@@ -138,6 +159,26 @@ class Connection extends BaseConnection
         return new Schema\Grammar();
     }
     
+    public function rebuildConnection()
+    {
+        $this->rebuild = true;
+    }
+    
+    public function getClient()
+    {
+        return $this->client;
+    }
+    
+    public function getMaxSize()
+    {
+        return $this->maxSize;
+    }
+    
+    public function getAllowIdSort()
+    {
+        return $this->allowIdSort;
+    }
+    
     
     //----------------------------------------------------------------------
     // Connection Builder
@@ -160,13 +201,15 @@ class Connection extends BaseConnection
         $hosts = config('database.connections.elasticsearch.hosts') ?? null;
         $username = config('database.connections.elasticsearch.username') ?? null;
         $pass = config('database.connections.elasticsearch.password') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
+        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
         $cb = ClientBuilder::create()->setHosts($hosts);
+        $cb = $this->_builderOptions($cb);
         if ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass)->build();
+            $cb->setBasicAuthentication($username, $pass);
         }
-        if ($certPath) {
-            $cb->setCABundle($certPath);
+        if ($apiKey) {
+            $cb->setApiKey($apiKey, $apiId);
         }
         
         return $cb->build();
@@ -179,18 +222,43 @@ class Connection extends BaseConnection
         $pass = config('database.connections.elasticsearch.password') ?? null;
         $apiId = config('database.connections.elasticsearch.api_id') ?? null;
         $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
-        $certPath = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
-        if ($apiId && $apiKey) {
-            $cb->setApiKey($apiKey, $apiId)->build();
-        } elseif ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass)->build();
+        $cb = $this->_builderOptions($cb);
+        if ($username && $pass) {
+            $cb->setBasicAuthentication($username, $pass);
         }
-        if ($certPath) {
-            $cb->setSSLVerification($certPath);
+        if ($apiKey) {
+            $cb->setApiKey($apiKey, $apiId);
         }
         
+        
         return $cb->build();
+    }
+    
+    protected function _builderOptions($cb)
+    {
+        $cb->setSSLVerification($this->sslVerification);
+        $cb->setElasticMetaHeader($this->elasticMetaHeader);
+        if ($this->retires) {
+            $cb->setRetries($this->retires);
+        }
+        $caBundle = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        if ($caBundle) {
+            $cb->setCABundle($caBundle);
+        }
+        $sslCert = config('database.connections.elasticsearch.ssl.cert') ?? null;
+        $sslCertPassword = config('database.connections.elasticsearch.ssl.cert_password') ?? null;
+        $sslKey = config('database.connections.elasticsearch.ssl.key') ?? null;
+        $sslKeyPassword = config('database.connections.elasticsearch.ssl.key_password') ?? null;
+        if ($sslCert) {
+            $cb->setSSLCert($sslCert, $sslCertPassword);
+        }
+        if ($sslKey) {
+            $cb->setSSLKey($sslKey, $sslKeyPassword);
+        }
+        
+        return $cb;
     }
     
     
@@ -203,8 +271,11 @@ class Connection extends BaseConnection
         if (!$this->index) {
             $this->index = $this->indexPrefix.'*';
         }
-        
-        $bridge = new Bridge($this->client, $this->index, $this->maxSize, $this->indexPrefix);
+        if ($this->rebuild) {
+            $this->client = $this->buildConnection();
+            $this->rebuild = false;
+        }
+        $bridge = new Bridge($this);
         
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }

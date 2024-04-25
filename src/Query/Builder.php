@@ -2,6 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Query;
 
+use Carbon\Carbon;
 use PDPhilip\Elasticsearch\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
@@ -214,14 +215,9 @@ class Builder extends BaseBuilder
     {
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
-    
-    /**
-     * @inheritdoc
-     */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
-    {
-        return parent::chunkById($count, $callback, $column, $alias);
-    }
+
+
+//
     
     /**
      * @inheritdoc
@@ -383,6 +379,25 @@ class Builder extends BaseBuilder
             'wheres'  => $wheres,
             'options' => $options,
             'boolean' => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    public function whereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
+    {
+        [$value, $operator] = $this->prepareValueAndOperator(
+            $value, $operator, func_num_args() === 2
+        );
+        if ($this->invalidOperator($operator)) {
+            [$value, $operator] = [$operator, '='];
+        }
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Timestamp',
+            'value'    => $value,
+            'operator' => $operator,
+            'boolean'  => $boolean,
         ];
         
         return $this;
@@ -1025,10 +1040,17 @@ class Builder extends BaseBuilder
      */
     protected function _parseWhereDate(array $where)
     {
-        //Just a normal where query.....
+        //return a normal where clause
         return $this->_parseWhereBasic($where);
     }
     
+    protected function _parseWhereTimestamp(array $where)
+    {
+        $where['value'] = $this->_formatTimestamp($where['value']);
+        
+        return $this->_parseWhereBasic($where);
+        
+    }
     
     /**
      * @param    array    $where
@@ -1144,6 +1166,7 @@ class Builder extends BaseBuilder
             $column => ['not_nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
         ];
     }
+    
     
     /**
      * Set custom options for the query.
@@ -1264,7 +1287,14 @@ class Builder extends BaseBuilder
         
     }
     
-    
+    public function rawAggregation(array $bodyParams)
+    {
+        $find = $this->connection->aggregationRaw($bodyParams);
+        $data = $find->data;
+        
+        return new Collection($data);
+        
+    }
     //----------------------------------------------------------------------
     // Pagination overrides
     //----------------------------------------------------------------------
@@ -1439,6 +1469,42 @@ class Builder extends BaseBuilder
         $this->fields[$field] = $boostFactor ?? 1;
     }
     
+    public function highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
+    {
+        $highlightFields = [
+            '*' => (object)[],
+        ];
+        if (!empty($fields)) {
+            $highlightFields = [];
+            foreach ($fields as $field => $payload) {
+                if (is_int($field)) {
+                    $highlightFields[$payload] = (object)[];
+                } else {
+                    $highlightFields[$field] = $payload;
+                }
+                
+            }
+        }
+        if (!is_array($preTag)) {
+            $preTag = [$preTag];
+        }
+        if (!is_array($postTag)) {
+            $postTag = [$postTag];
+        }
+        
+        $highlight = [];
+        if ($globalOptions) {
+            $highlight = $globalOptions;
+        }
+        $highlight['pre_tags'] = $preTag;
+        $highlight['post_tags'] = $postTag;
+        $highlight['fields'] = $highlightFields;
+        
+        
+        $this->searchOptions['highlight'] = $highlight;
+    }
+    
+    
     public function search($columns = '*')
     {
         
@@ -1455,6 +1521,7 @@ class Builder extends BaseBuilder
         if ($search->isSuccessful()) {
             $data = $search->data;
             
+            
             return new Collection($data);
             
             
@@ -1463,6 +1530,57 @@ class Builder extends BaseBuilder
         }
         
         
+    }
+    
+    //----------------------------------------------------------------------
+    // PIT API
+    //----------------------------------------------------------------------
+    
+    public function openPit($keepAlive = '5m')
+    {
+        return $this->connection->openPit($keepAlive);
+    }
+    
+    public function pitFind($count, $pitId, $after = null, $keepAlive = '5m')
+    {
+        $wheres = $this->compileWheres();
+        $options = $this->compileOptions();
+        $fields = $this->fields;
+        $options['limit'] = $count;
+        
+        return $this->connection->pitFind($wheres, $options, $fields, $pitId, $after, $keepAlive);
+    }
+    
+    public function closePit($id)
+    {
+        return $this->connection->closePit($id);
+    }
+    
+    
+    //----------------------------------------------------------------------
+    // Helpers
+    //----------------------------------------------------------------------
+    
+    private function _formatTimestamp($value)
+    {
+        if (is_numeric($value)) {
+            // Convert to integer in case it's a string
+            $value = (int)$value;
+            // Check for milliseconds
+            if ($value > 10000000000) {
+                return $value;
+            }
+            
+            // ES expects seconds as a string
+            return (string)Carbon::createFromTimestamp($value)->timestamp;
+        }
+        
+        // If it's not numeric, assume it's a date string and try to return TS as a string
+        try {
+            return (string)Carbon::parse($value)->timestamp;
+        } catch (\Exception $e) {
+            throw new LogicException('Invalid date or timestamp');
+        }
     }
     
     

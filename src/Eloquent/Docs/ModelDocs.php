@@ -19,6 +19,8 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method search(array $columns = '*')
  * @method query(array $columns = '*')
  *
+ * @method  $this WhereDate($column, $operator = null, $value = null, $boolean = 'and')
+ * @method  $this WhereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
  * @method  $this whereIn(string $column, array $values)
  * @method  $this whereExact(string $column, string $value)
  * @method  $this wherePhrase(string $column, string $value)
@@ -35,7 +37,13 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
  * @method  $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
  *
+ * @method  $this chunk(string $column, Callable $callback, string $keepAlive = '5m')
+ * @method  $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
  * @method  $this queryNested(string $column, Callable $callback)
+ * @method  $this rawSearch(array $bodyParams)
+ * @method  $this rawAggregation(array $bodyParams)
+ *
+ * @method  $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
  *
  * @method  $this  deleteIndexIfExists()
  *

@@ -33,8 +33,11 @@ class ParameterBuilder
     }
     
     
-    public static function fieldSort($field, $payload): array
+    public static function fieldSort($field, $payload, $allowId = false): array
     {
+        if ($field === '_id' && !$allowId) {
+            return [];
+        }
         if (!empty($payload['is_geo'])) {
             return self::fieldSortGeo($field, $payload);
         }

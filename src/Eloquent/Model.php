@@ -12,7 +12,11 @@ use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use RuntimeException;
 
-
+/**
+ * @property object $searchHighlights
+ * @property array $searchHighlightsAsArray
+ * @property object $withHighlights
+ */
 abstract class Model extends BaseModel
 {
     use HybridRelations, ModelDocs;
@@ -30,6 +34,7 @@ abstract class Model extends BaseModel
     
     protected $parentRelation;
     
+    protected $_meta = [];
     
     public function __construct(array $attributes = [])
     {
@@ -124,6 +129,55 @@ abstract class Model extends BaseModel
     public function getDateFormat()
     {
         return $this->dateFormat ? : 'Y-m-d H:i:s';
+    }
+    
+    public function setMeta($meta)
+    {
+        $this->_meta = $meta;
+        
+        return $this;
+    }
+    
+    public function getMeta()
+    {
+        return (object)$this->_meta;
+    }
+    
+    public function getSearchHighlightsAttribute()
+    {
+        if (!empty($this->_meta['highlights'])) {
+            $data = [];
+            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
+            
+            return (object)$data;
+        }
+        
+        return null;
+    }
+    
+    public function getSearchHighlightsAsArrayAttribute()
+    {
+        if (!empty($this->_meta['highlights'])) {
+            return $this->_meta['highlights'];
+        }
+        
+        return [];
+    }
+    
+    public function getWithHighlightsAttribute()
+    {
+        $data = $this->attributes;
+        $mutators = array_values(array_diff($this->getMutatedAttributes(), ['id', 'search_highlights', 'search_highlights_as_array', 'with_highlights']));
+        if ($mutators) {
+            foreach ($mutators as $mutator) {
+                $data[$mutator] = $this->{$mutator};
+            }
+        }
+        if (!empty($this->_meta['highlights'])) {
+            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
+        }
+        
+        return (object)$data;
     }
     
     /**
@@ -394,6 +448,34 @@ abstract class Model extends BaseModel
         }
         
         return $saved;
+    }
+    
+    
+    //----------------------------------------------------------------------
+    // Helpers
+    //----------------------------------------------------------------------
+    
+    protected function _mergeFlatKeysIntoNestedArray(&$data, $attrs)
+    {
+        foreach ($attrs as $key => $value) {
+            if ($value) {
+                $value = implode('......', $value);
+                $parts = explode('.', $key);
+                $current = &$data;
+                
+                foreach ($parts as $partIndex => $part) {
+                    if ($partIndex === count($parts) - 1) {
+                        $current[$part] = $value;
+                    } else {
+                        if (!isset($current[$part]) || !is_array($current[$part])) {
+                            $current[$part] = [];
+                        }
+                        $current = &$current[$part];
+                    }
+                }
+            }
+            
+        }
     }
     
 }
