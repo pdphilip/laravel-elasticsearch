@@ -17,11 +17,11 @@ class Connection extends BaseConnection
     protected $index;
     protected $maxSize;
     protected $indexPrefix;
-    protected $retires = null; //null will use default
-    protected $sslVerification = true;
-    protected $elasticMetaHeader = true;
-    protected $rebuild = false;
     protected $allowIdSort = false;
+    protected $sslVerification = true;
+    protected $retires = null; //null will use default
+    protected $elasticMetaHeader = null;
+    protected $rebuild = false;
     
     public function __construct(array $config)
     {
@@ -44,16 +44,16 @@ class Connection extends BaseConnection
         if (!empty($config['index_prefix'])) {
             $this->indexPrefix = $config['index_prefix'];
         }
-        if (!empty($config['options']['allow_id_sort'])) {
+        if (isset($config['options']['allow_id_sort'])) {
             $this->allowIdSort = $config['options']['allow_id_sort'];
         }
-        if (!empty($config['options']['ssl_verification'])) {
+        if (isset($config['options']['ssl_verification'])) {
             $this->sslVerification = $config['options']['ssl_verification'];
         }
-        if (!empty($config['options']['retires'])) {
+        if (isset($config['options']['retires'])) {
             $this->retires = $config['options']['retires'];
         }
-        if (!empty($config['options']['meta_header'])) {
+        if (isset($config['options']['meta_header'])) {
             $this->elasticMetaHeader = $config['options']['meta_header'];
         }
     }
@@ -239,8 +239,11 @@ class Connection extends BaseConnection
     protected function _builderOptions($cb)
     {
         $cb->setSSLVerification($this->sslVerification);
-        $cb->setElasticMetaHeader($this->elasticMetaHeader);
-        if ($this->retires) {
+        if (isset($this->elasticMetaHeader)) {
+            $cb->setElasticMetaHeader($this->elasticMetaHeader);
+        }
+        
+        if (isset($this->retires)) {
             $cb->setRetries($this->retires);
         }
         $caBundle = config('database.connections.elasticsearch.ssl_cert') ?? null;
