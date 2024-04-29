@@ -50,7 +50,7 @@ class Connection extends BaseConnection
         if (isset($config['options']['ssl_verification'])) {
             $this->sslVerification = $config['options']['ssl_verification'];
         }
-        if (isset($config['options']['retires'])) {
+        if (!empty($config['options']['retires'])) {
             $this->retires = $config['options']['retires'];
         }
         if (isset($config['options']['meta_header'])) {
