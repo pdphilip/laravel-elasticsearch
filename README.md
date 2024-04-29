@@ -10,6 +10,8 @@
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
 
+#### Using [OpenSearch](https://opensearch.pdphilip.com/)? [Github](https://github.com/pdphilip/laravel-opensearch)
+
 ```php
 $logs = UserLog::where('type', UserLogType::LOGIN)->where('created_at','>=',Carbon::now()->subDays(30))->get();
 ```
@@ -22,20 +24,17 @@ $logs = UserLog::where('type', UserLogType::LOGIN)->where('created_at','>=',Carb
 
 ### Maintained versions (Elasticsearch 8.x):
 
-Please note: Only **version 3** of the package will be maintained.
-
-**Laravel 11.x (main):**
+**Laravel 10.x & 11.x (main):**
 
 ```bash
 composer require pdphilip/elasticsearch
 ```
 
-| Laravel Version | Command                                          | Maintained |
-|-----------------|--------------------------------------------------|------------|
-| Laravel 11.x    | `composer require pdphilip/elasticsearch `       | ✅          |
-| Laravel 10.x    | `composer require pdphilip/elasticsearch:~3.10 ` | ✅          |
-| Laravel 9.x     | `composer require pdphilip/elasticsearch:~3.9`   | ✅          |
-| Laravel 8.x     | `composer require pdphilip/elasticsearch:~3.8`   | ✅          |
+| Laravel Version | Command                                        | Maintained |
+|-----------------|------------------------------------------------|------------|
+| Laravel 10 & 11 | `composer require pdphilip/elasticsearch:~4 `  | ✅          |
+| Laravel 9       | `composer require pdphilip/elasticsearch:~3.9` | ✅          |
+| Laravel 8       | `composer require pdphilip/elasticsearch:~3.8` | ✅          |
 
 ### Unmaintained versions (Elasticsearch 8.x):
 
