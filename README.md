@@ -10,14 +10,13 @@
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
 
-#### Using [OpenSearch](https://opensearch.pdphilip.com/)? [Github](https://github.com/pdphilip/laravel-opensearch)
-
 ```php
 $logs = UserLog::where('type', UserLogType::LOGIN)->where('created_at','>=',Carbon::now()->subDays(30))->get();
 ```
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
-
+---
+> #### Using [OpenSearch](https://opensearch.pdphilip.com/)? [Github](https://github.com/pdphilip/laravel-opensearch)
 ---
 
 ## Installation
@@ -137,6 +136,17 @@ ES_INDEX_PREFIX=my_app
 
 ### 3. If packages are not autoloaded, add the service provider:
 
+For **Laravel 11**:
+
+```php
+//bootstrap/providers.php
+<?php
+return [
+    App\Providers\AppServiceProvider::class,
+    PDPhilip\Elasticsearch\ElasticServiceProvider::class,
+];
+```
+
 For **Laravel 10 and below**:
 
 ```php
@@ -147,17 +157,6 @@ For **Laravel 10 and below**:
     PDPhilip\Elasticsearch\ElasticServiceProvider::class,
     ...
 
-```
-
-For **Laravel 11**:
-
-```php
-//bootstrap/providers.php
-<?php
-return [
-    App\Providers\AppServiceProvider::class,
-    PDPhilip\Elasticsearch\ElasticServiceProvider::class,
-];
 ```
 
 Now, you're all set to use Elasticsearch with Laravel as if it were native to the framework.
@@ -181,7 +180,7 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 - [Distinct and GroupBy](https://elasticsearch.pdphilip.com/distinct)
 - [Aggregations](https://elasticsearch.pdphilip.com/aggregation)
 - [Chunking](https://elasticsearch.pdphilip.com/chunking)
-- [Nested Queries](https://elasticsearch.pdphilip.com/nested-queries) **New in Version 3**
+- [Nested Queries](https://elasticsearch.pdphilip.com/nested-queries)
 - [Elasticsearch Specific Queries](https://elasticsearch.pdphilip.com/es-specific)
 - [Full-Text Search](https://elasticsearch.pdphilip.com/full-text-search)
 - [Dynamic Indices](https://elasticsearch.pdphilip.com/dynamic-indices)
@@ -196,13 +195,27 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 - [Migrations](https://elasticsearch.pdphilip.com/migrations)
 - [Re-indexing Process](https://elasticsearch.pdphilip.com/re-indexing)
 
+## Misc
+
+- [Handling Errors](https://elasticsearch.pdphilip.com/handling-errors)
+
+---
+
+# New in Version 4
+
+(and 3.9.1/3.8.1)
+
+- [Search Highlighting](https://elasticsearch.pdphilip.com/full-text-search#highlighting)
+- [whereTimestamp()](https://elasticsearch.pdphilip.com/es-specific#where-timestamp)
+- [Raw Aggregation](https://elasticsearch.pdphilip.com/es-specific#raw-aggregation-queries)
+- [Updated Error Handling](https://elasticsearch.pdphilip.com/handling-errors)
+- [Chunk Upgrade: Point In Time (PIT)](https://elasticsearch.pdphilip.com/chunking#chunking-under-the-hood-pit)
+
 ---
 
 # New in Version 3
 
 ### Nested Queries [(see)](https://elasticsearch.pdphilip.com/nested-queries)
-
-This update introduces support for querying, sorting and filtering nested data
 
 - [Nested Object Queries](https://elasticsearch.pdphilip.com/nested-queries#where-nested-object)
 - [Order By Nested](https://elasticsearch.pdphilip.com/nested-queries#order-by-nested-field)
