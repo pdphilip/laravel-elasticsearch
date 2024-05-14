@@ -67,6 +67,11 @@ class IndexBlueprint
     {
         return $this->addField('float', $field);
     }
+
+    public function double($field): Definitions\FieldDefinition
+    {
+        return $this->addField('double', $field);
+    }
     
     public function short($field): Definitions\FieldDefinition
     {
