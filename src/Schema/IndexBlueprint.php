@@ -53,30 +53,59 @@ class IndexBlueprint
         return $this->addField('keyword', $field);
     }
     
-    public function integer($field): Definitions\FieldDefinition
-    {
-        return $this->addField('integer', $field);
-    }
+    
+    //----------------------------------------------------------------------
+    // Numeric Types
+    //----------------------------------------------------------------------
     
     public function long($field): Definitions\FieldDefinition
     {
         return $this->addField('long', $field);
     }
     
-    public function float($field): Definitions\FieldDefinition
+    public function integer($field): Definitions\FieldDefinition
     {
-        return $this->addField('float', $field);
-    }
-
-    public function double($field): Definitions\FieldDefinition
-    {
-        return $this->addField('double', $field);
+        return $this->addField('integer', $field);
     }
     
     public function short($field): Definitions\FieldDefinition
     {
         return $this->addField('short', $field);
     }
+    
+    public function byte($field): Definitions\FieldDefinition
+    {
+        return $this->addField('byte', $field);
+    }
+    
+    public function double($field): Definitions\FieldDefinition
+    {
+        return $this->addField('double', $field);
+    }
+    
+    public function float($field): Definitions\FieldDefinition
+    {
+        return $this->addField('float', $field);
+    }
+    
+    public function halfFloat($field): Definitions\FieldDefinition
+    {
+        return $this->addField('half_float', $field);
+    }
+    
+    public function scaledFloat($field, $scalingFactor = 100): Definitions\FieldDefinition
+    {
+        return $this->addField('scaled_float', $field, [
+            'scaling_factor' => $scalingFactor,
+        ]);
+    }
+    
+    public function unsignedLong($field): Definitions\FieldDefinition
+    {
+        return $this->addField('unsigned_long', $field);
+    }
+    
+    //----------------------------------------------------------------------
     
     public function date($field, $format = null): Definitions\FieldDefinition
     {
