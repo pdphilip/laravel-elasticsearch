@@ -23,6 +23,7 @@ class Connection extends BaseConnection
     protected $elasticMetaHeader = null;
     protected $rebuild = false;
     
+    
     public function __construct(array $config)
     {
         $this->config = $config;
