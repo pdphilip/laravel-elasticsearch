@@ -1248,29 +1248,29 @@ class Builder extends BaseBuilder
     
     public function deleteIndex()
     {
-        return Schema::delete($this->index);
+        return Schema::connection($this->connection->getName())->delete($this->index);
         
     }
     
     public function deleteIndexIfExists()
     {
-        return Schema::deleteIfExists($this->index);
+        return Schema::connection($this->connection->getName())->deleteIfExists($this->index);
         
     }
     
     public function getIndexMappings()
     {
-        return Schema::getMappings($this->index);
+        return Schema::connection($this->connection->getName())->getMappings($this->index);
     }
     
     public function getIndexSettings()
     {
-        return Schema::getSettings($this->index);
+        return Schema::connection($this->connection->getName())->getSettings($this->index);
     }
     
     public function indexExists()
     {
-        return Schema::hasIndex($this->index);
+        return Schema::connection($this->connection->getName())->hasIndex($this->index);
     }
     
     public function createIndex()

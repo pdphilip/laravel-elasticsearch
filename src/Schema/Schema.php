@@ -47,7 +47,17 @@ class Schema extends Facade
      */
     public static function connection($name)
     {
+        
+        if ($name === null) {
+            return static::getFacadeAccessor();
+        }
+        
         return static::$app['db']->connection($name)->getSchemaBuilder();
+    }
+    
+    public static function on($name)
+    {
+        return static::connection($name);
     }
     
     /**

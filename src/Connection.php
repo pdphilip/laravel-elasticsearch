@@ -22,10 +22,14 @@ class Connection extends BaseConnection
     protected $retires = null; //null will use default
     protected $elasticMetaHeader = null;
     protected $rebuild = false;
+    protected $connectionName = 'elasticsearch';
     
     
     public function __construct(array $config)
     {
+        
+        $this->connectionName = $config['name'];
+        
         $this->config = $config;
         
         $this->setOptions($config);
@@ -199,11 +203,11 @@ class Connection extends BaseConnection
     
     protected function _httpConnection(): Client
     {
-        $hosts = config('database.connections.elasticsearch.hosts') ?? null;
-        $username = config('database.connections.elasticsearch.username') ?? null;
-        $pass = config('database.connections.elasticsearch.password') ?? null;
-        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
-        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
+        $hosts = config('database.connections.'.$this->connectionName.'.hosts') ?? null;
+        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
+        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
+        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
+        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
         $cb = ClientBuilder::create()->setHosts($hosts);
         $cb = $this->_builderOptions($cb);
         if ($username && $pass) {
@@ -218,11 +222,11 @@ class Connection extends BaseConnection
     
     protected function _cloudConnection(): Client
     {
-        $cloudId = config('database.connections.elasticsearch.cloud_id') ?? null;
-        $username = config('database.connections.elasticsearch.username') ?? null;
-        $pass = config('database.connections.elasticsearch.password') ?? null;
-        $apiId = config('database.connections.elasticsearch.api_id') ?? null;
-        $apiKey = config('database.connections.elasticsearch.api_key') ?? null;
+        $cloudId = config('database.connections.'.$this->connectionName.'.cloud_id') ?? null;
+        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
+        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
+        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
+        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
         
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
         $cb = $this->_builderOptions($cb);
@@ -247,14 +251,14 @@ class Connection extends BaseConnection
         if (isset($this->retires)) {
             $cb->setRetries($this->retires);
         }
-        $caBundle = config('database.connections.elasticsearch.ssl_cert') ?? null;
+        $caBundle = config('database.connections.'.$this->connectionName.'.ssl_cert') ?? null;
         if ($caBundle) {
             $cb->setCABundle($caBundle);
         }
-        $sslCert = config('database.connections.elasticsearch.ssl.cert') ?? null;
-        $sslCertPassword = config('database.connections.elasticsearch.ssl.cert_password') ?? null;
-        $sslKey = config('database.connections.elasticsearch.ssl.key') ?? null;
-        $sslKeyPassword = config('database.connections.elasticsearch.ssl.key_password') ?? null;
+        $sslCert = config('database.connections.'.$this->connectionName.'.ssl.cert') ?? null;
+        $sslCertPassword = config('database.connections.'.$this->connectionName.'.ssl.cert_password') ?? null;
+        $sslKey = config('database.connections.'.$this->connectionName.'.ssl.key') ?? null;
+        $sslKeyPassword = config('database.connections.'.$this->connectionName.'.ssl.key_password') ?? null;
         if ($sslCert) {
             $cb->setSSLCert($sslCert, $sslCertPassword);
         }
