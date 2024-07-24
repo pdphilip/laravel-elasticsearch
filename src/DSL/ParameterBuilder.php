@@ -142,4 +142,38 @@ class ParameterBuilder
     }
     
     
+    public static function multipleAggregations($aggregations, $field)
+    {
+        $aggs = [];
+        foreach ($aggregations as $aggregation) {
+            switch ($aggregation) {
+                case 'max':
+                    $aggs['max_'.$field] = self::maxAggregation($field);
+                    break;
+                case 'min':
+                    $aggs['min_'.$field] = self::minAggregation($field);
+                    break;
+                case 'avg':
+                    $aggs['avg_'.$field] = self::avgAggregation($field);
+                    break;
+                case 'sum':
+                    $aggs['sum_'.$field] = self::sumAggregation($field);
+                    break;
+                case 'matrix':
+                    $aggs['matrix_'.$field] = self::matrixAggregation([$field]);
+                    break;
+                case 'count':
+                    $aggs['count_'.$field] = [
+                        'value_count' => [
+                            'field' => $field,
+                        ],
+                    ];
+                    break;
+            }
+        }
+        
+        return $aggs;
+        
+    }
+    
 }

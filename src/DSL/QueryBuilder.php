@@ -353,6 +353,9 @@ trait QueryBuilder
                 case 'phrase':
                     $queryPart = ['match_phrase' => [$field => $operand]];
                     break;
+                case 'phrase_prefix':
+                    $queryPart = ['match_phrase_prefix' => [$field => ['query' => $operand]]];
+                    break;
                 case 'exact':
                     $keywordField = $this->parseRequiredKeywordMapping($field);
                     if (!$keywordField) {

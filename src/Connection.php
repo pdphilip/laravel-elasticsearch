@@ -18,6 +18,7 @@ class Connection extends BaseConnection
     protected $maxSize;
     protected $indexPrefix;
     protected $allowIdSort = false;
+    protected $errorLoggingIndex = false;
     protected $sslVerification = true;
     protected $retires = null; //null will use default
     protected $elasticMetaHeader = null;
@@ -61,6 +62,13 @@ class Connection extends BaseConnection
         if (isset($config['options']['meta_header'])) {
             $this->elasticMetaHeader = $config['options']['meta_header'];
         }
+        if (!empty($config['error_log_index'])) {
+            if ($this->indexPrefix) {
+                $this->errorLoggingIndex = $this->indexPrefix.'_'.$config['error_log_index'];
+            } else {
+                $this->errorLoggingIndex = $config['error_log_index'];
+            }
+        }
     }
     
     public function getIndexPrefix(): string|null
@@ -77,6 +85,11 @@ class Connection extends BaseConnection
     public function getTablePrefix(): string|null
     {
         return $this->getIndexPrefix();
+    }
+    
+    public function getErrorLoggingIndex(): string|bool
+    {
+        return $this->errorLoggingIndex;
     }
     
     public function setIndex($index): string
