@@ -10,23 +10,31 @@
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
 
-Example:
+Examples:
+
 ```php
 $logs = UserLog::where('created_at','>=',Carbon::now()->subDays(30))->get();
 ```
+
 ```php
 $updates = UserLog::where('status', 1)->update(['status' => 4]);
 ```
+
+```php
+$updates = UserLog::where('status', 1)->paginate(50);
+```
+
 ```php
 $profiles = UserProfile::whereIn('country_code',['US','CA'])->orderByDesc('last_login')->take(10)->get();
 ```
+
 ```php
-$deleted = UserProfile::where('state','unsubscribed')->where('updated_at','<=',Carbon::now()->subDays(90)->delete();
-```
-```php
-$search = UserProfile::term('loves espressos')->minShouldMatch(2)->highlight()->search();
+$deleted = UserProfile::where('state','unsubscribed')->where('updated_at','<=',Carbon::now()->subDays(90))->delete();
 ```
 
+```php
+$search = UserProfile::phrase('loves espressos')->highlight()->search();
+```
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
 ---
@@ -34,6 +42,7 @@ $search = UserProfile::term('loves espressos')->minShouldMatch(2)->highlight()->
 ---
 > #### [Package Tests](https://github.com/pdphilip/laravel-elasticsearch-tests)
 ---
+
 ## Installation
 
 ### Maintained versions (Elasticsearch 8.x):
@@ -91,6 +100,7 @@ ES_OPT_ID_SORTABLE=false
 ES_OPT_VERIFY_SSL=true
 ES_OPT_RETRIES=
 ES_OPT_META_HEADERS=true
+ES_ERROR_INDEX=
 ```
 
 For multiple nodes, pass in as comma-separated:
@@ -112,6 +122,7 @@ ES_API_ID=
 ES_API_KEY=
 ES_SSL_CA=
 ES_INDEX_PREFIX=my_app
+ES_ERROR_INDEX=
 ```
 
 </details>
@@ -142,10 +153,7 @@ ES_INDEX_PREFIX=my_app
         'retires'          => env('ES_OPT_RETRIES', null),
         'meta_header'      => env('ES_OPT_META_HEADERS', true),
     ],
-    'query_log'    => [
-        'index'      => false, //Or provide a name for the logging index ex: 'laravel_query_logs'
-        'error_only' => true, //If false, then all queries are logged if the query_log index is set
-    ],
+    'error_log_index' => env('ES_ERROR_INDEX', false), //If set will log ES errors to this index, ex: 'laravel_es_errors'
 ],
 ```
 
