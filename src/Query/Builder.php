@@ -215,7 +215,26 @@ class Builder extends BaseBuilder
     {
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
-
+    
+    
+    public function agg(array $functions, $column)
+    {
+        if (is_array($column)) {
+            throw new RuntimeException('Column must be a string');
+        }
+        $aggregateTypes = ['sum', 'avg', 'min', 'max', 'matrix', 'count'];
+        foreach ($functions as $function) {
+            if (!in_array($function, $aggregateTypes)) {
+                throw new RuntimeException('Invalid aggregate type: '.$function);
+            }
+        }
+        $wheres = $this->compileWheres();
+        $options = $this->compileOptions();
+        
+        $results = $this->connection->multipleAggregate($functions, $wheres, $options, $column);
+        
+        return $results->data ?? [];
+    }
 
 //
     
@@ -333,6 +352,26 @@ class Builder extends BaseBuilder
             'type'     => 'Basic',
             'value'    => $value,
             'operator' => 'phrase',
+            'boolean'  => $boolean,
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * @param $column
+     * @param $value
+     *
+     * @return $this
+     */
+    public function wherePhrasePrefix($column, $value)
+    {
+        $boolean = 'and';
+        $this->wheres[] = [
+            'column'   => $column,
+            'type'     => 'Basic',
+            'value'    => $value,
+            'operator' => 'phrase_prefix',
             'boolean'  => $boolean,
         ];
         
@@ -1326,6 +1365,29 @@ class Builder extends BaseBuilder
             ->get()->all();
     }
     
+    public function toSql()
+    {
+        return $this->toDsl();
+    }
+    
+    public function toDsl()
+    {
+        $wheres = $this->compileWheres();
+        $options = $this->compileOptions();
+        $columns = $this->prepareColumns([]);
+        if ($this->searchQuery) {
+            $searchParams = $this->searchQuery;
+            $searchOptions = $this->searchOptions;
+            $fields = $this->fields;
+            
+            return $this->connection->toDslForSearch($searchParams, $searchOptions, $wheres, $options, $fields, $columns);
+        }
+        
+        return $this->connection->toDsl($wheres, $options, $columns);
+        
+        
+    }
+    
     //----------------------------------------------------------------------
     // Disabled features (for now)
     //----------------------------------------------------------------------
@@ -1405,11 +1467,13 @@ class Builder extends BaseBuilder
         if (!$clause && !empty($this->searchQuery)) {
             switch ($type) {
                 case 'fuzzy':
-                    throw new RuntimeException('Incorrect query sequencing, searchFuzzyTerm() should only start the ORM chain');
+                    throw new RuntimeException('Incorrect query sequencing, fuzzyTerm() should only start the ORM chain');
                 case 'regex':
-                    throw new RuntimeException('Incorrect query sequencing, searchRegEx() should only start the ORM chain');
+                    throw new RuntimeException('Incorrect query sequencing, regEx() should only start the ORM chain');
+                case 'phrase':
+                    throw new RuntimeException('Incorrect query sequencing, phrase() should only start the ORM chain');
                 default:
-                    throw new RuntimeException('Incorrect query sequencing, searchTerm() should only start the ORM chain');
+                    throw new RuntimeException('Incorrect query sequencing, term() should only start the ORM chain');
             }
             
         }
@@ -1419,6 +1483,8 @@ class Builder extends BaseBuilder
                     throw new RuntimeException('Incorrect query sequencing, andFuzzyTerm()/orFuzzyTerm() cannot start the ORM chain');
                 case 'regex':
                     throw new RuntimeException('Incorrect query sequencing, andRegEx()/orRegEx() cannot start the ORM chain');
+                case 'phrase':
+                    throw new RuntimeException('Incorrect query sequencing, andPhrase()/orPhrase() cannot start the ORM chain');
                 default:
                     throw new RuntimeException('Incorrect query sequencing, andTerm()/orTerm() cannot start the ORM chain');
             }
@@ -1430,6 +1496,9 @@ class Builder extends BaseBuilder
                 break;
             case 'regex':
                 $nextTerm = '(/'.$term.'/)';
+                break;
+            case 'phrase':
+                $nextTerm = '("'.self::_escape($term).'")';
                 break;
             default:
                 $nextTerm = '('.self::_escape($term).')';
