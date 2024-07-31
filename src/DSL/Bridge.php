@@ -18,11 +18,11 @@ class Bridge
     
     use QueryBuilder, IndexInterpreter;
     
-    protected Connection $connection;
+    protected $connection;
     
-    protected Client $client;
+    protected $client;
     
-    protected string|bool $errorLogger = false;
+    protected $errorLogger = false;
     
     protected $maxSize = 10; //ES default
     

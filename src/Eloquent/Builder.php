@@ -43,7 +43,7 @@ class Builder extends BaseEloquentBuilder
         'raw',
         'rawValue',
         'sum',
-        'tosql',
+        'toSql',
         //ES only:
         'matrix',
         'query',
@@ -57,7 +57,7 @@ class Builder extends BaseEloquentBuilder
         'indexExists',
         'createIndex',
         'search',
-        'todsl',
+        'toDsl',
         'agg',
     ];
     
