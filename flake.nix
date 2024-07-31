@@ -1,5 +1,4 @@
 {
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -9,35 +8,40 @@
   outputs = inputs:
     inputs.snow-blower.mkSnowBlower {
       inherit inputs;
-      perSystem = {config, lib, ...}: let
+      perSystem = {
+        config,
+        lib,
+        ...
+      }: let
         serv = config.snow-blower.services;
         lang = config.snow-blower.languages;
-        env = config.snow-blower.env;
 
+        # Refrences PHP and Composer later in this config.
         composer = "${lang.php.packages.composer}/bin/composer";
         php = "${lang.php.package}/bin/php";
 
-          envKeys = builtins.attrNames config.snow-blower.env;
-          unsetEnv = builtins.concatStringsSep "\n" (
-            map (key: "unset ${key}") envKeys
-          );
-
+        envKeys = builtins.attrNames config.snow-blower.env;
+        unsetEnv = builtins.concatStringsSep "\n" (
+          map (key: "unset ${key}") envKeys
+        );
       in {
         snow-blower = {
           paths.src = ./.;
 
+          # Conviance scripts
           scripts = {
             pf.exec = ''
-            ${unsetEnv}
-              ./vendor/bin/pest --filter "$@"
+              ${unsetEnv}
+                ./vendor/bin/pest --filter "$@"
             '';
             p.exec = ''
-            ${unsetEnv}
-              ./vendor/bin/pest
+              ${unsetEnv}
+                ./vendor/bin/pest
             '';
           };
 
           languages = {
+            # the required version of PHP for this project.
             php = {
               enable = true;
               version = "8.2";
@@ -47,18 +51,17 @@
                 max_execution_time = 90
               '';
             };
-
-            javascript.enable = true;
-            javascript.npm.enable = true;
           };
 
           services = {
+            # Elasticsearch service for testing
             elasticsearch = {
               enable = true;
             };
           };
 
           integrations = {
+            #Creates Changelogs based on commits
             git-cliff.enable = true;
 
             treefmt = {
@@ -101,16 +104,15 @@
               mixed-line-endings.enable = true;
             };
           };
+
+          shell.interactive = [
+            ''
+              if [[ ! -d vendor ]]; then
+                  ${composer} install
+              fi
+            ''
+          ];
         };
-
-        shell.interactive = [
-          ''
-            if [[ ! -d vendor ]]; then
-                ${lib.getExe composer} install
-            fi
-          ''
-        ];
-
       };
     };
 }
