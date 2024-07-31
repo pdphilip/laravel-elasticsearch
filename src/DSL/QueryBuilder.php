@@ -10,7 +10,7 @@ trait QueryBuilder
 {
 
     protected static $filter;
-    
+
     protected static array $bucketOperators = ['and', 'or'];
 
     protected static array $equivalenceOperators = ['in', 'nin'];

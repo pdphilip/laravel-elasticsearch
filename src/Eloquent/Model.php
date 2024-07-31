@@ -21,9 +21,8 @@ abstract class Model extends BaseModel
 {
     use HybridRelations, ModelDocs;
 
-
     const MAX_SIZE = 1000;
-    
+
     protected $index;
 
     protected $recordIndex;

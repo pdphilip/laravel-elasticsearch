@@ -12,7 +12,6 @@ use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 use RuntimeException;
 use PDPhilip\Elasticsearch\Connection;
 
-
 class Bridge
 {
 
@@ -29,7 +28,6 @@ class Bridge
     private string|null $index;
 
     private string|null $indexPrefix;
-
 
     public function __construct(Connection $connection)
     {
@@ -309,7 +307,6 @@ class Bridge
     }
 
 
-
     //----------------------------------------------------------------------
     // Write Queries
     //----------------------------------------------------------------------
@@ -326,6 +323,9 @@ class Bridge
         }
         if (isset($data['_index'])) {
             unset($data['_index']);
+        }
+        if (isset($data['_meta'])) {
+            unset($data['_meta']);
         }
 
         $params = [
@@ -1002,7 +1002,6 @@ class Bridge
     {
         $this->throwError(new Exception('Matrix distinct aggregate not supported', 500), [], $this->_queryTag(__FUNCTION__));
     }
-
 
     //======================================================================
     // Private & Sanitization methods

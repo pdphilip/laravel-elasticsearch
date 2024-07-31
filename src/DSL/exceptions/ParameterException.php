@@ -4,7 +4,6 @@ namespace PDPhilip\Elasticsearch\DSL\exceptions;
 
 use Exception;
 
-
 class ParameterException extends Exception
 {
     private array $_details = [];

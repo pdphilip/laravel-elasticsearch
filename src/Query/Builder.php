@@ -23,7 +23,7 @@ class Builder extends BaseBuilder
     protected $refresh = 'wait_for';
 
     public $options = [];
-    
+
     public $paginating = false;
 
     public $searchQuery = '';

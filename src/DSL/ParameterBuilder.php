@@ -30,7 +30,8 @@ class ParameterBuilder
             'query' => $dsl,
         ];
     }
-    
+
+
     public static function fieldSort($field, $payload, $allowId = false): array
     {
         if ($field === '_id' && !$allowId) {
