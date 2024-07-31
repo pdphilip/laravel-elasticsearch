@@ -14,7 +14,6 @@ class HasOne extends BaseHasOne
         return $this->foreignKey;
     }
 
-
     public function getHasCompareKey()
     {
         return $this->getForeignKeyName();

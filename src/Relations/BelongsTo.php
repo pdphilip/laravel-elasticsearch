@@ -31,7 +31,7 @@ class BelongsTo extends BaseBelongsTo
     {
 
         $key = $this->getOwnerKey();
-
+        
         $this->query->whereIn($key, $this->getEagerModelKeys($models));
     }
 

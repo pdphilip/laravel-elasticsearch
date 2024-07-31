@@ -12,25 +12,23 @@ use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 use RuntimeException;
 use PDPhilip\Elasticsearch\Connection;
 
-
 class Bridge
 {
-    
+
     use QueryBuilder, IndexInterpreter;
-    
+
     protected Connection $connection;
-    
+
     protected Client $client;
-    
+
     protected string|bool $errorLogger = false;
-    
+
     protected int|null $maxSize = 10; //ES default
-    
+
     private string|null $index;
-    
+
     private string|null $indexPrefix;
-    
-    
+
     public function __construct(Connection $connection)
     {
         $this->connection = $connection;
@@ -39,13 +37,13 @@ class Bridge
         $this->maxSize = $this->connection->getMaxSize();
         $this->indexPrefix = $this->connection->getIndexPrefix();
         $this->errorLogger = $this->connection->getErrorLoggingIndex();
-        
+
     }
-    
+
     //----------------------------------------------------------------------
     // PIT
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws QueryException
      */
@@ -54,7 +52,7 @@ class Bridge
         $params = [
             'index'      => $this->index,
             'keep_alive' => $keepAlive,
-        
+
         ];
         try {
             $process = $this->client->openPointInTime($params);
@@ -62,14 +60,14 @@ class Bridge
             if (!empty($res['id'])) {
                 return $res['id'];
             }
-            
+
             throw new Exception('Error on PIT creation. No ID returned.');
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -77,7 +75,7 @@ class Bridge
     {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         unset($params['index']);
-        
+
         $params['body']['pit'] = [
             'id'         => $pitId,
             'keep_alive' => $keepAlive,
@@ -87,52 +85,52 @@ class Bridge
         }
         //order catch by shard doc
         $params['body']['sort'][] = ['_shard_doc' => ['order' => 'asc']];
-        
+
         if ($searchAfter) {
             $params['body']['search_after'] = $searchAfter;
         }
         try {
             $process = $this->client->search($params);
-            
+
             return $this->_sanitizePitSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
-            
-            
+
+
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
-        
+
+
     }
-    
-    
+
+
     /**
      * @throws QueryException
      */
     public function processClosePit($id): bool
     {
-        
+
         $params = [
             'index' => $this->index,
             'body'  => [
                 'id' => $id,
             ],
-        
+
         ];
         try {
             $process = $this->client->closePointInTime($params);
             $res = $process->asArray();
-            
+
             return $res['succeeded'];
-            
+
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     //----------------------------------------------------------------------
     //  BYO Query
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws Exception
      */
@@ -141,18 +139,18 @@ class Bridge
         $params = [
             'index' => $this->index,
             'body'  => $bodyParams,
-        
+
         ];
         try {
             $process = $this->client->search($params);
-            
+
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -161,18 +159,18 @@ class Bridge
         $params = [
             'index' => $this->index,
             'body'  => $bodyParams,
-        
+
         ];
         try {
             $process = $this->client->search($params);
-            
+
             return $this->_sanitizeAggsResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -180,64 +178,64 @@ class Bridge
     {
         try {
             $process = $this->client->indices()->{$method}($params);
-            
+
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     //----------------------------------------------------------------------
     // To DSL
     //----------------------------------------------------------------------
-    
+
     public function processToDsl($wheres, $options, $columns)
     {
         return $this->buildParams($this->index, $wheres, $options, $columns);
     }
-    
+
     public function processToDslForSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         return $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
     }
-    
+
     /**
      * @throws ParameterException
      */
     public function processShowQuery($wheres, $options, $columns)
     {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
-        
+
         return $params['body'] ?? null;
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Read Queries
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws QueryException
      */
     public function processFind($wheres, $options, $columns): Results
     {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
-        
+
         return $this->_returnSearch($params, __FUNCTION__);
     }
-    
+
     /**
      * @throws QueryException
      */
     public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
-        
+
         return $this->_returnSearch($params, __FUNCTION__);
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -247,17 +245,17 @@ class Bridge
             $params['size'] = $this->maxSize;
         }
         try {
-            
+
             $process = $this->client->search($params);
-            
+
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
-            
+
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -273,46 +271,46 @@ class Bridge
         unset($options['sort']);
         unset($options['skip']);
         unset($options['limit']);
-        
+
         if ($sort) {
             $sortField = key($sort);
             $sortDir = $sort[$sortField]['order'] ?? 'asc';
             $sort = [$sortField => $sortDir];
         }
-        
-        
+
+
         $params = $this->buildParams($this->index, $wheres, $options);
         try {
-            
+
             $params['body']['aggs'] = $this->createNestedAggs($columns, $sort);
-            
+
             $response = $this->client->search($params);
-            
-            
+
+
             $data = [];
             if (!empty($response['aggregations'])) {
                 $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
             }
-            
+
             //process limit and skip from all results
             if ($skip || $limit) {
                 $data = array_slice($data, $skip, $limit);
             }
-            
+
             return $this->_return($data, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
-    
-    
+
+
+
     //----------------------------------------------------------------------
     // Write Queries
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws QueryException
      */
@@ -326,31 +324,31 @@ class Bridge
         if (isset($data['_index'])) {
             unset($data['_index']);
         }
-        
+
         $params = [
             'index' => $this->index,
             'body'  => $data,
         ];
         if ($id) {
             $params['id'] = $id;
-            
+
         }
         if ($refresh) {
             $params['refresh'] = $refresh;
         }
-        
+
         try {
             $response = $this->client->index($params);
             $savedData = ['_id' => $response['_id']] + $data;
-            
+
             return $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
-        
+
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -358,7 +356,7 @@ class Bridge
     {
         return $this->processSave($values, $refresh);
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -369,10 +367,10 @@ class Bridge
         $resultMeta['failed'] = 0;
         $resultData = [];
         $data = $this->processFind($wheres, $options, []);
-        
+
         if (!empty($data->data)) {
             foreach ($data->data as $currentData) {
-                
+
                 foreach ($newValues as $field => $value) {
                     $currentData[$field] = $value;
                 }
@@ -385,15 +383,15 @@ class Bridge
                 }
             }
         }
-        
+
         $params['query'] = $this->_buildQuery($wheres);
         $params['queryOptions'] = $options;
         $params['updateValues'] = $newValues;
-        
-        
+
+
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -401,7 +399,7 @@ class Bridge
     public function processIncrementMany($wheres, $newValues, $options, $refresh): Results
     {
         //TODO INC on nested objects - maybe
-        
+
         $incField = '';
         foreach ($newValues['inc'] as $field => $incValue) {
             $incField = $field;
@@ -412,11 +410,11 @@ class Bridge
         $data = $this->processFind($wheres, $options, []);
         if (!empty($data->data)) {
             foreach ($data->data as $currentData) {
-                
+
                 $currentValue = $currentData[$incField] ?? 0;
                 $currentValue += $newValues['inc'][$incField];
                 $currentData[$incField] = (int)$currentValue;
-                
+
                 if (!empty($newValues['set'])) {
                     foreach ($newValues['set'] as $field => $value) {
                         $currentData[$field] = $value;
@@ -434,16 +432,16 @@ class Bridge
         $params['query'] = $this->_buildQuery($wheres);
         $params['queryOptions'] = $options;
         $params['updateValues'] = $newValues;
-        
-        
+
+
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Delete Queries
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -459,7 +457,7 @@ class Bridge
                 $responseObject = $this->client->delete($params);
                 $response = $responseObject->asArray();
                 $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
-                
+
                 return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
             } catch (Exception $e) {
                 $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
@@ -470,14 +468,14 @@ class Bridge
             $responseObject = $this->client->deleteByQuery($params);
             $response = $responseObject->asArray();
             $response['deleteCount'] = $response['deleted'] ?? 0;
-            
+
             return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     public function processScript($id, $script)
     {
 //        $params = [
@@ -495,12 +493,12 @@ class Bridge
 
 //        return $this->_return($find->data, $response, $params, $this->_queryTag(__FUNCTION__));
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Index administration
     //----------------------------------------------------------------------
-    
+
     /**
      * @throws ClientResponseException
      * @throws ServerResponseException
@@ -513,25 +511,25 @@ class Bridge
             $index = '*';
         }
         $response = $this->client->indices()->get(['index' => $index]);
-        
+
         return $response->asArray();
     }
-    
+
     public function processIndexExists($index): bool
     {
         $params = ['index' => $index];
-        
+
         try {
             $test = $this->client->indices()->exists($params);
-            
+
             return $test->getStatusCode() == 200;
         } catch (Exception $e) {
             return false;
         }
-        
+
     }
-    
-    
+
+
     /**
      * @throws QueryException
      */
@@ -542,13 +540,13 @@ class Bridge
             $responseObject = $this->client->indices()->getMapping($params);
             $response = $responseObject->asArray();
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
-            
+
             return $result->data;
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -558,13 +556,13 @@ class Bridge
         try {
             $response = $this->client->indices()->getSettings($params);
             $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
-            
+
             return $result->data->asArray();
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -573,16 +571,16 @@ class Bridge
         $params = $this->buildIndexMap($this->index, $settings);
         try {
             $response = $this->client->indices()->create($params);
-            
+
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
-            
+
             return true;
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -592,38 +590,38 @@ class Bridge
         try {
             $response = $this->client->indices()->delete($params);
             $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
-            
+
             return true;
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
-        
+
+
     }
-    
+
     /**
      * @throws QueryException
      */
     public function processIndexModify($settings): bool
     {
-        
+
         $params = $this->buildIndexMap($this->index, $settings);
         $params['body']['_source']['enabled'] = true;
         $props = $params['body']['mappings']['properties'];
         unset($params['body']['mappings']);
         $params['body']['properties'] = $props;
-        
+
         try {
             $response = $this->client->indices()->putMapping($params);
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
-            
+
             return true;
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -650,14 +648,14 @@ class Bridge
                 'noops'             => $result['noops'],
                 'retries'           => $result['retries'],
             ];
-            
+
             return $this->_return($resultData, $result, $params, $this->_queryTag(__FUNCTION__));
-            
+
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -669,35 +667,35 @@ class Bridge
             $response = $this->client->indices()->putSettings($params);
             $result = $this->_return(true, $response, $params, $this->_queryTag(__FUNCTION__));
             $this->client->indices()->open(['index' => $this->index]);
-            
+
             return true;
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Aggregates
     //----------------------------------------------------------------------
-    
-    
+
+
     public function processMultipleAggregate($functions, $wheres, $options, $column)
     {
         $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $params['body']['aggs'] = ParameterBuilder::multipleAggregations($functions, $column);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations'] ?? [], $process, $params, $this->_queryTag(__FUNCTION__));
-            
+
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
-    
+
+
     /**
      *  Aggregate entry point
      *
@@ -712,7 +710,7 @@ class Bridge
     {
         return $this->{'_'.$function.'Aggregate'}($wheres, $options, $columns);
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -722,15 +720,15 @@ class Bridge
         $params = $this->buildParams($this->index, $wheres);
         try {
             $process = $this->client->count($params);
-            
+
             return $this->_return($process['count'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -741,14 +739,14 @@ class Bridge
         try {
             $params['body']['aggs']['max_value'] = ParameterBuilder::maxAggregation($columns[0]);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations']['max_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -759,33 +757,33 @@ class Bridge
         try {
             $params['body']['aggs']['min_value'] = ParameterBuilder::minAggregation($columns[0]);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations']['min_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
      */
     private function _sumAggregate($wheres, $options, $columns): Results
     {
-        
+
         $params = $this->buildParams($this->index, $wheres, $options);
         try {
             $params['body']['aggs']['sum_value'] = ParameterBuilder::sumAggregation($columns[0]);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations']['sum_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -796,13 +794,13 @@ class Bridge
         try {
             $params['body']['aggs']['avg_value'] = ParameterBuilder::avgAggregation($columns[0]);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations']['avg_value']['value'] ?? 0, $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
-    
+
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -813,14 +811,14 @@ class Bridge
         try {
             $params['body']['aggs']['statistics'] = ParameterBuilder::matrixAggregation($columns);
             $process = $this->client->search($params);
-            
+
             return $this->_return($process['aggregations']['statistics'] ?? [], $process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -838,20 +836,20 @@ class Bridge
                 return $field.'.keyword';
             }
         }
-        
+
         return false;
-        
+
     }
-    
+
     //----------------------------------------------------------------------
     // Distinct Aggregates
     //----------------------------------------------------------------------
-    
+
     public function processDistinctAggregate($function, $wheres, $options, $columns): Results
     {
         return $this->{'_'.$function.'DistinctAggregate'}($wheres, $options, $columns);
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -862,16 +860,16 @@ class Bridge
         try {
             $process = $this->processDistinct($wheres, $options, $columns);
             $count = count($process->data);
-            
+
             return $this->_return($count, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
-    
+
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -881,7 +879,7 @@ class Bridge
         $params = $this->buildParams($this->index, $wheres);
         try {
             $process = $this->processDistinct($wheres, $options, $columns);
-            
+
             $min = 0;
             $hasBeenSet = false;
             if (!empty($process->data)) {
@@ -893,19 +891,19 @@ class Bridge
                         } else {
                             $min = min($min, $datum[$columns[0]]);
                         }
-                        
+
                     }
                 }
             }
-            
+
             return $this->_return($min, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -915,7 +913,7 @@ class Bridge
         $params = $this->buildParams($this->index, $wheres);
         try {
             $process = $this->processDistinct($wheres, $options, $columns);
-            
+
             $max = 0;
             if (!empty($process->data)) {
                 foreach ($process->data as $datum) {
@@ -924,17 +922,17 @@ class Bridge
                     }
                 }
             }
-            
-            
+
+
             return $this->_return($max, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
-    
+
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -952,15 +950,15 @@ class Bridge
                     }
                 }
             }
-            
+
             return $this->_return($sum, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -984,16 +982,16 @@ class Bridge
             if ($count > 0) {
                 $avg = $sum / $count;
             }
-            
-            
+
+
             return $this->_return($avg, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
-            
+
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-        
+
     }
-    
+
     /**
      * @throws QueryException
      */
@@ -1001,20 +999,20 @@ class Bridge
     {
         $this->throwError(new Exception('Matrix distinct aggregate not supported', 500), [], $this->_queryTag(__FUNCTION__));
     }
-    
+
     //======================================================================
     // Private & Sanitization methods
     //======================================================================
-    
-    
+
+
     private function _queryTag($function)
     {
         return str_replace('process', '', $function);
     }
-    
+
     private function _sanitizeSearchResponse($response, $params, $queryTag)
     {
-        
+
         $meta['took'] = $response['took'] ?? 0;
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
@@ -1027,37 +1025,37 @@ class Bridge
                 $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
                 if (!empty($hit['_source'])) {
-                    
+
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
                     }
-                    
+
                 }
                 if (!empty($hit['inner_hits'])) {
                     foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
                         $datum[$innerKey] = $this->_filterInnerHits($innerHit);
                     }
                 }
-                
+
                 //Meta data
                 if (!empty($hit['highlight'])) {
                     $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
                 }
-                
+
                 $datum['_meta']['_index'] = $hit['_index'];
                 $datum['_meta']['_id'] = $hit['_id'];
                 if (!empty($hit['_score'])) {
                     $datum['_meta']['_score'] = $hit['_score'];
                 }
                 $datum['_meta']['_query'] = $meta;
-                
+
                 $data[] = $datum;
             }
         }
-        
+
         return $this->_return($data, $meta, $params, $queryTag);
     }
-    
+
     private function _sanitizeHighlights($highlights)
     {
         //remove keyword results
@@ -1071,10 +1069,10 @@ class Bridge
                 }
             }
         }
-        
+
         return $highlights;
     }
-    
+
     private function _sanitizeAggsResponse($response, $params, $queryTag)
     {
         $meta['timed_out'] = $response['timed_out'];
@@ -1087,15 +1085,15 @@ class Bridge
                 $data = $this->_formatAggs($key, $values);
             }
         }
-        
+
         return $this->_return($data, $meta, $params, $queryTag);
     }
-    
+
     private function _formatAggs($key, $values)
     {
         $data[$key] = [];
         $aggTypes = ['buckets', 'values'];
-        
+
         foreach ($values as $subKey => $value) {
             if (in_array($subKey, $aggTypes)) {
                 $data[$key] = $this->_formatAggs($subKey, $value)[$subKey];
@@ -1104,13 +1102,13 @@ class Bridge
             } else {
                 $data[$key][$subKey] = $value;
             }
-            
+
         }
-        
+
         return $data;
-        
+
     }
-    
+
     private function _filterInnerHits($innerHit)
     {
         $hits = [];
@@ -1123,13 +1121,13 @@ class Bridge
             }
             $hits[] = $innerDatum;
         }
-        
+
         return $hits;
     }
-    
+
     private function _sanitizePitSearchResponse($response, $params, $queryTag)
     {
-        
+
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
@@ -1149,57 +1147,57 @@ class Bridge
                     $meta['last_sort'] = $hit['sort'];
                 }
                 $data[] = $datum;
-                
+
             }
         }
-        
+
         return $this->_return($data, $meta, $params, $queryTag);
     }
-    
-    
+
+
     private function _parseSort($sort, $sortParams)
     {
         $sortValues = [];
         foreach ($sort as $key => $value) {
             $sortValues[array_key_first($sortParams[$key])] = $value;
         }
-        
+
         return $sortValues;
     }
-    
+
     private function _sanitizeDistinctResponse($response, $columns, $includeDocCount)
     {
         $keys = [];
         foreach ($columns as $column) {
             $keys[] = 'by_'.$column;
         }
-        
+
         return $this->processBuckets($columns, $keys, $response, 0, $includeDocCount);
-        
+
     }
-    
+
     private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = [])
     {
         $data = [];
         if (!empty($response[$keys[$index]]['buckets'])) {
             foreach ($response[$keys[$index]]['buckets'] as $res) {
-                
+
                 $datum = $currentData;
-                
+
                 $col = $columns[$index];
                 if (str_contains($col, '.keyword')) {
                     $col = str_replace('.keyword', '', $col);
                 }
-                
+
                 $datum[$col] = $res['key'];
-                
+
                 if ($includeDocCount) {
                     $datum[$col.'_count'] = $res['doc_count'];
                 }
-                
+
                 if (isset($columns[$index + 1])) {
                     $nestedData = $this->processBuckets($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
-                    
+
                     if (!empty($nestedData)) {
                         $data = array_merge($data, $nestedData);
                     } else {
@@ -1210,10 +1208,10 @@ class Bridge
                 }
             }
         }
-        
+
         return $data;
     }
-    
+
     private function _return($data, $meta, $params, $queryTag): Results
     {
         if (is_object($meta)) {
@@ -1225,11 +1223,11 @@ class Bridge
         } else {
             $results = new Results($data, $meta, $params, $queryTag);
         }
-        
+
         return $results;
     }
-    
-    
+
+
     /**
      * @throws QueryException
      */
@@ -1242,7 +1240,7 @@ class Bridge
         $this->connection->rebuildConnection();
         $error = new Results([], [], $params, $queryTag);
         $error->setError($errorMsg, $errorCode);
-        
+
         $meta = $error->getMetaData();
         $details = [
             'error'     => $meta['error']['msg'],
@@ -1259,7 +1257,7 @@ class Bridge
         // For details catch $exception then $exception->getDetails()
         throw new QueryException($meta['error']['msg'], $errorCode, new $previous, $details);
     }
-    
+
     private function _logQuery(Results $results, $details)
     {
         $body = $results->getLogFormattedMetaData();
@@ -1276,5 +1274,5 @@ class Bridge
             //ignore if problem writing query log
         }
     }
-    
+
 }

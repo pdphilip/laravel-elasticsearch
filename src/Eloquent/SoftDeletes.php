@@ -5,7 +5,7 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 trait SoftDeletes
 {
     use \Illuminate\Database\Eloquent\SoftDeletes;
-    
+
     /**
      * @inheritdoc
      */
@@ -13,7 +13,6 @@ trait SoftDeletes
     {
         return $this->getDeletedAtColumn();
     }
-    
     /**
      * TODO: Update without refresh to speed up mass deleting
      * Could have unintended consequences

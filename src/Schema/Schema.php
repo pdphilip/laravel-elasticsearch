@@ -47,19 +47,19 @@ class Schema extends Facade
      */
     public static function connection($name)
     {
-        
+
         if ($name === null) {
             return static::getFacadeAccessor();
         }
-        
+
         return static::$app['db']->connection($name)->getSchemaBuilder();
     }
-    
+
     public static function on($name)
     {
         return static::connection($name);
     }
-    
+
     /**
      * Get a schema builder instance for the default connection.
      *
@@ -74,8 +74,8 @@ class Schema extends Facade
     public static function __callStatic($method, $args)
     {
         $instance = static::getFacadeAccessor();
-        
+
         return $instance->$method(...$args);
     }
-    
+
 }

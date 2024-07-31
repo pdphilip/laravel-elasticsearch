@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 
-
 trait QueriesRelationships
 {
     /**
