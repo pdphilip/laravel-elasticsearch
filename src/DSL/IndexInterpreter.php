@@ -41,10 +41,10 @@ trait IndexInterpreter
                 $params['body']['mappings']['properties'] = $properties;
             }
         }
-        
+
         return $params;
     }
-    
+
     public function buildAnalyzerSettings($index, $raw): array
     {
         $params = [];
@@ -63,13 +63,13 @@ trait IndexInterpreter
                 }
             }
         }
-        
+
         $params['body']['settings']['analysis'] = $analysis;
-        
+
         return $params;
     }
-    
-    
+
+
     public function catIndices($data, $all = false): array
     {
         if (!$all && $data) {
@@ -81,10 +81,10 @@ trait IndexInterpreter
                 }
             }
         }
-        
+
         return $data;
     }
-    
+
     public function cleanData($data): array
     {
         if ($data) {
@@ -94,8 +94,8 @@ trait IndexInterpreter
                 }
             });
         }
-        
+
         return $data;
     }
-    
+
 }

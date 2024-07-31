@@ -14,7 +14,6 @@ class HasOne extends BaseHasOne
         return $this->foreignKey;
     }
 
-
     public function getHasCompareKey()
     {
         return $this->getForeignKeyName();
@@ -26,7 +25,6 @@ class HasOne extends BaseHasOne
     public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])
     {
         $foreignKey = $this->getForeignKeyName();
-
 
         return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }

@@ -38,7 +38,6 @@ class HasMany extends BaseHasMany
         return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }
 
-
     protected function whereInMethod(EloquentModel $model, $key)
     {
         return 'whereIn';
