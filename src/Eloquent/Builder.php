@@ -19,6 +19,7 @@ class Builder extends BaseEloquentBuilder
      * @var array
      */
     protected $passthru = [
+        'aggregate',
         'average',
         'avg',
         'count',
