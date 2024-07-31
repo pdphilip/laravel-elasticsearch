@@ -8,20 +8,20 @@ use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 
 trait QueryBuilder
 {
-    
+
     protected static $filter;
     
     protected static array $bucketOperators = ['and', 'or'];
-    
+
     protected static array $equivalenceOperators = ['in', 'nin'];
-    
+
     protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
-    
-    
+
+
     //======================================================================
     // Parameter builders
     //======================================================================
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -45,13 +45,13 @@ trait QueryBuilder
             if (count($queryString['fields']) > 1) {
                 $queryString['type'] = 'cross_fields';
             }
-            
+
         }
         if (!empty($searchOptions['highlight'])) {
             $params['body']['highlight'] = $searchOptions['highlight'];
             unset($searchOptions['highlight']);
         }
-        
+
         if ($searchOptions) {
             foreach ($searchOptions as $searchOption => $searchOptionValue) {
                 $queryString[$searchOption] = $searchOptionValue;
@@ -59,9 +59,9 @@ trait QueryBuilder
         }
         $wheres = $this->addSearchToWheres($wheres, $queryString);
         $dsl = $this->_buildQuery($wheres);
-        
+
         $params['body']['query'] = $dsl['query'];
-        
+
         if ($columns && $columns != ['*']) {
             $params['body']['_source'] = $columns;
         }
@@ -81,10 +81,10 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
-        
+
         return $params;
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -96,11 +96,11 @@ trait QueryBuilder
                 'index' => $index,
             ];
         }
-        
+
         if ($_id) {
             $params['id'] = $_id;
         }
-        
+
         $params['body'] = $this->_buildQuery($wheres);
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
@@ -119,11 +119,11 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
-        
+
         return $params;
     }
-    
-    
+
+
     public function createNestedAggs($columns, $sort)
     {
         $aggs = [];
@@ -154,11 +154,11 @@ trait QueryBuilder
         if (count($columns) > 1) {
             $aggs['by_'.$columns[0]]['aggs'] = $this->createNestedAggs(array_slice($columns, 1), $sort);
         }
-        
+
         return $aggs;
     }
-    
-    
+
+
     public function addSearchToWheres($wheres, $queryString): array
     {
         $clause = ['_' => ['search' => $queryString]];
@@ -167,7 +167,7 @@ trait QueryBuilder
         }
         if (!empty($wheres['and'])) {
             $wheres['and'][] = $clause;
-            
+
             return $wheres;
         }
         if (!empty($wheres['or'])) {
@@ -177,18 +177,18 @@ trait QueryBuilder
                 $newOrs[] = $cond;
             }
             $wheres['or'] = $newOrs;
-            
+
             return $wheres;
         }
-        
+
         return ['and' => [$wheres, $clause]];
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Parsers
     //----------------------------------------------------------------------
-    
+
     public function _escape($value): string
     {
         $specialChars = ['"', '\\', '~', '^', '/'];
@@ -198,10 +198,10 @@ trait QueryBuilder
         if (str_starts_with($value, '-')) {
             $value = '\\'.$value;
         }
-        
+
         return $value;
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -212,11 +212,11 @@ trait QueryBuilder
             return ParameterBuilder::matchAll();
         }
         $dsl = $this->_convertWheresToDSL($wheres);
-        
+
         return ParameterBuilder::query($dsl);
     }
-    
-    
+
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -256,10 +256,10 @@ trait QueryBuilder
                     return $this->_parseCondition($wheres, $parentField);
             }
         }
-        
+
         return $dsl;
     }
-    
+
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -272,18 +272,18 @@ trait QueryBuilder
                 $field = $parentField.'.'.$field;
             }
         }
-        
+
         $value = current($condition);
-        
-        
+
+
         if (!is_array($value)) {
-            
+
             return ['match' => [$field => $value]];
         } else {
             $operator = key($value);
             $operand = current($value);
             $queryPart = [];
-            
+
             switch ($operator) {
                 case 'lt':
                     $queryPart = ['range' => [$field => ['lt' => $operand]]];
@@ -333,7 +333,7 @@ trait QueryBuilder
                     } else {
                         $queryPart = ['terms' => [$keywordField => $operand]];
                     }
-                    
+
                     break;
                 case 'nin':
                     $keywordField = $this->parseRequiredKeywordMapping($field);
@@ -342,7 +342,7 @@ trait QueryBuilder
                     } else {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
                     }
-                    
+
                     break;
                 case 'between':
                     $queryPart = ['range' => [$field => ['gte' => $operand[0], 'lte' => $operand[1]]]];
@@ -389,7 +389,7 @@ trait QueryBuilder
                                 ],
                             ],
                         ],
-                    
+
                     ];
                     break;
                 case 'innerNested':
@@ -408,16 +408,16 @@ trait QueryBuilder
                             'inner_hits' => $options,
                         ],
                     ];
-                    
+
                     break;
                 default:
                     abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
             }
-            
+
             return $queryPart;
         }
     }
-    
+
     /**
      * @throws ParameterException
      */
@@ -452,10 +452,10 @@ trait QueryBuilder
                             $this->_parseFilter($filterType, $filerValues);
                         }
                         break;
-                    
+
                     case 'multiple':
                     case 'searchOptions':
-                        
+
                         //Pass through
                         break;
                     default:
@@ -463,10 +463,10 @@ trait QueryBuilder
                 }
             }
         }
-        
+
         return $return;
     }
-    
+
     /**
      * @throws ParameterException
      */
@@ -489,13 +489,13 @@ trait QueryBuilder
                     $sorts[] = [$sortField => $sortPayload];
                 }
             }
-            
+
             $options['sort'] = $sorts;
         }
-        
+
         return $options;
     }
-    
+
     public function _parseFilter($filterType, $filterPayload): void
     {
         switch ($filterType) {
@@ -512,18 +512,18 @@ trait QueryBuilder
                         'lat' => $filterPayload['geoPoint'][0],
                         'lon' => $filterPayload['geoPoint'][1],
                     ],
-                
+
                 ];
                 break;
         }
     }
-    
-    
+
+
     public function _parseFilterParameter($params, $filer)
     {
         $body = $params['body'];
         $currentQuery = $body['query'];
-        
+
         $filteredBody = [
             'query' => [
                 'bool' => [
@@ -535,8 +535,8 @@ trait QueryBuilder
             ],
         ];
         $params['body']['query'] = $filteredBody['query'];
-        
+
         return $params;
-        
+
     }
 }

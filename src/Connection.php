@@ -12,7 +12,7 @@ use RuntimeException;
 
 class Connection extends BaseConnection
 {
-    
+
     protected $client;
     protected $index;
     protected $maxSize;
@@ -24,27 +24,26 @@ class Connection extends BaseConnection
     protected $elasticMetaHeader = null;
     protected $rebuild = false;
     protected $connectionName = 'elasticsearch';
-    
-    
+
     public function __construct(array $config)
     {
-        
+
         $this->connectionName = $config['name'];
-        
+
         $this->config = $config;
-        
+
         $this->setOptions($config);
-        
+
         $this->client = $this->buildConnection();
-        
+
         $this->useDefaultPostProcessor();
-        
+
         $this->useDefaultSchemaGrammar();
-        
+
         $this->useDefaultQueryGrammar();
-        
+
     }
-    
+
     public function setOptions($config)
     {
         if (!empty($config['index_prefix'])) {
@@ -70,28 +69,28 @@ class Connection extends BaseConnection
             }
         }
     }
-    
+
     public function getIndexPrefix(): string|null
     {
         return $this->indexPrefix;
     }
-    
+
     public function setIndexPrefix($newPrefix): void
     {
         $this->indexPrefix = $newPrefix;
     }
-    
-    
+
+
     public function getTablePrefix(): string|null
     {
         return $this->getIndexPrefix();
     }
-    
+
     public function getErrorLoggingIndex(): string|bool
     {
         return $this->errorLoggingIndex;
     }
-    
+
     public function setIndex($index): string
     {
         $this->index = $index;
@@ -100,33 +99,33 @@ class Connection extends BaseConnection
                 $this->index = $this->indexPrefix.'_'.$index;
             }
         }
-        
+
         return $this->getIndex();
     }
-    
+
     public function getSchemaGrammar()
     {
         return new Schema\Grammar($this);
     }
-    
+
     public function getIndex(): string
     {
         return $this->index;
     }
-    
+
     public function setMaxSize($value)
     {
         $this->maxSize = $value;
     }
-    
-    
+
+
     public function table($table, $as = null)
     {
         $query = new Query\Builder($this, new Query\Processor());
-        
+
         return $query->from($table);
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -134,8 +133,8 @@ class Connection extends BaseConnection
     {
         return new Schema\Builder($this);
     }
-    
-    
+
+
     /**
      * @inheritdoc
      */
@@ -143,8 +142,8 @@ class Connection extends BaseConnection
     {
         unset($this->connection);
     }
-    
-    
+
+
     /**
      * @inheritdoc
      */
@@ -152,7 +151,7 @@ class Connection extends BaseConnection
     {
         return 'elasticsearch';
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -160,7 +159,7 @@ class Connection extends BaseConnection
     {
         return new Query\Processor();
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -168,7 +167,7 @@ class Connection extends BaseConnection
     {
         return new Query\Grammar();
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -176,32 +175,32 @@ class Connection extends BaseConnection
     {
         return new Schema\Grammar();
     }
-    
+
     public function rebuildConnection()
     {
         $this->rebuild = true;
     }
-    
+
     public function getClient()
     {
         return $this->client;
     }
-    
+
     public function getMaxSize()
     {
         return $this->maxSize;
     }
-    
+
     public function getAllowIdSort()
     {
         return $this->allowIdSort;
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Connection Builder
     //----------------------------------------------------------------------
-    
+
     protected function buildConnection(): Client
     {
         $type = config('database.connections.elasticsearch.auth_type') ?? null;
@@ -209,11 +208,11 @@ class Connection extends BaseConnection
         if (!in_array($type, ['http', 'cloud'])) {
             throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
         }
-        
+
         return $this->{'_'.$type.'Connection'}();
-        
+
     }
-    
+
     protected function _httpConnection(): Client
     {
         $hosts = config('database.connections.'.$this->connectionName.'.hosts') ?? null;
@@ -229,10 +228,10 @@ class Connection extends BaseConnection
         if ($apiKey) {
             $cb->setApiKey($apiKey, $apiId);
         }
-        
+
         return $cb->build();
     }
-    
+
     protected function _cloudConnection(): Client
     {
         $cloudId = config('database.connections.'.$this->connectionName.'.cloud_id') ?? null;
@@ -240,7 +239,7 @@ class Connection extends BaseConnection
         $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
         $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
         $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
-        
+
         $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
         $cb = $this->_builderOptions($cb);
         if ($username && $pass) {
@@ -249,18 +248,18 @@ class Connection extends BaseConnection
         if ($apiKey) {
             $cb->setApiKey($apiKey, $apiId);
         }
-        
-        
+
+
         return $cb->build();
     }
-    
+
     protected function _builderOptions($cb)
     {
         $cb->setSSLVerification($this->sslVerification);
         if (isset($this->elasticMetaHeader)) {
             $cb->setElasticMetaHeader($this->elasticMetaHeader);
         }
-        
+
         if (isset($this->retires)) {
             $cb->setRetries($this->retires);
         }
@@ -278,15 +277,15 @@ class Connection extends BaseConnection
         if ($sslKey) {
             $cb->setSSLKey($sslKey, $sslKeyPassword);
         }
-        
+
         return $cb;
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Dynamic call routing to DSL bridge
     //----------------------------------------------------------------------
-    
+
     public function __call($method, $parameters)
     {
         if (!$this->index) {
@@ -297,7 +296,7 @@ class Connection extends BaseConnection
             $this->rebuild = false;
         }
         $bridge = new Bridge($this);
-        
+
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }
 }

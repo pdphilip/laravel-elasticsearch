@@ -15,7 +15,7 @@ class AnalyzerBlueprint
     protected $connection;
 
     protected $index;
-
+    
     protected $parameters = [];
 
     public function __construct($index)

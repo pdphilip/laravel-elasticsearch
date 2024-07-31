@@ -8,57 +8,57 @@ use PDPhilip\Elasticsearch\Connection;
 
 class Builder
 {
-    
+
     protected $connection;
-    
+
     public function __construct(Connection $connection)
     {
         $this->connection = $connection;
     }
-    
+
     //----------------------------------------------------------------------
     //  View Index Meta
     //----------------------------------------------------------------------
-    
+
     public function getIndices()
     {
         return $this->connection->getIndices(false);
     }
-    
-    
+
+
     public function overridePrefix($value): Builder
     {
         $this->connection->setIndexPrefix($value);
-        
+
         return $this;
     }
-    
+
     public function getIndex($index)
     {
         if ($this->hasIndex($index)) {
             $this->connection->setIndex($index);
-            
+
             return $this->connection->getIndices(false);
         }
-        
+
         return [];
-        
+
     }
-    
+
     public function getMappings($index)
     {
         $this->connection->setIndex($index);
-        
+
         return $this->connection->indexMappings($this->connection->getIndex());
     }
-    
+
     public function getSettings($index)
     {
         $this->connection->setIndex($index);
-        
+
         return $this->connection->indexSettings($this->connection->getIndex());
     }
-    
+
     //----------------------------------------------------------------------
     //  Create Index
     //----------------------------------------------------------------------
@@ -67,10 +67,10 @@ class Builder
         $this->builder('buildIndexCreate', tap(new IndexBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
         }));
-        
+
         return $this->getIndex($index);
     }
-    
+
     public function createIfNotExists($index, Closure $callback)
     {
         if ($this->hasIndex($index)) {
@@ -79,55 +79,55 @@ class Builder
         $this->builder('buildIndexCreate', tap(new IndexBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
         }));
-        
+
         return $this->getIndex($index);
     }
-    
+
     //----------------------------------------------------------------------
     // Reindex
     //----------------------------------------------------------------------
-    
+
     public function reIndex($from, $to)
     {
         return $this->connection->reIndex($from, $to);
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Modify Index
     //----------------------------------------------------------------------
-    
+
     public function modify($index, Closure $callback)
     {
         $this->builder('buildIndexModify', tap(new IndexBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
         }));
-        
+
         return $this->getIndex($index);
     }
-    
+
     //----------------------------------------------------------------------
     // Delete Index
     //----------------------------------------------------------------------
-    
+
     public function delete($index)
     {
         $this->connection->setIndex($index);
-        
+
         return $this->connection->indexDelete();
     }
-    
+
     public function deleteIfExists($index)
     {
         if ($this->hasIndex($index)) {
             $this->connection->setIndex($index);
-            
+
             return $this->connection->indexDelete();
         }
-        
+
         return false;
     }
-    
+
     //----------------------------------------------------------------------
     // Index template
     //----------------------------------------------------------------------
@@ -135,31 +135,31 @@ class Builder
     {
         //TODO
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Analysers
     //----------------------------------------------------------------------
-    
+
     public function setAnalyser($index, Closure $callback)
     {
         $this->analyzerBuilder('buildIndexAnalyzerSettings', tap(new AnalyzerBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
         }));
-        
+
         return $this->getIndex($index);
     }
-    
-    
-    
+
+
+
     //----------------------------------------------------------------------
     // Index ops
     //----------------------------------------------------------------------
-    
+
     public function hasField($index, $field)
     {
         $index = $this->connection->setIndex($index);
-        
+
         try {
             $mappings = $this->getMappings($index);
             $props = $mappings[$index]['mappings']['properties'];
@@ -169,17 +169,17 @@ class Builder
                 return true;
             }
         } catch (Exception $e) {
-        
+
         }
-        
+
         return false;
-        
+
     }
-    
+
     public function hasFields($index, array $fields)
     {
         $index = $this->connection->setIndex($index);
-        
+
         try {
             $mappings = $this->getMappings($index);
             $props = $mappings[$index]['mappings']['properties'];
@@ -191,32 +191,32 @@ class Builder
                     $allFound = false;
                 }
             }
-            
+
             return $allFound;
         } catch (Exception $e) {
             return false;
         }
-        
+
     }
-    
-    
+
+
     public function hasIndex($index)
     {
         $index = $this->connection->setIndex($index);
-        
+
         return $this->connection->indexExists($index);
     }
-    
-    
+
+
     //----------------------------------------------------------------------
     // Manual
     //----------------------------------------------------------------------
-    
+
     public function dsl($method, $params)
     {
         return $this->connection->indicesDsl($method, $params);
     }
-    
+
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
@@ -230,13 +230,13 @@ class Builder
                 $result[$prefix.$key] = $value;
             }
         }
-        
+
         return $result;
     }
-    
+
     private function _flattenFields($array, $prefix = '')
     {
-        
+
         $result = [];
         foreach ($array as $key => $value) {
             if (is_array($value)) {
@@ -245,10 +245,10 @@ class Builder
                 $result[$prefix.$key] = $value;
             }
         }
-        
+
         return $result;
     }
-    
+
     private function _sanitizeFlatFields($flatFields)
     {
         $fields = [];
@@ -259,16 +259,16 @@ class Builder
                 array_walk($parts, function ($v, $k) use (&$field, $parts) {
                     if ($v == 'properties') {
                         $field .= '.'.$parts[$k + 1];
-                        
+
                     }
                 });
                 $fields[] = $field;
             }
         }
-        
+
         return $fields;
     }
-    
+
     //----------------------------------------------------------------------
     // Internal Laravel init migration catchers
     // *Case for when ES is the only datasource
@@ -277,7 +277,7 @@ class Builder
     {
         return $this->getIndex($table);
     }
-    
+
     //----------------------------------------------------------------------
     // Builders
     //----------------------------------------------------------------------
@@ -285,7 +285,7 @@ class Builder
     {
         $blueprint->{$builder}($this->connection);
     }
-    
+
     protected function analyzerBuilder($builder, AnalyzerBlueprint $blueprint)
     {
         $blueprint->{$builder}($this->connection);

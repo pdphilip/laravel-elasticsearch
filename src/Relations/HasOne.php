@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne as BaseHasOne;
 
 class HasOne extends BaseHasOne
 {
-
     public function getForeignKeyName()
     {
         return $this->foreignKey;

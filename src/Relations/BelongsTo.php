@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo as BaseBelongsTo;
 
 class BelongsTo extends BaseBelongsTo
 {
-
     public function getHasCompareKey()
     {
         return $this->getOwnerKey();
