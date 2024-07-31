@@ -17,7 +17,7 @@ class HasMany extends BaseHasMany
     {
         return $this->foreignKey;
     }
-
+    
     /**
      * Get the key for comparing against the parent key in "has" query.
      *

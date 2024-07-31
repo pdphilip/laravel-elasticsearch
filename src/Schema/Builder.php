@@ -193,15 +193,13 @@ class Builder
         }
 
     }
-    
     public function hasIndex($index)
     {
         $index = $this->connection->setIndex($index);
 
         return $this->connection->indexExists($index);
     }
-
-
+    
     //----------------------------------------------------------------------
     // Manual
     //----------------------------------------------------------------------

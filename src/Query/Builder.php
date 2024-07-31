@@ -52,7 +52,7 @@ class Builder extends BaseBuilder
         // @Elastic Search
         'exist', 'regex',
     ];
-    
+
     /**
      * Operator conversion.
      *

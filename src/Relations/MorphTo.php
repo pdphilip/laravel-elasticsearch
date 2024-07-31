@@ -30,8 +30,7 @@ class MorphTo extends BaseMorphTo
 
         return $query->whereIn($key, $this->gatherKeysByType($type, $instance->getKeyType()))->get();
     }
-
-
+    
     public function getOwnerKey()
     {
         return property_exists($this, 'ownerKey') ? $this->ownerKey : $this->otherKey;

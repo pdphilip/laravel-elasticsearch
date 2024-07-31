@@ -4,7 +4,6 @@ namespace PDPhilip\Elasticsearch\DSL\exceptions;
 
 use Exception;
 
-
 class QueryException extends Exception
 {
     private $_details = [];
