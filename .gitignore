@@ -1,6 +1,9 @@
 .env
 .env.*
 
+#composer
+vendor
+
 # Snow-blower
 !secrets/.env*
 .sb*
