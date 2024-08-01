@@ -42,11 +42,11 @@
             # swap a and artisan commands for testbench
             a.exec = ''
               ${unsetEnv}
-              ./vendor/bin/testbench
+              ./vendor/bin/testbench "$@"
             '';
             artisan.exec = ''
               ${unsetEnv}
-              ./vendor/bin/testbench
+              ./vendor/bin/testbench "$@"
             '';
           };
 
