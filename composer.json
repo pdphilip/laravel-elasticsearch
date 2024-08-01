@@ -39,7 +39,13 @@
   },
   "autoload": {
     "psr-4": {
-      "PDPhilip\\Elasticsearch\\": "src/"
+      "PDPhilip\\Elasticsearch\\": "src/",
+      "PDPhilip\\Elasticsearch\\Tests\\": "tests"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
     }
   },
   "extra": {
