@@ -83,7 +83,7 @@
                 mdformat.enable = true;
 
                 #PHP CS Fixer setup with Laravel Pint Standerds
-                php-cs-fixer.enable = false;
+                php-cs-fixer.enable = true;
 
                 #JS / CSS Formatting.
                 prettier = {
