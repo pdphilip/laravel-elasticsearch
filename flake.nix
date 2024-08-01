@@ -32,11 +32,21 @@
           scripts = {
             pf.exec = ''
               ${unsetEnv}
-                ./vendor/bin/pest --filter "$@"
+              ./vendor/bin/pest --filter "$@"
             '';
             p.exec = ''
               ${unsetEnv}
-                ./vendor/bin/pest
+              ./vendor/bin/pest
+            '';
+
+            # swap a and artisan commands for testbench
+            a.exec = ''
+              ${unsetEnv}
+              ./vendor/bin/testbench
+            '';
+            artisan.exec = ''
+              ${unsetEnv}
+              ./vendor/bin/testbench
             '';
           };
 
