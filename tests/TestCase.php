@@ -9,7 +9,6 @@ use Orchestra\Testbench\TestCase as Orchestra;
 use PDPhilip\Elasticsearch\ElasticServiceProvider;
 use Workbench\Database\Seeders\DatabaseSeeder;
 
-use function Orchestra\Testbench\artisan;
 use function Orchestra\Testbench\workbench_path;
 
 class TestCase extends Orchestra
@@ -28,20 +27,10 @@ class TestCase extends Orchestra
      */
     protected function defineDatabaseMigrations(): void
     {
-
         // Testing migrations are located in workbench database/migrations
         $this->loadMigrationsFrom(
             workbench_path('database/migrations')
         );
-
-        //      # When we set up the app we migrate elasticsearch
-        //      artisan($this, 'migrate', ['--database' => 'elasticsearch']);
-        //
-        //      # Tearing down the app should roll back the migrations
-        //      $this->beforeApplicationDestroyed(
-        //        fn () => artisan($this, 'migrate:rollback', ['--database' => 'elasticsearch'])
-        //      );
-
     }
 
     protected function defineDatabaseSeeders(): void
