@@ -41,6 +41,8 @@ class Product extends Model
 
     protected $connection = 'elasticsearch';
 
+    const MAX_SIZE = 10000;
+
     protected $fillable = [
         '_id',
         'name',
