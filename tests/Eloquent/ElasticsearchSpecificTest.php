@@ -2,24 +2,7 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
-
-beforeEach(function () {
-    Schema::deleteIfExists('products');
-    Schema::create('products', function ($index) {
-        $index->text('name');
-        $index->keyword('product_id');
-        $index->keyword('name');
-        $index->keyword('color');
-        $index->float('price');
-        $index->integer('status');
-        $index->geo('manufacturer.location');
-        $index->date('created_at');
-        $index->date('updated_at');
-        $index->date('deleted_at');
-    });
-});
 
 test('filter products within a geo box', function () {
     Product::factory()->count(3)->state(['manufacturer' => ['location' => ['lat' => 5, 'lon' => 5]]])->create();

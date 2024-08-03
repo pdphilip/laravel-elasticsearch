@@ -13,8 +13,6 @@ class ProductFactory extends Factory
 
   public function definition(): array
   {
-    $tsMs = $this->randomTsAndMs();
-
     return [
       'name'                => fake()->name(),
       'description'         => fake()->realTextBetween(100),
@@ -26,9 +24,6 @@ class ProductFactory extends Factory
       'price'               => fake()->randomFloat(2, 0, 2000),
       'orders'              => fake()->numberBetween(0,250),
       'order_values'        => $this->randomArrayOfInts(),
-      'last_order_datetime' => $tsMs['datetime'],
-      'last_order_ts'       => $tsMs['ts'],
-      'last_order_ms'       => $tsMs['ms'],
 
       'manufacturer' => [
         'location' => [
@@ -42,23 +37,10 @@ class ProductFactory extends Factory
           'country' => fake()->country(),
         ],
       ],
-      'datetime'     => Carbon::now()->format('Y-m-d H:i:s'),
       'created_at'   => Carbon::now(),
       'updated_at'   => Carbon::now(),
+      'deleted_at'   => null,
     ];
-  }
-
-  public function randomTsAndMs()
-  {
-    $date = Carbon::now();
-    $date->subDays(rand(0, 14))->subMinutes(rand(0, 1440))->subSeconds(rand(0, 60));
-
-    return [
-      'datetime' => $date->format('Y-m-d H:i:s'),
-      'ts'       => $date->getTimestamp(),
-      'ms'       => $date->getTimestampMs(),
-    ];
-
   }
 
 

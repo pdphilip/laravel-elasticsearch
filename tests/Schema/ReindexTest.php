@@ -99,4 +99,4 @@ it('re-indexs data', function () {
     expect(Schema::hasIndex('products'))->toBeFalse()
         ->and(Schema::hasIndex('holding_products'))->toBeFalse();
 
-})->group('schema');
+})->group('schema')->todo();

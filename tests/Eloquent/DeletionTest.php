@@ -5,19 +5,6 @@ declare(strict_types=1);
 use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
-beforeEach(function () {
-    Schema::deleteIfExists('products');
-    Schema::create('products', function ($index) {
-        $index->text('name');
-        $index->float('price');
-        $index->integer('status');
-        $index->geo('manufacturer.location');
-        $index->date('created_at');
-        $index->date('updated_at');
-        $index->date('deleted_at');
-    });
-});
-
 test('delete a single model', function () {
     $product = Product::factory()->create();
     $retrieved = Product::find($product->_id);

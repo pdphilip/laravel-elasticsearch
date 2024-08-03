@@ -5,19 +5,6 @@ declare(strict_types=1);
 use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
-beforeEach(function () {
-    Schema::deleteIfExists('products');
-    Schema::create('products', function ($index) {
-        $index->text('name');
-        $index->keyword('name');
-        $index->float('price');
-        $index->integer('status');
-        $index->geo('manufacturer.location');
-        $index->date('created_at');
-        $index->date('updated_at');
-    });
-});
-
 test('retrieve all products', function () {
     Product::factory()->count(5)->create();
     $products = Product::all();
