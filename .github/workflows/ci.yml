@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run the CI on'
+        required: true
+        default: 'main' # You can set this to your main development branch or any other default
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    env:
+      BROADCAST_DRIVER: log
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      DB_CONNECTION: testing
+      APP_KEY: base64:2fl+Ktvkfl+Fuz3Qp/A76G2RTiGVA/ZjKZaz6fiiM10=
+      APP_ENV: testing
+      BCRYPT_ROUNDS: 10
+      MAIL_MAILER: array
+      TELESCOPE_ENABLED: false
+
+    # Docs: https://docs.github.com/en/actions/using-containerized-services
+    services:
+      elasticsearch:
+        image: elasticsearch:7.17.3
+        env:
+          discovery.type: single-node
+          ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+        ports:
+          - 9200:9200
+        options: --health-cmd="curl http://localhost:9200/_cluster/health" --health-interval=10s --health-timeout=5s --health-retries=5
+
+      redis:
+        image: redis
+        ports:
+          - 6379/tcp
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      - name: Verify Elasticsearch connection 🧩
+        run: |
+          curl -X GET "localhost:${{ job.services.elasticsearch.ports['9200'] }}/_cluster/health?pretty=true"
+
+      - name: Setup PHP 🏗
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          tools: composer:v2
+          coverage: xdebug
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, mysql
+
+      - name: Install Project Dependencies 💻
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: List Installed Dependencies 📦
+        run: composer show -D
+
+      - name: Run tests 🧪
+        run: |
+          ./vendor/bin/pest  --version
+          ./vendor/bin/pest
+        env:
+          REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
+          ELASTICSEARCH_PORT: ${{ job.services.elasticsearch.ports['9200'] }}

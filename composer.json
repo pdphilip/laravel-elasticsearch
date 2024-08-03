@@ -24,22 +24,35 @@
     "illuminate/container": "^10.0|^11.0",
     "illuminate/database": "^10.0|^11.0",
     "illuminate/events": "^10.0|^11.0",
-    "elasticsearch/elasticsearch": "^8.12"
+    "elasticsearch/elasticsearch": "^8.12",
+    "rkondratuk/geo-math-php": "^1.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^10.3",
     "orchestra/testbench": "^8.0",
     "mockery/mockery": "^1.4.4",
-    "doctrine/coding-standard": "12.0.x-dev"
+    "doctrine/coding-standard": "12.0.x-dev",
+    "pestphp/pest": "^2.34",
+    "pestphp/pest-plugin-laravel": "^2.4"
   },
   "autoload-dev": {
     "psr-4": {
-      "PDPhilip\\Elasticsearch\\Tests\\": "tests/"
+      "PDPhilip\\Elasticsearch\\Tests\\": "tests/",
+      "Workbench\\App\\": "workbench/app/",
+      "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+      "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
     }
   },
   "autoload": {
     "psr-4": {
-      "PDPhilip\\Elasticsearch\\": "src/"
+      "PDPhilip\\Elasticsearch\\": "src/",
+      "PDPhilip\\Elasticsearch\\Tests\\": "tests"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "php-http/discovery": true
     }
   },
   "extra": {
@@ -48,5 +61,25 @@
         "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
       ]
     }
+  },
+  "scripts": {
+    "post-autoload-dump": [
+      "@clear",
+      "@prepare"
+    ],
+    "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+    "prepare": "@php vendor/bin/testbench package:discover --ansi",
+    "build": "@php vendor/bin/testbench workbench:build --ansi",
+    "serve": [
+      "Composer\\Config::disableProcessTimeout",
+      "@build",
+      "@php vendor/bin/testbench serve"
+    ],
+    "lint": [
+      "@php vendor/bin/phpstan analyse"
+    ],
+    "test": [
+      "@php vendor/bin/pest"
+    ]
   }
 }
