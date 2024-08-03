@@ -4,6 +4,7 @@
   use Illuminate\Database\Eloquent\Factories\Factory;
   use Illuminate\Support\Carbon;
   use Workbench\App\Models\ClientProfile;
+  use Workbench\App\Models\Company;
 
   class ClientProfileFactory extends Factory
   {
@@ -13,6 +14,9 @@
     {
       return [
         'client_id'     => '',
+        'company_id' => function () {
+          return Company::factory()->create()->_id;
+        },
         'contact_name'  => fake()->name(),
         'contact_email' => fake()->email(),
         'website'       => fake()->url(),

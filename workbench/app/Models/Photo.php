@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Workbench\App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use PDPhilip\Elasticsearch\Eloquent\Model;
+use Workbench\Database\Factories\PhotoFactory;
 
 /**
  * App\Models\Photo
@@ -30,8 +32,18 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Photo extends Model
 {
+
+    use HasFactory;
+
+    protected $connection = 'elasticsearch';
+
     public function photoable()
     {
         return $this->morphTo();
     }
+
+  public static function newFactory(): PhotoFactory
+  {
+    return PhotoFactory::new();
+  }
 }

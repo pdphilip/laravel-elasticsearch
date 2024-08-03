@@ -2,8 +2,9 @@
 
   namespace Workbench\App\Models;
 
-  use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
-
+  use PDPhilip\Elasticsearch\Eloquent\Model;
+  use Workbench\Database\Factories\AvatarFactory;
+  use Illuminate\Database\Eloquent\Factories\HasFactory;
   /**
    * App\Models\Avatar
    *
@@ -23,11 +24,13 @@
    * @property-read mixed $status_name
    * @property-read mixed $status_color
    *
-   * @mixin \Eloquent
+   * @mixin Model
    *
    */
-  class Avatar extends Eloquent
+  class Avatar extends Model
   {
+    use HasFactory;
+
     protected $connection = 'elasticsearch';
 
     //Relationships  =====================================
@@ -37,5 +40,9 @@
       return $this->morphTo();
     }
 
+    public static function newFactory(): AvatarFactory
+    {
+      return AvatarFactory::new();
+    }
 
   }

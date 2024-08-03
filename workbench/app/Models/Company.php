@@ -3,7 +3,7 @@
   namespace Workbench\App\Models;
 
   use Illuminate\Database\Eloquent\Factories\HasFactory;
-  use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
+  use PDPhilip\Elasticsearch\Eloquent\Model;
   use Workbench\Database\Factories\CompanyFactory;
 
   /**
@@ -32,10 +32,10 @@
    * @property-read mixed $status_name
    * @property-read mixed $status_color
    *
-   * @mixin \Eloquent
+   * @mixin Model
    *
    */
-  class Company extends Eloquent
+  class Company extends Model
   {
     use HasFactory;
     protected $connection = 'elasticsearch';
@@ -84,12 +84,6 @@
     {
       return $this->morphMany(Photo::class, 'photoable');
     }
-
-    public function esPhotos()
-    {
-      return $this->morphMany(EsPhoto::class, 'photoable');
-    }
-
 
     public function clients()
     {
