@@ -38,6 +38,11 @@
               ${unsetEnv}
               ./vendor/bin/pest
             '';
+            coverage.exec = ''
+               export XDEBUG_MODE=coverage
+              ./vendor/bin/pest --coverage
+              unset XDEBUG_MODE
+            '';
 
             # swap a and artisan commands for testbench
             a.exec = ''
