@@ -1,79 +1,55 @@
 <?php
 
-declare(strict_types=1);
+  declare(strict_types=1);
 
-namespace Workbench\Database\Factories;
+  namespace Workbench\Database\Factories;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Workbench\App\Models\BlogPost;
+  use Carbon\Carbon;
+  use Illuminate\Database\Eloquent\Factories\Factory;
+  use Workbench\App\Models\BlogPost;
 
-/**
- * @template TModel of \Workbench\App\Product
- *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<TModel>
- */
-class BlogPostFactory extends Factory
-{
+  /**
+   * Factory for BlogPost model.
+   *
+   * @extends Factory<BlogPost>
+   */
+  class BlogPostFactory extends Factory
+  {
     protected $model = BlogPost::class;
 
-    public function generateRandomCountry()
+    /**
+     * Generates an array of random comments.
+     *
+     * @param int $count The number of comments to generate.
+     * @return array An array of comment data.
+     */
+    public function generateComments(int $count): array
     {
-        $countries = [
-            'USA',
-            'UK',
-            'Canada',
-            'Australia',
-            'Germany',
-            'France',
-            'Netherlands',
-            'Austria',
-            'Switzerland',
-            'Sweden',
-            'Norway',
-            'Denmark',
-            'Finland',
-            'Belgium',
-            'Italy',
-            'Spain',
-            'Portugal',
-            'Greece',
-            'Ireland',
-            'Poland',
-            'Peru',
+      return collect(range(1, $count))->map(function () {
+        return [
+          'name' => fake()->name(),
+          'comment' => fake()->text(),
+          'country' => fake()->country(),
+          'likes' => fake()->numberBetween(0, 10),
         ];
-
-        return $countries[rand(0, count($countries) - 1)];
+      })->all();
     }
 
-    public function generateComments($count)
-    {
-        $comments = [];
-        for ($i = 0; $i < $count; $i++) {
-            $comment = [
-                'name' => fake()->name(),
-                'comment' => fake()->text(),
-                'country' => fake()->country(),
-                'likes' => fake()->numberBetween(0, 10),
-
-            ];
-            $comments[] = $comment;
-        }
-
-        return $comments;
-    }
-
+    /**
+     * Defines the default state for the BlogPost model.
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
-
-        return [
-            'title' => fake()->word(),
-            'content' => fake()->word(),
-            'comments' => $this->generateComments(fake()->numberBetween(5, 20)),
-            'status' => fake()->numberBetween(1, 5),
-            'active' => fake()->boolean(),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ];
+      return [
+        'title' => fake()->sentence(),
+        'content' => fake()->text(),
+        'comments' => $this->generateComments(fake()->numberBetween(5, 20)),
+        'status' => fake()->numberBetween(1, 5),
+        'active' => fake()->boolean(),
+        'created_at' => Carbon::now(),
+        'updated_at' => Carbon::now(),
+      ];
     }
-}
+  }
