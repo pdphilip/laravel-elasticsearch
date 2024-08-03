@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 use Workbench\Database\Factories\ProductFactory;
 
 /**
@@ -14,11 +17,11 @@ use Workbench\Database\Factories\ProductFactory;
  * @property string $_id
  * @property string $name
  * @property string $description
- * @property integer $in_stock
- * @property integer $price
- * @property integer $orders
+ * @property int $in_stock
+ * @property int $price
+ * @property int $orders
  * @property array $order_values
- * @property integer $status
+ * @property int $status
  * @property string $color
  * @property bool $is_active
  * @property array $manufacturer
@@ -29,68 +32,63 @@ use Workbench\Database\Factories\ProductFactory;
  ******Relationships*******
  * @property-read User $user
  *
- *
  * @mixin \Eloquent
- *
  */
-  class Product extends Model
-  {
+class Product extends Model
+{
     use HasFactory;
+    use SoftDeletes;
 
     protected $connection = 'elasticsearch';
 
     protected $fillable = [
-      '_id',
-      'name',
-      'description',
-      'in_stock',
-      'is_active',
-      'status',
-      'color',
-      'manufacturer',
-      'price',
-      'orders',
-      'order_values',
-      'product_id',
-      'datetime',
-      'last_order_datetime',
-      'last_order_ts',
-      'last_order_ms',
+        '_id',
+        'name',
+        'description',
+        'in_stock',
+        'is_active',
+        'status',
+        'color',
+        'manufacturer',
+        'price',
+        'orders',
+        'order_values',
+        'product_id',
+        'datetime',
+        'last_order_datetime',
+        'last_order_ts',
+        'last_order_ms',
     ];
 
     public function getHasStockAttribute(): string
     {
-      if ($this->in_stock > 0) {
-        return 'yes';
-      }
+        if ($this->in_stock > 0) {
+            return 'yes';
+        }
 
-      return 'no';
+        return 'no';
     }
 
     public function getAvgOrdersAttribute(): float|int
     {
-      $orders = array_filter($this->order_values);
-      $avg = 0;
-      if (count($orders)) {
-        $avg = round(array_sum($orders) / count($orders));
-      }
+        $orders = array_filter($this->order_values);
+        $avg = 0;
+        if (count($orders)) {
+            $avg = round(array_sum($orders) / count($orders));
+        }
 
-      return $avg;
+        return $avg;
     }
 
     //Relationships  =====================================
 
     public function user(): \PDPhilip\Elasticsearch\Relations\BelongsTo
     {
-      return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class);
     }
-
 
     public static function newFactory(): ProductFactory
     {
-      return ProductFactory::new();
+        return ProductFactory::new();
     }
-
-  }
-
-
+}
