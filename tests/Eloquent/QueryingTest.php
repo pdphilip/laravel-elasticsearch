@@ -35,11 +35,15 @@ test('fail to find a product and get null', function () {
     expect($product)->toBeNull();
 });
 
+test('fail to find a product and get exception', function () {
+    Product::findOrFail('nonexistent');
+})->throws(Exception::class);
+
 test('retrieve first product by status', function () {
     $product = Product::factory()->state(['status' => 1])->create();
     $found = Product::where('status', 1)->first();
-    expect($found)->toBeInstanceOf(Product::class);
-    expect($found->status)->toEqual(1);
+    expect($found)->toBeInstanceOf(Product::class)
+        ->and($found->status)->toEqual(1);
 });
 
 test('retrieve and count products using where condition', function () {
@@ -113,8 +117,8 @@ test('calculate average orders correctly', function () {
 test('search for products with partial text match', function () {
     Product::factory()->state(['name' => 'Black Coffee'])->create();
     $products = Product::where('name', 'like', 'bl')->orderBy('name.keyword')->get();
-    expect($products)->toHaveCount(1);
-    expect($products->first()->name)->toEqual('Black Coffee');
+    expect($products)->toHaveCount(1)
+        ->and($products->first()->name)->toEqual('Black Coffee');
 });
 
 test('complex query chaining', function () {
