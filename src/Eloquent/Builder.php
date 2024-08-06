@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Container\Container;
@@ -8,8 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Pagination\ElasticsearchPaginator;
 use RuntimeException;
@@ -64,9 +64,8 @@ class Builder extends BaseEloquentBuilder
         'agg',
     ];
 
-
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function getConnection()
     {
@@ -129,13 +128,11 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    array    $values
-     *
      * @return array
      */
     protected function addUpdatedAtColumn(array $values)
     {
-        if (!$this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
+        if (! $this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
             return $values;
         }
 
@@ -145,23 +142,19 @@ class Builder extends BaseEloquentBuilder
         return $values;
     }
 
-
     public function firstOrCreate(array $attributes = [], array $values = [])
     {
         $instance = $this->_instanceBuilder($attributes);
-        if (!is_null($instance)) {
+        if (! is_null($instance)) {
             return $instance;
         }
 
         return $this->create(array_merge($attributes, $values));
     }
 
-
     /**
-     *
      * Fast create method for 'write and forget'
      *
-     * @param    array    $attributes
      *
      * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|mixed|Builder
      */
@@ -180,11 +173,10 @@ class Builder extends BaseEloquentBuilder
         return $query->update($this->addUpdatedAtColumn($attributes));
     }
 
-
     public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
     {
         $instance = $this->_instanceBuilder($attributes);
-        if (!is_null($instance)) {
+        if (! is_null($instance)) {
             return $instance;
         }
 
@@ -192,7 +184,7 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function chunkById($count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
     {
@@ -203,7 +195,6 @@ class Builder extends BaseEloquentBuilder
 
         if ($column === '_id') {
             //Use PIT
-
 
             return $this->_chunkByPit($count, $callback, $keepAlive);
         } else {
@@ -237,11 +228,7 @@ class Builder extends BaseEloquentBuilder
             return true;
         }
 
-
     }
-
-
-
 
     public function chunk($count, callable $callback, $keepAlive = '5m')
     {
@@ -249,18 +236,11 @@ class Builder extends BaseEloquentBuilder
         return $this->_chunkByPit($count, $callback, $keepAlive);
     }
 
-
-
-
     //----------------------------------------------------------------------
     // ES Filters
     //----------------------------------------------------------------------
 
     /**
-     * @param    string    $field
-     * @param    array    $topLeft
-     * @param    array    $bottomRight
-     *
      * @return $this
      */
     public function filterGeoBox(string $field, array $topLeft, array $bottomRight)
@@ -271,10 +251,6 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $field
-     * @param    string    $distance
-     * @param    array    $geoPoint
-     *
      * @return $this
      */
     public function filterGeoPoint(string $field, string $distance, array $geoPoint)
@@ -289,12 +265,9 @@ class Builder extends BaseEloquentBuilder
     //----------------------------------------------------------------------
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function term(string $term, int $boostFactor = null)
+    public function term(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor);
 
@@ -302,12 +275,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function andTerm(string $term, int $boostFactor = null)
+    public function andTerm(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'AND');
 
@@ -315,12 +285,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function orTerm(string $term, int $boostFactor = null)
+    public function orTerm(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'OR');
 
@@ -328,12 +295,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function fuzzyTerm(string $term, int $boostFactor = null)
+    public function fuzzyTerm(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, null, 'fuzzy');
 
@@ -341,12 +305,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function andFuzzyTerm(string $term, int $boostFactor = null)
+    public function andFuzzyTerm(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'AND', 'fuzzy');
 
@@ -354,12 +315,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $term
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function orFuzzyTerm(string $term, int $boostFactor = null)
+    public function orFuzzyTerm(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'OR', 'fuzzy');
 
@@ -367,12 +325,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $regEx
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function regEx(string $regEx, int $boostFactor = null)
+    public function regEx(string $regEx, ?int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, null, 'regex');
 
@@ -380,12 +335,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $regEx
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function andRegEx(string $regEx, int $boostFactor = null)
+    public function andRegEx(string $regEx, ?int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, 'AND', 'regex');
 
@@ -393,34 +345,30 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $regEx
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function orRegEx(string $regEx, int $boostFactor = null)
+    public function orRegEx(string $regEx, ?int $boostFactor = null)
     {
         $this->query->searchQuery($regEx, $boostFactor, 'OR', 'regex');
 
         return $this;
     }
 
-
-    public function phrase(string $term, int $boostFactor = null)
+    public function phrase(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, null, 'phrase');
 
         return $this;
     }
 
-    public function andPhrase(string $term, int $boostFactor = null)
+    public function andPhrase(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'AND', 'phrase');
 
         return $this;
     }
 
-    public function orPhrase(string $term, int $boostFactor = null)
+    public function orPhrase(string $term, ?int $boostFactor = null)
     {
         $this->query->searchQuery($term, $boostFactor, 'OR', 'phrase');
 
@@ -428,8 +376,6 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param $value
-     *
      * @return $this
      */
     public function minShouldMatch($value)
@@ -440,8 +386,6 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    float    $value
-     *
      * @return $this
      */
     public function minScore(float $value)
@@ -452,12 +396,9 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    string    $field
-     * @param    int|null    $boostFactor
-     *
      * @return $this
      */
-    public function field(string $field, int $boostFactor = null)
+    public function field(string $field, ?int $boostFactor = null)
     {
         $this->query->searchField($field, $boostFactor);
 
@@ -465,8 +406,6 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param    array    $fields
-     *
      * @return $this
      */
     public function fields(array $fields)
@@ -483,7 +422,7 @@ class Builder extends BaseEloquentBuilder
         return $instance->newCollection(array_map(function ($item) use ($items, $instance) {
             $recordIndex = null;
             if (is_array($item)) {
-                $recordIndex = !empty($item['_index']) ? $item['_index'] : null;
+                $recordIndex = ! empty($item['_index']) ? $item['_index'] : null;
                 if ($recordIndex) {
                     unset($item['_index']);
                 }
@@ -510,38 +449,33 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
 
+    // Elastic type paginator that uses the search_after instead of limiting to Max results.
+    public function elasticPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
+    {
+        if (! $cursor instanceof Cursor) {
+            $cursor = is_string($cursor)
+              ? Cursor::fromEncoded($cursor)
+              : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
+        }
 
-  # Elastic type paginator that uses the search_after instead of limiting to Max results.
-  public function elasticPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
-  {
-    if (! $cursor instanceof Cursor) {
-      $cursor = is_string($cursor)
-        ? Cursor::fromEncoded($cursor)
-        : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
+        $this->setPaginating($cursor);
+        $this->limit($perPage);
+
+        $search = $this->get();
+
+        return $this->elasticPaginator($search, $perPage, $cursor, [
+            'path' => Paginator::resolveCurrentPath(),
+            'cursorName' => $cursorName,
+        ]);
+
     }
 
-    $this->setPaginating($cursor);
-    $this->limit($perPage);
-
-    $search = $this->get();
-
-    return $this->elasticPaginator($search, $perPage, $cursor, [
-      'path' => Paginator::resolveCurrentPath(),
-      'cursorName' => $cursorName,
-      'parameters' => [
-        'search_after' => '_meta.sort',
-      ],
-    ]);
-
-  }
-
-  protected function elasticPaginator($items, $perPage, $cursor, $options)
-  {
-    return Container::getInstance()->makeWith(ElasticsearchPaginator::class, compact(
-      'items', 'perPage', 'cursor', 'options'
-    ));
-  }
-
+    protected function elasticPaginator($items, $perPage, $cursor, $options)
+    {
+        return Container::getInstance()->makeWith(ElasticsearchPaginator::class, compact(
+            'items', 'perPage', 'cursor', 'options'
+        ));
+    }
 
     //----------------------------------------------------------------------
     // Private methods
@@ -566,7 +500,6 @@ class Builder extends BaseEloquentBuilder
 
         return $instance->first();
     }
-
 
     private function _chunkByPit($count, callable $callback, $keepAlive = '5m')
     {
