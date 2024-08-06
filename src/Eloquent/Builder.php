@@ -2,11 +2,16 @@
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
+use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\Cursor;
+use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
+use PDPhilip\Elasticsearch\Pagination\ElasticsearchPaginator;
 use RuntimeException;
 
 class Builder extends BaseEloquentBuilder
@@ -234,6 +239,8 @@ class Builder extends BaseEloquentBuilder
 
 
     }
+
+
 
 
     public function chunk($count, callable $callback, $keepAlive = '5m')
@@ -503,6 +510,37 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
 
+
+  # Elastic type paginator that uses the search_after instead of limiting to Max results.
+  public function elasticPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
+  {
+    if (! $cursor instanceof Cursor) {
+      $cursor = is_string($cursor)
+        ? Cursor::fromEncoded($cursor)
+        : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
+    }
+
+    $this->setPaginating($cursor);
+    $this->limit($perPage);
+
+    $search = $this->get();
+
+    return $this->elasticPaginator($search, $perPage, $cursor, [
+      'path' => Paginator::resolveCurrentPath(),
+      'cursorName' => $cursorName,
+      'parameters' => [
+        'search_after' => '_meta.sort',
+      ],
+    ]);
+
+  }
+
+  protected function elasticPaginator($items, $perPage, $cursor, $options)
+  {
+    return Container::getInstance()->makeWith(ElasticsearchPaginator::class, compact(
+      'items', 'perPage', 'cursor', 'options'
+    ));
+  }
 
 
     //----------------------------------------------------------------------

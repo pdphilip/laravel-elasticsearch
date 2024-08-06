@@ -427,6 +427,10 @@ trait QueryBuilder
         if ($options) {
             foreach ($options as $key => $value) {
                 switch ($key) {
+                    #If we are paginating then we need to include search after
+                    case 'search_after':
+                        $return['body']['search_after'] = $value;
+                        break;
                     case 'limit':
                         $return['size'] = $value;
                         break;

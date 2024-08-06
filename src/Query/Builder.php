@@ -85,6 +85,16 @@ class Builder extends BaseBuilder
         $this->refresh = $value;
     }
 
+    public function setPaginating($cursor)
+    {
+
+      if(!empty($cursor)) {
+        $this->paginating = $cursor->parameter('search_after');
+      }
+
+      return $this;
+    }
+
 
     //----------------------------------------------------------------------
     // Querying Executors
@@ -848,6 +858,9 @@ class Builder extends BaseBuilder
             //Check if it's first() with no ordering,
             //Set order to created_at -> asc for consistency
             //TODO
+        }
+        if ($this->paginating) {
+            $options['search_after'] = $this->paginating;
         }
         if ($this->minScore) {
             $options['minScore'] = $this->minScore;

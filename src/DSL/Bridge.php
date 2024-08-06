@@ -1,21 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\DSL;
 
+use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
-use Elastic\Elasticsearch\Client;
+use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
-use RuntimeException;
-use PDPhilip\Elasticsearch\Connection;
 
 class Bridge
 {
-
-    use QueryBuilder, IndexInterpreter;
+    use IndexInterpreter, QueryBuilder;
 
     protected Connection $connection;
 
@@ -23,11 +23,11 @@ class Bridge
 
     protected string|bool $errorLogger = false;
 
-    protected int|null $maxSize = 10; //ES default
+    protected ?int $maxSize = 10; //ES default
 
-    private string|null $index;
+    private ?string $index;
 
-    private string|null $indexPrefix;
+    private ?string $indexPrefix;
 
     public function __construct(Connection $connection)
     {
@@ -50,14 +50,14 @@ class Bridge
     public function processOpenPit($keepAlive = '5m'): string
     {
         $params = [
-            'index'      => $this->index,
+            'index' => $this->index,
             'keep_alive' => $keepAlive,
 
         ];
         try {
             $process = $this->client->openPointInTime($params);
             $res = $process->asArray();
-            if (!empty($res['id'])) {
+            if (! empty($res['id'])) {
                 return $res['id'];
             }
 
@@ -77,7 +77,7 @@ class Bridge
         unset($params['index']);
 
         $params['body']['pit'] = [
-            'id'         => $pitId,
+            'id' => $pitId,
             'keep_alive' => $keepAlive,
         ];
         if (empty($params['body']['sort'])) {
@@ -94,14 +94,11 @@ class Bridge
 
             return $this->_sanitizePitSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
 
-
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
 
-
     }
-
 
     /**
      * @throws QueryException
@@ -111,7 +108,7 @@ class Bridge
 
         $params = [
             'index' => $this->index,
-            'body'  => [
+            'body' => [
                 'id' => $id,
             ],
 
@@ -138,7 +135,7 @@ class Bridge
     {
         $params = [
             'index' => $this->index,
-            'body'  => $bodyParams,
+            'body' => $bodyParams,
 
         ];
         try {
@@ -158,7 +155,7 @@ class Bridge
     {
         $params = [
             'index' => $this->index,
-            'body'  => $bodyParams,
+            'body' => $bodyParams,
 
         ];
         try {
@@ -210,7 +207,6 @@ class Bridge
         return $params['body'] ?? null;
     }
 
-
     //----------------------------------------------------------------------
     // Read Queries
     //----------------------------------------------------------------------
@@ -241,6 +237,7 @@ class Bridge
      */
     protected function _returnSearch($params, $source)
     {
+
         if (empty($params['size'])) {
             $params['size'] = $this->maxSize;
         }
@@ -262,7 +259,7 @@ class Bridge
      */
     public function processDistinct($wheres, $options, $columns, $includeDocCount = false): Results
     {
-        if ($columns && !is_array($columns)) {
+        if ($columns && ! is_array($columns)) {
             $columns = [$columns];
         }
         $sort = $options['sort'] ?? [];
@@ -278,7 +275,6 @@ class Bridge
             $sort = [$sortField => $sortDir];
         }
 
-
         $params = $this->buildParams($this->index, $wheres, $options);
         try {
 
@@ -286,9 +282,8 @@ class Bridge
 
             $response = $this->client->search($params);
 
-
             $data = [];
-            if (!empty($response['aggregations'])) {
+            if (! empty($response['aggregations'])) {
                 $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
             }
 
@@ -304,7 +299,6 @@ class Bridge
         }
 
     }
-
 
     //----------------------------------------------------------------------
     // Write Queries
@@ -329,7 +323,7 @@ class Bridge
 
         $params = [
             'index' => $this->index,
-            'body'  => $data,
+            'body' => $data,
         ];
         if ($id) {
             $params['id'] = $id;
@@ -347,7 +341,6 @@ class Bridge
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
-
 
     }
 
@@ -370,7 +363,7 @@ class Bridge
         $resultData = [];
         $data = $this->processFind($wheres, $options, []);
 
-        if (!empty($data->data)) {
+        if (! empty($data->data)) {
             foreach ($data->data as $currentData) {
 
                 foreach ($newValues as $field => $value) {
@@ -389,7 +382,6 @@ class Bridge
         $params['query'] = $this->_buildQuery($wheres);
         $params['queryOptions'] = $options;
         $params['updateValues'] = $newValues;
-
 
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
@@ -410,14 +402,14 @@ class Bridge
         $resultMeta['failed'] = 0;
         $resultData = [];
         $data = $this->processFind($wheres, $options, []);
-        if (!empty($data->data)) {
+        if (! empty($data->data)) {
             foreach ($data->data as $currentData) {
 
                 $currentValue = $currentData[$incField] ?? 0;
                 $currentValue += $newValues['inc'][$incField];
-                $currentData[$incField] = (int)$currentValue;
+                $currentData[$incField] = (int) $currentValue;
 
-                if (!empty($newValues['set'])) {
+                if (! empty($newValues['set'])) {
                     foreach ($newValues['set'] as $field => $value) {
                         $currentData[$field] = $value;
                     }
@@ -435,10 +427,8 @@ class Bridge
         $params['queryOptions'] = $options;
         $params['updateValues'] = $newValues;
 
-
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
-
 
     //----------------------------------------------------------------------
     // Delete Queries
@@ -453,7 +443,7 @@ class Bridge
         if (isset($wheres['_id'])) {
             $params = [
                 'index' => $this->index,
-                'id'    => $wheres['_id'],
+                'id' => $wheres['_id'],
             ];
             try {
                 $responseObject = $this->client->delete($params);
@@ -480,22 +470,21 @@ class Bridge
 
     public function processScript($id, $script)
     {
-//        $params = [
-//            'id'    => $id,
-//            'index' => $this->index,
-//        ];
-//        if ($script) {
-//            $params['body']['script']['source'] = $script;
-//        }
-//
-//        $response = $this->client->update($params);
-//
-//        $n = new self($this->index);
-//        $find = $n->processFind($id);
+        //        $params = [
+        //            'id'    => $id,
+        //            'index' => $this->index,
+        //        ];
+        //        if ($script) {
+        //            $params['body']['script']['source'] = $script;
+        //        }
+        //
+        //        $response = $this->client->update($params);
+        //
+        //        $n = new self($this->index);
+        //        $find = $n->processFind($id);
 
-//        return $this->_return($find->data, $response, $params, $this->_queryTag(__FUNCTION__));
+        //        return $this->_return($find->data, $response, $params, $this->_queryTag(__FUNCTION__));
     }
-
 
     //----------------------------------------------------------------------
     // Index administration
@@ -530,7 +519,6 @@ class Bridge
         }
 
     }
-
 
     /**
      * @throws QueryException
@@ -598,7 +586,6 @@ class Bridge
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
 
-
     }
 
     /**
@@ -640,15 +627,15 @@ class Bridge
             $response = $this->client->reindex($params);
             $result = $response->asArray();
             $resultData = [
-                'took'              => $result['took'],
-                'total'             => $result['total'],
-                'created'           => $result['created'],
-                'updated'           => $result['updated'],
-                'deleted'           => $result['deleted'],
-                'batches'           => $result['batches'],
+                'took' => $result['took'],
+                'total' => $result['total'],
+                'created' => $result['created'],
+                'updated' => $result['updated'],
+                'deleted' => $result['deleted'],
+                'batches' => $result['batches'],
                 'version_conflicts' => $result['version_conflicts'],
-                'noops'             => $result['noops'],
-                'retries'           => $result['retries'],
+                'noops' => $result['noops'],
+                'retries' => $result['retries'],
             ];
 
             return $this->_return($resultData, $result, $params, $this->_queryTag(__FUNCTION__));
@@ -676,11 +663,9 @@ class Bridge
         }
     }
 
-
     //----------------------------------------------------------------------
     // Aggregates
     //----------------------------------------------------------------------
-
 
     public function processMultipleAggregate($functions, $wheres, $options, $column)
     {
@@ -697,14 +682,9 @@ class Bridge
         }
     }
 
-
     /**
      *  Aggregate entry point
      *
-     * @param $function
-     * @param $wheres
-     * @param $options
-     * @param $columns
      *
      * @return mixed
      */
@@ -828,13 +808,13 @@ class Bridge
     {
         $mappings = $this->processIndexMappings($this->index);
         $map = reset($mappings);
-        if (!empty($map['mappings']['properties'][$field])) {
+        if (! empty($map['mappings']['properties'][$field])) {
             $fieldMap = $map['mappings']['properties'][$field];
-            if (!empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
+            if (! empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
                 //primary Map is field. Use as is
                 return $field;
             }
-            if (!empty($fieldMap['fields']['keyword'])) {
+            if (! empty($fieldMap['fields']['keyword'])) {
                 return $field.'.keyword';
             }
         }
@@ -871,7 +851,6 @@ class Bridge
 
     }
 
-
     /**
      * @throws ParameterException
      * @throws QueryException
@@ -884,10 +863,10 @@ class Bridge
 
             $min = 0;
             $hasBeenSet = false;
-            if (!empty($process->data)) {
+            if (! empty($process->data)) {
                 foreach ($process->data as $datum) {
-                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
-                        if (!$hasBeenSet) {
+                    if (! empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                        if (! $hasBeenSet) {
                             $min = $datum[$columns[0]];
                             $hasBeenSet = true;
                         } else {
@@ -917,14 +896,13 @@ class Bridge
             $process = $this->processDistinct($wheres, $options, $columns);
 
             $max = 0;
-            if (!empty($process->data)) {
+            if (! empty($process->data)) {
                 foreach ($process->data as $datum) {
-                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                    if (! empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
                         $max = max($max, $datum[$columns[0]]);
                     }
                 }
             }
-
 
             return $this->_return($max, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
@@ -933,7 +911,6 @@ class Bridge
         }
 
     }
-
 
     /**
      * @throws ParameterException
@@ -945,9 +922,9 @@ class Bridge
         try {
             $process = $this->processDistinct($wheres, $options, $columns);
             $sum = 0;
-            if (!empty($process->data)) {
+            if (! empty($process->data)) {
                 foreach ($process->data as $datum) {
-                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                    if (! empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
                         $sum += $datum[$columns[0]];
                     }
                 }
@@ -973,9 +950,9 @@ class Bridge
             $sum = 0;
             $count = 0;
             $avg = 0;
-            if (!empty($process->data)) {
+            if (! empty($process->data)) {
                 foreach ($process->data as $datum) {
-                    if (!empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
+                    if (! empty($datum[$columns[0]]) && is_numeric($datum[$columns[0]])) {
                         $count++;
                         $sum += $datum[$columns[0]];
                     }
@@ -984,7 +961,6 @@ class Bridge
             if ($count > 0) {
                 $avg = $sum / $count;
             }
-
 
             return $this->_return($avg, $process->getMetaData(), $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
@@ -1006,7 +982,6 @@ class Bridge
     // Private & Sanitization methods
     //======================================================================
 
-
     private function _queryTag($function)
     {
         return str_replace('process', '', $function);
@@ -1021,36 +996,38 @@ class Bridge
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
         $meta['shards'] = $response['_shards'] ?? [];
         $data = [];
-        if (!empty($response['hits']['hits'])) {
+        if (! empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
                 $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
-                if (!empty($hit['_source'])) {
+                if (! empty($hit['_source'])) {
 
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
                     }
 
                 }
-                if (!empty($hit['inner_hits'])) {
+                if (! empty($hit['inner_hits'])) {
                     foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
                         $datum[$innerKey] = $this->_filterInnerHits($innerHit);
                     }
                 }
 
                 //Meta data
-                if (!empty($hit['highlight'])) {
+                if (! empty($hit['highlight'])) {
                     $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
                 }
 
                 $datum['_meta']['_index'] = $hit['_index'];
                 $datum['_meta']['_id'] = $hit['_id'];
-                if (!empty($hit['_score'])) {
+                if (! empty($hit['_score'])) {
                     $datum['_meta']['_score'] = $hit['_score'];
                 }
                 $datum['_meta']['_query'] = $meta;
 
+                // If we are sorting we need to store it to be able to pass it on in the search after.
+                $datum['_meta']['sort'] = ! empty($hit['sort']) ? $hit['sort'] : null;
                 $data[] = $datum;
             }
         }
@@ -1082,7 +1059,7 @@ class Bridge
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
         $meta['sorts'] = [];
         $data = [];
-        if (!empty($response['aggregations'])) {
+        if (! empty($response['aggregations'])) {
             foreach ($response['aggregations'] as $key => $values) {
                 $data = $this->_formatAggs($key, $values);
             }
@@ -1116,7 +1093,7 @@ class Bridge
         $hits = [];
         foreach ($innerHit['hits']['hits'] as $inner) {
             $innerDatum = [];
-            if (!empty($inner['_source'])) {
+            if (! empty($inner['_source'])) {
                 foreach ($inner['_source'] as $innerSourceKey => $innerSourceValue) {
                     $innerDatum[$innerSourceKey] = $innerSourceValue;
                 }
@@ -1135,17 +1112,17 @@ class Bridge
         $meta['max_score'] = $response['hits']['max_score'] ?? 0;
         $meta['last_sort'] = null;
         $data = [];
-        if (!empty($response['hits']['hits'])) {
+        if (! empty($response['hits']['hits'])) {
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
                 $datum['_index'] = $hit['_index'];
                 $datum['_id'] = $hit['_id'];
-                if (!empty($hit['_source'])) {
+                if (! empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
                     }
                 }
-                if (!empty($hit['sort'][0])) {
+                if (! empty($hit['sort'][0])) {
                     $meta['last_sort'] = $hit['sort'];
                 }
                 $data[] = $datum;
@@ -1155,7 +1132,6 @@ class Bridge
 
         return $this->_return($data, $meta, $params, $queryTag);
     }
-
 
     private function _parseSort($sort, $sortParams)
     {
@@ -1181,7 +1157,7 @@ class Bridge
     private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = [])
     {
         $data = [];
-        if (!empty($response[$keys[$index]]['buckets'])) {
+        if (! empty($response[$keys[$index]]['buckets'])) {
             foreach ($response[$keys[$index]]['buckets'] as $res) {
 
                 $datum = $currentData;
@@ -1200,7 +1176,7 @@ class Bridge
                 if (isset($columns[$index + 1])) {
                     $nestedData = $this->processBuckets($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
 
-                    if (!empty($nestedData)) {
+                    if (! empty($nestedData)) {
                         $data = array_merge($data, $nestedData);
                     } else {
                         $data[] = $datum;
@@ -1229,7 +1205,6 @@ class Bridge
         return $results;
     }
 
-
     /**
      * @throws QueryException
      */
@@ -1245,13 +1220,13 @@ class Bridge
 
         $meta = $error->getMetaData();
         $details = [
-            'error'     => $meta['error']['msg'],
-            'details'   => $meta['error']['data'],
-            'code'      => $errorCode,
+            'error' => $meta['error']['msg'],
+            'details' => $meta['error']['data'],
+            'code' => $errorCode,
             'exception' => $previous,
-            'query'     => $queryTag,
-            'params'    => $params,
-            'original'  => $errorMsg,
+            'query' => $queryTag,
+            'params' => $params,
+            'original' => $errorMsg,
         ];
         if ($this->errorLogger) {
             $this->_logQuery($error, $details);
@@ -1264,11 +1239,11 @@ class Bridge
     {
         $body = $results->getLogFormattedMetaData();
         if ($details) {
-            $body['details'] = (array)$details;
+            $body['details'] = (array) $details;
         }
         $params = [
             'index' => $this->errorLogger,
-            'body'  => $body,
+            'body' => $body,
         ];
         try {
             $this->client->index($params);
@@ -1276,5 +1251,4 @@ class Bridge
             //ignore if problem writing query log
         }
     }
-
 }
