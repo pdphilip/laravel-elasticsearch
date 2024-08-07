@@ -26,6 +26,8 @@ class Builder extends BaseBuilder
 
     public $paginating = false;
 
+    public $searchAfter = false;
+
     public $searchQuery = '';
 
     public $searchOptions = [];
@@ -85,11 +87,18 @@ class Builder extends BaseBuilder
         $this->refresh = $value;
     }
 
-    public function setPaginating($cursor)
+    /**
+     * @param $cursor
+     *
+     * @return $this
+     */
+    public function setSearchAfter($cursor)
     {
 
+      # if there is no $cursor then we don't do anything
+      # otherwise we specifically look for the `search_after` parameter on the cursor
       if(!empty($cursor)) {
-        $this->paginating = $cursor->parameter('search_after');
+        $this->searchAfter = $cursor->parameter('search_after');
       }
 
       return $this;
@@ -859,8 +868,8 @@ class Builder extends BaseBuilder
             //Set order to created_at -> asc for consistency
             //TODO
         }
-        if ($this->paginating) {
-            $options['search_after'] = $this->paginating;
+        if ($this->searchAfter) {
+            $options['search_after'] = $this->searchAfter;
         }
         if ($this->minScore) {
             $options['minScore'] = $this->minScore;

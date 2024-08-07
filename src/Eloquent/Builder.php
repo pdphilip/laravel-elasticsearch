@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
+use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
-use PDPhilip\Elasticsearch\Pagination\ElasticsearchPaginator;
+use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use RuntimeException;
 
 class Builder extends BaseEloquentBuilder
@@ -449,30 +450,37 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
 
-    // Elastic type paginator that uses the search_after instead of limiting to Max results.
-    public function elasticPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
+    # Elastic type paginator that uses the search_after instead of limiting to Max results.
+    public function searchAfterPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
     {
-        if (! $cursor instanceof Cursor) {
-            $cursor = is_string($cursor)
-              ? Cursor::fromEncoded($cursor)
-              : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
-        }
 
-        $this->setPaginating($cursor);
+      if(empty($this->query->orders)){
+        throw new MissingOrderException();
+      }
+
+
+      if (! $cursor instanceof Cursor) {
+          $cursor = is_string($cursor)
+            ? Cursor::fromEncoded($cursor)
+            : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
+      }
+
+        # this moves our search_after cursor in to the query.
+        $this->setSearchAfter($cursor);
         $this->limit($perPage);
 
         $search = $this->get();
 
-        return $this->elasticPaginator($search, $perPage, $cursor, [
+        return $this->searchAfterPaginator($search, $perPage, $cursor, [
             'path' => Paginator::resolveCurrentPath(),
             'cursorName' => $cursorName,
         ]);
 
     }
 
-    protected function elasticPaginator($items, $perPage, $cursor, $options)
+    protected function searchAfterPaginator($items, $perPage, $cursor, $options)
     {
-        return Container::getInstance()->makeWith(ElasticsearchPaginator::class, compact(
+        return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact(
             'items', 'perPage', 'cursor', 'options'
         ));
     }
