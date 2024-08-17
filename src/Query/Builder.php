@@ -1317,9 +1317,9 @@ class Builder extends BaseBuilder
         return false;
     }
 
-    public function rawSearch(array $bodyParams)
+    public function rawSearch(array $bodyParams, $returnRaw = false)
     {
-        $find = $this->connection->searchRaw($bodyParams);
+        $find = $this->connection->searchRaw($bodyParams, $returnRaw);
         $data = $find->data;
 
         return new Collection($data);

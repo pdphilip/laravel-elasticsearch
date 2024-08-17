@@ -51,7 +51,7 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method  $this chunk(string $column, Callable $callback, string $keepAlive = '5m')
  * @method  $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
  * @method  $this queryNested(string $column, Callable $callback)
- * @method  $this rawSearch(array $bodyParams)
+ * @method  $this rawSearch(array $bodyParams, bool $returnRaw = false)
  * @method  $this rawAggregation(array $bodyParams)
  *
  * @method  $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
