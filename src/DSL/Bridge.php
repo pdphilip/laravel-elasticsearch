@@ -135,7 +135,7 @@ class Bridge
     /**
      * @throws Exception
      */
-    public function processSearchRaw($bodyParams): Results
+    public function processSearchRaw($bodyParams, $returnRaw): Results
     {
         $params = [
             'index' => $this->index,
@@ -144,6 +144,9 @@ class Bridge
         ];
         try {
             $process = $this->client->search($params);
+            if ($returnRaw) {
+                return $this->_return($process->asArray(), [], $params, $this->_queryTag(__FUNCTION__));
+            }
 
             return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
         } catch (Exception $e) {
@@ -821,7 +824,7 @@ class Bridge
             $process = $this->client->search($params);
 
             return $this->_sanitizeAggsResponse($process, $params, $this->_queryTag(__FUNCTION__));
-            
+
         } catch (Exception $e) {
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
