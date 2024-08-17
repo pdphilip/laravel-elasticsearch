@@ -1428,7 +1428,7 @@ class Builder extends BaseBuilder
     private function _isAssociative(array $arr)
     {
         if ([] === $arr) {
-            return false;
+            return true;
         }
 
         return array_keys($arr) !== range(0, count($arr) - 1);
