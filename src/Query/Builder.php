@@ -1339,9 +1339,9 @@ class Builder extends BaseBuilder
         return false;
     }
 
-    public function rawSearch(array $bodyParams)
+    public function rawSearch(array $bodyParams, $returnRaw = false)
     {
-        $find = $this->connection->searchRaw($bodyParams);
+        $find = $this->connection->searchRaw($bodyParams, $returnRaw);
         $data = $find->data;
 
         return new Collection($data);
@@ -1444,7 +1444,7 @@ class Builder extends BaseBuilder
     private function _isAssociative(array $arr)
     {
         if ([] === $arr) {
-            return false;
+            return true;
         }
 
         return array_keys($arr) !== range(0, count($arr) - 1);
