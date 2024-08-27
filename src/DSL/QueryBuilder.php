@@ -11,11 +11,11 @@ trait QueryBuilder
 {
     protected static $filter;
 
-    protected static array $bucketOperators = ['and', 'or'];
-
-    protected static array $equivalenceOperators = ['in', 'nin'];
-
-    protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
+    //    protected static array $bucketOperators = ['and', 'or'];
+    //
+    //    protected static array $equivalenceOperators = ['in', 'nin'];
+    //
+    //    protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
 
     //======================================================================
     // Parameter builders
@@ -69,7 +69,7 @@ trait QueryBuilder
             if ($opts) {
                 foreach ($opts as $key => $value) {
                     if (isset($params[$key])) {
-                        $params[$key] = array_merge($params[$key], $opts[$key]);
+                        $params[$key] = array_merge($params[$key], $value);
                     } else {
                         $params[$key] = $value;
                     }
@@ -122,7 +122,7 @@ trait QueryBuilder
         return $params;
     }
 
-    public function createNestedAggs($columns, $sort)
+    public function createNestedAggs($columns, $sort): array
     {
         $aggs = [];
         $terms = [
@@ -468,7 +468,7 @@ trait QueryBuilder
     /**
      * @throws ParameterException
      */
-    private function _buildNestedOptions($options, $field)
+    private function _buildNestedOptions($options, $field): array
     {
         $options = $this->_buildOptions($options);
         if (! empty($options['body'])) {
@@ -516,7 +516,7 @@ trait QueryBuilder
         }
     }
 
-    public function _parseFilterParameter($params, $filer)
+    public function _parseFilterParameter($params, $filer): array
     {
         $body = $params['body'];
         $currentQuery = $body['query'];

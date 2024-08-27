@@ -11,7 +11,7 @@ trait SoftDeletes
     /**
      * {@inheritdoc}
      */
-    public function getQualifiedDeletedAtColumn()
+    public function getQualifiedDeletedAtColumn(): string
     {
         return $this->getDeletedAtColumn();
     }

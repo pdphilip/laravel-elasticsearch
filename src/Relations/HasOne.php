@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne as BaseHasOne;
 
 class HasOne extends BaseHasOne
 {
-    public function getHasCompareKey()
+    public function getHasCompareKey(): string
     {
         return $this->getForeignKeyName();
     }
 
-    public function getForeignKeyName()
+    public function getForeignKeyName(): string
     {
         return $this->foreignKey;
     }
@@ -30,7 +30,7 @@ class HasOne extends BaseHasOne
         return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }
 
-    protected function whereInMethod(EloquentModel $model, $key)
+    protected function whereInMethod(EloquentModel $model, $key): string
     {
         return 'whereIn';
     }

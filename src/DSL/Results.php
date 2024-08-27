@@ -36,7 +36,7 @@ class Results
 
     }
 
-    private function _decodeError($error)
+    private function _decodeError($error): array
     {
         $return['msg'] = $error;
         $return['data'] = [];
@@ -101,8 +101,6 @@ class Results
 
     private function _isJson($string): bool
     {
-        json_decode($string);
-
-        return json_last_error() == JSON_ERROR_NONE;
+        return json_validate($string);
     }
 }

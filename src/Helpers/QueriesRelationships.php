@@ -22,12 +22,13 @@ trait QueriesRelationships
      * @param  string  $operator
      * @param  int  $count
      * @param  string  $boolean
-     * @return Builder|static
+     *
+     * @throws Exception
      */
-    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null)
+    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null): Builder|static
     {
         if (is_string($relation)) {
-            if (strpos($relation, '.') !== false) {
+            if (str_contains($relation, '.')) {
                 return $this->hasNested($relation, $operator, $count, $boolean, $callback);
             }
 
@@ -63,10 +64,7 @@ trait QueriesRelationships
         );
     }
 
-    /**
-     * @return bool
-     */
-    protected function isAcrossConnections(Relation $relation)
+    protected function isAcrossConnections(Relation $relation): bool
     {
         return $relation->getParent()->getConnectionName() !== $relation->getRelated()->getConnectionName();
     }
@@ -74,14 +72,10 @@ trait QueriesRelationships
     /**
      * Compare across databases.
      *
-     * @param  string  $operator
-     * @param  int  $count
-     * @param  string  $boolean
-     * @return mixed
      *
      * @throws Exception
      */
-    public function addHybridHas(Relation $relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null)
+    public function addHybridHas(Relation $relation, string $operator = '>=', int $count = 1, string $boolean = 'and', ?Closure $callback = null): mixed
     {
         $hasQuery = $relation->getQuery();
         if ($callback) {
@@ -102,10 +96,7 @@ trait QueriesRelationships
         return $this->whereIn($this->getRelatedConstraintKey($relation), $relatedIds, $boolean, $not);
     }
 
-    /**
-     * @return string
-     */
-    protected function getHasCompareKey(Relation $relation)
+    protected function getHasCompareKey(Relation $relation): string
     {
         if (method_exists($relation, 'getHasCompareKey')) {
             return $relation->getHasCompareKey();
@@ -114,10 +105,7 @@ trait QueriesRelationships
         return $relation instanceof HasOneOrMany ? $relation->getForeignKeyName() : $relation->getOwnerKeyName();
     }
 
-    /**
-     * @return array
-     */
-    protected function getConstrainedRelatedIds($relations, $operator, $count)
+    protected function getConstrainedRelatedIds($relations, $operator, $count): array
     {
         $relationCount = array_count_values(array_map(function ($id) {
             return (string) $id; // Convert Back ObjectIds to Strings
@@ -149,11 +137,10 @@ trait QueriesRelationships
      * Returns key we are constraining this parent model's query with.
      *
      *
-     * @return string
      *
      * @throws Exception
      */
-    protected function getRelatedConstraintKey(Relation $relation)
+    protected function getRelatedConstraintKey(Relation $relation): string
     {
         if ($relation instanceof HasOneOrMany) {
             return $relation->getLocalKeyName();

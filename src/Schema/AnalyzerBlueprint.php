@@ -11,14 +11,12 @@ class AnalyzerBlueprint
 {
     /**
      * The Connection object for this blueprint.
-     *
-     * @var Connection
      */
-    protected $connection;
+    protected Connection $connection;
 
-    protected $index;
+    protected string $index = '';
 
-    protected $parameters = [];
+    protected array $parameters = [];
 
     public function __construct($index)
     {
@@ -71,19 +69,21 @@ class AnalyzerBlueprint
     // Builders
     //----------------------------------------------------------------------
 
-    public function buildIndexAnalyzerSettings(Connection $connection)
+    public function buildIndexAnalyzerSettings(Connection $connection): bool
     {
         $connection->setIndex($this->index);
         if ($this->parameters) {
             $this->_formatParams();
             $connection->indexAnalyzerSettings($this->parameters);
         }
+
+        return false;
     }
 
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
-    private function _formatParams()
+    private function _formatParams(): void
     {
         if ($this->parameters) {
             if (! empty($this->parameters['analysis'])) {

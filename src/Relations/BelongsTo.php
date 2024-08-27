@@ -10,51 +10,39 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo as BaseBelongsTo;
 
 class BelongsTo extends BaseBelongsTo
 {
-    public function getHasCompareKey()
+    public function getHasCompareKey(): string
     {
-        return $this->getOwnerKey();
-    }
-
-    /**
-     * Get the owner key with backwards compatible support.
-     *
-     * @return string
-     */
-    public function getOwnerKey()
-    {
-        return property_exists($this, 'ownerKey') ? $this->ownerKey : $this->otherKey;
+        return $this->ownerKey;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function addConstraints()
+    public function addConstraints(): void
     {
         if (static::$constraints) {
-            $this->query->where($this->getOwnerKey(), '=', $this->parent->{$this->foreignKey});
+            $this->query->where($this->ownerKey, '=', $this->parent->{$this->foreignKey});
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function addEagerConstraints(array $models)
+    public function addEagerConstraints(array $models): void
     {
 
-        $key = $this->getOwnerKey();
-
-        $this->query->whereIn($key, $this->getEagerModelKeys($models));
+        $this->query->whereIn($this->ownerKey, $this->getEagerModelKeys($models));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])
+    public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*']): Builder
     {
         return $query;
     }
 
-    protected function whereInMethod(EloquentModel $model, $key)
+    protected function whereInMethod(EloquentModel $model, $key): string
     {
         return 'whereIn';
     }

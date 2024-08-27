@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
 use PDPhilip\Elasticsearch\Relations\BelongsTo;
-use PDPhilip\Elasticsearch\Relations\BelongsToMany;
 use PDPhilip\Elasticsearch\Relations\HasMany;
 use PDPhilip\Elasticsearch\Relations\HasOne;
 use PDPhilip\Elasticsearch\Relations\MorphMany;
@@ -20,7 +19,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function hasOne($related, $foreignKey = null, $localKey = null)
+    public function hasOne($related, $foreignKey = null, $localKey = null): HasOne
     {
         $foreignKey = $foreignKey ?: $this->getForeignKey();
 
@@ -34,7 +33,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphOne($related, $name, $type = null, $id = null, $localKey = null)
+    public function morphOne($related, $name, $type = null, $id = null, $localKey = null): MorphOne
     {
         $instance = new $related;
 
@@ -49,7 +48,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function hasMany($related, $foreignKey = null, $localKey = null)
+    public function hasMany($related, $foreignKey = null, $localKey = null): HasMany
     {
         $foreignKey = $foreignKey ?: $this->getForeignKey();
 
@@ -63,7 +62,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
+    public function morphMany($related, $name, $type = null, $id = null, $localKey = null): MorphMany
     {
 
         $instance = new $related;
@@ -80,7 +79,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null)
+    public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null): BelongsTo
     {
 
         if ($relation === null) {
@@ -105,7 +104,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null)
+    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null): MorphTo
     {
         if ($name === null) {
             [$current, $caller] = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
@@ -133,54 +132,26 @@ trait HybridRelations
     }
 
     /**
-     * {@inheritDoc}
-     */
-    public function belongsToMany($related, $collection = null, $foreignKey = null, $otherKey = null, $parentKey = null, $relatedKey = null, $relation = null)
-    {
-
-        if ($relation === null) {
-            $relation = $this->guessBelongsToManyRelation();
-        }
-
-        if (! is_subclass_of($related, ParentModel::class)) {
-            return parent::belongsToMany($related, $collection, $foreignKey, $otherKey, $parentKey, $relatedKey, $relation);
-        }
-
-        $foreignKey = $foreignKey ?: $this->getForeignKey().'s';
-        $instance = new $related;
-        $otherKey = $otherKey ?: $instance->getForeignKey().'s';
-
-        if ($collection === null) {
-            $collection = $instance->getTable();
-        }
-
-        $query = $instance->newQuery();
-
-        return new BelongsToMany($query, $this, $collection, $foreignKey, $otherKey, $parentKey ?: $this->getKeyName(), $relatedKey ?: $instance->getKeyName(), $relation
-        );
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    protected function guessBelongsToManyRelation()
-    {
-        if (method_exists($this, 'getBelongsToManyCaller')) {
-            return $this->getBelongsToManyCaller();
-        }
-
-        return parent::guessBelongsToManyRelation();
-    }
-
-    /**
      * {@inheritdoc}
      */
-    public function newEloquentBuilder($query)
+    public function newEloquentBuilder($query): EloquentBuilder|Builder
     {
         if (is_subclass_of($this, ParentModel::class)) {
             return new Builder($query);
         }
 
         return new EloquentBuilder($query);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    protected function guessBelongsToManyRelation(): string
+    {
+        if (method_exists($this, 'getBelongsToManyCaller')) {
+            return $this->getBelongsToManyCaller();
+        }
+
+        return parent::guessBelongsToManyRelation();
     }
 }

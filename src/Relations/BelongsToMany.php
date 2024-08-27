@@ -21,6 +21,7 @@ class BelongsToMany extends BaseBelongsToMany
         $relatedKey,
         $relationName = null
     ) {
+        parent::__construct($query, $parent, $table, $foreignPivotKey, $relatedPivotKey, $parentKey, $relatedKey, $relationName);
         throw new RuntimeException('BelongsToMany relation is currently not supported for this package. You can create a model as a pivot table and use HasMany relations to that instead.');
     }
 }

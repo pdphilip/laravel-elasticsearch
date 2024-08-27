@@ -4,36 +4,65 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch;
 
+use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
+use PDPhilip\Elasticsearch\DSL\Results;
 use RuntimeException;
 
+/**
+ * @method bool indexModify(array $settings)
+ * @method bool indexCreate(string $index, Closure $callback = null)
+ * @method array indexSettings(string $index)
+ * @method array getIndices(bool $all = false)
+ * @method bool indexExists(string $index)
+ * @method bool indexDelete()
+ * @method array indexMappings(string $index)
+ * @method Results indicesDsl(string $method, array $params)
+ * @method Results reIndex(string $from, string $to)
+ * @method bool indexAnalyzerSettings(array $settings)
+ * @method Results distinctAggregate(string $function, array $wheres, array $options, array $columns)
+ * @method Results aggregate(string $function, array $wheres, array $options, array $columns)
+ * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
+ * @method Results find(array $wheres, array $options, array $columns)
+ * @method Results save(array $data, string $refresh)
+ * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)
+ * @method Results deleteAll(array $wheres, array $options = [])
+ * @method Results searchRaw(array $bodyParams, bool $returnRaw = false)
+ * @method Results aggregationRaw(array $bodyParams)
+ * @method Results search(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
+ * @method array toDsl(array $wheres, array $options, array $columns)
+ * @method array toDslForSearch(array $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
+ * @method string openPit(string $keepAlive = '5m')
+ * @method bool closePit(string $id)
+ * @method Results pitFind(array $wheres, array $options, array $fields, string $pitId, ?array $after, string $keepAlive)
+ */
 class Connection extends BaseConnection
 {
-    protected $client;
+    protected Client $client;
 
-    protected $index;
+    protected string $index = '';
 
-    protected $maxSize;
+    protected int $maxSize = 10;
 
-    protected $indexPrefix;
+    protected ?string $indexPrefix;
 
-    protected $allowIdSort = false;
+    protected bool $allowIdSort = false;
 
-    protected $errorLoggingIndex = false;
+    protected ?string $errorLoggingIndex = null;
 
-    protected $sslVerification = true;
+    protected bool $sslVerification = true;
 
-    protected $retires = null; //null will use default
+    protected ?int $retires = null; //null will use default
 
-    protected $elasticMetaHeader = null;
+    protected mixed $elasticMetaHeader = null;
 
-    protected $rebuild = false;
+    protected bool $rebuild = false;
 
-    protected $connectionName = 'elasticsearch';
+    protected string $connectionName = 'elasticsearch';
 
     public function __construct(array $config)
     {
@@ -112,7 +141,7 @@ class Connection extends BaseConnection
         return $this->errorLoggingIndex;
     }
 
-    public function getSchemaGrammar()
+    public function getSchemaGrammar(): Schema\Grammar
     {
         return new Schema\Grammar($this);
     }
@@ -144,7 +173,7 @@ class Connection extends BaseConnection
     /**
      * {@inheritdoc}
      */
-    public function getSchemaBuilder()
+    public function getSchemaBuilder(): Schema\Builder
     {
         return new Schema\Builder($this);
     }
@@ -152,7 +181,7 @@ class Connection extends BaseConnection
     /**
      * {@inheritdoc}
      */
-    public function disconnect()
+    public function disconnect(): void
     {
         unset($this->connection);
     }
@@ -165,27 +194,27 @@ class Connection extends BaseConnection
         return 'elasticsearch';
     }
 
-    public function rebuildConnection()
+    public function rebuildConnection(): void
     {
         $this->rebuild = true;
     }
 
-    public function getClient()
+    public function getClient(): Client
     {
         return $this->client;
     }
 
-    public function getMaxSize()
+    public function getMaxSize(): int
     {
         return $this->maxSize;
     }
 
-    public function setMaxSize($value)
+    public function setMaxSize($value): void
     {
         $this->maxSize = $value;
     }
 
-    public function getAllowIdSort()
+    public function getAllowIdSort(): bool
     {
         return $this->allowIdSort;
     }
@@ -207,7 +236,7 @@ class Connection extends BaseConnection
     /**
      * {@inheritdoc}
      */
-    protected function getDefaultPostProcessor()
+    protected function getDefaultPostProcessor(): Query\Processor
     {
         return new Query\Processor;
     }
@@ -219,7 +248,7 @@ class Connection extends BaseConnection
     /**
      * {@inheritdoc}
      */
-    protected function getDefaultQueryGrammar()
+    protected function getDefaultQueryGrammar(): Query\Grammar
     {
         return new Query\Grammar;
     }
@@ -227,7 +256,7 @@ class Connection extends BaseConnection
     /**
      * {@inheritdoc}
      */
-    protected function getDefaultSchemaGrammar()
+    protected function getDefaultSchemaGrammar(): Schema\Grammar
     {
         return new Schema\Grammar;
     }

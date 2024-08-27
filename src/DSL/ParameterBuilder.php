@@ -15,16 +15,16 @@ class ParameterBuilder
         ];
     }
 
-    public static function queryStringQuery($string): array
-    {
-        return [
-            'query' => [
-                'query_string' => [
-                    'query' => $string,
-                ],
-            ],
-        ];
-    }
+    //    public static function queryStringQuery($string): array
+    //    {
+    //        return [
+    //            'query' => [
+    //                'query_string' => [
+    //                    'query' => $string,
+    //                ],
+    //            ],
+    //        ];
+    //    }
 
     public static function query($dsl): array
     {
@@ -77,7 +77,7 @@ class ParameterBuilder
         ];
     }
 
-    public static function filterNested($field, $payload)
+    public static function filterNested($field, $payload): array
     {
         $sort = [];
         $pathParts = explode('.', $field);
@@ -95,7 +95,7 @@ class ParameterBuilder
         ];
     }
 
-    public static function multipleAggregations($aggregations, $field)
+    public static function multipleAggregations($aggregations, $field): array
     {
         $aggs = [];
         foreach ($aggregations as $aggregation) {

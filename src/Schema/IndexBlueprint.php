@@ -11,16 +11,14 @@ class IndexBlueprint
 {
     /**
      * The Connection object for this blueprint.
-     *
-     * @var Connection
      */
-    protected $connection;
+    protected Connection $connection;
 
-    protected $index;
+    protected string $index = '';
 
-    protected $newIndex;
+    protected ?string $newIndex;
 
-    protected $parameters = [];
+    protected array $parameters = [];
 
     public function __construct($index, $newIndex = null)
     {
@@ -177,7 +175,7 @@ class IndexBlueprint
     // Builders
     //======================================================================
 
-    public function buildIndexCreate(Connection $connection)
+    public function buildIndexCreate(Connection $connection): void
     {
         $connection->setIndex($this->index);
         if ($this->parameters) {
@@ -186,7 +184,7 @@ class IndexBlueprint
         }
     }
 
-    private function _formatParams()
+    private function _formatParams(): void
     {
         if ($this->parameters) {
             if (! empty($this->parameters['properties'])) {
@@ -203,17 +201,17 @@ class IndexBlueprint
         }
     }
 
-    public function buildReIndex(Connection $connection)
-    {
-        return $connection->reIndex($this->index, $this->newIndex);
-    }
+    //    public function buildReIndex(Connection $connection): void
+    //    {
+    //        return $connection->reIndex($this->index, $this->newIndex);
+    //    }
 
     //----------------------------------------------------------------------
     // Internal Laravel init migration catchers
     // *Case for when ES is the only datasource
     //----------------------------------------------------------------------
 
-    public function buildIndexModify(Connection $connection)
+    public function buildIndexModify(Connection $connection): void
     {
         $connection->setIndex($this->index);
         if ($this->parameters) {
@@ -222,7 +220,7 @@ class IndexBlueprint
         }
     }
 
-    public function increments($column)
+    public function increments($column): Definitions\FieldDefinition
     {
         return $this->addField('keyword', $column);
     }
@@ -231,7 +229,7 @@ class IndexBlueprint
     // Helpers
     //----------------------------------------------------------------------
 
-    public function string($column)
+    public function string($column): Definitions\FieldDefinition
     {
         return $this->addField('keyword', $column);
     }

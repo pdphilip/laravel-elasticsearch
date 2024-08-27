@@ -22,25 +22,21 @@ class HasMany extends BaseHasMany
 
     /**
      * Get the key for comparing against the parent key in "has" query.
-     *
-     * @return string
      */
-    public function getHasCompareKey()
+    public function getHasCompareKey(): string
     {
         return $this->getForeignKeyName();
     }
 
     /**
      * Get the plain foreign key.
-     *
-     * @return string
      */
-    public function getForeignKeyName()
+    public function getForeignKeyName(): string
     {
         return $this->foreignKey;
     }
 
-    protected function whereInMethod(EloquentModel $model, $key)
+    protected function whereInMethod(EloquentModel $model, $key): string
     {
         return 'whereIn';
     }

@@ -36,13 +36,7 @@ use Illuminate\Support\Facades\Facade;
  */
 class Schema extends Facade
 {
-    //    protected static $app;
-    //
-    //    protected static $resolvedInstance;
-    //
-    //
-    //    protected static $cached = false;
-    public static function on($name)
+    public static function on($name): Builder
     {
         return static::connection($name);
     }
@@ -51,9 +45,8 @@ class Schema extends Facade
      * Get a schema builder instance for a connection.
      *
      * @param  string|null  $name
-     * @return Builder
      */
-    public static function connection($name)
+    public static function connection($name): Builder
     {
 
         if ($name === null) {
@@ -65,15 +58,12 @@ class Schema extends Facade
 
     /**
      * Get a schema builder instance for the default connection.
-     *
-     * @return Builder
      */
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): Builder
     {
         return static::$app['db']->connection('elasticsearch')->getSchemaBuilder();
     }
 
-    //
     public static function __callStatic($method, $args)
     {
         $instance = static::getFacadeAccessor();

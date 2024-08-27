@@ -25,17 +25,24 @@ abstract class Model extends BaseModel
 
     const MAX_SIZE = 1000;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string|null
+     *
+     * @phpstan-ignore-next-line
+     */
     protected $index;
 
-    protected $recordIndex;
+    protected ?string $recordIndex;
 
     protected $primaryKey = '_id';
 
     protected $keyType = 'string';
 
-    protected $parentRelation;
+    protected ?Relation $parentRelation;
 
-    protected $_meta = [];
+    protected array $_meta = [];
 
     public function __construct(array $attributes = [])
     {
@@ -45,12 +52,12 @@ abstract class Model extends BaseModel
         $this->forcePrimaryKey();
     }
 
-    public function forcePrimaryKey()
+    public function forcePrimaryKey(): void
     {
         $this->primaryKey = '_id';
     }
 
-    public function getRecordIndex()
+    public function getRecordIndex(): ?string
     {
         return $this->recordIndex;
     }
@@ -64,6 +71,9 @@ abstract class Model extends BaseModel
         return $this->recordIndex = $this->index;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function setTable($index)
     {
         $this->index = $index;
@@ -85,24 +95,24 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getQualifiedKeyName()
+    public function getQualifiedKeyName(): string
     {
         return $this->getKeyName();
     }
 
-    public function getMeta()
+    public function getMeta(): object
     {
         return (object) $this->_meta;
     }
 
-    public function setMeta($meta)
+    public function setMeta($meta): static
     {
         $this->_meta = $meta;
 
         return $this;
     }
 
-    public function getSearchHighlightsAttribute()
+    public function getSearchHighlightsAttribute(): ?object
     {
         if (! empty($this->_meta['highlights'])) {
             $data = [];
@@ -114,7 +124,7 @@ abstract class Model extends BaseModel
         return null;
     }
 
-    protected function _mergeFlatKeysIntoNestedArray(&$data, $attrs)
+    protected function _mergeFlatKeysIntoNestedArray(&$data, $attrs): void
     {
         foreach ($attrs as $key => $value) {
             if ($value) {
@@ -137,7 +147,7 @@ abstract class Model extends BaseModel
         }
     }
 
-    public function getSearchHighlightsAsArrayAttribute()
+    public function getSearchHighlightsAsArrayAttribute(): array
     {
         if (! empty($this->_meta['highlights'])) {
             return $this->_meta['highlights'];
@@ -146,7 +156,7 @@ abstract class Model extends BaseModel
         return [];
     }
 
-    public function getWithHighlightsAttribute()
+    public function getWithHighlightsAttribute(): object
     {
         $data = $this->attributes;
         $mutators = array_values(array_diff($this->getMutatedAttributes(), ['id', 'search_highlights', 'search_highlights_as_array', 'with_highlights']));
@@ -165,7 +175,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function freshTimestamp()
+    public function freshTimestamp(): string
     {
         //        return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
@@ -174,12 +184,12 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getDateFormat()
+    public function getDateFormat(): string
     {
         return $this->dateFormat ?: 'Y-m-d H:i:s';
     }
 
-    public function getIndex()
+    public function getIndex(): string
     {
         return $this->index ?: parent::getTable();
     }
@@ -196,7 +206,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getTable()
+    public function getTable(): string
     {
         return $this->getIndex();
     }
@@ -204,10 +214,10 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getAttribute($key)
+    public function getAttribute($key): mixed
     {
         if (! $key) {
-            return;
+            return null;
         }
 
         // Dot notation support.
@@ -221,7 +231,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function setAttribute($key, $value)
+    public function setAttribute($key, $value): mixed
     {
 
         if (Str::contains($key, '.')) {
@@ -231,7 +241,7 @@ abstract class Model extends BaseModel
 
             Arr::set($this->attributes, $key, $value);
 
-            return;
+            return null;
         }
 
         return parent::setAttribute($key, $value);
@@ -240,7 +250,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function fromDateTime($value)
+    public function fromDateTime($value): Carbon
     {
         return parent::asDateTime($value);
     }
@@ -248,7 +258,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    protected function asDateTime($value)
+    protected function asDateTime($value): Carbon
     {
 
         return parent::asDateTime($value);
@@ -257,7 +267,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getCasts()
+    public function getCasts(): array
     {
         return $this->casts;
     }
@@ -265,7 +275,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function originalIsEquivalent($key)
+    public function originalIsEquivalent($key): bool
     {
         if (! array_key_exists($key, $this->original)) {
             return false;
@@ -293,7 +303,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function getForeignKey()
+    public function getForeignKey(): string
     {
         return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
     }
@@ -301,14 +311,14 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    public function newEloquentBuilder($query)
+    public function newEloquentBuilder($query): Builder
     {
         $builder = new Builder($query);
 
         return $builder;
     }
 
-    public function saveWithoutRefresh(array $options = [])
+    public function saveWithoutRefresh(array $options = []): bool
     {
         $this->mergeAttributesFromCachedCasts();
 
@@ -316,7 +326,7 @@ abstract class Model extends BaseModel
         $query->setRefresh(false);
 
         if ($this->exists) {
-            $saved = $this->isDirty() ? $this->performUpdate($query) : true;
+            $saved = ! $this->isDirty() || $this->performUpdate($query);
         } else {
             $saved = $this->performInsert($query);
         }
@@ -330,11 +340,8 @@ abstract class Model extends BaseModel
 
     /**
      * Append one or more values to the underlying attribute value and sync with original.
-     *
-     * @param  string  $column
-     * @param  bool  $unique
      */
-    protected function pushAttributeValues($column, array $values, $unique = false)
+    protected function pushAttributeValues(string $column, array $values, bool $unique = false): void
     {
         $current = $this->getAttributeFromArray($column) ?: [];
 
@@ -355,7 +362,7 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    protected function getAttributeFromArray($key)
+    protected function getAttributeFromArray($key): mixed
     {
         // Support keys in dot notation.
         if (Str::contains($key, '.')) {
@@ -367,10 +374,8 @@ abstract class Model extends BaseModel
 
     /**
      * Remove one or more values to the underlying attribute value and sync with original.
-     *
-     * @param  string  $column
      */
-    protected function pullAttributeValues($column, array $values)
+    protected function pullAttributeValues(string $column, array $values): void
     {
         $current = $this->getAttributeFromArray($column) ?: [];
 
@@ -410,7 +415,7 @@ abstract class Model extends BaseModel
         return new QueryBuilder($connection, $connection->getPostProcessor());
     }
 
-    public function getMaxSize()
+    public function getMaxSize(): int
     {
         return static::MAX_SIZE;
     }
@@ -418,17 +423,15 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    protected function removeTableFromKey($key)
+    protected function removeTableFromKey($key): string
     {
         return $key;
     }
 
     /**
      * Get loaded relations for the instance without parent.
-     *
-     * @return array
      */
-    protected function getRelationsWithoutParent()
+    protected function getRelationsWithoutParent(): array
     {
         $relations = $this->getRelations();
 
@@ -441,10 +444,8 @@ abstract class Model extends BaseModel
 
     /**
      * Get the parent relation.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\Relation
      */
-    public function getParentRelation()
+    public function getParentRelation(): \Illuminate\Database\Eloquent\Relations\Relation
     {
         return $this->parentRelation;
     }
@@ -452,7 +453,7 @@ abstract class Model extends BaseModel
     /**
      * Set the parent relation.
      */
-    public function setParentRelation(Relation $relation)
+    public function setParentRelation(Relation $relation): void
     {
         $this->parentRelation = $relation;
     }
@@ -461,7 +462,7 @@ abstract class Model extends BaseModel
     // Helpers
     //----------------------------------------------------------------------
 
-    protected function isGuardableColumn($key)
+    protected function isGuardableColumn($key): bool
     {
         return true;
     }

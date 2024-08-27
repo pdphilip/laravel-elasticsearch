@@ -8,7 +8,7 @@ use Exception;
 
 class ParameterException extends Exception
 {
-    private array $_details = [];
+    private array $_details;
 
     public function __construct($message, $code = 0, ?Exception $previous = null, $details = [])
     {
@@ -17,7 +17,7 @@ class ParameterException extends Exception
         $this->_details = $details;
     }
 
-    public function getDetails()
+    public function getDetails(): array
     {
         return $this->_details;
     }

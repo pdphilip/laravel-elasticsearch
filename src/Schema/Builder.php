@@ -7,10 +7,11 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Closure;
 use Exception;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\DSL\Results;
 
 class Builder
 {
-    protected $connection;
+    protected Connection $connection;
 
     public function __construct(Connection $connection)
     {
@@ -28,14 +29,14 @@ class Builder
         return $this;
     }
 
-    public function getSettings($index)
+    public function getSettings($index): array
     {
         $this->connection->setIndex($index);
 
         return $this->connection->indexSettings($this->connection->getIndex());
     }
 
-    public function getIndex($index)
+    public function getIndex($index): array
     {
         if ($this->hasIndex($index)) {
             $this->connection->setIndex($index);
@@ -47,14 +48,14 @@ class Builder
 
     }
 
-    public function hasIndex($index)
+    public function hasIndex($index): bool
     {
         $index = $this->connection->setIndex($index);
 
         return $this->connection->indexExists($index);
     }
 
-    public function getIndices()
+    public function getIndices(): array
     {
         return $this->connection->getIndices(false);
     }
@@ -63,7 +64,7 @@ class Builder
     //  Create Index
     //----------------------------------------------------------------------
 
-    public function create($index, Closure $callback)
+    public function create($index, Closure $callback): array
     {
         $this->builder('buildIndexCreate', tap(new IndexBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
@@ -72,7 +73,7 @@ class Builder
         return $this->getIndex($index);
     }
 
-    protected function builder($builder, IndexBlueprint $blueprint)
+    protected function builder($builder, IndexBlueprint $blueprint): void
     {
         $blueprint->{$builder}($this->connection);
     }
@@ -81,7 +82,7 @@ class Builder
     // Reindex
     //----------------------------------------------------------------------
 
-    public function createIfNotExists($index, Closure $callback)
+    public function createIfNotExists($index, Closure $callback): array
     {
         if ($this->hasIndex($index)) {
             return $this->getIndex($index);
@@ -97,7 +98,7 @@ class Builder
     // Modify Index
     //----------------------------------------------------------------------
 
-    public function reIndex($from, $to)
+    public function reIndex($from, $to): Results
     {
         return $this->connection->reIndex($from, $to);
     }
@@ -106,7 +107,7 @@ class Builder
     // Delete Index
     //----------------------------------------------------------------------
 
-    public function modify($index, Closure $callback)
+    public function modify($index, Closure $callback): array
     {
         $this->builder('buildIndexModify', tap(new IndexBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
@@ -115,7 +116,7 @@ class Builder
         return $this->getIndex($index);
     }
 
-    public function delete($index)
+    public function delete($index): bool
     {
         $this->connection->setIndex($index);
 
@@ -126,7 +127,7 @@ class Builder
     // Index template
     //----------------------------------------------------------------------
 
-    public function deleteIfExists($index)
+    public function deleteIfExists($index): bool
     {
         if ($this->hasIndex($index)) {
             $this->connection->setIndex($index);
@@ -150,7 +151,7 @@ class Builder
     // Index ops
     //----------------------------------------------------------------------
 
-    public function setAnalyser($index, Closure $callback)
+    public function setAnalyser($index, Closure $callback): array
     {
         $this->analyzerBuilder('buildIndexAnalyzerSettings', tap(new AnalyzerBlueprint($index), function ($blueprint) use ($callback) {
             $callback($blueprint);
@@ -159,12 +160,12 @@ class Builder
         return $this->getIndex($index);
     }
 
-    protected function analyzerBuilder($builder, AnalyzerBlueprint $blueprint)
+    protected function analyzerBuilder($builder, AnalyzerBlueprint $blueprint): void
     {
         $blueprint->{$builder}($this->connection);
     }
 
-    public function hasField($index, $field)
+    public function hasField($index, $field): bool
     {
         $index = $this->connection->setIndex($index);
 
@@ -188,7 +189,7 @@ class Builder
     // Manual
     //----------------------------------------------------------------------
 
-    public function getMappings($index)
+    public function getMappings($index): array
     {
         $this->connection->setIndex($index);
 
@@ -199,7 +200,7 @@ class Builder
     // Helpers
     //----------------------------------------------------------------------
 
-    private function _flattenFields($array, $prefix = '')
+    private function _flattenFields($array, $prefix = ''): array
     {
 
         $result = [];
@@ -214,7 +215,7 @@ class Builder
         return $result;
     }
 
-    private function _sanitizeFlatFields($flatFields)
+    private function _sanitizeFlatFields($flatFields): array
     {
         $fields = [];
         if ($flatFields) {
@@ -234,7 +235,7 @@ class Builder
         return $fields;
     }
 
-    public function hasFields($index, array $fields)
+    public function hasFields($index, array $fields): bool
     {
         $index = $this->connection->setIndex($index);
 
@@ -262,7 +263,7 @@ class Builder
     // *Case for when ES is the only datasource
     //----------------------------------------------------------------------
 
-    public function dsl($method, $params)
+    public function dsl($method, $params): Results
     {
         return $this->connection->indicesDsl($method, $params);
     }
@@ -271,12 +272,12 @@ class Builder
     // Builders
     //----------------------------------------------------------------------
 
-    public function flatten($array, $prefix = '')
+    public function flatten($array, $prefix = ''): array
     {
         $result = [];
         foreach ($array as $key => $value) {
             if (is_array($value)) {
-                $result = $result + flatten($value, $prefix.$key.'.');
+                $result = $result + $this->flatten($value, $prefix.$key.'.');
             } else {
                 $result[$prefix.$key] = $value;
             }
@@ -285,7 +286,7 @@ class Builder
         return $result;
     }
 
-    public function hasTable($table)
+    public function hasTable($table): array
     {
         return $this->getIndex($table);
     }

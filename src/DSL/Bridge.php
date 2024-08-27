@@ -71,7 +71,64 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false, $keepAlive = '5m')
+    private function throwError(Exception $exception, $params, $queryTag): QueryException
+    {
+        $previous = get_class($exception);
+        $errorMsg = $exception->getMessage();
+        $errorCode = $exception->getCode();
+        $queryTag = str_replace('_', '', $queryTag);
+        $this->connection->rebuildConnection();
+        $error = new Results([], [], $params, $queryTag);
+        $error->setError($errorMsg, $errorCode);
+
+        $meta = $error->getMetaData();
+        $details = [
+            'error' => $meta['error']['msg'],
+            'details' => $meta['error']['data'],
+            'code' => $errorCode,
+            'exception' => $previous,
+            'query' => $queryTag,
+            'params' => $params,
+            'original' => $errorMsg,
+        ];
+        if ($this->errorLogger) {
+            $this->_logQuery($error, $details);
+        }
+        // For details catch $exception then $exception->getDetails()
+        throw new QueryException($meta['error']['msg'], $errorCode, new $previous, $details);
+    }
+
+    private function _logQuery(Results $results, $details)
+    {
+        $body = $results->getLogFormattedMetaData();
+        if ($details) {
+            $body['details'] = (array) $details;
+        }
+        $params = [
+            'index' => $this->errorLogger,
+            'body' => $body,
+        ];
+        try {
+            $this->client->index($params);
+        } catch (Exception $e) {
+            //ignore if problem writing query log
+        }
+    }
+
+    //----------------------------------------------------------------------
+    //  BYO Query
+    //----------------------------------------------------------------------
+
+    private function _queryTag($function)
+    {
+        return str_replace('process', '', $function);
+    }
+
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
+    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false, $keepAlive = '5m'): Results
     {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         unset($params['index']);
@@ -100,6 +157,54 @@ class Bridge
 
     }
 
+    private function _sanitizePitSearchResponse($response, $params, $queryTag)
+    {
+
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['last_sort'] = null;
+        $data = [];
+        if (! empty($response['hits']['hits'])) {
+            foreach ($response['hits']['hits'] as $hit) {
+                $datum = [];
+                $datum['_index'] = $hit['_index'];
+                $datum['_id'] = $hit['_id'];
+                if (! empty($hit['_source'])) {
+                    foreach ($hit['_source'] as $key => $value) {
+                        $datum[$key] = $value;
+                    }
+                }
+                if (! empty($hit['sort'][0])) {
+                    $meta['last_sort'] = $hit['sort'];
+                }
+                $data[] = $datum;
+
+            }
+        }
+
+        return $this->_return($data, $meta, $params, $queryTag);
+    }
+
+    //----------------------------------------------------------------------
+    // To DSL
+    //----------------------------------------------------------------------
+
+    private function _return($data, $meta, $params, $queryTag): Results
+    {
+        if (is_object($meta)) {
+            $metaAsArray = [];
+            if (method_exists($meta, 'asArray')) {
+                $metaAsArray = $meta->asArray();
+            }
+            $results = new Results($data, $metaAsArray, $params, $queryTag);
+        } else {
+            $results = new Results($data, $meta, $params, $queryTag);
+        }
+
+        return $results;
+    }
+
     /**
      * @throws QueryException
      */
@@ -125,7 +230,7 @@ class Bridge
     }
 
     //----------------------------------------------------------------------
-    //  BYO Query
+    // Read Queries
     //----------------------------------------------------------------------
 
     /**
@@ -151,6 +256,91 @@ class Bridge
         }
     }
 
+    private function _sanitizeSearchResponse($response, $params, $queryTag)
+    {
+
+        $meta['took'] = $response['took'] ?? 0;
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['shards'] = $response['_shards'] ?? [];
+        $data = [];
+        if (! empty($response['hits']['hits'])) {
+            foreach ($response['hits']['hits'] as $hit) {
+                $datum = [];
+                $datum['_index'] = $hit['_index'];
+                $datum['_id'] = $hit['_id'];
+                if (! empty($hit['_source'])) {
+
+                    foreach ($hit['_source'] as $key => $value) {
+                        $datum[$key] = $value;
+                    }
+
+                }
+                if (! empty($hit['inner_hits'])) {
+                    foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
+                        $datum[$innerKey] = $this->_filterInnerHits($innerHit);
+                    }
+                }
+
+                //Meta data
+                if (! empty($hit['highlight'])) {
+                    $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
+                }
+
+                $datum['_meta']['_index'] = $hit['_index'];
+                $datum['_meta']['_id'] = $hit['_id'];
+                if (! empty($hit['_score'])) {
+                    $datum['_meta']['_score'] = $hit['_score'];
+                }
+                $datum['_meta']['_query'] = $meta;
+
+                // If we are sorting we need to store it to be able to pass it on in the search after.
+                $datum['_meta']['sort'] = ! empty($hit['sort']) ? $hit['sort'] : null;
+                $data[] = $datum;
+            }
+        }
+
+        return $this->_return($data, $meta, $params, $queryTag);
+    }
+
+    private function _filterInnerHits($innerHit)
+    {
+        $hits = [];
+        foreach ($innerHit['hits']['hits'] as $inner) {
+            $innerDatum = [];
+            if (! empty($inner['_source'])) {
+                foreach ($inner['_source'] as $innerSourceKey => $innerSourceValue) {
+                    $innerDatum[$innerSourceKey] = $innerSourceValue;
+                }
+            }
+            $hits[] = $innerDatum;
+        }
+
+        return $hits;
+    }
+
+    private function _sanitizeHighlights($highlights)
+    {
+        //remove keyword results
+        foreach ($highlights as $field => $vals) {
+            if (str_contains($field, '.keyword')) {
+                $cleanField = str_replace('.keyword', '', $field);
+                if (isset($highlights[$cleanField])) {
+                    unset($highlights[$field]);
+                } else {
+                    $highlights[$cleanField] = $vals;
+                }
+            }
+        }
+
+        return $highlights;
+    }
+
+    //----------------------------------------------------------------------
+    // Write Queries
+    //----------------------------------------------------------------------
+
     /**
      * @throws QueryException
      */
@@ -171,6 +361,42 @@ class Bridge
         }
     }
 
+    private function _sanitizeRawAggsResponse($response, $params, $queryTag)
+    {
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['sorts'] = [];
+        $data = [];
+        if (! empty($response['aggregations'])) {
+            foreach ($response['aggregations'] as $key => $values) {
+                $data[$key] = $this->_formatAggs($key, $values)[$key];
+            }
+        }
+
+        return $this->_return($data, $meta, $params, $queryTag);
+    }
+
+    private function _formatAggs($key, $values)
+    {
+        $data[$key] = [];
+        $aggTypes = ['buckets', 'values'];
+
+        foreach ($values as $subKey => $value) {
+            if (in_array($subKey, $aggTypes)) {
+                $data[$key] = $this->_formatAggs($subKey, $value)[$subKey];
+            } elseif (is_array($value)) {
+                $data[$key][$subKey] = $this->_formatAggs($subKey, $value)[$subKey];
+            } else {
+                $data[$key][$subKey] = $value;
+            }
+
+        }
+
+        return $data;
+
+    }
+
     /**
      * @throws QueryException
      */
@@ -187,47 +413,54 @@ class Bridge
     }
 
     //----------------------------------------------------------------------
-    // To DSL
+    // Delete Queries
     //----------------------------------------------------------------------
 
-    public function processToDsl($wheres, $options, $columns)
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
+    public function processToDsl($wheres, $options, $columns): array
     {
         return $this->buildParams($this->index, $wheres, $options, $columns);
     }
 
-    public function processToDslForSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
+    //    public function processScript($id, $script)
+    //    {
+    //        //        $params = [
+    //        //            'id'    => $id,
+    //        //            'index' => $this->index,
+    //        //        ];
+    //        //        if ($script) {
+    //        //            $params['body']['script']['source'] = $script;
+    //        //        }
+    //        //
+    //        //        $response = $this->client->update($params);
+    //        //
+    //        //        $n = new self($this->index);
+    //        //        $find = $n->processFind($id);
+    //
+    //        //        return $this->_return($find->data, $response, $params, $this->_queryTag(__FUNCTION__));
+    //    }
+
+    //----------------------------------------------------------------------
+    // Index administration
+    //----------------------------------------------------------------------
+
+    /**
+     * @throws ParameterException
+     * @throws QueryException
+     */
+    public function processToDslForSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols): array
     {
         return $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
     }
 
     /**
+     * @throws QueryException
      * @throws ParameterException
      */
-    public function processShowQuery($wheres, $options, $columns)
-    {
-        $params = $this->buildParams($this->index, $wheres, $options, $columns);
-
-        return $params['body'] ?? null;
-    }
-
-    //----------------------------------------------------------------------
-    // Read Queries
-    //----------------------------------------------------------------------
-
-    /**
-     * @throws QueryException
-     */
-    public function processFind($wheres, $options, $columns): Results
-    {
-        $params = $this->buildParams($this->index, $wheres, $options, $columns);
-
-        return $this->_returnSearch($params, __FUNCTION__);
-    }
-
-    /**
-     * @throws QueryException
-     */
-    public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols)
+    public function processSearch($searchParams, $searchOptions, $wheres, $opts, $fields, $cols): Results
     {
         $params = $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
 
@@ -238,7 +471,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    protected function _returnSearch($params, $source)
+    protected function _returnSearch($params, $source): Results
     {
 
         if (empty($params['size'])) {
@@ -258,54 +491,11 @@ class Bridge
 
     /**
      * @throws QueryException
-     * @throws ParameterException
      */
-    public function processDistinct($wheres, $options, $columns, $includeDocCount = false): Results
+    public function processInsertOne($values, $refresh): Results
     {
-        if ($columns && ! is_array($columns)) {
-            $columns = [$columns];
-        }
-        $sort = $options['sort'] ?? [];
-        $skip = $options['skip'] ?? 0;
-        $limit = $options['limit'] ?? 0;
-        unset($options['sort']);
-        unset($options['skip']);
-        unset($options['limit']);
-
-        if ($sort) {
-            $sortField = key($sort);
-            $sortDir = $sort[$sortField]['order'] ?? 'asc';
-            $sort = [$sortField => $sortDir];
-        }
-
-        $params = $this->buildParams($this->index, $wheres, $options);
-        try {
-
-            $params['body']['aggs'] = $this->createNestedAggs($columns, $sort);
-
-            $response = $this->client->search($params);
-
-            $data = [];
-            if (! empty($response['aggregations'])) {
-                $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
-            }
-
-            //process limit and skip from all results
-            if ($skip || $limit) {
-                $data = array_slice($data, $skip, $limit);
-            }
-
-            return $this->_return($data, $response, $params, $this->_queryTag(__FUNCTION__));
-        } catch (Exception $e) {
-
-            $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
-        }
-
+        return $this->processSave($values, $refresh);
     }
-
-    //----------------------------------------------------------------------
-    // Write Queries
-    //----------------------------------------------------------------------
 
     /**
      * @throws QueryException
@@ -349,14 +539,6 @@ class Bridge
 
     /**
      * @throws QueryException
-     */
-    public function processInsertOne($values, $refresh): Results
-    {
-        return $this->processSave($values, $refresh);
-    }
-
-    /**
-     * @throws QueryException
      * @throws ParameterException
      */
     public function processUpdateMany($wheres, $newValues, $options, $refresh = null): Results
@@ -387,6 +569,17 @@ class Bridge
         $params['updateValues'] = $newValues;
 
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
+    }
+
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
+    public function processFind($wheres, $options, $columns): Results
+    {
+        $params = $this->buildParams($this->index, $wheres, $options, $columns);
+
+        return $this->_returnSearch($params, __FUNCTION__);
     }
 
     /**
@@ -433,10 +626,6 @@ class Bridge
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
 
-    //----------------------------------------------------------------------
-    // Delete Queries
-    //----------------------------------------------------------------------
-
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -471,26 +660,8 @@ class Bridge
 
     }
 
-    public function processScript($id, $script)
-    {
-        //        $params = [
-        //            'id'    => $id,
-        //            'index' => $this->index,
-        //        ];
-        //        if ($script) {
-        //            $params['body']['script']['source'] = $script;
-        //        }
-        //
-        //        $response = $this->client->update($params);
-        //
-        //        $n = new self($this->index);
-        //        $find = $n->processFind($id);
-
-        //        return $this->_return($find->data, $response, $params, $this->_queryTag(__FUNCTION__));
-    }
-
     //----------------------------------------------------------------------
-    // Index administration
+    // Aggregates
     //----------------------------------------------------------------------
 
     /**
@@ -526,23 +697,6 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processIndexMappings($index): mixed
-    {
-        $params = ['index' => $index];
-        try {
-            $responseObject = $this->client->indices()->getMapping($params);
-            $response = $responseObject->asArray();
-            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
-
-            return $result->data;
-        } catch (Exception $e) {
-            $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
-        }
-    }
-
-    /**
-     * @throws QueryException
-     */
     public function processIndexSettings($index): mixed
     {
         $params = ['index' => $index];
@@ -559,7 +713,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processIndexCreate($settings)
+    public function processIndexCreate($settings): bool
     {
         $params = $this->buildIndexMap($this->index, $settings);
         try {
@@ -666,11 +820,11 @@ class Bridge
         }
     }
 
-    //----------------------------------------------------------------------
-    // Aggregates
-    //----------------------------------------------------------------------
-
-    public function processMultipleAggregate($functions, $wheres, $options, $column)
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
+    public function processMultipleAggregate($functions, $wheres, $options, $column): Results
     {
         $params = $this->buildParams($this->index, $wheres, $options);
         try {
@@ -684,6 +838,10 @@ class Bridge
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
+
+    //----------------------------------------------------------------------
+    // Distinct Aggregates
+    //----------------------------------------------------------------------
 
     /**
      *  Aggregate entry point
@@ -715,6 +873,50 @@ class Bridge
     }
 
     /**
+     * @throws QueryException
+     */
+    public function parseRequiredKeywordMapping($field): ?string
+    {
+        $mappings = $this->processIndexMappings($this->index);
+        $map = reset($mappings);
+        if (! empty($map['mappings']['properties'][$field])) {
+            $fieldMap = $map['mappings']['properties'][$field];
+            if (! empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
+                //primary Map is field. Use as is
+                return $field;
+            }
+            if (! empty($fieldMap['fields']['keyword'])) {
+                return $field.'.keyword';
+            }
+        }
+
+        return null;
+
+    }
+
+    /**
+     * @throws QueryException
+     */
+    public function processIndexMappings($index): mixed
+    {
+        $params = ['index' => $index];
+        try {
+            $responseObject = $this->client->indices()->getMapping($params);
+            $response = $responseObject->asArray();
+            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
+
+            return $result->data;
+        } catch (Exception $e) {
+            $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+    }
+
+    public function processDistinctAggregate($function, $wheres, $options, $columns): Results
+    {
+        return $this->{'_'.$function.'DistinctAggregate'}($wheres, $options, $columns);
+    }
+
+    /**
      * @throws ParameterException
      * @throws QueryException
      */
@@ -737,6 +939,25 @@ class Bridge
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
     }
+
+    public function _sanitizeAggsResponse($response, $params, $queryTag): Results
+    {
+        $meta['timed_out'] = $response['timed_out'];
+        $meta['total'] = $response['hits']['total']['value'] ?? 0;
+        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
+        $meta['sorts'] = [];
+
+        $aggs = $response['aggregations'];
+        $data = (count($aggs) === 1)
+            ? reset($aggs)['value'] ?? 0
+            : array_map(fn ($value) => $value['value'] ?? 0, $aggs);
+
+        return $this->_return($data, $meta, $params, $queryTag);
+    }
+
+    //======================================================================
+    // Private & Sanitization methods
+    //======================================================================
 
     /**
      * @throws QueryException
@@ -827,37 +1048,6 @@ class Bridge
     }
 
     /**
-     * @throws QueryException
-     */
-    public function parseRequiredKeywordMapping($field)
-    {
-        $mappings = $this->processIndexMappings($this->index);
-        $map = reset($mappings);
-        if (! empty($map['mappings']['properties'][$field])) {
-            $fieldMap = $map['mappings']['properties'][$field];
-            if (! empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
-                //primary Map is field. Use as is
-                return $field;
-            }
-            if (! empty($fieldMap['fields']['keyword'])) {
-                return $field.'.keyword';
-            }
-        }
-
-        return false;
-
-    }
-
-    //----------------------------------------------------------------------
-    // Distinct Aggregates
-    //----------------------------------------------------------------------
-
-    public function processDistinctAggregate($function, $wheres, $options, $columns): Results
-    {
-        return $this->{'_'.$function.'DistinctAggregate'}($wheres, $options, $columns);
-    }
-
-    /**
      * @throws ParameterException
      * @throws QueryException
      */
@@ -874,6 +1064,100 @@ class Bridge
             $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
 
+    }
+
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
+    public function processDistinct($wheres, $options, $columns, $includeDocCount = false): Results
+    {
+        if ($columns && ! is_array($columns)) {
+            $columns = [$columns];
+        }
+        $sort = $options['sort'] ?? [];
+        $skip = $options['skip'] ?? 0;
+        $limit = $options['limit'] ?? 0;
+        unset($options['sort']);
+        unset($options['skip']);
+        unset($options['limit']);
+
+        if ($sort) {
+            $sortField = key($sort);
+            $sortDir = $sort[$sortField]['order'] ?? 'asc';
+            $sort = [$sortField => $sortDir];
+        }
+
+        $params = $this->buildParams($this->index, $wheres, $options);
+        try {
+
+            $params['body']['aggs'] = $this->createNestedAggs($columns, $sort);
+
+            $response = $this->client->search($params);
+
+            $data = [];
+            if (! empty($response['aggregations'])) {
+                $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
+            }
+
+            //process limit and skip from all results
+            if ($skip || $limit) {
+                $data = array_slice($data, $skip, $limit);
+            }
+
+            return $this->_return($data, $response, $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+
+            $this->throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+    }
+
+    private function _sanitizeDistinctResponse($response, $columns, $includeDocCount): array
+    {
+        $keys = [];
+        foreach ($columns as $column) {
+            $keys[] = 'by_'.$column;
+        }
+
+        return $this->processBuckets($columns, $keys, $response, 0, $includeDocCount);
+
+    }
+
+    private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = []): array
+    {
+        $data = [];
+        if (! empty($response[$keys[$index]]['buckets'])) {
+            foreach ($response[$keys[$index]]['buckets'] as $res) {
+
+                $datum = $currentData;
+
+                $col = $columns[$index];
+                if (str_contains($col, '.keyword')) {
+                    $col = str_replace('.keyword', '', $col);
+                }
+
+                $datum[$col] = $res['key'];
+
+                if ($includeDocCount) {
+                    $datum[$col.'_count'] = $res['doc_count'];
+                }
+
+                if (isset($columns[$index + 1])) {
+                    $nestedData = $this->processBuckets($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
+
+                    if (! empty($nestedData)) {
+                        $data = array_merge($data, $nestedData);
+                    } else {
+                        $data[] = $datum;
+                    }
+                } else {
+                    $data[] = $datum;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -967,7 +1251,7 @@ class Bridge
      * @throws ParameterException
      * @throws QueryException
      */
-    private function _avgDistinctAggregate($wheres, $options, $columns)
+    private function _avgDistinctAggregate($wheres, $options, $columns): Results
     {
         $params = $this->buildParams($this->index, $wheres);
         try {
@@ -1003,177 +1287,7 @@ class Bridge
         $this->throwError(new Exception('Matrix distinct aggregate not supported', 500), [], $this->_queryTag(__FUNCTION__));
     }
 
-    //======================================================================
-    // Private & Sanitization methods
-    //======================================================================
-
-    private function _queryTag($function)
-    {
-        return str_replace('process', '', $function);
-    }
-
-    private function _sanitizeSearchResponse($response, $params, $queryTag)
-    {
-
-        $meta['took'] = $response['took'] ?? 0;
-        $meta['timed_out'] = $response['timed_out'];
-        $meta['total'] = $response['hits']['total']['value'] ?? 0;
-        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
-        $meta['shards'] = $response['_shards'] ?? [];
-        $data = [];
-        if (! empty($response['hits']['hits'])) {
-            foreach ($response['hits']['hits'] as $hit) {
-                $datum = [];
-                $datum['_index'] = $hit['_index'];
-                $datum['_id'] = $hit['_id'];
-                if (! empty($hit['_source'])) {
-
-                    foreach ($hit['_source'] as $key => $value) {
-                        $datum[$key] = $value;
-                    }
-
-                }
-                if (! empty($hit['inner_hits'])) {
-                    foreach ($hit['inner_hits'] as $innerKey => $innerHit) {
-                        $datum[$innerKey] = $this->_filterInnerHits($innerHit);
-                    }
-                }
-
-                //Meta data
-                if (! empty($hit['highlight'])) {
-                    $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
-                }
-
-                $datum['_meta']['_index'] = $hit['_index'];
-                $datum['_meta']['_id'] = $hit['_id'];
-                if (! empty($hit['_score'])) {
-                    $datum['_meta']['_score'] = $hit['_score'];
-                }
-                $datum['_meta']['_query'] = $meta;
-
-                // If we are sorting we need to store it to be able to pass it on in the search after.
-                $datum['_meta']['sort'] = ! empty($hit['sort']) ? $hit['sort'] : null;
-                $data[] = $datum;
-            }
-        }
-
-        return $this->_return($data, $meta, $params, $queryTag);
-    }
-
-    private function _sanitizeHighlights($highlights)
-    {
-        //remove keyword results
-        foreach ($highlights as $field => $vals) {
-            if (str_contains($field, '.keyword')) {
-                $cleanField = str_replace('.keyword', '', $field);
-                if (isset($highlights[$cleanField])) {
-                    unset($highlights[$field]);
-                } else {
-                    $highlights[$cleanField] = $vals;
-                }
-            }
-        }
-
-        return $highlights;
-    }
-
-    public function _sanitizeAggsResponse($response, $params, $queryTag)
-    {
-        $meta['timed_out'] = $response['timed_out'];
-        $meta['total'] = $response['hits']['total']['value'] ?? 0;
-        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
-        $meta['sorts'] = [];
-
-        $aggs = $response['aggregations'];
-        $data = (count($aggs) === 1)
-            ? reset($aggs)['value'] ?? 0
-            : array_map(fn ($value) => $value['value'] ?? 0, $aggs);
-
-        return $this->_return($data, $meta, $params, $queryTag);
-    }
-
-    private function _sanitizeRawAggsResponse($response, $params, $queryTag)
-    {
-        $meta['timed_out'] = $response['timed_out'];
-        $meta['total'] = $response['hits']['total']['value'] ?? 0;
-        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
-        $meta['sorts'] = [];
-        $data = [];
-        if (! empty($response['aggregations'])) {
-            foreach ($response['aggregations'] as $key => $values) {
-                $data[$key] = $this->_formatAggs($key, $values)[$key];
-            }
-        }
-
-        return $this->_return($data, $meta, $params, $queryTag);
-    }
-
-    private function _formatAggs($key, $values)
-    {
-        $data[$key] = [];
-        $aggTypes = ['buckets', 'values'];
-
-        foreach ($values as $subKey => $value) {
-            if (in_array($subKey, $aggTypes)) {
-                $data[$key] = $this->_formatAggs($subKey, $value)[$subKey];
-            } elseif (is_array($value)) {
-                $data[$key][$subKey] = $this->_formatAggs($subKey, $value)[$subKey];
-            } else {
-                $data[$key][$subKey] = $value;
-            }
-
-        }
-
-        return $data;
-
-    }
-
-    private function _filterInnerHits($innerHit)
-    {
-        $hits = [];
-        foreach ($innerHit['hits']['hits'] as $inner) {
-            $innerDatum = [];
-            if (! empty($inner['_source'])) {
-                foreach ($inner['_source'] as $innerSourceKey => $innerSourceValue) {
-                    $innerDatum[$innerSourceKey] = $innerSourceValue;
-                }
-            }
-            $hits[] = $innerDatum;
-        }
-
-        return $hits;
-    }
-
-    private function _sanitizePitSearchResponse($response, $params, $queryTag)
-    {
-
-        $meta['timed_out'] = $response['timed_out'];
-        $meta['total'] = $response['hits']['total']['value'] ?? 0;
-        $meta['max_score'] = $response['hits']['max_score'] ?? 0;
-        $meta['last_sort'] = null;
-        $data = [];
-        if (! empty($response['hits']['hits'])) {
-            foreach ($response['hits']['hits'] as $hit) {
-                $datum = [];
-                $datum['_index'] = $hit['_index'];
-                $datum['_id'] = $hit['_id'];
-                if (! empty($hit['_source'])) {
-                    foreach ($hit['_source'] as $key => $value) {
-                        $datum[$key] = $value;
-                    }
-                }
-                if (! empty($hit['sort'][0])) {
-                    $meta['last_sort'] = $hit['sort'];
-                }
-                $data[] = $datum;
-
-            }
-        }
-
-        return $this->_return($data, $meta, $params, $queryTag);
-    }
-
-    private function _parseSort($sort, $sortParams)
+    private function _parseSort($sort, $sortParams): array
     {
         $sortValues = [];
         foreach ($sort as $key => $value) {
@@ -1181,114 +1295,5 @@ class Bridge
         }
 
         return $sortValues;
-    }
-
-    private function _sanitizeDistinctResponse($response, $columns, $includeDocCount)
-    {
-        $keys = [];
-        foreach ($columns as $column) {
-            $keys[] = 'by_'.$column;
-        }
-
-        return $this->processBuckets($columns, $keys, $response, 0, $includeDocCount);
-
-    }
-
-    private function processBuckets($columns, $keys, $response, $index, $includeDocCount, $currentData = [])
-    {
-        $data = [];
-        if (! empty($response[$keys[$index]]['buckets'])) {
-            foreach ($response[$keys[$index]]['buckets'] as $res) {
-
-                $datum = $currentData;
-
-                $col = $columns[$index];
-                if (str_contains($col, '.keyword')) {
-                    $col = str_replace('.keyword', '', $col);
-                }
-
-                $datum[$col] = $res['key'];
-
-                if ($includeDocCount) {
-                    $datum[$col.'_count'] = $res['doc_count'];
-                }
-
-                if (isset($columns[$index + 1])) {
-                    $nestedData = $this->processBuckets($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
-
-                    if (! empty($nestedData)) {
-                        $data = array_merge($data, $nestedData);
-                    } else {
-                        $data[] = $datum;
-                    }
-                } else {
-                    $data[] = $datum;
-                }
-            }
-        }
-
-        return $data;
-    }
-
-    private function _return($data, $meta, $params, $queryTag): Results
-    {
-        if (is_object($meta)) {
-            $metaAsArray = [];
-            if (method_exists($meta, 'asArray')) {
-                $metaAsArray = $meta->asArray();
-            }
-            $results = new Results($data, $metaAsArray, $params, $queryTag);
-        } else {
-            $results = new Results($data, $meta, $params, $queryTag);
-        }
-
-        return $results;
-    }
-
-    /**
-     * @throws QueryException
-     */
-    private function throwError(Exception $exception, $params, $queryTag): QueryException
-    {
-        $previous = get_class($exception);
-        $errorMsg = $exception->getMessage();
-        $errorCode = $exception->getCode();
-        $queryTag = str_replace('_', '', $queryTag);
-        $this->connection->rebuildConnection();
-        $error = new Results([], [], $params, $queryTag);
-        $error->setError($errorMsg, $errorCode);
-
-        $meta = $error->getMetaData();
-        $details = [
-            'error' => $meta['error']['msg'],
-            'details' => $meta['error']['data'],
-            'code' => $errorCode,
-            'exception' => $previous,
-            'query' => $queryTag,
-            'params' => $params,
-            'original' => $errorMsg,
-        ];
-        if ($this->errorLogger) {
-            $this->_logQuery($error, $details);
-        }
-        // For details catch $exception then $exception->getDetails()
-        throw new QueryException($meta['error']['msg'], $errorCode, new $previous, $details);
-    }
-
-    private function _logQuery(Results $results, $details)
-    {
-        $body = $results->getLogFormattedMetaData();
-        if ($details) {
-            $body['details'] = (array) $details;
-        }
-        $params = [
-            'index' => $this->errorLogger,
-            'body' => $body,
-        ];
-        try {
-            $this->client->index($params);
-        } catch (Exception $e) {
-            //ignore if problem writing query log
-        }
     }
 }
