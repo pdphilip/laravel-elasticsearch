@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Eloquent\Docs;
 
 /**
@@ -27,40 +29,32 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method query(array $columns = '*')
  * @method toDsl(array $columns = '*')
  * @method agg(array $functions, $column)
- *
- *
- * @method  $this WhereDate($column, $operator = null, $value = null, $boolean = 'and')
- * @method  $this WhereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
- * @method  $this whereIn(string $column, array $values)
- * @method  $this whereExact(string $column, string $value)
- * @method  $this wherePhrase(string $column, string $value)
- * @method  $this wherePhrasePrefix(string $column, string $value)
- * @method  $this filterGeoBox(string $column, array $topLeftCoords, array $bottomRightCoords)
- * @method  $this filterGeoPoint(string $column, string $distance, array $point)
- * @method  $this whereRegex(string $column, string $regex)
- * @method  $this whereNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
- * @method  $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
- * @method  $this firstOrCreate(array $attributes, array $values = [])
- * @method  $this firstOrCreateWithoutRefresh(array $attributes, array $values = [])
- * @method  $this orderBy(string $column, string $direction = 'asc', string $mode = null, array $missing = '_last')
- * @method  $this orderByDesc(string $column, string $mode = null, array $missing = '_last')
- * @method  $this orderByGeo(string $column, array $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = 'arc')
- * @method  $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
- * @method  $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
- *
- * @method  $this chunk(string $column, Callable $callback, string $keepAlive = '5m')
- * @method  $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
- * @method  $this queryNested(string $column, Callable $callback)
- * @method  $this rawSearch(array $bodyParams, bool $returnRaw = false)
- * @method  $this rawAggregation(array $bodyParams)
- *
- * @method  $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
- *
- * @method  $this  deleteIndexIfExists()
- *
+ * @method $this WhereDate($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this WhereTimestamp($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this whereIn(string $column, array $values)
+ * @method $this whereExact(string $column, string $value)
+ * @method $this wherePhrase(string $column, string $value)
+ * @method $this wherePhrasePrefix(string $column, string $value)
+ * @method $this filterGeoBox(string $column, array $topLeftCoords, array $bottomRightCoords)
+ * @method $this filterGeoPoint(string $column, string $distance, array $point)
+ * @method $this whereRegex(string $column, string $regex)
+ * @method $this whereNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
+ * @method $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
+ * @method $this firstOrCreate(array $attributes, array $values = [])
+ * @method $this firstOrCreateWithoutRefresh(array $attributes, array $values = [])
+ * @method $this orderBy(string $column, string $direction = 'asc', string $mode = null, array $missing = '_last')
+ * @method $this orderByDesc(string $column, string $mode = null, array $missing = '_last')
+ * @method $this orderByGeo(string $column, array $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = 'arc')
+ * @method $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
+ * @method $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
+ * @method $this chunk(string $count, Callable $callback, string $keepAlive = '5m')
+ * @method $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
+ * @method $this queryNested(string $column, Callable $callback)
+ * @method $this rawSearch(array $bodyParams, bool $returnRaw = false)
+ * @method $this rawAggregation(array $bodyParams)
+ * @method $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
+ * @method $this deleteIndexIfExists()
  *
  * @mixin \Illuminate\Database\Query\Builder
  */
-trait ModelDocs
-{
-}
+trait ModelDocs {}

@@ -20,8 +20,8 @@ class SearchAfterPaginator extends CursorPaginator
     {
         $this->items = $items instanceof Collection ? $items : Collection::make($items);
 
-        # FIXME: We need to account fot the scenario where $this->perPage == $this->items->count()
-        # but there are no more records and this ends up doing an extra pull.
+        // FIXME: We need to account fot the scenario where $this->perPage == $this->items->count()
+        // but there are no more records and this ends up doing an extra pull.
         $this->hasMore = $this->items->count() >= $this->perPage;
 
         $this->items = $this->items->slice(0, $this->perPage);

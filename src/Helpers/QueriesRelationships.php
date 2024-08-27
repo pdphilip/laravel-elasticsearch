@@ -1,7 +1,6 @@
 <?php
-/**
- * @credit https://github.com/jenssegers/laravel-mongodb/
- */
+
+declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Helpers;
 
@@ -19,15 +18,13 @@ trait QueriesRelationships
     /**
      * Add a relationship count / exists condition to the query.
      *
-     * @param    Relation|string    $relation
-     * @param    string    $operator
-     * @param    int    $count
-     * @param    string    $boolean
-     * @param    Closure|null    $callback
-     *
+     * @param  Relation|string  $relation
+     * @param  string  $operator
+     * @param  int  $count
+     * @param  string  $boolean
      * @return Builder|static
      */
-    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', Closure $callback = null)
+    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null)
     {
         if (is_string($relation)) {
             if (strpos($relation, '.') !== false) {
@@ -67,8 +64,6 @@ trait QueriesRelationships
     }
 
     /**
-     * @param    Relation    $relation
-     *
      * @return bool
      */
     protected function isAcrossConnections(Relation $relation)
@@ -79,16 +74,14 @@ trait QueriesRelationships
     /**
      * Compare across databases.
      *
-     * @param    Relation    $relation
-     * @param    string    $operator
-     * @param    int    $count
-     * @param    string    $boolean
-     * @param    Closure|null    $callback
-     *
+     * @param  string  $operator
+     * @param  int  $count
+     * @param  string  $boolean
      * @return mixed
+     *
      * @throws Exception
      */
-    public function addHybridHas(Relation $relation, $operator = '>=', $count = 1, $boolean = 'and', Closure $callback = null)
+    public function addHybridHas(Relation $relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null)
     {
         $hasQuery = $relation->getQuery();
         if ($callback) {
@@ -99,7 +92,7 @@ trait QueriesRelationships
         $not = in_array($operator, ['<', '<=', '!=']);
         // If we are comparing to 0, we need an additional $not flip.
         if ($count == 0) {
-            $not = !$not;
+            $not = ! $not;
         }
 
         $relations = $hasQuery->pluck($this->getHasCompareKey($relation));
@@ -110,8 +103,6 @@ trait QueriesRelationships
     }
 
     /**
-     * @param    Relation    $relation
-     *
      * @return string
      */
     protected function getHasCompareKey(Relation $relation)
@@ -124,16 +115,12 @@ trait QueriesRelationships
     }
 
     /**
-     * @param $relations
-     * @param $operator
-     * @param $count
-     *
      * @return array
      */
     protected function getConstrainedRelatedIds($relations, $operator, $count)
     {
         $relationCount = array_count_values(array_map(function ($id) {
-            return (string)$id; // Convert Back ObjectIds to Strings
+            return (string) $id; // Convert Back ObjectIds to Strings
         }, is_array($relations) ? $relations : $relations->flatten()->toArray()));
         // Remove unwanted related objects based on the operator and count.
         $relationCount = array_filter($relationCount, function ($counted) use ($count, $operator) {
@@ -161,9 +148,9 @@ trait QueriesRelationships
     /**
      * Returns key we are constraining this parent model's query with.
      *
-     * @param    Relation    $relation
      *
      * @return string
+     *
      * @throws Exception
      */
     protected function getRelatedConstraintKey(Relation $relation)
@@ -176,7 +163,7 @@ trait QueriesRelationships
             return $relation->getForeignKeyName();
         }
 
-        if ($relation instanceof BelongsToMany && !$this->isAcrossConnections($relation)) {
+        if ($relation instanceof BelongsToMany && ! $this->isAcrossConnections($relation)) {
             return $this->model->getKeyName();
         }
 

@@ -1,34 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch;
 
 use Elastic\Elasticsearch\Client;
-use PDPhilip\Elasticsearch\DSL\Bridge;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\DSL\Bridge;
 use RuntimeException;
-
 
 class Connection extends BaseConnection
 {
-
     protected $client;
-    protected $index;
-    protected $maxSize;
-    protected $indexPrefix;
-    protected $allowIdSort = false;
-    protected $errorLoggingIndex = false;
-    protected $sslVerification = true;
-    protected $retires = null; //null will use default
-    protected $elasticMetaHeader = null;
-    protected $rebuild = false;
-    protected $connectionName = 'elasticsearch';
 
+    protected $index;
+
+    protected $maxSize;
+
+    protected $indexPrefix;
+
+    protected $allowIdSort = false;
+
+    protected $errorLoggingIndex = false;
+
+    protected $sslVerification = true;
+
+    protected $retires = null; //null will use default
+
+    protected $elasticMetaHeader = null;
+
+    protected $rebuild = false;
+
+    protected $connectionName = 'elasticsearch';
 
     public function __construct(array $config)
     {
-        
+
         $this->connectionName = $config['name'];
 
         $this->config = $config;
@@ -47,7 +56,7 @@ class Connection extends BaseConnection
 
     public function setOptions($config)
     {
-        if (!empty($config['index_prefix'])) {
+        if (! empty($config['index_prefix'])) {
             $this->indexPrefix = $config['index_prefix'];
         }
         if (isset($config['options']['allow_id_sort'])) {
@@ -56,13 +65,13 @@ class Connection extends BaseConnection
         if (isset($config['options']['ssl_verification'])) {
             $this->sslVerification = $config['options']['ssl_verification'];
         }
-        if (!empty($config['options']['retires'])) {
+        if (! empty($config['options']['retires'])) {
             $this->retires = $config['options']['retires'];
         }
         if (isset($config['options']['meta_header'])) {
             $this->elasticMetaHeader = $config['options']['meta_header'];
         }
-        if (!empty($config['error_log_index'])) {
+        if (! empty($config['error_log_index'])) {
             if ($this->indexPrefix) {
                 $this->errorLoggingIndex = $this->indexPrefix.'_'.$config['error_log_index'];
             } else {
@@ -71,7 +80,24 @@ class Connection extends BaseConnection
         }
     }
 
-    public function getIndexPrefix(): string|null
+    protected function buildConnection(): Client
+    {
+        $type = config('database.connections.elasticsearch.auth_type') ?? null;
+        $type = strtolower($type);
+        if (! in_array($type, ['http', 'cloud'])) {
+            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
+        }
+
+        return $this->{'_'.$type.'Connection'}();
+
+    }
+
+    public function getTablePrefix(): ?string
+    {
+        return $this->getIndexPrefix();
+    }
+
+    public function getIndexPrefix(): ?string
     {
         return $this->indexPrefix;
     }
@@ -81,27 +107,9 @@ class Connection extends BaseConnection
         $this->indexPrefix = $newPrefix;
     }
 
-
-    public function getTablePrefix(): string|null
-    {
-        return $this->getIndexPrefix();
-    }
-
     public function getErrorLoggingIndex(): string|bool
     {
         return $this->errorLoggingIndex;
-    }
-
-    public function setIndex($index): string
-    {
-        $this->index = $index;
-        if ($this->indexPrefix) {
-            if (!(str_contains($this->index, $this->indexPrefix.'_'))) {
-                $this->index = $this->indexPrefix.'_'.$index;
-            }
-        }
-
-        return $this->getIndex();
     }
 
     public function getSchemaGrammar()
@@ -114,67 +122,47 @@ class Connection extends BaseConnection
         return $this->index;
     }
 
-    public function setMaxSize($value)
+    public function setIndex($index): string
     {
-        $this->maxSize = $value;
-    }
+        $this->index = $index;
+        if ($this->indexPrefix) {
+            if (! (str_contains($this->index, $this->indexPrefix.'_'))) {
+                $this->index = $this->indexPrefix.'_'.$index;
+            }
+        }
 
+        return $this->getIndex();
+    }
 
     public function table($table, $as = null)
     {
-        $query = new Query\Builder($this, new Query\Processor());
+        $query = new Query\Builder($this, new Query\Processor);
 
         return $query->from($table);
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function getSchemaBuilder()
     {
         return new Schema\Builder($this);
     }
 
-
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function disconnect()
     {
         unset($this->connection);
     }
 
-
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function getDriverName(): string
     {
         return 'elasticsearch';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getDefaultPostProcessor()
-    {
-        return new Query\Processor();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getDefaultQueryGrammar()
-    {
-        return new Query\Grammar();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function getDefaultSchemaGrammar()
-    {
-        return new Schema\Grammar();
     }
 
     public function rebuildConnection()
@@ -192,26 +180,56 @@ class Connection extends BaseConnection
         return $this->maxSize;
     }
 
+    public function setMaxSize($value)
+    {
+        $this->maxSize = $value;
+    }
+
     public function getAllowIdSort()
     {
         return $this->allowIdSort;
     }
 
+    public function __call($method, $parameters)
+    {
+        if (! $this->index) {
+            $this->index = $this->indexPrefix.'*';
+        }
+        if ($this->rebuild) {
+            $this->client = $this->buildConnection();
+            $this->rebuild = false;
+        }
+        $bridge = new Bridge($this);
+
+        return $bridge->{'process'.Str::studly($method)}(...$parameters);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getDefaultPostProcessor()
+    {
+        return new Query\Processor;
+    }
 
     //----------------------------------------------------------------------
     // Connection Builder
     //----------------------------------------------------------------------
 
-    protected function buildConnection(): Client
+    /**
+     * {@inheritdoc}
+     */
+    protected function getDefaultQueryGrammar()
     {
-        $type = config('database.connections.elasticsearch.auth_type') ?? null;
-        $type = strtolower($type);
-        if (!in_array($type, ['http', 'cloud'])) {
-            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
-        }
+        return new Query\Grammar;
+    }
 
-        return $this->{'_'.$type.'Connection'}();
-
+    /**
+     * {@inheritdoc}
+     */
+    protected function getDefaultSchemaGrammar()
+    {
+        return new Schema\Grammar;
     }
 
     protected function _httpConnection(): Client
@@ -229,27 +247,6 @@ class Connection extends BaseConnection
         if ($apiKey) {
             $cb->setApiKey($apiKey, $apiId);
         }
-
-        return $cb->build();
-    }
-
-    protected function _cloudConnection(): Client
-    {
-        $cloudId = config('database.connections.'.$this->connectionName.'.cloud_id') ?? null;
-        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
-        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
-        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
-        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
-
-        $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
-        $cb = $this->_builderOptions($cb);
-        if ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass);
-        }
-        if ($apiKey) {
-            $cb->setApiKey($apiKey, $apiId);
-        }
-
 
         return $cb->build();
     }
@@ -282,22 +279,27 @@ class Connection extends BaseConnection
         return $cb;
     }
 
-
     //----------------------------------------------------------------------
     // Dynamic call routing to DSL bridge
     //----------------------------------------------------------------------
 
-    public function __call($method, $parameters)
+    protected function _cloudConnection(): Client
     {
-        if (!$this->index) {
-            $this->index = $this->indexPrefix.'*';
-        }
-        if ($this->rebuild) {
-            $this->client = $this->buildConnection();
-            $this->rebuild = false;
-        }
-        $bridge = new Bridge($this);
+        $cloudId = config('database.connections.'.$this->connectionName.'.cloud_id') ?? null;
+        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
+        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
+        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
+        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
 
-        return $bridge->{'process'.Str::studly($method)}(...$parameters);
+        $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
+        $cb = $this->_builderOptions($cb);
+        if ($username && $pass) {
+            $cb->setBasicAuthentication($username, $pass);
+        }
+        if ($apiKey) {
+            $cb->setApiKey($apiKey, $apiId);
+        }
+
+        return $cb->build();
     }
 }

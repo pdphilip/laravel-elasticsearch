@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Schema\Definitions;
 
 use Illuminate\Support\Fluent;

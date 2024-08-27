@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Schema;
 
-use PDPhilip\Elasticsearch\Connection;
 use Illuminate\Support\Fluent;
+use PDPhilip\Elasticsearch\Connection;
 
 class AnalyzerBlueprint
 {
@@ -32,26 +34,6 @@ class AnalyzerBlueprint
         return $this->addProperty('analyzer', $name);
     }
 
-    public function tokenizer($type): Definitions\AnalyzerPropertyDefinition
-    {
-        return $this->addProperty('tokenizer', $type);
-    }
-
-    public function charFilter($type): Definitions\AnalyzerPropertyDefinition
-    {
-        return $this->addProperty('char_filter', $type);
-    }
-
-    public function filter($type): Definitions\AnalyzerPropertyDefinition
-    {
-        return $this->addProperty('filter', $type);
-    }
-
-
-    //----------------------------------------------------------------------
-    // Definitions
-    //----------------------------------------------------------------------
-
     protected function addProperty($config, $name, array $parameters = [])
     {
         return $this->addPropertyDefinition(new Definitions\AnalyzerPropertyDefinition(
@@ -64,6 +46,25 @@ class AnalyzerBlueprint
         $this->parameters['analysis'][] = $definition;
 
         return $definition;
+    }
+
+    public function tokenizer($type): Definitions\AnalyzerPropertyDefinition
+    {
+        return $this->addProperty('tokenizer', $type);
+    }
+
+    //----------------------------------------------------------------------
+    // Definitions
+    //----------------------------------------------------------------------
+
+    public function charFilter($type): Definitions\AnalyzerPropertyDefinition
+    {
+        return $this->addProperty('char_filter', $type);
+    }
+
+    public function filter($type): Definitions\AnalyzerPropertyDefinition
+    {
+        return $this->addProperty('filter', $type);
     }
 
     //----------------------------------------------------------------------
@@ -85,7 +86,7 @@ class AnalyzerBlueprint
     private function _formatParams()
     {
         if ($this->parameters) {
-            if (!empty($this->parameters['analysis'])) {
+            if (! empty($this->parameters['analysis'])) {
                 $properties = [];
                 foreach ($this->parameters['analysis'] as $property) {
                     if ($property instanceof Fluent) {
@@ -98,5 +99,4 @@ class AnalyzerBlueprint
             }
         }
     }
-
 }

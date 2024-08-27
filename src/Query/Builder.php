@@ -1,21 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Query;
 
 use Carbon\Carbon;
-use PDPhilip\Elasticsearch\Connection;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
+use LogicException;
+use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\QueryBuilder;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use RuntimeException;
-use LogicException;
 
 class Builder extends BaseBuilder
 {
-
     use QueryBuilder;
 
     protected $index;
@@ -61,17 +62,17 @@ class Builder extends BaseBuilder
      * @var array
      */
     protected $conversion = [
-        '='  => '=',
+        '=' => '=',
         '!=' => 'ne',
         '<>' => 'ne',
-        '<'  => 'lt',
+        '<' => 'lt',
         '<=' => 'lte',
-        '>'  => 'gt',
+        '>' => 'gt',
         '>=' => 'gte',
     ];
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function __construct(Connection $connection, Processor $processor)
     {
@@ -81,36 +82,32 @@ class Builder extends BaseBuilder
 
     }
 
-
     public function setRefresh($value)
     {
         $this->refresh = $value;
     }
 
     /**
-     * @param $cursor
-     *
      * @return $this
      */
     public function setSearchAfter($cursor)
     {
 
-      # if there is no $cursor then we don't do anything
-      # otherwise we specifically look for the `search_after` parameter on the cursor
-      if(!empty($cursor)) {
-        $this->searchAfter = $cursor->parameter('search_after');
-      }
+        // if there is no $cursor then we don't do anything
+        // otherwise we specifically look for the `search_after` parameter on the cursor
+        if (! empty($cursor)) {
+            $this->searchAfter = $cursor->parameter('search_after');
+        }
 
-      return $this;
+        return $this;
     }
-
 
     //----------------------------------------------------------------------
     // Querying Executors
     //----------------------------------------------------------------------
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function find($id, $columns = [])
     {
@@ -118,17 +115,17 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function value($column)
     {
-        $result = (array)$this->first([$column]);
+        $result = (array) $this->first([$column]);
 
         return Arr::get($result, $column);
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function all($columns = [])
     {
@@ -136,7 +133,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function get($columns = [])
     {
@@ -144,7 +141,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function cursor($columns = [])
     {
@@ -156,7 +153,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function exists()
     {
@@ -164,7 +161,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function insert(array $values)
     {
@@ -172,14 +169,14 @@ class Builder extends BaseBuilder
             return true;
         }
 
-        if (!is_array(reset($values))) {
+        if (! is_array(reset($values))) {
             $values = [$values];
         }
 
         $allSuccess = true;
         foreach ($values as $value) {
             $result = $this->_processInsert($value, true);
-            if (!$result) {
+            if (! $result) {
                 $allSuccess = false;
             }
         }
@@ -188,7 +185,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function insertGetId(array $values, $sequence = null)
     {
@@ -197,7 +194,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function update(array $values, array $options = [])
     {
@@ -207,13 +204,13 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function increment($column, $amount = 1, $extra = [], $options = [])
     {
         $values = ['inc' => [$column => $amount]];
 
-        if (!empty($extra)) {
+        if (! empty($extra)) {
             $values['set'] = $extra;
         }
 
@@ -223,18 +220,16 @@ class Builder extends BaseBuilder
             $query->orWhereNotNull($column);
         });
 
-
         return $this->_processUpdate($values, $options, 'incrementMany');
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function decrement($column, $amount = 1, $extra = [], $options = [])
     {
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
-
 
     public function agg(array $functions, $column)
     {
@@ -243,7 +238,7 @@ class Builder extends BaseBuilder
         }
         $aggregateTypes = ['sum', 'avg', 'min', 'max', 'matrix', 'count'];
         foreach ($functions as $function) {
-            if (!in_array($function, $aggregateTypes)) {
+            if (! in_array($function, $aggregateTypes)) {
                 throw new RuntimeException('Invalid aggregate type: '.$function);
             }
         }
@@ -255,10 +250,10 @@ class Builder extends BaseBuilder
         return $results->data ?? [];
     }
 
-//
+    //
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function forPageAfterId($perPage = 15, $lastId = 0, $column = '_id')
     {
@@ -266,7 +261,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function delete($id = null)
     {
@@ -280,7 +275,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function aggregate($function, $columns = [])
     {
@@ -301,7 +296,7 @@ class Builder extends BaseBuilder
         $this->bindings['select'] = $previousSelectBindings;
 
         if (isset($results[0])) {
-            $result = (array)$results[0];
+            $result = (array) $results[0];
 
             return $result['aggregate'];
         }
@@ -310,10 +305,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param $column
-     * @param $callBack
-     * @param $scoreMode
-     *
      * @return $this
      */
     public function whereNestedObject($column, $callBack, $scoreMode = 'avg')
@@ -323,21 +314,17 @@ class Builder extends BaseBuilder
         $callBack($query);
         $wheres = $query->compileWheres();
         $this->wheres[] = [
-            'column'     => $column,
-            'type'       => 'NestedObject',
-            'wheres'     => $wheres,
+            'column' => $column,
+            'type' => 'NestedObject',
+            'wheres' => $wheres,
             'score_mode' => $scoreMode,
-            'boolean'    => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
 
     /**
-     * @param $column
-     * @param $callBack
-     * @param $scoreMode
-     *
      * @return $this
      */
     public function whereNotNestedObject($column, $callBack, $scoreMode = 'avg')
@@ -347,81 +334,68 @@ class Builder extends BaseBuilder
         $callBack($query);
         $wheres = $query->compileWheres();
         $this->wheres[] = [
-            'column'     => $column,
-            'type'       => 'NotNestedObject',
-            'wheres'     => $wheres,
+            'column' => $column,
+            'type' => 'NotNestedObject',
+            'wheres' => $wheres,
             'score_mode' => $scoreMode,
-            'boolean'    => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
 
     /**
-     * @param $column
-     * @param $value
-     *
      * @return $this
      */
     public function wherePhrase($column, $value)
     {
         $boolean = 'and';
         $this->wheres[] = [
-            'column'   => $column,
-            'type'     => 'Basic',
-            'value'    => $value,
+            'column' => $column,
+            'type' => 'Basic',
+            'value' => $value,
             'operator' => 'phrase',
-            'boolean'  => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
 
     /**
-     * @param $column
-     * @param $value
-     *
      * @return $this
      */
     public function wherePhrasePrefix($column, $value)
     {
         $boolean = 'and';
         $this->wheres[] = [
-            'column'   => $column,
-            'type'     => 'Basic',
-            'value'    => $value,
+            'column' => $column,
+            'type' => 'Basic',
+            'value' => $value,
             'operator' => 'phrase_prefix',
-            'boolean'  => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
 
     /**
-     * @param $column
-     * @param $value
-     *
      * @return $this
      */
     public function whereExact($column, $value)
     {
         $boolean = 'and';
         $this->wheres[] = [
-            'column'   => $column,
-            'type'     => 'Basic',
-            'value'    => $value,
+            'column' => $column,
+            'type' => 'Basic',
+            'value' => $value,
             'operator' => 'exact',
-            'boolean'  => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
 
-
     /**
-     * @param $column
-     * @param $callBack
-     *
      * @return $this
      */
     public function queryNested($column, $callBack)
@@ -432,9 +406,9 @@ class Builder extends BaseBuilder
         $wheres = $query->compileWheres();
         $options = $query->compileOptions();
         $this->wheres[] = [
-            'column'  => $column,
-            'type'    => 'QueryNested',
-            'wheres'  => $wheres,
+            'column' => $column,
+            'type' => 'QueryNested',
+            'wheres' => $wheres,
             'options' => $options,
             'boolean' => $boolean,
         ];
@@ -451,25 +425,23 @@ class Builder extends BaseBuilder
             [$value, $operator] = [$operator, '='];
         }
         $this->wheres[] = [
-            'column'   => $column,
-            'type'     => 'Timestamp',
-            'value'    => $value,
+            'column' => $column,
+            'type' => 'Timestamp',
+            'value' => $value,
             'operator' => $operator,
-            'boolean'  => $boolean,
+            'boolean' => $boolean,
         ];
 
         return $this;
     }
-
 
     //----------------------------------------------------------------------
     //  Query Processing (Connection API)
     //----------------------------------------------------------------------
 
     /**
-     * @param    array    $columns
-     * @param    false    $returnLazy
-     *
+     * @param  array  $columns
+     * @param  false  $returnLazy
      * @return Collection|LazyCollection|void
      */
     protected function _processGet($columns = [], $returnLazy = false)
@@ -500,12 +472,12 @@ class Builder extends BaseBuilder
                 $totalResults = $this->connection->aggregate($function, $wheres, $options, $columns);
             }
 
-            if (!$totalResults->isSuccessful()) {
+            if (! $totalResults->isSuccessful()) {
                 throw new RuntimeException($totalResults->errorMessage);
             }
             $results = [
                 [
-                    '_id'       => null,
+                    '_id' => null,
                     'aggregate' => $totalResults->data,
                 ],
             ];
@@ -553,16 +525,14 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param $query
-     * @param    array    $options
-     * @param    string    $method
-     *
+     * @param  $query
+     * @param  string  $method
      * @return int
      */
     protected function _processUpdate($values, array $options = [], $method = 'updateMany')
     {
         // Update multiple items by default.
-        if (!array_key_exists('multiple', $options)) {
+        if (! array_key_exists('multiple', $options)) {
             $options['multiple'] = true;
         }
         $wheres = $this->compileWheres();
@@ -574,11 +544,8 @@ class Builder extends BaseBuilder
         return 0;
     }
 
-
     /**
-     * @param    array    $values
-     * @param    false    $returnIdOnly
-     *
+     * @param  false  $returnIdOnly
      * @return null|string|array
      */
     protected function _processInsert(array $values, $returnIdOnly = false)
@@ -609,13 +576,12 @@ class Builder extends BaseBuilder
         return 0;
     }
 
-
     //----------------------------------------------------------------------
     // Clause Operators
     //----------------------------------------------------------------------
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function orderBy($column, $direction = 'asc', $mode = null, $missing = null)
     {
@@ -624,18 +590,18 @@ class Builder extends BaseBuilder
         }
 
         $this->orders[$column] = [
-            'order'   => $direction,
-            'mode'    => $mode,
+            'order' => $direction,
+            'mode' => $mode,
             'missing' => $missing,
         ];
 
-//        dd($this->orders);
+        //        dd($this->orders);
 
         return $this;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function orderByDesc($column, $mode = null, $missing = null)
     {
@@ -643,36 +609,30 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param $column
-     * @param $pin
-     * @param $direction    @values: 'asc', 'desc'
-     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
-     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
-     * @param $type    @values: 'arc', 'plane'
-     *
+     * @param  $direction  @values: 'asc', 'desc'
+     * @param  $unit  @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type  @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeo($column, $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = null)
     {
         $this->orders[$column] = [
             'is_geo' => true,
-            'order'  => $direction,
-            'pin'    => $pin,
-            'unit'   => $unit,
-            'mode'   => $mode,
-            'type'   => $type,
+            'order' => $direction,
+            'pin' => $pin,
+            'unit' => $unit,
+            'mode' => $mode,
+            'type' => $type,
         ];
 
         return $this;
     }
 
     /**
-     * @param $column
-     * @param $pin
-     * @param $unit    @values: 'km', 'mi', 'm', 'ft'
-     * @param $mode    @values: 'min', 'max', 'avg', 'sum'
-     * @param $type    @values: 'arc', 'plane'
-     *
+     * @param  $unit  @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type  @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeoDesc($column, $pin, $unit = 'km', $mode = null, $type = null)
@@ -680,29 +640,23 @@ class Builder extends BaseBuilder
         return $this->orderByGeo($column, $pin, 'desc', $unit, $mode, $type);
     }
 
-
     /**
-     * @param $column
-     * @param $direction
-     * @param $mode
-     *
      * @return $this
      */
     public function orderByNested($column, $direction = 'asc', $mode = null)
     {
         $this->orders[$column] = [
             'is_nested' => true,
-            'order'     => $direction,
-            'mode'      => $mode,
+            'order' => $direction,
+            'mode' => $mode,
 
         ];
 
         return $this;
     }
 
-
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function whereBetween($column, iterable $values, $boolean = 'and', $not = false)
     {
@@ -714,7 +668,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function select($columns = ['*'])
     {
@@ -726,7 +680,7 @@ class Builder extends BaseBuilder
 
     public function addSelect($column)
     {
-        if (!is_array($column)) {
+        if (! is_array($column)) {
             $column = [$column];
         }
 
@@ -740,9 +694,8 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-
     public function distinct($includeCount = false)
     {
         $this->distinct = 1;
@@ -754,10 +707,9 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param ...$groups
+     * @param  ...$groups
      *
      * GroupBy will be passed on to distinct
-     *
      * @return $this|Builder
      */
     public function groupBy(...$groups)
@@ -777,8 +729,8 @@ class Builder extends BaseBuilder
     public function filterGeoBox($field, $topLeft, $bottomRight)
     {
         $this->filters['filterGeoBox'] = [
-            'field'       => $field,
-            'topLeft'     => $topLeft,
+            'field' => $field,
+            'topLeft' => $topLeft,
             'bottomRight' => $bottomRight,
         ];
     }
@@ -786,7 +738,7 @@ class Builder extends BaseBuilder
     public function filterGeoPoint($field, $distance, $geoPoint)
     {
         $this->filters['filterGeoPoint'] = [
-            'field'    => $field,
+            'field' => $field,
             'distance' => $distance,
             'geoPoint' => $geoPoint,
         ];
@@ -813,7 +765,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function newQuery()
     {
@@ -831,7 +783,7 @@ class Builder extends BaseBuilder
         }
 
         if ($columns) {
-            if (!is_array($columns)) {
+            if (! is_array($columns)) {
                 $columns = [$columns];
             }
 
@@ -839,7 +791,7 @@ class Builder extends BaseBuilder
                 $final[] = $col;
             }
         }
-        if (!$final) {
+        if (! $final) {
             return ['*'];
         }
 
@@ -849,7 +801,6 @@ class Builder extends BaseBuilder
         }
 
         return $final;
-
 
     }
 
@@ -889,7 +840,7 @@ class Builder extends BaseBuilder
      */
     protected function compileWheres()
     {
-        $wheres = $this->wheres ? : [];
+        $wheres = $this->wheres ?: [];
         $compiledWheres = [];
         if ($wheres) {
             if ($wheres[0]['boolean'] == 'or') {
@@ -937,8 +888,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereBasic(array $where)
@@ -957,7 +906,7 @@ class Builder extends BaseBuilder
             $operator = 'not_like';
         }
 
-        if (!isset($operator) || $operator == '=') {
+        if (! isset($operator) || $operator == '=') {
             $query = [$column => $value];
         } elseif (array_key_exists($operator, $this->conversion)) {
             $query = [$column => [$this->conversion[$operator] => $value]];
@@ -972,17 +921,15 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return mixed
      */
     protected function _parseWhereNested(array $where)
     {
 
         $boolean = $where['boolean'];
-//        if ($boolean !== 'and') {
-//            throw new RuntimeException('Nested where clause with boolean other than "and" is not supported');
-//        }
+        //        if ($boolean !== 'and') {
+        //            throw new RuntimeException('Nested where clause with boolean other than "and" is not supported');
+        //        }
         if ($boolean === 'and not') {
             $boolean = 'not';
         }
@@ -1000,7 +947,6 @@ class Builder extends BaseBuilder
             $must => ['group' => ['wheres' => $wheres]],
         ];
 
-
     }
 
     protected function _parseWhereQueryNested(array $where)
@@ -1008,7 +954,7 @@ class Builder extends BaseBuilder
         return [
             $where['column'] => [
                 'innerNested' => [
-                    'wheres'  => $where['wheres'],
+                    'wheres' => $where['wheres'],
                     'options' => $where['options'],
                 ],
             ],
@@ -1016,8 +962,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereIn(array $where)
@@ -1028,10 +972,7 @@ class Builder extends BaseBuilder
         return [$column => ['in' => array_values($values)]];
     }
 
-
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereNotIn(array $where)
@@ -1043,8 +984,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereNull(array $where)
@@ -1056,8 +995,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereNotNull(array $where)
@@ -1069,8 +1006,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereBetween(array $where)
@@ -1095,8 +1030,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereDate(array $where)
@@ -1114,58 +1047,43 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereMonth(array $where)
     {
         throw new LogicException('whereMonth clause is not available yet');
-
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereDay(array $where)
     {
         throw new LogicException('whereDay clause is not available yet');
-
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereYear(array $where)
     {
         throw new LogicException('whereYear clause is not available yet');
-
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array
      */
     protected function _parseWhereTime(array $where)
     {
         throw new LogicException('whereTime clause is not available yet');
-
     }
 
     /**
-     * @param    array    $where
-     *
      * @return mixed
      */
     protected function _parseWhereRaw(array $where)
     {
         throw new LogicException('whereRaw clause is not available yet');
-
     }
 
     public function _parseWhereExists(array $where)
@@ -1178,10 +1096,7 @@ class Builder extends BaseBuilder
         throw new LogicException('SQL type "where exists" query is not valid for Elasticsearch. Use whereNotNull() or whereNull() to query the existence of a field');
     }
 
-
     /**
-     * @param    array    $where
-     *
      * @return mixed
      */
     protected function _parseWhereRegex(array $where)
@@ -1194,8 +1109,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param    array    $where
-     *
      * @return array[]
      */
     protected function _parseWhereNestedObject(array $where)
@@ -1204,16 +1117,12 @@ class Builder extends BaseBuilder
         $column = $where['column'];
         $scoreMode = $where['score_mode'];
 
-
         return [
             $column => ['nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
         ];
     }
 
-
     /**
-     * @param    array    $where
-     *
      * @return array[]
      */
     protected function _parseWhereNotNestedObject(array $where)
@@ -1222,17 +1131,14 @@ class Builder extends BaseBuilder
         $column = $where['column'];
         $scoreMode = $where['score_mode'];
 
-
         return [
             $column => ['not_nested' => ['wheres' => $wheres, 'score_mode' => $scoreMode]],
         ];
     }
 
-
     /**
      * Set custom options for the query.
      *
-     * @param    array    $options
      *
      * @return $this
      */
@@ -1243,13 +1149,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-
     //----------------------------------------------------------------------
     // Collection bindings
     //----------------------------------------------------------------------
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function pluck($column, $key = null)
     {
@@ -1258,7 +1163,7 @@ class Builder extends BaseBuilder
         // Convert ObjectID's to strings
         if ($key == '_id') {
             $results = $results->map(function ($item) {
-                $item['_id'] = (string)$item['_id'];
+                $item['_id'] = (string) $item['_id'];
 
                 return $item;
             });
@@ -1274,7 +1179,7 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function from($index, $as = null)
     {
@@ -1288,7 +1193,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function truncate()
     {
@@ -1330,7 +1235,7 @@ class Builder extends BaseBuilder
 
     public function createIndex()
     {
-        if (!$this->indexExists()) {
+        if (! $this->indexExists()) {
             $this->connection->indexCreate($this->index);
 
             return true;
@@ -1359,7 +1264,6 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // Pagination overrides
     //----------------------------------------------------------------------
-
 
     protected function runPaginationCountQuery($columns = ['*'])
     {
@@ -1401,7 +1305,6 @@ class Builder extends BaseBuilder
 
         return $this->connection->toDsl($wheres, $options, $columns);
 
-
     }
 
     //----------------------------------------------------------------------
@@ -1409,22 +1312,20 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function upsert(array $values, $uniqueBy, $update = null)
     {
         throw new LogicException('The upsert feature for Elasticsearch is currently not supported. Please use updateAll()');
     }
 
-
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function groupByRaw($sql, array $bindings = [])
     {
         throw new LogicException('groupByRaw() is currently not supported');
     }
-
 
     //----------------------------------------------------------------------
     // Helpers
@@ -1434,7 +1335,7 @@ class Builder extends BaseBuilder
     {
         unset($values['updated_at']);
         unset($values['created_at']);
-        if (!$this->_isAssociative($values)) {
+        if (! $this->_isAssociative($values)) {
             throw new RuntimeException('Invalid value format. Expected associative array, got sequential array');
         }
 
@@ -1443,13 +1344,12 @@ class Builder extends BaseBuilder
 
     private function _isAssociative(array $arr)
     {
-        if ([] === $arr) {
+        if ($arr === []) {
             return true;
         }
 
         return array_keys($arr) !== range(0, count($arr) - 1);
     }
-
 
     //----------------------------------------------------------------------
     // ES query executors
@@ -1465,22 +1365,21 @@ class Builder extends BaseBuilder
 
     public function matrix($column)
     {
-        if (!is_array($column)) {
+        if (! is_array($column)) {
             $column = [$column];
         }
         $result = $this->aggregate(__FUNCTION__, $column);
 
-        return $result ? : 0;
+        return $result ?: 0;
     }
 
     //----------------------------------------------------------------------
     // ES Search query methods
     //----------------------------------------------------------------------
 
-
     public function searchQuery($term, $boostFactor = null, $clause = null, $type = 'term')
     {
-        if (!$clause && !empty($this->searchQuery)) {
+        if (! $clause && ! empty($this->searchQuery)) {
             switch ($type) {
                 case 'fuzzy':
                     throw new RuntimeException('Incorrect query sequencing, fuzzyTerm() should only start the ORM chain');
@@ -1563,23 +1462,23 @@ class Builder extends BaseBuilder
     public function highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
     {
         $highlightFields = [
-            '*' => (object)[],
+            '*' => (object) [],
         ];
-        if (!empty($fields)) {
+        if (! empty($fields)) {
             $highlightFields = [];
             foreach ($fields as $field => $payload) {
                 if (is_int($field)) {
-                    $highlightFields[$payload] = (object)[];
+                    $highlightFields[$payload] = (object) [];
                 } else {
                     $highlightFields[$field] = $payload;
                 }
 
             }
         }
-        if (!is_array($preTag)) {
+        if (! is_array($preTag)) {
             $preTag = [$preTag];
         }
-        if (!is_array($postTag)) {
+        if (! is_array($postTag)) {
             $postTag = [$postTag];
         }
 
@@ -1591,16 +1490,14 @@ class Builder extends BaseBuilder
         $highlight['post_tags'] = $postTag;
         $highlight['fields'] = $highlightFields;
 
-
         $this->searchOptions['highlight'] = $highlight;
     }
-
 
     public function search($columns = '*')
     {
 
         $searchParams = $this->searchQuery;
-        if (!$searchParams) {
+        if (! $searchParams) {
             throw new RuntimeException('No search parameters. Add terms to search for.');
         }
         $searchOptions = $this->searchOptions;
@@ -1612,14 +1509,11 @@ class Builder extends BaseBuilder
         if ($search->isSuccessful()) {
             $data = $search->data;
 
-
             return new Collection($data);
-
 
         } else {
             throw new RuntimeException('Error: '.$search->errorMessage);
         }
-
 
     }
 
@@ -1647,7 +1541,6 @@ class Builder extends BaseBuilder
         return $this->connection->closePit($id);
     }
 
-
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
@@ -1656,23 +1549,21 @@ class Builder extends BaseBuilder
     {
         if (is_numeric($value)) {
             // Convert to integer in case it's a string
-            $value = (int)$value;
+            $value = (int) $value;
             // Check for milliseconds
             if ($value > 10000000000) {
                 return $value;
             }
 
             // ES expects seconds as a string
-            return (string)Carbon::createFromTimestamp($value)->timestamp;
+            return (string) Carbon::createFromTimestamp($value)->timestamp;
         }
 
         // If it's not numeric, assume it's a date string and try to return TS as a string
         try {
-            return (string)Carbon::parse($value)->timestamp;
+            return (string) Carbon::parse($value)->timestamp;
         } catch (\Exception $e) {
             throw new LogicException('Invalid date or timestamp');
         }
     }
-
-
 }

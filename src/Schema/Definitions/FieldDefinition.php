@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Schema\Definitions;
 
 use Illuminate\Support\Fluent;
@@ -15,8 +17,8 @@ use Illuminate\Support\Fluent;
  * @method $this addFieldMap(string $type)
  * @method $this ignoreAbove(int $value)
  * @method $this indexOptions(int $value)
- * @removed $this addType(string $indexName = null)
  *
+ * @removed $this addType(string $indexName = null)
  * @removed $this format(string $value)
  * @removed $this path(string $expression = null)
  */

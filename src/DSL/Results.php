@@ -1,18 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\DSL;
-
-use Elastic\Elasticsearch\Response\Elasticsearch;
-
 
 class Results
 {
-    private array $_meta;
-
     public mixed $data;
-    
+
     public mixed $errorMessage;
 
+    private array $_meta;
 
     public function __construct($data, $meta, $params, $queryTag)
     {
@@ -50,7 +48,7 @@ class Results
 
         if (json_last_error() === JSON_ERROR_NONE) {
             $errorReason = $errorArray['error']['reason'] ?? null;
-            if (!$errorReason) {
+            if (! $errorReason) {
                 return $return;
             }
             $return['msg'] = $title.$errorReason;
@@ -86,11 +84,10 @@ class Results
         return $return;
     }
 
-    public function getInsertedId(): string|null
+    public function getInsertedId(): ?string
     {
         return $this->_meta['_id'] ?? null;
     }
-
 
     public function getModifiedCount(): int
     {
@@ -106,7 +103,6 @@ class Results
     {
         json_decode($string);
 
-        return (json_last_error() == JSON_ERROR_NONE);
+        return json_last_error() == JSON_ERROR_NONE;
     }
-
 }

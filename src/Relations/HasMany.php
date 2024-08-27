@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Relations;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -9,15 +11,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany as BaseHasMany;
 class HasMany extends BaseHasMany
 {
     /**
-     * Get the plain foreign key.
-     *
-     * @return string
+     * {@inheritdoc}
      */
-    public function getForeignKeyName()
+    public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])
     {
-        return $this->foreignKey;
+        $foreignKey = $this->getHasCompareKey();
+
+        return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }
-    
+
     /**
      * Get the key for comparing against the parent key in "has" query.
      *
@@ -29,15 +31,14 @@ class HasMany extends BaseHasMany
     }
 
     /**
-     * @inheritdoc
+     * Get the plain foreign key.
+     *
+     * @return string
      */
-    public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])
+    public function getForeignKeyName()
     {
-        $foreignKey = $this->getHasCompareKey();
-
-        return $query->select($foreignKey)->where($foreignKey, 'exists', true);
+        return $this->foreignKey;
     }
-
 
     protected function whereInMethod(EloquentModel $model, $key)
     {

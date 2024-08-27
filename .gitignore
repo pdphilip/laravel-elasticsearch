@@ -16,3 +16,15 @@ secrets.nix
 .direnv
 
 .phpunit*
+
+
+.idea
+.phpunit.cache
+build
+composer.lock
+coverage
+docs
+phpunit.xml
+phpstan.neon
+testbench.yaml
+node_modules

@@ -266,8 +266,8 @@ class Bridge
             $columns = [$columns];
         }
         $sort = $options['sort'] ?? [];
-        $skip = $options['skip'] ?? false;
-        $limit = $options['limit'] ?? false;
+        $skip = $options['skip'] ?? 0;
+        $limit = $options['limit'] ?? 0;
         unset($options['sort']);
         unset($options['skip']);
         unset($options['limit']);
@@ -1087,7 +1087,7 @@ class Bridge
         $aggs = $response['aggregations'];
         $data = (count($aggs) === 1)
             ? reset($aggs)['value'] ?? 0
-            : array_map(fn($value) => $value['value'] ?? 0, $aggs);
+            : array_map(fn ($value) => $value['value'] ?? 0, $aggs);
 
         return $this->_return($data, $meta, $params, $queryTag);
     }

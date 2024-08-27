@@ -1,39 +1,38 @@
 <?php
-/**
- * @credit https://github.com/jenssegers/laravel-mongodb/
- */
+
+declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
 use PDPhilip\Elasticsearch\Relations\BelongsTo;
 use PDPhilip\Elasticsearch\Relations\BelongsToMany;
 use PDPhilip\Elasticsearch\Relations\HasMany;
 use PDPhilip\Elasticsearch\Relations\HasOne;
 use PDPhilip\Elasticsearch\Relations\MorphMany;
-use PDPhilip\Elasticsearch\Relations\MorphTo;
 use PDPhilip\Elasticsearch\Relations\MorphOne;
-use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use PDPhilip\Elasticsearch\Relations\MorphTo;
 
 trait HybridRelations
 {
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function hasOne($related, $foreignKey = null, $localKey = null)
     {
-        $foreignKey = $foreignKey ? : $this->getForeignKey();
+        $foreignKey = $foreignKey ?: $this->getForeignKey();
 
         $instance = new $related;
 
-        $localKey = $localKey ? : $this->getKeyName();
+        $localKey = $localKey ?: $this->getKeyName();
 
         return new HasOne($instance->newQuery(), $this, $foreignKey, $localKey);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function morphOne($related, $name, $type = null, $id = null, $localKey = null)
     {
@@ -41,28 +40,28 @@ trait HybridRelations
 
         [$type, $id] = $this->getMorphs($name, $type, $id);
 
-        $localKey = $localKey ? : $this->getKeyName();
+        $localKey = $localKey ?: $this->getKeyName();
 
         return new MorphOne($instance->newQuery(), $this, $type, $id, $localKey);
 
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function hasMany($related, $foreignKey = null, $localKey = null)
     {
-        $foreignKey = $foreignKey ? : $this->getForeignKey();
+        $foreignKey = $foreignKey ?: $this->getForeignKey();
 
         $instance = new $related;
 
-        $localKey = $localKey ? : $this->getKeyName();
+        $localKey = $localKey ?: $this->getKeyName();
 
         return new HasMany($instance->newQuery(), $this, $foreignKey, $localKey);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
     {
@@ -73,23 +72,22 @@ trait HybridRelations
 
         $table = $instance->getTable();
 
-        $localKey = $localKey ? : $this->getKeyName();
+        $localKey = $localKey ?: $this->getKeyName();
 
         return new MorphMany($instance->newQuery(), $this, $type, $id, $localKey);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null)
     {
 
         if ($relation === null) {
-            [$current, $caller] = debug_backtrace(false, 2);
+            [$current, $caller] = debug_backtrace(0, 2);
 
             $relation = $caller['function'];
         }
-
 
         if ($foreignKey === null) {
             $foreignKey = Str::snake($relation).'_id';
@@ -99,13 +97,13 @@ trait HybridRelations
 
         $query = $instance->newQuery();
 
-        $otherKey = $otherKey ? : $instance->getKeyName();
+        $otherKey = $otherKey ?: $instance->getKeyName();
 
         return new BelongsTo($query, $this, $foreignKey, $otherKey, $relation);
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function morphTo($name = null, $type = null, $id = null, $ownerKey = null)
     {
@@ -135,7 +133,7 @@ trait HybridRelations
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function belongsToMany($related, $collection = null, $foreignKey = null, $otherKey = null, $parentKey = null, $relatedKey = null, $relation = null)
     {
@@ -144,14 +142,13 @@ trait HybridRelations
             $relation = $this->guessBelongsToManyRelation();
         }
 
-
-        if (!is_subclass_of($related, ParentModel::class)) {
+        if (! is_subclass_of($related, ParentModel::class)) {
             return parent::belongsToMany($related, $collection, $foreignKey, $otherKey, $parentKey, $relatedKey, $relation);
         }
 
-        $foreignKey = $foreignKey ? : $this->getForeignKey().'s';
+        $foreignKey = $foreignKey ?: $this->getForeignKey().'s';
         $instance = new $related;
-        $otherKey = $otherKey ? : $instance->getForeignKey().'s';
+        $otherKey = $otherKey ?: $instance->getForeignKey().'s';
 
         if ($collection === null) {
             $collection = $instance->getTable();
@@ -159,14 +156,13 @@ trait HybridRelations
 
         $query = $instance->newQuery();
 
-        return new BelongsToMany($query, $this, $collection, $foreignKey, $otherKey, $parentKey ? : $this->getKeyName(), $relatedKey ? : $instance->getKeyName(), $relation
+        return new BelongsToMany($query, $this, $collection, $foreignKey, $otherKey, $parentKey ?: $this->getKeyName(), $relatedKey ?: $instance->getKeyName(), $relation
         );
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-
     protected function guessBelongsToManyRelation()
     {
         if (method_exists($this, 'getBelongsToManyCaller')) {
@@ -177,7 +173,7 @@ trait HybridRelations
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function newEloquentBuilder($query)
     {
