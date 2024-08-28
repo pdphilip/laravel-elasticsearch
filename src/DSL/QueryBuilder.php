@@ -6,9 +6,12 @@ namespace PDPhilip\Elasticsearch\DSL;
 
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
+use PDPhilip\Elasticsearch\Helpers\Utilities;
 
 trait QueryBuilder
 {
+    use Utilities;
+
     protected static $filter;
 
     //    protected static array $bucketOperators = ['and', 'or'];
@@ -132,9 +135,7 @@ trait QueryBuilder
             ],
         ];
         if (isset($sort['_count'])) {
-            if (! isset($terms['terms']['order'])) {
-                $terms['terms']['order'] = [];
-            }
+            $terms['terms']['order'] = [];
             if ($sort['_count'] == 'asc') {
                 $terms['terms']['order'][] = ['_count' => 'asc'];
             } else {
@@ -184,19 +185,6 @@ trait QueryBuilder
     //----------------------------------------------------------------------
     // Parsers
     //----------------------------------------------------------------------
-
-    public function _escape($value): string
-    {
-        $specialChars = ['"', '\\', '~', '^', '/'];
-        foreach ($specialChars as $char) {
-            $value = str_replace($char, '\\'.$char, $value);
-        }
-        if (str_starts_with($value, '-')) {
-            $value = '\\'.$value;
-        }
-
-        return $value;
-    }
 
     /**
      * @throws ParameterException
@@ -405,7 +393,7 @@ trait QueryBuilder
 
                     break;
                 default:
-                    abort('400', 'Invalid operator ['.$operator.'] provided for condition.');
+                    abort(400, 'Invalid operator ['.$operator.'] provided for condition.');
             }
 
             return $queryPart;

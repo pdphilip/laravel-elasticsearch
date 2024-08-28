@@ -102,6 +102,7 @@ trait QueriesRelationships
             return $relation->getHasCompareKey();
         }
 
+        //@phpstan-ignore-next-line
         return $relation instanceof HasOneOrMany ? $relation->getForeignKeyName() : $relation->getOwnerKeyName();
     }
 

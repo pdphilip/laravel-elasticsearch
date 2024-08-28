@@ -13,18 +13,20 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 use LogicException;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\DSL\QueryBuilder;
 use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Helpers\Utilities;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use RuntimeException;
 
 /**
  * @property Connection $connection
+ * @property Processor $processor
+ * @property Grammar $grammar
  */
 #[AllowDynamicProperties]
 class Builder extends BaseBuilder
 {
-    use QueryBuilder;
+    use Utilities;
 
     public array $options = [];
 
@@ -33,6 +35,8 @@ class Builder extends BaseBuilder
     public bool $searchAfter = false;
 
     public string $searchQuery = '';
+
+    public int $distinctType = 0;
 
     public array $searchOptions = [];
 
@@ -85,6 +89,16 @@ class Builder extends BaseBuilder
         $this->connection = $connection;
         $this->processor = $processor;
 
+    }
+
+    public function getProcessor(): Processor
+    {
+        return $this->processor;
+    }
+
+    public function getConnection(): Connection
+    {
+        return $this->connection;
     }
 
     public function setRefresh($value): void
@@ -154,7 +168,7 @@ class Builder extends BaseBuilder
                 $columns = $aggColumns;
             }
 
-            if ($this->distinct) {
+            if ($this->distinctType) {
                 $totalResults = $this->connection->distinctAggregate($function, $wheres, $options, $columns);
             } else {
                 $totalResults = $this->connection->aggregate($function, $wheres, $options, $columns);
@@ -175,12 +189,12 @@ class Builder extends BaseBuilder
 
         }
 
-        if ($this->distinct) {
+        if ($this->distinctType) {
             if (empty($columns[0]) || $columns[0] == '*') {
                 throw new RuntimeException('Columns are required for term aggregation when using distinct()');
             } else {
 
-                if ($this->distinct == 2) {
+                if ($this->distinctType == 2) {
                     $find = $this->connection->distinct($wheres, $options, $columns, true);
                 } else {
                     $find = $this->connection->distinct($wheres, $options, $columns);
@@ -360,9 +374,9 @@ class Builder extends BaseBuilder
      */
     public function distinct($includeCount = false): static
     {
-        $this->distinct = 1;
+        $this->distinctType = 1;
         if ($includeCount) {
-            $this->distinct = 2;
+            $this->distinctType = 2;
         }
 
         return $this;
@@ -570,7 +584,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function newQuery(): static
+    public function newQuery(): Builder
     {
         return new self($this->connection, $this->processor);
     }
@@ -773,20 +787,14 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    /**
-     * @param  ...$groups
-     *
-     * GroupBy will be passed on to distinct
-     * @return $this|Builder
-     */
-    public function groupBy(...$groups): static
+    public function groupBy(...$groups): Builder
     {
         if (is_array($groups[0])) {
             $groups = $groups[0];
         }
 
         $this->addSelect($groups);
-        $this->distinct = 1;
+        $this->distinctType = 1;
 
         return $this;
     }
@@ -978,7 +986,7 @@ class Builder extends BaseBuilder
     public function createIndex()
     {
         if (! $this->indexExists()) {
-            $this->connection->indexCreate($this->index);
+            $this->connection->indexCreate();
 
             return true;
         }
@@ -1009,6 +1017,7 @@ class Builder extends BaseBuilder
 
     }
 
+    //@phpstan-ignore-next-line
     public function toSql(): array
     {
         return $this->toDsl();
@@ -1228,9 +1237,6 @@ class Builder extends BaseBuilder
     // Pagination overrides
     //----------------------------------------------------------------------
 
-    /**
-     * @return mixed
-     */
     protected function _parseWhereNested(array $where): array
     {
 
@@ -1465,7 +1471,7 @@ class Builder extends BaseBuilder
 
     protected function runPaginationCountQuery($columns = ['*']): Closure|array
     {
-        if ($this->distinct) {
+        if ($this->distinctType) {
             $clone = $this->cloneForPaginationCount();
             $currentCloneCols = $clone->columns;
             if ($columns && $columns !== ['*']) {

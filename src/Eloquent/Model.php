@@ -29,8 +29,6 @@ abstract class Model extends BaseModel
      * The table associated with the model.
      *
      * @var string|null
-     *
-     * @phpstan-ignore-next-line
      */
     protected $index;
 
@@ -174,10 +172,12 @@ abstract class Model extends BaseModel
 
     /**
      * {@inheritdoc}
+     *
+     * @phpstan-ignore-next-line
      */
     public function freshTimestamp(): string
     {
-        //        return Carbon::now()->toIso8601String();
+        // return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
     }
 
@@ -247,10 +247,8 @@ abstract class Model extends BaseModel
         return parent::setAttribute($key, $value);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function fromDateTime($value): Carbon
+    //@phpstan-ignore-next-line
+    public function fromDateTime(mixed $value): Carbon
     {
         return parent::asDateTime($value);
     }
@@ -323,11 +321,14 @@ abstract class Model extends BaseModel
         $this->mergeAttributesFromCachedCasts();
 
         $query = $this->newModelQuery();
+        //@phpstan-ignore-next-line
         $query->setRefresh(false);
 
         if ($this->exists) {
+            //@phpstan-ignore-next-line
             $saved = ! $this->isDirty() || $this->performUpdate($query);
         } else {
+            //@phpstan-ignore-next-line
             $saved = $this->performInsert($query);
         }
 
@@ -435,9 +436,9 @@ abstract class Model extends BaseModel
     {
         $relations = $this->getRelations();
 
-        if ($parentRelation = $this->getParentRelation()) {
-            unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
-        }
+        $parentRelation = $this->getParentRelation();
+        //@phpstan-ignore-next-line
+        unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
 
         return $relations;
     }
@@ -458,6 +459,16 @@ abstract class Model extends BaseModel
         $this->parentRelation = $relation;
     }
 
+    //----------------------------------------------------------------------
+    // Inherited as is but typed
+    //----------------------------------------------------------------------
+
+    //    public function newModelQuery(): QueryBuilder
+    //    {
+    //        return $this->newEloquentBuilder(
+    //            $this->newBaseQueryBuilder()
+    //        )->setModel($this);
+    //    }
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------

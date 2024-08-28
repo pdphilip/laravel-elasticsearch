@@ -8,7 +8,7 @@ use Exception;
 
 class MissingOrderException extends Exception
 {
-    private array $_details = [];
+    //    private array $_details;
 
     public function __construct($message = 'Order parameter is required for pagination using search_after.', $code = 0, ?Exception $previous = null)
     {

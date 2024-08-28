@@ -44,7 +44,11 @@ class Results
         $response = ($error);
         $title = substr($response, 0, $jsonStartPos);
         $jsonString = substr($response, $jsonStartPos);
-        $errorArray = json_decode($jsonString, true);
+        if ($this->_isJson($jsonString)) {
+            $errorArray = json_decode($jsonString, true);
+        } else {
+            $errorArray = [$jsonString];
+        }
 
         if (json_last_error() === JSON_ERROR_NONE) {
             $errorReason = $errorArray['error']['reason'] ?? null;

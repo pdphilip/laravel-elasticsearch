@@ -47,13 +47,15 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method $this orderByGeo(string $column, array $pin, $direction = 'asc', $unit = 'km', $mode = null, $type = 'arc')
  * @method $this orderByGeoDesc(string $column, array $pin, $unit = 'km', $mode = null, $type = 'arc')
  * @method $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
- * @method $this chunk(string $count, Callable $callback, string $keepAlive = '5m')
- * @method $this chunkById(string $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
+ * @method $this chunk(mixed $count, callable $callback, string $keepAlive = '5m')
+ * @method $this chunkById(mixed $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
  * @method $this queryNested(string $column, Callable $callback)
  * @method $this rawSearch(array $bodyParams, bool $returnRaw = false)
  * @method $this rawAggregation(array $bodyParams)
  * @method $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
  * @method $this deleteIndexIfExists()
+ * @method $this deleteIndex()
+ * @method $this createIndex(array $settings = [])
  *
  * @mixin \Illuminate\Database\Query\Builder
  */

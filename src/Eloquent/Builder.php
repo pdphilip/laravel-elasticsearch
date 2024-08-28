@@ -5,20 +5,23 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Container\Container;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
-use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
+use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use RuntimeException;
 
 /**
- * @property \PDPhilip\Elasticsearch\Query\Builder $query
+ * @property QueryBuilder $query
+ * @property Model $model
+ *
+ * @template TModel of Model
  */
 class Builder extends BaseEloquentBuilder
 {
@@ -27,7 +30,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * The methods that should be returned from query builder.
      *
-     * @var array
+     * @var array<string>
      */
     protected $passthru = [
         'aggregate',
@@ -70,22 +73,27 @@ class Builder extends BaseEloquentBuilder
         'agg',
     ];
 
-    public function getConnection(): Connection
+    /**
+     * @inerhitDoc
+     */
+    public function getConnection(): ConnectionInterface
     {
         return $this->query->getConnection();
     }
 
     /**
-     * @inerhitDoc
+     * Override the default getModels
+     *
+     * @return array<string, array>
+     *
+     * @phpstan-ignore-next-line
      */
     public function getModels($columns = ['*']): array
     {
-
         $data = $this->query->get($columns);
         $results = $this->model->hydrate($data->all())->all();
 
         return ['results' => $results];
-
     }
 
     /**
@@ -103,6 +111,12 @@ class Builder extends BaseEloquentBuilder
 
     }
 
+    /**
+     * Hydrate the models from the given array.
+     *
+     *
+     * @return Collection<int, TModel>
+     */
     public function hydrate(array $items): Collection
     {
         $instance = $this->newModelInstance();
@@ -209,9 +223,8 @@ class Builder extends BaseEloquentBuilder
         }
 
         $column = $this->model->getUpdatedAtColumn();
-        $values = array_merge([$column => $this->model->freshTimestampString()], $values);
 
-        return $values;
+        return array_merge([$column => $this->model->freshTimestampString()], $values);
     }
 
     public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
@@ -241,7 +254,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * {@inheritdoc}
      */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m'): void
+    public function chunkById(mixed $count, callable $callback, mixed $column = '_id', mixed $alias = null, string $keepAlive = '5m'): bool
     {
         $column ??= $this->defaultKeyName();
         $alias ??= $column;
@@ -250,7 +263,7 @@ class Builder extends BaseEloquentBuilder
 
         if ($column === '_id') {
             //Use PIT
-            $this->_chunkByPit($count, $callback, $keepAlive);
+            return $this->_chunkByPit($count, $callback, $keepAlive);
         } else {
             $lastId = null;
             $page = 1;
@@ -261,8 +274,9 @@ class Builder extends BaseEloquentBuilder
                 if ($countResults == 0) {
                     break;
                 }
+                // @phpstan-ignore-next-line
                 if ($callback($results, $page) === false) {
-                    return;
+                    return true;
                 }
                 $aliasClean = $alias;
                 if (str_ends_with($aliasClean, '.keyword')) {
@@ -280,9 +294,11 @@ class Builder extends BaseEloquentBuilder
             } while ($countResults == $count);
         }
 
+        return true;
+
     }
 
-    private function _chunkByPit($count, callable $callback, $keepAlive = '5m'): void
+    private function _chunkByPit(mixed $count, callable $callback, string $keepAlive = '5m'): bool
     {
         $pitId = $this->query->openPit($keepAlive);
 
@@ -301,7 +317,7 @@ class Builder extends BaseEloquentBuilder
             }
 
             if ($callback($results, $page) === false) {
-                return;
+                return true;
             }
 
             unset($results);
@@ -310,16 +326,18 @@ class Builder extends BaseEloquentBuilder
         } while ($countResults == $count);
 
         $this->query->closePit($pitId);
+
+        return true;
     }
 
     //----------------------------------------------------------------------
     // ES Search query builders
     //----------------------------------------------------------------------
 
-    public function chunk($count, callable $callback, $keepAlive = '5m'): void
+    public function chunk(mixed $count, callable $callback, string $keepAlive = '5m'): bool
     {
         //default to using PIT
-        $this->_chunkByPit($count, $callback, $keepAlive);
+        return $this->_chunkByPit($count, $callback, $keepAlive);
     }
 
     public function filterGeoBox(string $field, array $topLeft, array $bottomRight): self
@@ -451,6 +469,41 @@ class Builder extends BaseEloquentBuilder
     }
 
     //----------------------------------------------------------------------
+    // Inherited as is but typed
+    //----------------------------------------------------------------------
+    /**
+     * Create a new instance of the model being queried.
+     *
+     * @param  array  $attributes
+     */
+    public function newModelInstance($attributes = []): Model
+    {
+        return $this->model->newInstance($attributes)->setConnection(
+            $this->query->getConnection()->getName()
+        );
+    }
+
+    /**
+     * Override the default schema builder.
+     */
+    public function toBase(): QueryBuilder
+    {
+        return $this->applyScopes()->getQuery();
+    }
+
+    public function create(array $attributes = []): Model
+    {
+        return tap($this->newModelInstance($attributes), function ($instance) {
+            $instance->save();
+        });
+    }
+
+    public function getQuery(): QueryBuilder
+    {
+        return $this->query;
+    }
+
+    //----------------------------------------------------------------------
     // Private methods
     //----------------------------------------------------------------------
 
@@ -471,7 +524,7 @@ class Builder extends BaseEloquentBuilder
         }
 
         // this moves our search_after cursor in to the query.
-        $this->setSearchAfter($cursor);
+        //        $this->setSearchAfter($cursor); //  where is this method?
         $this->limit($perPage);
 
         $search = $this->get();

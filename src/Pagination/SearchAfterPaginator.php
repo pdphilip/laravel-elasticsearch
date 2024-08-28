@@ -11,8 +11,11 @@ class SearchAfterPaginator extends CursorPaginator
 {
     public function getParametersForItem($item)
     {
+        //@phpstan-ignore-next-line
+        $sort = $item->getMeta()->sort;
+
         return [
-            'search_after' => $item->getMeta()->sort,
+            'search_after' => $sort,
         ];
     }
 

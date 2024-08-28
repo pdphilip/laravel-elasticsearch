@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch;
 
-use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Database\Connection as BaseConnection;
@@ -15,7 +14,7 @@ use RuntimeException;
 
 /**
  * @method bool indexModify(array $settings)
- * @method bool indexCreate(string $index, Closure $callback = null)
+ * @method bool indexCreate(array $settings = [])
  * @method array indexSettings(string $index)
  * @method array getIndices(bool $all = false)
  * @method bool indexExists(string $index)
@@ -35,7 +34,7 @@ use RuntimeException;
  * @method Results aggregationRaw(array $bodyParams)
  * @method Results search(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
  * @method array toDsl(array $wheres, array $options, array $columns)
- * @method array toDslForSearch(array $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
+ * @method array toDslForSearch(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
  * @method string openPit(string $keepAlive = '5m')
  * @method bool closePit(string $id)
  * @method Results pitFind(array $wheres, array $options, array $fields, string $pitId, ?array $after, string $keepAlive)
@@ -64,6 +63,11 @@ class Connection extends BaseConnection
 
     protected string $connectionName = 'elasticsearch';
 
+    /**
+     * @var Query\Processor
+     */
+    protected $postProcessor;
+
     public function __construct(array $config)
     {
 
@@ -75,7 +79,7 @@ class Connection extends BaseConnection
 
         $this->client = $this->buildConnection();
 
-        $this->useDefaultPostProcessor();
+        $this->postProcessor = new Query\Processor;
 
         $this->useDefaultSchemaGrammar();
 
@@ -131,6 +135,11 @@ class Connection extends BaseConnection
         return $this->indexPrefix;
     }
 
+    public function getPostProcessor(): Query\Processor
+    {
+        return $this->postProcessor;
+    }
+
     public function setIndexPrefix($newPrefix): void
     {
         $this->indexPrefix = $newPrefix;
@@ -143,7 +152,7 @@ class Connection extends BaseConnection
 
     public function getSchemaGrammar(): Schema\Grammar
     {
-        return new Schema\Grammar($this);
+        return new Schema\Grammar;
     }
 
     public function getIndex(): string
@@ -171,7 +180,9 @@ class Connection extends BaseConnection
     }
 
     /**
-     * {@inheritdoc}
+     * Override the default schema builder.
+     *
+     * @phpstan-ignore-next-line
      */
     public function getSchemaBuilder(): Schema\Builder
     {
