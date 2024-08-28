@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "91206e09f168e3b68d9a8dd1606d2391",
+    "content-hash": "c07ac09e0f955a1d2b2180e96ac51c43",
     "packages": [
         {
             "name": "brick/math",
@@ -9251,57 +9251,6 @@
                 }
             ],
             "time": "2024-08-23T09:03:01+00:00"
-        },
-        {
-            "name": "rkondratuk/geo-math-php",
-            "version": "1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/rkondratuk/geo-math-php.git",
-                "reference": "98cf9a16183259f719389cf7a8818bc6c88350d4"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/rkondratuk/geo-math-php/zipball/98cf9a16183259f719389cf7a8818bc6c88350d4",
-                "reference": "98cf9a16183259f719389cf7a8818bc6c88350d4",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.4"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "5.7.18"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "PhpGeoMath\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Roman Kondratuk",
-                    "email": "rkodratuk@gmail.com"
-                }
-            ],
-            "description": "Geo calculations library",
-            "homepage": "https://github.com/rkondratuk/php-geo-math",
-            "keywords": [
-                "cartesian",
-                "coordinates",
-                "geo",
-                "mathematics",
-                "polar"
-            ],
-            "support": {
-                "issues": "https://github.com/rkondratuk/geo-math-php/issues",
-                "source": "https://github.com/rkondratuk/geo-math-php/tree/1.0.0"
-            },
-            "time": "2022-10-14T18:36:00+00:00"
         },
         {
             "name": "sebastian/cli-parser",

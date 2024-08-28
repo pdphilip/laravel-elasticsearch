@@ -32,7 +32,6 @@
     "doctrine/coding-standard": "12.0.x-dev",
     "pestphp/pest": "^2.34",
     "pestphp/pest-plugin-laravel": "^2.4",
-    "rkondratuk/geo-math-php": "^1.0",
     "laravel/pint": "^1.14",
     "nunomaduro/collision": "^8.1.1||^7.10.0",
     "larastan/larastan": "^2.9",
