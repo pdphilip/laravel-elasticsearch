@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
 test('delete a single model', function () {
@@ -24,7 +23,7 @@ test('mass deletion of models where color is null', function () {
 test('truncate all documents from an index', function () {
     Product::factory(10)->create();
     Product::truncate();
-    sleep(1);
+    sleep(3);
 
     $products = Product::all();
     expect($products)->toBeEmpty();

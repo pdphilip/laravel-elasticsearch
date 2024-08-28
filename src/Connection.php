@@ -47,7 +47,7 @@ class Connection extends BaseConnection
 
     protected int $maxSize = 10;
 
-    protected ?string $indexPrefix;
+    protected string $indexPrefix = '';
 
     protected bool $allowIdSort = false;
 
@@ -145,7 +145,7 @@ class Connection extends BaseConnection
         $this->indexPrefix = $newPrefix;
     }
 
-    public function getErrorLoggingIndex(): string|bool
+    public function getErrorLoggingIndex(): ?string
     {
         return $this->errorLoggingIndex;
     }

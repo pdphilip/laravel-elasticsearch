@@ -33,9 +33,13 @@ test('products are ordered by status', function () {
 });
 
 test('products are ordered by created_at descending', function () {
-    Product::factory(50)->make()->each(function ($model) {
-        $model->saveWithoutRefresh();
-    });
+
+    while (Product::count() < 10) {
+        Product::factory(1)->make()->each(function ($model) {
+            $model->saveWithoutRefresh();
+        });
+        sleep(1);
+    }
     sleep(2);
     $products = Product::orderBy('created_at', 'desc')->get();
     expect(isSorted($products, 'created_at', true))->toBeTrue();

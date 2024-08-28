@@ -21,7 +21,7 @@ class Bridge
 
     protected Client $client;
 
-    protected string|bool $errorLogger = false;
+    protected ?string $errorLogger;
 
     protected ?int $maxSize = 10; //ES default
 
