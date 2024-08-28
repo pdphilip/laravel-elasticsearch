@@ -983,7 +983,7 @@ class Builder extends BaseBuilder
         return Schema::connection($this->connection->getName())->getSettings($this->index);
     }
 
-    public function createIndex()
+    public function createIndex(): bool
     {
         if (! $this->indexExists()) {
             $this->connection->indexCreate();
@@ -994,7 +994,7 @@ class Builder extends BaseBuilder
         return false;
     }
 
-    public function indexExists()
+    public function indexExists(): bool
     {
         return Schema::connection($this->connection->getName())->hasIndex($this->index);
     }

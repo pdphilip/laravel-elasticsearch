@@ -5,23 +5,27 @@ declare(strict_types=1);
 use Workbench\App\Models\Product;
 
 test('filter products within a geo box', function () {
-    Product::factory()->count(3)->state(['manufacturer' => ['location' => ['lat' => 5, 'lon' => 5]]])->create();
-    Product::factory()->count(2)->state(['manufacturer' => ['location' => ['lat' => 15, 'lon' => -15]]])->create();
 
+    Product::factory()->count(3)->state(['status' => 7, 'manufacturer' => ['location' => ['lat' => 5, 'lon' => 5]]])->create();
+    Product::factory()->count(2)->state(['status' => 7, 'manufacturer' => ['location' => ['lat' => 15, 'lon' => -15]]])->create();
     $topLeft = [-10, 10];
     $bottomRight = [10, -10];
     $products = Product::where('status', 7)->filterGeoBox('manufacturer.location', $topLeft, $bottomRight)->get();
     expect($products)->toHaveCount(3); // Expecting only the first three within the box
-})->todo();
+});
 
 test('filter products close to a specific point', function () {
-    Product::factory()->state(['manufacturer' => ['location' => ['lat' => 0, 'lon' => 0]]])->create();
 
+    $first = Product::factory()->state(['status' => 7])->create();
+    Product::factory()->count(5)->state(['status' => 7])->create();
+    $first->manufacturer = ['location' => ['lat' => 0, 'lon' => 0]];
+    $first->save();
     $point = [0, 0];
-    $distance = '20km';
+    $distance = '1m';
     $products = Product::where('status', 7)->filterGeoPoint('manufacturer.location', $distance, $point)->get();
     expect($products)->toHaveCount(1);
-})->todo();
+
+});
 
 test('search for products by exact name', function () {
     Product::factory()->state(['name' => 'John Smith'])->create();
@@ -80,7 +84,7 @@ test('perform raw aggregation query', function () {
     Product::factory()->state(['price' => 700])->create();
     Product::factory()->state(['price' => 1200])->create();
 
-    $body = [
+    $bodyParams = [
         'aggs' => [
             'price_ranges' => [
                 'range' => [
@@ -91,22 +95,17 @@ test('perform raw aggregation query', function () {
                         ['from' => 500, 'to' => 1000],
                         ['from' => 1000],
                     ],
-                ],
-                'aggs' => [
-                    'sales_over_time' => [
-                        'date_histogram' => [
-                            'field' => 'datetime',
-                            'fixed_interval' => '1d',
-                        ],
-                    ],
+
                 ],
             ],
         ],
     ];
-    $results = Product::rawAggregation($body);
-    expect($results)->toBeArray()
-        ->and(array_keys($results))->toContain('aggregations');
-})->todo();
+    $priceBuckets = Product::rawAggregation($bodyParams);
+    expect($priceBuckets['price_ranges'][0]['doc_count'])->toBe(1)
+        ->and($priceBuckets['price_ranges'][1]['doc_count'])->toBe(1)
+        ->and($priceBuckets['price_ranges'][2]['doc_count'])->toBe(1)
+        ->and($priceBuckets['price_ranges'][3]['doc_count'])->toBe(1);
+});
 
 test('convert query to DSL', function () {
     $dslQuery = Product::where('price', '>', 100)->toDSL();
