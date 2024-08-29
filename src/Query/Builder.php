@@ -32,7 +32,11 @@ class Builder extends BaseBuilder
 
     public bool $paginating = false;
 
-    public bool $searchAfter = false;
+    public mixed $searchAfter = null;
+
+    public array $cursor = [];
+
+    public mixed $previousSearchAfter = null;
 
     public string $searchQuery = '';
 
@@ -106,19 +110,30 @@ class Builder extends BaseBuilder
         $this->refresh = $value;
     }
 
-    /**
-     * @return $this
-     */
-    public function setSearchAfter($cursor): static
+    public function initCursor($cursor): array
     {
 
-        // if there is no $cursor then we don't do anything
-        // otherwise we specifically look for the `search_after` parameter on the cursor
+        $this->cursor = [
+            'page' => 1,
+            'pages' => 0,
+            'records' => 0,
+            'sort_history' => [],
+            'next_sort' => null,
+            'ts' => 0,
+        ];
+
         if (! empty($cursor)) {
-            $this->searchAfter = $cursor->parameter('search_after');
+            $this->cursor = [
+                'page' => $cursor->parameter('page'),
+                'pages' => $cursor->parameter('pages'),
+                'records' => $cursor->parameter('records'),
+                'sort_history' => $cursor->parameter('sort_history'),
+                'next_sort' => $cursor->parameter('next_sort'),
+                'ts' => $cursor->parameter('ts'),
+            ];
         }
 
-        return $this;
+        return $this->cursor;
     }
 
     //----------------------------------------------------------------------
@@ -291,8 +306,15 @@ class Builder extends BaseBuilder
             //Set order to created_at -> asc for consistency
             //TODO
         }
-        if ($this->searchAfter) {
-            $options['search_after'] = $this->searchAfter;
+        if ($this->cursor) {
+            $options['_meta']['cursor'] = $this->cursor;
+            if (! empty($this->cursor['next_sort'])) {
+                $options['search_after'] = $this->cursor['next_sort'];
+            }
+        }
+
+        if ($this->previousSearchAfter) {
+            $options['prev_search_after'] = $this->previousSearchAfter;
         }
         if ($this->minScore) {
             $options['minScore'] = $this->minScore;
@@ -1493,9 +1515,6 @@ class Builder extends BaseBuilder
     // Helpers
     //----------------------------------------------------------------------
 
-    /**
-     * {@inheritdoc}
-     */
     public function all($columns = []): Collection
     {
         return $this->_processGet($columns);

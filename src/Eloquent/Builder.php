@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Pagination\Cursor;
@@ -510,7 +511,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * @throws MissingOrderException
      */
-    public function searchAfterPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null)
+    public function searchAfterPaginate($perPage = null, array|string $columns = [], $cursor = null)
     {
 
         if (empty($this->query->orders)) {
@@ -520,22 +521,38 @@ class Builder extends BaseEloquentBuilder
         if (! $cursor instanceof Cursor) {
             $cursor = is_string($cursor)
                 ? Cursor::fromEncoded($cursor)
-                : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
+                : CursorPaginator::resolveCurrentCursor('cursor', $cursor);
         }
-
-        // this moves our search_after cursor in to the query.
-        //        $this->setSearchAfter($cursor); //  where is this method?
-        $this->limit($perPage);
-
-        $search = $this->get();
+        $this->query->limit($perPage);
+        $cursorPayload = $this->query->initCursor($cursor);
+        $age = time() - $cursorPayload['ts'];
+        $ttl = 300; //5 minutes
+        if ($age > $ttl) {
+            // cursor is older than 5m, let's refresh it
+            $clone = $this->clone();
+            $cursorPayload['records'] = $clone->count();
+            $cursorPayload['pages'] = (int) ceil($cursorPayload['records'] / $perPage);
+            $cursorPayload['ts'] = time();
+        }
+        if ($cursorPayload['next_sort'] && ! in_array($cursorPayload['next_sort'], $cursorPayload['sort_history'])) {
+            $cursorPayload['sort_history'][] = $cursorPayload['next_sort'];
+        }
+        $this->query->cursor = $cursorPayload;
+        $search = $this->get($columns);
 
         return $this->searchAfterPaginator($search, $perPage, $cursor, [
             'path' => Paginator::resolveCurrentPath(),
-            'cursorName' => $cursorName,
+            'cursorName' => 'cursor',
+            'records' => $cursorPayload['records'],
+            'totalPages' => $cursorPayload['pages'],
+            'currentPage' => $cursorPayload['page'],
         ]);
 
     }
 
+    /**
+     * @throws BindingResolutionException
+     */
     protected function searchAfterPaginator($items, $perPage, $cursor, $options)
     {
         return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact(

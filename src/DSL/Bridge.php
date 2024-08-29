@@ -27,6 +27,8 @@ class Bridge
 
     private ?string $index;
 
+    private ?array $stashedMeta;
+
     private ?string $indexPrefix;
 
     public function __construct(Connection $connection)
@@ -1061,7 +1063,6 @@ class Bridge
 
     private function _sanitizeSearchResponse($response, $params, $queryTag)
     {
-
         $meta['took'] = $response['took'] ?? 0;
         $meta['timed_out'] = $response['timed_out'];
         $meta['total'] = $response['hits']['total']['value'] ?? 0;
@@ -1097,9 +1098,9 @@ class Bridge
                     $datum['_meta']['_score'] = $hit['_score'];
                 }
                 $datum['_meta']['_query'] = $meta;
-
                 // If we are sorting we need to store it to be able to pass it on in the search after.
                 $datum['_meta']['sort'] = ! empty($hit['sort']) ? $hit['sort'] : null;
+                $datum['_meta'] = $this->_attachStashedMeta($datum['_meta']);
                 $data[] = $datum;
             }
         }
@@ -1272,6 +1273,24 @@ class Bridge
         } catch (Exception $e) {
             //ignore if problem writing query log
         }
+    }
+
+    //----------------------------------------------------------------------
+    // Meta Stasher
+    //----------------------------------------------------------------------
+
+    private function _stashMeta($meta): void
+    {
+        $this->stashedMeta = $meta;
+    }
+
+    private function _attachStashedMeta($meta): mixed
+    {
+        if (! empty($this->stashedMeta)) {
+            $meta = array_merge($meta, $this->stashedMeta);
+        }
+
+        return $meta;
     }
 
     //    private function _parseSort($sort, $sortParams): array

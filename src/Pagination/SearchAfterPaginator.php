@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Pagination;
 
+use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
 
@@ -12,25 +13,67 @@ class SearchAfterPaginator extends CursorPaginator
     public function getParametersForItem($item)
     {
         //@phpstan-ignore-next-line
-        $sort = $item->getMeta()->sort;
+        $cursor = $item->getMeta()->cursor;
+        $search_after = $item->getMeta()->sort;
+        $cursor['page']++;
+        $cursor['next_sort'] = $search_after;
 
+        return $cursor;
+    }
+
+    public function toArray(): array
+    {
         return [
-            'search_after' => $sort,
+            'data' => $this->items->toArray(),
+            'path' => $this->path(),
+            'per_page' => $this->perPage(),
+            'current_page' => $this->currentPageNumber(),
+            'next_cursor' => $this->nextCursor()?->encode(),
+            'next_page_url' => $this->nextPageUrl(),
+            'prev_cursor' => $this->previousCursor()?->encode(),
+            'prev_page_url' => $this->previousPageUrl(),
         ];
     }
 
-    protected function setItems($items)
+    public function currentPageNumber()
+    {
+        return $this->options['currentPage'];
+    }
+
+    public function previousCursor(): ?Cursor
+    {
+        if (! $this->cursor) {
+            return null;
+        }
+        $current = $this->cursor->toArray();
+        if ($current['page'] < 2) {
+            return null;
+        }
+        $previousCursor = $current;
+        unset($previousCursor['_pointsToNextItems']);
+        $previousCursor['page']--;
+        $previousCursor['next_sort'] = array_pop($previousCursor['sort_history']);
+
+        return new Cursor($previousCursor, false);
+
+    }
+
+    public function previousPageUrl(): ?string
+    {
+        if (is_null($previousCursor = $this->previousCursor())) {
+            return null;
+        }
+        if ($previousCursor->parameter('page') == 1) {
+            //Show base rather to reset cursor
+            return $this->path();
+        }
+
+        return $this->url($previousCursor);
+    }
+
+    protected function setItems($items): void
     {
         $this->items = $items instanceof Collection ? $items : Collection::make($items);
-
-        // FIXME: We need to account fot the scenario where $this->perPage == $this->items->count()
-        // but there are no more records and this ends up doing an extra pull.
-        $this->hasMore = $this->items->count() >= $this->perPage;
-
-        $this->items = $this->items->slice(0, $this->perPage);
-
-        if (! is_null($this->cursor) && $this->cursor->pointsToPreviousItems()) {
-            $this->items = $this->items->reverse()->values();
-        }
+        $this->hasMore = $this->options['currentPage'] < $this->options['totalPages'];
     }
 }
