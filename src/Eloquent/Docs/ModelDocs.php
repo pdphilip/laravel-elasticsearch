@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent\Docs;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Cursor;
+use Illuminate\Pagination\CursorPaginator;
+
 /**
  * @method $this term(string $term, $boostFactor = null) @return $this
  * @method $this andTerm(string $term, $boostFactor = null)
@@ -59,6 +63,8 @@ namespace PDPhilip\Elasticsearch\Eloquent\Docs;
  * @method array getIndexMappings()
  * @method array getIndexSettings()
  * @method bool indexExists()
+ * @method LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
+ * @method CursorPaginator cursorPaginate(int $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
  *
  * @mixin \Illuminate\Database\Query\Builder
  */

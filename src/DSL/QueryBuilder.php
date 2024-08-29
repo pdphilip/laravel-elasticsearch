@@ -30,6 +30,8 @@ trait QueryBuilder
      */
     public function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = []): array
     {
+        $searchOptions = $this->_clearAndStashMeta($searchOptions);
+        $options = $this->_clearAndStashMeta($options);
         $params = [];
         if ($index) {
             $params['index'] = $index;
@@ -93,6 +95,7 @@ trait QueryBuilder
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
+        $options = $this->_clearAndStashMeta($options);
         if ($index) {
             $params = [
                 'index' => $index,
@@ -195,9 +198,20 @@ trait QueryBuilder
         if (! $wheres) {
             return ParameterBuilder::matchAll();
         }
+
         $dsl = $this->_convertWheresToDSL($wheres);
 
         return ParameterBuilder::query($dsl);
+    }
+
+    private function _clearAndStashMeta($options): array
+    {
+        if (! empty($options['_meta'])) {
+            $this->_stashMeta($options['_meta']);
+            unset($options['_meta']);
+        }
+
+        return $options;
     }
 
     /**
@@ -409,7 +423,9 @@ trait QueryBuilder
         if ($options) {
             foreach ($options as $key => $value) {
                 switch ($key) {
-                    //If we are paginating then we need to include search after
+                    case 'prev_search_after':
+                        $return['_meta']['prev_search_after'] = $value;
+                        break;
                     case 'search_after':
                         $return['body']['search_after'] = $value;
                         break;
