@@ -524,7 +524,7 @@ class Builder extends BaseEloquentBuilder
         }
 
         // this moves our search_after cursor in to the query.
-        //        $this->setSearchAfter($cursor); //  where is this method?
+        $this->setSearchAfter($cursor);
         $this->limit($perPage);
 
         $search = $this->get();

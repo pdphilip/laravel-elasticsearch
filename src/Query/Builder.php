@@ -32,7 +32,7 @@ class Builder extends BaseBuilder
 
     public bool $paginating = false;
 
-    public bool $searchAfter = false;
+    public ?array $searchAfter;
 
     public string $searchQuery = '';
 
