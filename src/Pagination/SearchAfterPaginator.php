@@ -27,11 +27,16 @@ class SearchAfterPaginator extends CursorPaginator
             'data' => $this->items->toArray(),
             'path' => $this->path(),
             'per_page' => $this->perPage(),
-            'current_page' => $this->currentPageNumber(),
             'next_cursor' => $this->nextCursor()?->encode(),
             'next_page_url' => $this->nextPageUrl(),
             'prev_cursor' => $this->previousCursor()?->encode(),
             'prev_page_url' => $this->previousPageUrl(),
+            'current_page' => $this->currentPageNumber(),
+            'total' => $this->totalRecords(),
+            'from' => $this->showingFrom(),
+            'to' => $this->showingTo(),
+            'last_page' => $this->lastPage(),
+
         ];
     }
 
@@ -40,6 +45,36 @@ class SearchAfterPaginator extends CursorPaginator
         return $this->options['currentPage'];
     }
 
+    public function totalRecords()
+    {
+        return $this->options['records'];
+    }
+
+    public function showingFrom()
+    {
+        $perPage = $this->perPage();
+        $currentPage = $this->currentPageNumber();
+        $start = ($currentPage - 1) * $perPage + 1;
+
+        return $start;
+    }
+
+    public function showingTo()
+    {
+        $records = count($this->items);
+        $currentPage = $this->currentPageNumber();
+        $perPage = $this->perPage();
+        $end = (($currentPage - 1) * $perPage) + $records;
+
+        return $end;
+    }
+
+    public function lastPage()
+    {
+        return $this->options['totalPages'];
+    }
+
+    //  Builds the cursor for the previous page
     public function previousCursor(): ?Cursor
     {
         if (! $this->cursor) {
@@ -58,18 +93,21 @@ class SearchAfterPaginator extends CursorPaginator
 
     }
 
-    public function previousPageUrl(): ?string
-    {
-        if (is_null($previousCursor = $this->previousCursor())) {
-            return null;
-        }
-        if ($previousCursor->parameter('page') == 1) {
-            //Show base rather to reset cursor
-            return $this->path();
-        }
+    //  PDP: I'll leave out this logic for now
 
-        return $this->url($previousCursor);
-    }
+    //    public function previousPageUrl(): ?string
+    //    {
+    //        if (is_null($previousCursor = $this->previousCursor())) {
+    //            return null;
+    //        }
+    //
+    //        if ($previousCursor->parameter('page') == 1) {
+    //            //Show base rather to reset cursor
+    //            return $this->path();
+    //        }
+    //
+    //        return $this->url($previousCursor);
+    //    }
 
     protected function setItems($items): void
     {

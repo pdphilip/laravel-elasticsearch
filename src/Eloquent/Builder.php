@@ -509,13 +509,20 @@ class Builder extends BaseEloquentBuilder
     //----------------------------------------------------------------------
 
     /**
-     * @throws MissingOrderException
+     *  Using Laravel base method name rather
+     *
+     * @throws MissingOrderException|BindingResolutionException
      */
-    public function searchAfterPaginate($perPage = null, array|string $columns = [], $cursor = null)
+    public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null): CursorPaginator
     {
-
         if (empty($this->query->orders)) {
-            throw new MissingOrderException;
+            //try set created_at & updated_at
+            if (! $this->inferSort()) {
+                throw new MissingOrderException;
+            }
+        } elseif (count($this->query->orders) === 1) {
+            //try set a tie-breaker with created_at & updated_at
+            $this->inferSort();
         }
 
         if (! $cursor instanceof Cursor) {
@@ -523,6 +530,7 @@ class Builder extends BaseEloquentBuilder
                 ? Cursor::fromEncoded($cursor)
                 : CursorPaginator::resolveCurrentCursor('cursor', $cursor);
         }
+
         $this->query->limit($perPage);
         $cursorPayload = $this->query->initCursor($cursor);
         $age = time() - $cursorPayload['ts'];
@@ -548,6 +556,26 @@ class Builder extends BaseEloquentBuilder
             'currentPage' => $cursorPayload['page'],
         ]);
 
+    }
+
+    protected function inferSort(): bool
+    {
+        $found = false;
+        $indexMappings = $this->query->getIndexMappings();
+        $mappings = reset($indexMappings);
+        $fields = $mappings['mappings']['properties'];
+        if (! empty($fields['created_at'])) {
+            $this->query->orderBy('created_at');
+
+            $found = true;
+        }
+        if (! empty($fields['updated_at'])) {
+            $this->query->orderBy('updated_at');
+
+            $found = true;
+        }
+
+        return $found;
     }
 
     /**
