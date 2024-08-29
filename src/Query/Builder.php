@@ -598,7 +598,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null)
+    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null, $unmappedType = null)
     {
         if (is_string($direction)) {
             $direction = (strtolower($direction) == 'asc' ? 'asc' : 'desc');
@@ -608,6 +608,7 @@ class Builder extends BaseBuilder
             'order'   => $direction,
             'mode'    => $mode,
             'missing' => $missing,
+            'unmapped_type' => $unmappedType,
         ];
 
 //        dd($this->orders);
