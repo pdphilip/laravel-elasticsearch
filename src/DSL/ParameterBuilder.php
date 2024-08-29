@@ -51,6 +51,9 @@ class ParameterBuilder
         if (!empty($payload['missing'])) {
             $sort['missing'] = $payload['missing'];
         }
+        if (!empty($payload['unmapped_type'])) {
+            $sort['unmapped_type'] = $payload['unmapped_type'];
+        }
 
         return [
             $field => $sort,
