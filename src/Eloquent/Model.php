@@ -380,7 +380,7 @@ abstract class Model extends BaseModel
      */
     protected function newBaseQueryBuilder()
     {
-        $connection = $this->getConnection();
+        $connection = clone $this->getConnection();
         if (!($connection instanceof Connection)) {
             $config = $connection->getConfig() ?? null;
             if (!empty($config['driver'])) {
