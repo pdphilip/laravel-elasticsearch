@@ -346,6 +346,64 @@ class Bridge
     }
 
     /**
+     * Allows us to use the Bulk API.
+     * Such speed!
+     *
+     * More Info:
+     * - https://www.elastic.co/guide/en/elasticsearch/client/php-api/current/indexing_documents.html#_bulk_indexing
+     * - https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
+     *
+     * @throws QueryException
+     */
+    public function processBulk(array $records, $refresh): array
+    {
+        $params = ['body' => []];
+
+        // Create action/metadata pairs
+        foreach ($records as $data) {
+            $recordHeader['_index'] = $this->index;
+
+            if (isset($data['_id'])) {
+                $recordHeader['_id'] = $data['_id'];
+                unset($data['_id']);
+            }
+            if (isset($data['_index'])) {
+                unset($data['_index']);
+            }
+            if (isset($data['_meta'])) {
+                unset($data['_meta']);
+            }
+
+            $params['body'][] = [
+                'index' => $recordHeader,
+            ];
+            $params['body'][] = $data;
+        }
+
+        if ($refresh) {
+            $params['refresh'] = $refresh;
+        }
+
+        $finalResponse = [];
+        try {
+            $response = $this->client->bulk($params);
+
+            //iterate over the return and return an array of Results
+            foreach ($response['items'] as $count => $hit) {
+
+                //We use $params['body'] here again to get the body
+                // The index we want is always +1 above our insert index
+                $savedData = ['_id' => $hit['index']['_id']] + $params['body'][($count * 2) + 1];
+                $finalResponse[] = $this->_return($savedData, $response, $params, $this->_queryTag(__FUNCTION__));
+            }
+        } catch (Exception $e) {
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $finalResponse;
+    }
+
+    /**
      * @throws QueryException
      */
     public function processInsertOne($values, $refresh): Results

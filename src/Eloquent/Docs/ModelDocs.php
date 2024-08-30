@@ -71,7 +71,7 @@ use Illuminate\Support\Collection;
  * @method static array getIndexSettings()
  * @method static bool indexExists()
  * @method static LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
- * @method static CursorPaginator cursorPaginate(int $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
+ * @method static CursorPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
  * @method static object getMeta()
  * @method static string getQualifiedKeyName()
  * @method static string getConnection()
