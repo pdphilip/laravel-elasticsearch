@@ -64,7 +64,7 @@ use Illuminate\Pagination\CursorPaginator;
  * @method array getIndexSettings()
  * @method bool indexExists()
  * @method LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
- * @method CursorPaginator cursorPaginate(int $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
+ * @method CursorPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
  *
  * @mixin \Illuminate\Database\Query\Builder
  */
