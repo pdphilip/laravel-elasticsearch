@@ -447,13 +447,17 @@ class Builder extends BaseBuilder
             $values = [$values];
         }
 
+
         $allSuccess = true;
-        foreach ($values as $value) {
-            $result = $this->_processInsert($value, true);
-            if (! $result) {
-                $allSuccess = false;
-            }
-        }
+      // TODO: Should the size here be something that can be set at the model level?
+      // the suggested max for bulk processing is 10k records. So that's why I put this here!
+        collect($values)->chunk(10000)->each(function ($chunk) use (&$allSuccess) {
+          // TODO: How do we get bulk to register here?
+          $result = $this->connection->bulk($chunk->toArray(), $this->refresh);
+          $allSuccess = !!collect($result)->firstWhere(function ($hit){
+            return $hit->isSuccessful();
+          });
+        });
 
         return $allSuccess;
     }
