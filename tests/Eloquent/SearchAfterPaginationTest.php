@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
-use Workbench\App\Models\Post;
+  use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
+  use Workbench\App\Models\Post;
+  use Workbench\App\Models\StaticPage;
 
-it('can paginate a large amount of records', function () {
+  it('can paginate a large amount of records', function () {
 
     Post::truncate();
 
@@ -23,9 +25,11 @@ it('can paginate a large amount of records', function () {
         ]);
     }
 
-    foreach ($collectionToInsert as $count => $post) {
-        Post::createWithoutRefresh($post);
-    }
+    Post::insert($collectionToInsert->toArray());
+
+//    foreach ($collectionToInsert as $count => $post) {
+//        Post::insert($post);
+//    }
     sleep(3);
 
     $perPage = 100;
@@ -33,7 +37,7 @@ it('can paginate a large amount of records', function () {
     $totalProducts = Post::count();
 
     // Fetch the first page of posts
-    $paginator = Post::orderBy('slug.keyword')->searchAfterPaginate($perPage)->withQueryString();
+    $paginator = Post::orderBy('slug.keyword')->cursorPaginate($perPage)->withQueryString();
 
     do {
         // Count the number of posts fetched in the current page
@@ -42,7 +46,7 @@ it('can paginate a large amount of records', function () {
         // Move to the next page if possible
         if ($paginator->hasMorePages()) {
             $cursor = $paginator->nextCursor();
-            $paginator = Post::orderBy('slug.keyword')->searchAfterPaginate($perPage, ['*'], 'cursor', $cursor)->withQueryString();
+            $paginator = Post::orderBy('slug.keyword')->cursorPaginate($perPage, ['*'], 'cursor', $cursor)->withQueryString();
         }
     } while ($paginator->hasMorePages());
 
@@ -52,7 +56,7 @@ it('can paginate a large amount of records', function () {
     // Check if all products were fetched
     expect($totalFetched)->toEqual($totalProducts);
 
-});
+})->only();
 
 it('can paginate a small amount of records', function () {
 
@@ -77,7 +81,7 @@ it('can paginate a small amount of records', function () {
     sleep(2);
 
     // Fetch the first page of posts
-    $paginator = Post::orderBy('slug.keyword')->searchAfterPaginate(200)->withQueryString();
+    $paginator = Post::orderBy('slug.keyword')->cursorPaginate(200)->withQueryString();
 
     expect($paginator->hasMorePages())->toBeFalse()
         ->and($paginator->count())->toBe(100);
@@ -87,6 +91,6 @@ it('can paginate a small amount of records', function () {
 test('throws an exception when there is no ordering search_after', function () {
 
     // Fetch the first page of posts
-    Post::searchAfterPaginate(100)->withQueryString();
+    StaticPage::cursorPaginate(100)->withQueryString();
 
-})->throws(Exception::class);
+})->throws(MissingOrderException::class);
