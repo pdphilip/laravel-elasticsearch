@@ -743,8 +743,6 @@ class Builder extends BaseBuilder
             'missing' => $missing,
         ];
 
-        //        dd($this->orders);
-
         return $this;
     }
 
@@ -1005,10 +1003,10 @@ class Builder extends BaseBuilder
         return Schema::connection($this->connection->getName())->getSettings($this->index);
     }
 
-    public function createIndex(): bool
+    public function createIndex(array $settings = []): bool
     {
         if (! $this->indexExists()) {
-            $this->connection->indexCreate();
+            $this->connection->indexCreate($settings);
 
             return true;
         }
@@ -1027,7 +1025,6 @@ class Builder extends BaseBuilder
         $data = $find->data;
 
         return new Collection($data);
-
     }
 
     public function rawAggregation(array $bodyParams): Collection
