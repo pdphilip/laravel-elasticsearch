@@ -15,7 +15,6 @@ class TestCase extends Orchestra
 {
     use WithWorkbench;
 
-
     protected function getPackageProviders($app): array
     {
         return [

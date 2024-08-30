@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
-  use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
-  use Workbench\App\Models\Post;
-  use Workbench\App\Models\StaticPage;
+use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
+use Workbench\App\Models\Post;
+use Workbench\App\Models\StaticPage;
 
-  it('can paginate a large amount of records', function () {
+it('can paginate a large amount of records', function () {
 
     Post::truncate();
 
@@ -26,10 +26,9 @@ use Carbon\Carbon;
     }
 
     Post::insert($collectionToInsert->toArray());
-
-//    foreach ($collectionToInsert as $count => $post) {
-//        Post::insert($post);
-//    }
+    //    foreach ($collectionToInsert as $count => $post) {
+    //        Post::insert($post);
+    //    }
     sleep(3);
 
     $perPage = 100;
@@ -56,7 +55,7 @@ use Carbon\Carbon;
     // Check if all products were fetched
     expect($totalFetched)->toEqual($totalProducts);
 
-})->only();
+});
 
 it('can paginate a small amount of records', function () {
 
