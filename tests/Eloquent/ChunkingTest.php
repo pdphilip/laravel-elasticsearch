@@ -2,14 +2,11 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
 test('process large dataset using basic chunking', function () {
-    Product::factory(100)->state(['price' => 50])->make()->each(function ($model) {
-        $model->saveWithoutRefresh();
-    });
-    sleep(3);
+    $products = Product::factory(100)->state(['price' => 50])->make();
+    Product::insert($products->toArray());
 
     Product::chunk(10, function ($products) {
         foreach ($products as $product) {
@@ -24,10 +21,8 @@ test('process large dataset using basic chunking', function () {
 });
 
 test('process large dataset using basic chunking with extended keepAlive', function () {
-    Product::factory(100)->state(['price' => 50])->make()->each(function ($model) {
-        $model->saveWithoutRefresh();
-    });
-    sleep(3);
+    $products = Product::factory(100)->state(['price' => 50])->make();
+    Product::insert($products->toArray());
 
     Product::chunk(1000, function ($products) {
         foreach ($products as $product) {
@@ -42,10 +37,8 @@ test('process large dataset using basic chunking with extended keepAlive', funct
 });
 
 test('chunk by ID on a specific column with custom keepAlive', function () {
-    Product::factory(100)->state(['price' => 50])->make()->each(function ($model) {
-        $model->saveWithoutRefresh();
-    });
-    sleep(3);
+    $products = Product::factory(100)->state(['price' => 50])->make();
+    Product::insert($products->toArray());
 
     // Assuming 'product_id' is a unique identifier in the dataset
     Product::chunkById(1000, function ($products) {
