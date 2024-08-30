@@ -141,7 +141,6 @@ abstract class Model extends BaseModel
                     }
                 }
             }
-
         }
     }
 
@@ -157,7 +156,12 @@ abstract class Model extends BaseModel
     public function getWithHighlightsAttribute(): object
     {
         $data = $this->attributes;
-        $mutators = array_values(array_diff($this->getMutatedAttributes(), ['id', 'search_highlights', 'search_highlights_as_array', 'with_highlights']));
+        $mutators = array_values(array_diff($this->getMutatedAttributes(), [
+            'id',
+            'search_highlights',
+            'search_highlights_as_array',
+            'with_highlights',
+        ]));
         if ($mutators) {
             foreach ($mutators as $mutator) {
                 $data[$mutator] = $this->{$mutator};
@@ -291,8 +295,7 @@ abstract class Model extends BaseModel
         }
 
         if ($this->hasCast($key, static::$primitiveCastTypes)) {
-            return $this->castAttribute($key, $attribute) ===
-                $this->castAttribute($key, $original);
+            return $this->castAttribute($key, $attribute) === $this->castAttribute($key, $original);
         }
 
         return is_numeric($attribute) && is_numeric($original) && strcmp((string) $attribute, (string) $original) === 0;
@@ -398,8 +401,9 @@ abstract class Model extends BaseModel
     /**
      * {@inheritdoc}
      */
-    protected function newBaseQueryBuilder()
+    protected function newBaseQueryBuilder(): QueryBuilder
     {
+
         $connection = $this->getConnection();
         if (! ($connection instanceof Connection)) {
             $config = $connection->getConfig() ?? null;
@@ -414,6 +418,11 @@ abstract class Model extends BaseModel
         $connection->setMaxSize($this->getMaxSize());
 
         return new QueryBuilder($connection, $connection->getPostProcessor());
+    }
+
+    public function getConnection()
+    {
+        return clone static::resolveConnection($this->getConnectionName());
     }
 
     public function getMaxSize(): int
