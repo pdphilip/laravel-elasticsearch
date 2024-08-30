@@ -3,15 +3,14 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
-  use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
-  use Workbench\App\Models\Post;
-  use Workbench\App\Models\StaticPage;
+use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
+use Workbench\App\Models\Post;
+use Workbench\App\Models\StaticPage;
 
-  it('can paginate a large amount of records', function () {
+it('can paginate a large amount of records', function () {
 
     Post::truncate();
 
-    //TODO: This needs to get updated when bulk insertion is working.
     //Generate a massive amount of data to paginate over.
     $collectionToInsert = collect([]);
     $numberOfEntries = 25000;
@@ -27,11 +26,6 @@ use Carbon\Carbon;
 
     Post::insert($collectionToInsert->toArray());
 
-//    foreach ($collectionToInsert as $count => $post) {
-//        Post::insert($post);
-//    }
-    sleep(3);
-
     $perPage = 100;
     $totalFetched = 0;
     $totalProducts = Post::count();
@@ -40,6 +34,7 @@ use Carbon\Carbon;
     $paginator = Post::orderBy('slug.keyword')->cursorPaginate($perPage)->withQueryString();
 
     do {
+
         // Count the number of posts fetched in the current page
         $totalFetched += $paginator->count();
 
@@ -56,7 +51,7 @@ use Carbon\Carbon;
     // Check if all products were fetched
     expect($totalFetched)->toEqual($totalProducts);
 
-})->only();
+});
 
 it('can paginate a small amount of records', function () {
 
@@ -74,11 +69,7 @@ it('can paginate a small amount of records', function () {
             'updated_at' => Carbon::now(),
         ]);
     }
-
-    foreach ($collectionToInsert as $count => $post) {
-        Post::createWithoutRefresh($post);
-    }
-    sleep(2);
+    Post::insert($collectionToInsert->toArray());
 
     // Fetch the first page of posts
     $paginator = Post::orderBy('slug.keyword')->cursorPaginate(200)->withQueryString();
