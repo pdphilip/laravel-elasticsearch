@@ -448,20 +448,17 @@ class Builder extends BaseBuilder
         }
 
         $allSuccess = true;
-        // TODO: Should the size here be something that can be set at the model level?
-        // the suggested max for bulk processing is 10k records. So that's why I put this here!
-        collect($values)->chunk(10000)->each(function ($chunk) use (&$allSuccess) {
-            $result = $this->connection->bulk($chunk->toArray(), $this->refresh);
-            $result = collect($result)->firstWhere(function ($hit) {
-                return ! $hit->isSuccessful();
-            });
+      // TODO: Should the size here be something that can be set at the model level?
+      // the suggested max for bulk processing is 10k records. So that's why I put this here!
+        collect($values)->chunk(10000)->each(callback: function ($chunk) use (&$allSuccess) {
+          $result = $this->connection->bulk($chunk->toArray(), $this->refresh);
 
-            dump($result);
-
-            $allSuccess = ! empty($result);
+          //FIXME: Shout we stop further chunk processing if one fails?
+          $result = collect($result)->firstWhere(function ($hit){
+            return !$hit->isSuccessful();
+          });
+          $allSuccess = empty($result);
         });
-
-        dd($allSuccess);
 
         return $allSuccess;
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 use Workbench\Database\Factories\ProductFactory;
@@ -70,6 +71,11 @@ class Product extends Model
 
         return 'no';
     }
+
+  public function scopeGreen(Builder $query): Builder
+  {
+    return $query->where('color', 'green');
+  }
 
     public function getAvgOrdersAttribute(): float|int
     {
