@@ -28,6 +28,7 @@ use RuntimeException;
  * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
  * @method Results find(array $wheres, array $options, array $columns)
  * @method Results save(array $data, string $refresh)
+ * @method Results[] bulk(array $data, string $refresh)
  * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)
  * @method Results deleteAll(array $wheres, array $options = [])
  * @method Results searchRaw(array $bodyParams, bool $returnRaw = false)
