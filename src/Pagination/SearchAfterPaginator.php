@@ -10,11 +10,13 @@ use Illuminate\Support\Collection;
 
 class SearchAfterPaginator extends CursorPaginator
 {
-    public function getParametersForItem($item)
+    /**
+     * @param  \PDPhilip\Elasticsearch\Eloquent\Model  $item
+     */
+    public function getParametersForItem($item): array
     {
-        //@phpstan-ignore-next-line
-        $cursor = $item->getMeta()->cursor;
-        $search_after = $item->getMeta()->sort;
+        $cursor = $item->getMeta()->getCursor();
+        $search_after = $item->getMeta()->getSort();
         $cursor['page']++;
         $cursor['next_sort'] = $search_after;
 
@@ -40,17 +42,17 @@ class SearchAfterPaginator extends CursorPaginator
         ];
     }
 
-    public function currentPageNumber()
+    public function currentPageNumber(): int
     {
         return $this->options['currentPage'];
     }
 
-    public function totalRecords()
+    public function totalRecords(): int
     {
         return $this->options['records'];
     }
 
-    public function showingFrom()
+    public function showingFrom(): int
     {
         $perPage = $this->perPage();
         $currentPage = $this->currentPageNumber();
@@ -59,7 +61,7 @@ class SearchAfterPaginator extends CursorPaginator
         return $start;
     }
 
-    public function showingTo()
+    public function showingTo(): int
     {
         $records = count($this->items);
         $currentPage = $this->currentPageNumber();
@@ -69,7 +71,7 @@ class SearchAfterPaginator extends CursorPaginator
         return $end;
     }
 
-    public function lastPage()
+    public function lastPage(): int
     {
         return $this->options['totalPages'];
     }
@@ -90,24 +92,7 @@ class SearchAfterPaginator extends CursorPaginator
         $previousCursor['next_sort'] = array_pop($previousCursor['sort_history']);
 
         return new Cursor($previousCursor, false);
-
     }
-
-    //  FIXME: PDP: I'll leave out this logic for now
-
-    //    public function previousPageUrl(): ?string
-    //    {
-    //        if (is_null($previousCursor = $this->previousCursor())) {
-    //            return null;
-    //        }
-    //
-    //        if ($previousCursor->parameter('page') == 1) {
-    //            //Show base rather to reset cursor
-    //            return $this->path();
-    //        }
-    //
-    //        return $this->url($previousCursor);
-    //    }
 
     protected function setItems($items): void
     {

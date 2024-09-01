@@ -12,6 +12,7 @@ use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
@@ -85,40 +86,49 @@ class Builder extends BaseEloquentBuilder
     /**
      * Override the default getModels
      *
-     * @return array<string, array>
+     * @return array<string, array|\PDPhilip\Elasticsearch\Meta\QueryMetaData>
      *
      * @phpstan-ignore-next-line
      */
     public function getModels($columns = ['*']): array
     {
         $data = $this->query->get($columns);
+        $meta = $data->getQueryMeta();
         $results = $this->model->hydrate($data->all())->all();
 
-        return ['results' => $results];
+        return [
+            'results' => $results,
+            'meta' => $meta,
+        ];
+    }
+
+    public function getModel(): Model
+    {
+        return $this->model;
     }
 
     /**
      * @inerhitDoc
      */
-    public function get($columns = ['*']): Collection
+    public function get($columns = ['*']): ElasticCollection
     {
         $builder = $this->applyScopes();
         $fetch = $builder->getModels($columns);
+        $meta = $fetch['meta'];
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
+        $elasticCollection = $builder->getModel()->newCollection($models);
 
-        return $builder->getModel()->newCollection($models);
+        $elasticCollection->setQueryMeta($meta);
 
+        return $elasticCollection;
     }
 
     /**
      * Hydrate the models from the given array.
-     *
-     *
-     * @return Collection<int, TModel>
      */
-    public function hydrate(array $items): Collection
+    public function hydrate(array $items): ElasticCollection
     {
         $instance = $this->newModelInstance();
 
@@ -135,11 +145,11 @@ class Builder extends BaseEloquentBuilder
                 $meta = $item['_meta'];
                 unset($item['_meta']);
             }
+            $instance->setMeta($meta);
             $model = $instance->newFromBuilder($item);
             if ($recordIndex) {
                 $model->setRecordIndex($recordIndex);
                 $model->setIndex($recordIndex);
-
             }
             if ($meta) {
                 $model->setMeta($meta);
@@ -162,7 +172,6 @@ class Builder extends BaseEloquentBuilder
         $results = $this->model->hydrate($data->all())->all();
 
         return ['results' => $results];
-
     }
 
     /**
@@ -241,8 +250,8 @@ class Builder extends BaseEloquentBuilder
     /**
      * Fast create method for 'write and forget'
      */
-    public function createWithoutRefresh(array $attributes = []): \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|null|Builder
-    {
+    public function createWithoutRefresh(array $attributes = []
+    ): \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|null|Builder {
         return tap($this->newModelInstance($attributes), function ($instance) {
             $instance->saveWithoutRefresh();
         });
@@ -255,8 +264,13 @@ class Builder extends BaseEloquentBuilder
     /**
      * {@inheritdoc}
      */
-    public function chunkById(mixed $count, callable $callback, mixed $column = '_id', mixed $alias = null, string $keepAlive = '5m'): bool
-    {
+    public function chunkById(
+        mixed $count,
+        callable $callback,
+        mixed $column = '_id',
+        mixed $alias = null,
+        string $keepAlive = '5m'
+    ): bool {
         $column ??= $this->defaultKeyName();
         $alias ??= $column;
         //remove sort
@@ -296,7 +310,6 @@ class Builder extends BaseEloquentBuilder
         }
 
         return true;
-
     }
 
     private function _chunkByPit(mixed $count, callable $callback, string $keepAlive = '5m'): bool
@@ -309,7 +322,7 @@ class Builder extends BaseEloquentBuilder
             $clone = clone $this;
             $search = $clone->query->pitFind($count, $pitId, $searchAfter, $keepAlive);
             $meta = $search->getMetaData();
-            $searchAfter = $meta['last_sort'];
+            $searchAfter = $meta->getSort();
             $results = $this->hydrate($search->data);
             $countResults = $results->count();
 
@@ -475,13 +488,11 @@ class Builder extends BaseEloquentBuilder
     /**
      * Create a new instance of the model being queried.
      *
-     * @param  array  $attributes
+     * @param array $attributes
      */
     public function newModelInstance($attributes = []): Model
     {
-        return $this->model->newInstance($attributes)->setConnection(
-            $this->query->getConnection()->getName()
-        );
+        return $this->model->newInstance($attributes)->setConnection($this->query->getConnection()->getName());
     }
 
     /**
@@ -513,8 +524,12 @@ class Builder extends BaseEloquentBuilder
      *
      * @throws MissingOrderException|BindingResolutionException
      */
-    public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null): CursorPaginator
-    {
+    public function cursorPaginate(
+        $perPage = null,
+        $columns = ['*'],
+        $cursorName = 'cursor',
+        $cursor = null
+    ): CursorPaginator {
         if (empty($this->query->orders)) {
             //try set created_at & updated_at
             if (! $this->inferSort()) {
@@ -526,9 +541,7 @@ class Builder extends BaseEloquentBuilder
         }
 
         if (! $cursor instanceof Cursor) {
-            $cursor = is_string($cursor)
-                ? Cursor::fromEncoded($cursor)
-                : CursorPaginator::resolveCurrentCursor('cursor', $cursor);
+            $cursor = is_string($cursor) ? Cursor::fromEncoded($cursor) : CursorPaginator::resolveCurrentCursor('cursor', $cursor);
         }
 
         $this->query->limit($perPage);
@@ -555,7 +568,6 @@ class Builder extends BaseEloquentBuilder
             'totalPages' => $cursorPayload['pages'],
             'currentPage' => $cursorPayload['page'],
         ]);
-
     }
 
     protected function inferSort(): bool
@@ -583,8 +595,6 @@ class Builder extends BaseEloquentBuilder
      */
     protected function searchAfterPaginator($items, $perPage, $cursor, $options)
     {
-        return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact(
-            'items', 'perPage', 'cursor', 'options'
-        ));
+        return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact('items', 'perPage', 'cursor', 'options'));
     }
 }

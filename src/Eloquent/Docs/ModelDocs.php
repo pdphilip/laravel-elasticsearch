@@ -72,9 +72,9 @@ use Illuminate\Support\Collection;
  * @method static bool indexExists()
  * @method static LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
  * @method static CursorPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
- * @method static object getMeta()
  * @method static string getQualifiedKeyName()
  * @method static string getConnection()
+ * @method static void truncate()
  *
  * @property object $search_highlights
  * @property object $with_highlights
@@ -82,6 +82,4 @@ use Illuminate\Support\Collection;
  *
  * @mixin \Illuminate\Database\Query\Builder
  */
-trait ModelDocs
-{
-}
+trait ModelDocs {}

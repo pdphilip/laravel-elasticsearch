@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
+use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use RuntimeException;
 
@@ -21,7 +22,7 @@ use RuntimeException;
  */
 abstract class Model extends BaseModel
 {
-    use HybridRelations, ModelDocs;
+    use HasCollection, HybridRelations, ModelDocs;
 
     const MAX_SIZE = 1000;
 
@@ -40,7 +41,7 @@ abstract class Model extends BaseModel
 
     protected ?Relation $parentRelation;
 
-    protected array $_meta = [];
+    protected ?ModelMetaData $_meta;
 
     public function __construct(array $attributes = [])
     {
@@ -98,59 +99,31 @@ abstract class Model extends BaseModel
         return $this->getKeyName();
     }
 
-    public function getMeta(): object
+    public function getMeta(): ModelMetaData
     {
-        return (object) $this->_meta;
+        return $this->_meta;
+    }
+
+    public function getMetaAsArray(): array
+    {
+        return $this->_meta->asArray();
     }
 
     public function setMeta($meta): static
     {
-        $this->_meta = $meta;
+        $this->_meta = new ModelMetaData($meta);
 
         return $this;
     }
 
     public function getSearchHighlightsAttribute(): ?object
     {
-        if (! empty($this->_meta['highlights'])) {
-            $data = [];
-            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
-
-            return (object) $data;
-        }
-
-        return null;
-    }
-
-    protected function _mergeFlatKeysIntoNestedArray(&$data, $attrs): void
-    {
-        foreach ($attrs as $key => $value) {
-            if ($value) {
-                $value = implode('......', $value);
-                $parts = explode('.', $key);
-                $current = &$data;
-
-                foreach ($parts as $partIndex => $part) {
-                    if ($partIndex === count($parts) - 1) {
-                        $current[$part] = $value;
-                    } else {
-                        if (! isset($current[$part]) || ! is_array($current[$part])) {
-                            $current[$part] = [];
-                        }
-                        $current = &$current[$part];
-                    }
-                }
-            }
-        }
+        return $this->_meta->parseHighlights();
     }
 
     public function getSearchHighlightsAsArrayAttribute(): array
     {
-        if (! empty($this->_meta['highlights'])) {
-            return $this->_meta['highlights'];
-        }
-
-        return [];
+        return $this->_meta->getHighlights();
     }
 
     public function getWithHighlightsAttribute(): object
@@ -167,11 +140,8 @@ abstract class Model extends BaseModel
                 $data[$mutator] = $this->{$mutator};
             }
         }
-        if (! empty($this->_meta['highlights'])) {
-            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
-        }
 
-        return (object) $data;
+        return (object) $this->_meta->parseHighlights($data);
     }
 
     /**
