@@ -468,7 +468,16 @@ class Builder extends BaseBuilder
 
         if (! is_array(reset($values))) {
             $values = [$values];
+        } else {
+            // Ensure all values have the same order of keys
+            foreach ($values as $key => $value) {
+                ksort($value);
+
+                $values[$key] = $value;
+            }
         }
+
+        $this->applyBeforeQueryCallbacks();
 
         $allSuccess = true;
 
