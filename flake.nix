@@ -13,6 +13,7 @@
         lib,
         ...
       }: let
+        rootDir = config.snow-blower.paths.root;
         serv = config.snow-blower.services;
         lang = config.snow-blower.languages;
 
@@ -80,15 +81,26 @@
             git-cliff.enable = true;
 
             treefmt = {
+              settings.formatter = {
+                # Laravel Pint Formating
+                "laravel-pint" = {
+                  command = "${php}";
+                  options = [
+                    "${rootDir}/vendor/bin/pint"
+                    #make it verbose
+                    "-v"
+                    "--repair"
+                  ];
+                  includes = ["*.php"];
+                };
+              };
+
               programs = {
                 #Nix Formater
                 alejandra.enable = true;
 
                 #Format Markdown files.
                 mdformat.enable = true;
-
-                #PHP CS Fixer setup with Laravel Pint Standerds
-                php-cs-fixer.enable = true;
 
                 #JS / CSS Formatting.
                 prettier = {
@@ -113,7 +125,7 @@
               treefmt.enable = true;
 
               # Code linting
-              phpstan.enable = true;
+              phpstan.enable = false;
 
               #lets make sure there are no keys in the repo
               detect-private-keys.enable = true;
