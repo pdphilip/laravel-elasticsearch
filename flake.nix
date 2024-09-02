@@ -112,6 +112,9 @@
               # run formatting on files that are being commited
               treefmt.enable = true;
 
+              # Code linting
+              phpstan.enable = true;
+
               #lets make sure there are no keys in the repo
               detect-private-keys.enable = true;
 
