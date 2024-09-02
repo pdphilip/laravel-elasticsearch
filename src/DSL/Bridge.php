@@ -354,9 +354,14 @@ class Bridge
      *
      * @throws QueryException
      */
-    public function processInsertBulk(array $records, $returnData): array
+    public function processInsertBulk(array $records, bool $returnData = false, string|null $refresh = null): array
     {
         $params = ['body' => []];
+
+        # If we don't want to wait for elastic to refresh this needs to be set.
+        if ($refresh) {
+          $params['refresh'] = $refresh;
+        }
 
         // Create action/metadata pairs
         foreach ($records as $data) {
