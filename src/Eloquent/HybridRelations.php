@@ -18,8 +18,6 @@ trait HybridRelations
 {
     /**
      * {@inheritDoc}
-     *
-     * @phpstan-ignore-next-line
      */
     public function hasOne($related, $foreignKey = null, $localKey = null): HasOne
     {
@@ -34,8 +32,6 @@ trait HybridRelations
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function morphOne($related, $name, $type = null, $id = null, $localKey = null): MorphOne
     {
@@ -46,13 +42,10 @@ trait HybridRelations
         $localKey = $localKey ?: $this->getKeyName();
 
         return new MorphOne($instance->newQuery(), $this, $type, $id, $localKey);
-
     }
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function hasMany($related, $foreignKey = null, $localKey = null): HasMany
     {
@@ -67,8 +60,6 @@ trait HybridRelations
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function morphMany($related, $name, $type = null, $id = null, $localKey = null): MorphMany
     {
@@ -86,8 +77,6 @@ trait HybridRelations
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null): BelongsTo
     {
@@ -113,8 +102,6 @@ trait HybridRelations
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function morphTo($name = null, $type = null, $id = null, $ownerKey = null): MorphTo
     {
@@ -127,9 +114,7 @@ trait HybridRelations
         [$type, $id] = $this->getMorphs($name, $type, $id);
 
         if (($class = $this->$type) === null) {
-            return new MorphTo(
-                $this->newQuery(), $this, $id, $ownerKey, $type, $name
-            );
+            return new MorphTo($this->newQuery(), $this, $id, $ownerKey, $type, $name);
         }
 
         $class = $this->getActualClassNameForMorph($class);
@@ -138,15 +123,11 @@ trait HybridRelations
 
         $ownerKey = $ownerKey ?? $instance->getKeyName();
 
-        return new MorphTo(
-            $instance->newQuery(), $this, $id, $ownerKey, $type, $name
-        );
+        return new MorphTo($instance->newQuery(), $this, $id, $ownerKey, $type, $name);
     }
 
     /**
      * {@inheritdoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     public function newEloquentBuilder($query): EloquentBuilder|Builder
     {
@@ -159,8 +140,6 @@ trait HybridRelations
 
     /**
      * {@inheritDoc}
-     *
-     *  @phpstan-ignore-next-line
      */
     protected function guessBelongsToManyRelation(): string
     {

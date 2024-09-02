@@ -24,6 +24,7 @@ use RuntimeException;
  * @property Model $model
  *
  * @template TModel of Model
+ * @template TCollection of ElasticCollection
  */
 class Builder extends BaseEloquentBuilder
 {
@@ -87,8 +88,6 @@ class Builder extends BaseEloquentBuilder
      * Override the default getModels
      *
      * @return array<string, array|\PDPhilip\Elasticsearch\Meta\QueryMetaData>
-     *
-     * @phpstan-ignore-next-line
      */
     public function getModels($columns = ['*']): array
     {
@@ -108,7 +107,8 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @inerhitDoc
+     * @param string[] $columns
+     * @return TCollection
      */
     public function get($columns = ['*']): ElasticCollection
     {

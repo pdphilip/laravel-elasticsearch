@@ -146,8 +146,6 @@ abstract class Model extends BaseModel
 
     /**
      * {@inheritdoc}
-     *
-     * @phpstan-ignore-next-line
      */
     public function freshTimestamp(): string
     {
@@ -221,7 +219,6 @@ abstract class Model extends BaseModel
         return parent::setAttribute($key, $value);
     }
 
-    //@phpstan-ignore-next-line
     public function fromDateTime(mixed $value): Carbon
     {
         return parent::asDateTime($value);
@@ -368,13 +365,25 @@ abstract class Model extends BaseModel
         $this->syncOriginalAttribute($column);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function newBaseQueryBuilder(): QueryBuilder
     {
-
+        /** @phpstan-var  Connection $connection */
         $connection = $this->getConnection();
+        $connection->setIndex($this->getTable());
+        $connection->setMaxSize($this->getMaxSize());
+
+        return new QueryBuilder($connection, $connection->getPostProcessor());
+    }
+
+    /**
+     * Get the database connection instance.
+     *
+     *
+     * @throws \RuntimeException
+     */
+    public function getConnection(): Connection
+    {
+        $connection = clone static::resolveConnection($this->getConnectionName());
         if (! ($connection instanceof Connection)) {
             $config = $connection->getConfig() ?? null;
             if (! empty($config['driver'])) {
@@ -384,15 +393,7 @@ abstract class Model extends BaseModel
             }
         }
 
-        $connection->setIndex($this->getTable());
-        $connection->setMaxSize($this->getMaxSize());
-
-        return new QueryBuilder($connection, $connection->getPostProcessor());
-    }
-
-    public function getConnection()
-    {
-        return clone static::resolveConnection($this->getConnectionName());
+        return $connection;
     }
 
     public function getMaxSize(): int
@@ -416,8 +417,10 @@ abstract class Model extends BaseModel
         $relations = $this->getRelations();
 
         $parentRelation = $this->getParentRelation();
-        //@phpstan-ignore-next-line
-        unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
+        if ($parentRelation instanceof Relation) {
+            //@phpstan-ignore-next-line
+            unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
+        }
 
         return $relations;
     }
@@ -425,9 +428,9 @@ abstract class Model extends BaseModel
     /**
      * Get the parent relation.
      */
-    public function getParentRelation(): \Illuminate\Database\Eloquent\Relations\Relation
+    public function getParentRelation(): ?Relation
     {
-        return $this->parentRelation;
+        return $this->parentRelation ?? null;
     }
 
     /**
@@ -438,16 +441,6 @@ abstract class Model extends BaseModel
         $this->parentRelation = $relation;
     }
 
-    //----------------------------------------------------------------------
-    // Inherited as is but typed
-    //----------------------------------------------------------------------
-
-    //    public function newModelQuery(): QueryBuilder
-    //    {
-    //        return $this->newEloquentBuilder(
-    //            $this->newBaseQueryBuilder()
-    //        )->setModel($this);
-    //    }
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------

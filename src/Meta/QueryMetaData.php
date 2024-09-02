@@ -22,11 +22,11 @@ final class QueryMetaData
 
     protected array $dsl = [];
 
-    protected array $error = [];
-
     protected array $results = [];
 
     protected array $_meta = [];
+
+    protected array $error = [];
 
     protected string $errorMessage = '';
 
@@ -86,12 +86,17 @@ final class QueryMetaData
 
     public function getModified(): int
     {
-        return $this->modified ?? 0;
+        return $this->getResults('modified') ?? 0;
     }
 
     public function getDeleted(): int
     {
-        return $this->deleted ?? 0;
+        return $this->getResults('deleted') ?? 0;
+    }
+
+    public function getCreated(): int
+    {
+        return $this->getResults('created') ?? 0;
     }
 
     public function isSuccessful(): bool
@@ -109,42 +114,42 @@ final class QueryMetaData
         return $this->cursor;
     }
 
-    public function getQuery()
+    public function getQuery(): string
     {
         return $this->query;
     }
 
-    public function getDsl()
+    public function getDsl(): array
     {
         return $this->dsl;
     }
 
-    public function getTook()
+    public function getTook(): int
     {
         return $this->took;
     }
 
-    public function getTotal()
+    public function getTotal(): int
     {
         return $this->total;
     }
 
-    public function getMaxScore()
+    public function getMaxScore(): string
     {
         return $this->max_score;
     }
 
-    public function getShards()
+    public function getShards(): array
     {
         return $this->shards;
     }
 
-    public function getErrorMessage()
+    public function getErrorMessage(): string
     {
         return $this->errorMessage;
     }
 
-    public function getError()
+    public function getError(): array
     {
         return $this->error;
     }
@@ -157,10 +162,16 @@ final class QueryMetaData
             'timed_out' => $this->timed_out,
             'took' => $this->took,
             'total' => $this->total,
-            'max_score' => $this->max_score,
-            'shards' => $this->shards,
-            'dsl' => $this->dsl,
         ];
+        if ($this->max_score) {
+            $return['max_score'] = $this->max_score;
+        }
+        if ($this->shards) {
+            $return['shards'] = $this->shards;
+        }
+        if ($this->dsl) {
+            $return['dsl'] = $this->dsl;
+        }
         if ($this->_id) {
             $return['_id'] = $this->_id;
         }
@@ -203,6 +214,16 @@ final class QueryMetaData
         $this->_id = $id;
     }
 
+    public function setTook(int $took): void
+    {
+        $this->took = $took;
+    }
+
+    public function setTotal(int $total): void
+    {
+        $this->total = $total;
+    }
+
     public function setQuery($query): void
     {
         $this->query = $query;
@@ -221,6 +242,11 @@ final class QueryMetaData
     public function setModified(int $count): void
     {
         $this->setResult('modified', $count);
+    }
+
+    public function setCreated(int $count): void
+    {
+        $this->setResult('created', $count);
     }
 
     public function setDeleted(int $count): void
@@ -248,7 +274,13 @@ final class QueryMetaData
         $this->dsl = $params;
     }
 
-    public function setError($error, $errorCode)
+    public function setError(array $error, string $errorMessage = ''): void
+    {
+        $this->error = $error;
+        $this->errorMessage = $errorMessage;
+    }
+
+    public function parseAndSetError($error, $errorCode)
     {
         $errorMessage = $error;
         $this->success = false;

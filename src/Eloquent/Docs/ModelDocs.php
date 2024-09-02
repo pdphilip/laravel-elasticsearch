@@ -9,7 +9,8 @@ use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
-use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Collection\ElasticCollection;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 
 /**
  * @method static $this term(string $term, $boostFactor = null)
@@ -34,9 +35,9 @@ use Illuminate\Support\Collection;
  * @method static int|array avg(array|string $columns)
  * @method static array getModels(array $columns = ['*'])
  * @method static array searchModels(array $columns = ['*'])
- * @method static Collection get(array $columns = ['*'])
- * @method static \PDPhilip\Elasticsearch\Eloquent\Model|null first(array $columns = ['*'])
- * @method static Collection search(array $columns = ['*'])
+ * @method static ElasticCollection get(array $columns = ['*'])
+ * @method static Model|null first(array $columns = ['*'])
+ * @method static ElasticCollection search(array $columns = ['*'])
  * @method static array toDsl(array $columns = ['*'])
  * @method static mixed agg(array $functions, $column)
  * @method static $this where(array|Closure|Expression|string $column, $operator = null, $value = null, $boolean = 'and')
@@ -75,6 +76,7 @@ use Illuminate\Support\Collection;
  * @method static string getQualifiedKeyName()
  * @method static string getConnection()
  * @method static void truncate()
+ * @method static ElasticCollection insert($values, $returnData = null)
  *
  * @property object $search_highlights
  * @property object $with_highlights
@@ -82,4 +84,6 @@ use Illuminate\Support\Collection;
  *
  * @mixin \Illuminate\Database\Query\Builder
  */
-trait ModelDocs {}
+trait ModelDocs
+{
+}

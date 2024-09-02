@@ -37,7 +37,7 @@ class Results
 
     public function setError($error, $errorCode): void
     {
-        $this->_meta->setError($error, $errorCode);
+        $this->_meta->parseAndSetError($error, $errorCode);
     }
 
     public function isSuccessful(): bool

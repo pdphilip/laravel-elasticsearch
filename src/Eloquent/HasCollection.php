@@ -9,10 +9,10 @@ trait HasCollection
     /**
      * Create a new Eloquent Collection instance.
      *
-     * @param array<array-key, \PDPhilip\Elasticsearch\Eloquent\Model> $models
-     * @return \PDPhilip\Elasticsearch\Collection\ElasticCollection;
+     * @param  array<array-key, \PDPhilip\Elasticsearch\Eloquent\Model>  $models
+     * @return \PDPhilip\Elasticsearch\Collection\ElasticCollection<array-key, \PDPhilip\Elasticsearch\Eloquent\Model>;
      */
-    public function newCollection(array $models = [])
+    public function newCollection(array $models = []): ElasticCollection
     {
         return new ElasticCollection($models);
     }

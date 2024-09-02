@@ -354,7 +354,7 @@ class Bridge
      *
      * @throws QueryException
      */
-    public function processBulk(array $records, $refresh): array
+    public function processInsertBulk(array $records, $returnData): array
     {
         $params = ['body' => []];
 
@@ -379,22 +379,56 @@ class Bridge
             $params['body'][] = $data;
         }
 
-        if ($refresh) {
-            $params['refresh'] = $refresh;
-        }
-
-        $finalResponse = [];
+        $finalResponse = [
+            'hasErrors' => false,
+            'total' => 0,
+            'took' => 0,
+            'success' => 0,
+            'created' => 0,
+            'modified' => 0,
+            'failed' => 0,
+            'data' => [],
+            'error_bag' => [],
+        ];
         try {
             $response = $this->client->bulk($params);
-
-            //iterate over the return and return an array of Results
+            $finalResponse['hasErrors'] = $response['errors'];
+            $finalResponse['took'] = $response['took'];
             foreach ($response['items'] as $count => $hit) {
+                $finalResponse['total']++;
+                $payload = $params['body'][($count * 2) + 1];
 
-                // We use $params['body'] here again to get the body
-                // The index we want is always +1 above our insert index
-                $savedData = ['_id' => $hit['index']['_id']] + $params['body'][($count * 2) + 1];
-                $finalResponse[] = $this->_return($savedData, $hit['index'], $params, $this->_queryTag(__FUNCTION__));
+                if (! empty($hit['index']['error'])) {
+                    $finalResponse['failed']++;
+                    $finalResponse['error_bag'][] = [
+                        'error' => $hit['index']['error'],
+                        'payload' => $payload,
+                    ];
+                } else {
+                    $finalResponse['success']++;
+                    $finalResponse['success']++;
+                    if ($hit['index']['result'] === 'created') {
+                        $finalResponse['created']++;
+                    } else {
+                        $finalResponse['modified']++;
+                    }
+                    $id = $hit['index']['_id'];
+                    $record = ['_id' => $id] + $payload;
+                    if ($returnData) {
+                        $finalResponse['data'][] = $record;
+                    } else {
+                        $finalResponse['data'][] = $id;
+                    }
+                }
             }
+            ////iterate over the return and return an array of Results
+            //foreach ($response['items'] as $count => $hit) {
+            //
+            //    // We use $params['body'] here again to get the body
+            //    // The index we want is always +1 above our insert index
+            //    $savedData = ['_id' => $hit['index']['_id']] + $params['body'][($count * 2) + 1];
+            //    $finalResponse[] = $this->_return($savedData, $hit['index'], $params, $this->_queryTag(__FUNCTION__));
+            //}
         } catch (Exception $e) {
             $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }

@@ -13,21 +13,26 @@ trait ElasticCollectionMeta
         $this->meta = $meta;
     }
 
-    public function getQueryMeta()
+    public function getQueryMeta(): QueryMetaData
     {
         return $this->meta;
     }
 
-    public function getQueryMetaAsArray()
+    public function getQueryMetaAsArray(): array
     {
         return $this->meta->asArray();
     }
 
-    public function getDsl()
+    public function getDsl(): array
     {
         return [
             'query' => $this->meta->getQuery(),
             'dsl' => $this->meta->getDsl(),
         ];
+    }
+
+    public function getResults(): array
+    {
+        return $this->meta->getResults();
     }
 }

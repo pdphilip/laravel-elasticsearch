@@ -6,3 +6,5 @@ parameters:
     paths:
         - src
     tmpDir: build/phpstan
+    ignoreErrors:
+            - '#Return type .* of method .* should be compatible with return type .* of method#'

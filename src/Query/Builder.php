@@ -13,10 +13,12 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 use LogicException;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
+use PDPhilip\Elasticsearch\Collection\ElasticResult;
 use PDPhilip\Elasticsearch\Collection\LazyElasticCollection;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\Results;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
+use PDPhilip\Elasticsearch\Meta\QueryMetaData;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use RuntimeException;
 
@@ -224,9 +226,11 @@ class Builder extends BaseBuilder
                     'aggregate' => $totalResults->data,
                 ],
             ];
+            $result = new ElasticCollection($results);
+            $result->setQueryMeta($totalResults->getMetaData());
 
             // Return results
-            return new ElasticCollection($results);
+            return $result;
         }
 
         if ($this->distinctType) {
@@ -399,7 +403,6 @@ class Builder extends BaseBuilder
 
         $this->bindings['select'] = [];
         $results = $this->get($columns);
-
         // Restore bindings after aggregate search
         $this->aggregate = [];
         $this->columns = $previousColumns;
@@ -407,8 +410,13 @@ class Builder extends BaseBuilder
 
         if (isset($results[0])) {
             $result = (array) $results[0];
+            $esResult = new ElasticResult();
+            $esResult->setQueryMeta($results->getQueryMeta());
+            $esResult->setValue($result['aggregate']);
 
-            return $result['aggregate'];
+            // For now we'll return the result as is,
+            // Later we'll return ElasticResult to get access to the meta
+            return $esResult->getValue();
         }
 
         return null;
@@ -460,38 +468,65 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values): bool
+    public function insert(array $values, $returnModels = false): ElasticCollection
     {
+        $response = [
+            'hasErrors' => false,
+            'took' => 0,
+            'total' => 0,
+            'success' => 0,
+            'created' => 0,
+            'modified' => 0,
+            'failed' => 0,
+            'data' => [],
+            'error_bag' => [],
+        ];
         if (empty($values)) {
-            return true;
+            return $this->_parseBulkInsertResult($response);
         }
 
         if (! is_array(reset($values))) {
             $values = [$values];
-        } else {
-            // Ensure all values have the same order of keys
-            foreach ($values as $key => $value) {
-                ksort($value);
-
-                $values[$key] = $value;
-            }
         }
-
         $this->applyBeforeQueryCallbacks();
 
-        $allSuccess = true;
-
-        collect($values)->chunk(1000)->each(callback: function ($chunk) use (&$allSuccess) {
-            $result = $this->connection->bulk($chunk->toArray(), $this->refresh);
-
-            //FIXME: Shout we stop further chunk processing if one fails?
-            $result = collect($result)->firstWhere(function ($hit) {
-                return ! $hit->isSuccessful();
-            });
-            $allSuccess = empty($result);
+        collect($values)->chunk(1000)->each(callback: function ($chunk) use (&$response, $returnModels) {
+            $result = $this->connection->insertBulk($chunk->toArray(), $returnModels);
+            if ((bool) $result['hasErrors']) {
+                $response['hasErrors'] = true;
+            }
+            $response['total'] += $result['total'];
+            $response['took'] += $result['took'];
+            $response['success'] += $result['success'];
+            $response['failed'] += $result['failed'];
+            $response['created'] += $result['created'];
+            $response['modified'] += $result['modified'];
+            $response['data'] = array_merge($response['data'], $result['data']);
+            $response['error_bag'] = array_merge($response['error_bag'], $result['error_bag']);
         });
 
-        return $allSuccess;
+        return $this->_parseBulkInsertResult($response);
+    }
+
+    protected function _parseBulkInsertResult($response): ElasticCollection
+    {
+        $result = new ElasticCollection($response['data']);
+        $result->setQueryMeta(new QueryMetaData([]));
+        $result->getQueryMeta()->setCreated($response['created']);
+        $result->getQueryMeta()->setModified($response['modified']);
+        $result->getQueryMeta()->setFailed($response['failed']);
+        $result->getQueryMeta()->setQuery('InsertBulk');
+        $result->getQueryMeta()->setTook($response['took']);
+        $result->getQueryMeta()->setTotal($response['total']);
+        if ($response['hasErrors']) {
+            $errorMessage = 'Bulk insert failed for all values';
+            if ($response['success'] > 0) {
+                $errorMessage = 'Bulk insert failed for some values';
+            }
+            $result->getQueryMeta()->setError($response['error_bag'], $errorMessage);
+        }
+
+        return $result;
     }
 
     protected function _processInsert(array $values, bool $returnIdOnly = false): array|string|null
@@ -781,9 +816,9 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param  $unit  @values: 'km', 'mi', 'm', 'ft'
-     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
-     * @param  $type  @values: 'arc', 'plane'
+     * @param  $unit @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeoDesc($column, $pin, $unit = 'km', $mode = null, $type = null): static
@@ -792,10 +827,10 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param  string  $direction  @values: 'asc', 'desc'
-     * @param  string  $unit  @values: 'km', 'mi', 'm', 'ft'
-     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
-     * @param  $type  @values: 'arc', 'plane'
+     * @param string $direction @values: 'asc', 'desc'
+     * @param string $unit @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeo(
@@ -1071,7 +1106,6 @@ class Builder extends BaseBuilder
         return new Collection($data);
     }
 
-    //@phpstan-ignore-next-line
     public function toSql(): array
     {
         return $this->toDsl();
