@@ -276,6 +276,7 @@ final class QueryMetaData
 
     public function setError(array $error, string $errorMessage = ''): void
     {
+        $this->success = false;
         $this->error = $error;
         $this->errorMessage = $errorMessage;
     }

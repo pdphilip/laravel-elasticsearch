@@ -412,12 +412,11 @@ class Bridge
                     } else {
                         $finalResponse['modified']++;
                     }
-                    $id = $hit['index']['_id'];
-                    $record = ['_id' => $id] + $payload;
+
                     if ($returnData) {
+                        $id = $hit['index']['_id'];
+                        $record = ['_id' => $id] + $payload;
                         $finalResponse['data'][] = $record;
-                    } else {
-                        $finalResponse['data'][] = $id;
                     }
                 }
             }

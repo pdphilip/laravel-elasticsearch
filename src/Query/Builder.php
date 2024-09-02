@@ -468,7 +468,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values, $returnModels = false): ElasticCollection
+    public function insert(array $values, $returnData = false): ElasticCollection
     {
         $response = [
             'hasErrors' => false,
@@ -482,7 +482,7 @@ class Builder extends BaseBuilder
             'error_bag' => [],
         ];
         if (empty($values)) {
-            return $this->_parseBulkInsertResult($response);
+            return $this->_parseBulkInsertResult($response, $returnData);
         }
 
         if (! is_array(reset($values))) {
@@ -490,8 +490,8 @@ class Builder extends BaseBuilder
         }
         $this->applyBeforeQueryCallbacks();
 
-        collect($values)->chunk(1000)->each(callback: function ($chunk) use (&$response, $returnModels) {
-            $result = $this->connection->insertBulk($chunk->toArray(), $returnModels);
+        collect($values)->chunk(1000)->each(callback: function ($chunk) use (&$response, $returnData) {
+            $result = $this->connection->insertBulk($chunk->toArray(), $returnData);
             if ((bool) $result['hasErrors']) {
                 $response['hasErrors'] = true;
             }
@@ -502,16 +502,19 @@ class Builder extends BaseBuilder
             $response['created'] += $result['created'];
             $response['modified'] += $result['modified'];
             $response['data'] = array_merge($response['data'], $result['data']);
+
             $response['error_bag'] = array_merge($response['error_bag'], $result['error_bag']);
         });
 
-        return $this->_parseBulkInsertResult($response);
+        return $this->_parseBulkInsertResult($response, $returnData);
     }
 
-    protected function _parseBulkInsertResult($response): ElasticCollection
+    protected function _parseBulkInsertResult($response, $returnData): ElasticCollection
     {
+
         $result = new ElasticCollection($response['data']);
         $result->setQueryMeta(new QueryMetaData([]));
+        $result->getQueryMeta()->setSuccess();
         $result->getQueryMeta()->setCreated($response['created']);
         $result->getQueryMeta()->setModified($response['modified']);
         $result->getQueryMeta()->setFailed($response['failed']);
@@ -524,6 +527,13 @@ class Builder extends BaseBuilder
                 $errorMessage = 'Bulk insert failed for some values';
             }
             $result->getQueryMeta()->setError($response['error_bag'], $errorMessage);
+        }
+        if (! $returnData) {
+            $data = $result->getQueryMetaAsArray();
+            unset($data['query']);
+            $response['data'] = $data;
+
+            return $this->_parseBulkInsertResult($response, true);
         }
 
         return $result;
