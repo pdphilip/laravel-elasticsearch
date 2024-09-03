@@ -463,12 +463,24 @@ class Builder extends BaseBuilder
         return $this->first() !== null;
     }
 
-    //
-
     /**
      * {@inheritdoc}
      */
     public function insert(array $values, $returnData = false): ElasticCollection
+    {
+        return $this->_processInsert($values, $returnData, false);
+    }
+
+    /*
+     * @see insert(array $values, $returnData = false)
+     */
+
+    public function insertWithoutRefresh(array $values, $returnData = false): ElasticCollection
+    {
+        return $this->_processInsert($values, $returnData, true);
+    }
+
+    protected function _processInsert(array $values, bool $returnData, bool $saveWithoutRefresh): ElasticCollection
     {
         $response = [
             'hasErrors' => false,
@@ -483,6 +495,10 @@ class Builder extends BaseBuilder
         ];
         if (empty($values)) {
             return $this->_parseBulkInsertResult($response, $returnData);
+        }
+
+        if ($saveWithoutRefresh) {
+            $this->refresh = false;
         }
 
         if (! is_array(reset($values))) {
@@ -507,6 +523,7 @@ class Builder extends BaseBuilder
         });
 
         return $this->_parseBulkInsertResult($response, $returnData);
+
     }
 
     protected function _parseBulkInsertResult($response, $returnData): ElasticCollection
@@ -539,25 +556,19 @@ class Builder extends BaseBuilder
         return $result;
     }
 
-    protected function _processInsert(array $values, bool $returnIdOnly = false): array|string|null
-    {
-        $result = $this->connection->save($values, $this->refresh);
-
-        if ($result->isSuccessful()) {
-            // Return id
-            return $returnIdOnly ? $result->getInsertedId() : $result->data;
-        }
-
-        return null;
-    }
-
     /**
      * {@inheritdoc}
      */
     public function insertGetId(array $values, $sequence = null): int|array|string|null
     {
-        //Also Model->save()
-        return $this->_processInsert($values, true);
+        $result = $this->connection->save($values, $this->refresh);
+
+        if ($result->isSuccessful()) {
+            // Return id
+            return $sequence ? $result->getInsertedId() : $result->data;
+        }
+
+        return null;
     }
 
     /**
@@ -826,9 +837,9 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param  $unit @values: 'km', 'mi', 'm', 'ft'
-     * @param  $mode @values: 'min', 'max', 'avg', 'sum'
-     * @param  $type @values: 'arc', 'plane'
+     * @param  $unit  @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type  @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeoDesc($column, $pin, $unit = 'km', $mode = null, $type = null): static
@@ -837,10 +848,10 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param string $direction @values: 'asc', 'desc'
-     * @param string $unit @values: 'km', 'mi', 'm', 'ft'
-     * @param  $mode @values: 'min', 'max', 'avg', 'sum'
-     * @param  $type @values: 'arc', 'plane'
+     * @param  string  $direction  @values: 'asc', 'desc'
+     * @param  string  $unit  @values: 'km', 'mi', 'm', 'ft'
+     * @param  $mode  @values: 'min', 'max', 'avg', 'sum'
+     * @param  $type  @values: 'arc', 'plane'
      * @return $this
      */
     public function orderByGeo(

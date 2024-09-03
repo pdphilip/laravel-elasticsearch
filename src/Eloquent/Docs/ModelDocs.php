@@ -77,6 +77,7 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
  * @method static string getConnection()
  * @method static void truncate()
  * @method static ElasticCollection insert($values, $returnData = null)
+ * @method static ElasticCollection insertWithoutRefresh($values, $returnData = null)
  *
  * @property object $search_highlights
  * @property object $with_highlights

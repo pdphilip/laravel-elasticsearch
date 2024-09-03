@@ -74,6 +74,7 @@ class Builder extends BaseEloquentBuilder
         'search',
         'todsl',
         'agg',
+        'insertwithoutrefresh',
     ];
 
     /**
@@ -107,7 +108,7 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
-     * @param string[] $columns
+     * @param  string[]  $columns
      * @return TCollection
      */
     public function get($columns = ['*']): ElasticCollection
@@ -488,7 +489,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * Create a new instance of the model being queried.
      *
-     * @param array $attributes
+     * @param  array  $attributes
      */
     public function newModelInstance($attributes = []): Model
     {

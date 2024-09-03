@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Collection;
 use Workbench\App\Models\Product;
 
+ini_set('memory_limit', '1024M');
+
 function isSorted(Collection $collection, $key, $descending = false): bool
 {
     $values = $collection->pluck($key)->toArray();
@@ -42,16 +44,16 @@ test('products are ordered by created_at descending', function () {
 })->todo();
 
 test('products are ordered by name using keyword subfield', function () {
-  $products = Product::factory(50)->make();
-  Product::insert($products->toArray());
+    $products = Product::factory(50)->make();
+    Product::insert($products->toArray());
 
     $products = Product::orderBy('name.keyword')->get();
     expect(isSorted($products, 'name'))->toBeTrue();
 });
 
 test('products are paginated', function () {
-  $products = Product::factory(50)->make();
-  Product::insert($products->toArray());
+    $products = Product::factory(50)->make();
+    Product::insert($products->toArray());
 
     $products = Product::where('is_active', true)->paginate(10);
     expect($products)->toHaveCount(10);
