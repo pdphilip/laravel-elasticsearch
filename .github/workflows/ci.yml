@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch to run the CI on'
         required: true
-        default: 'main' # You can set this to your main development branch or any other default
+        default: 'github-actions' # You can set this to your main development branch or any other default
 
 jobs:
   test:
