@@ -31,6 +31,26 @@ trait ElasticCollectionMeta
         ];
     }
 
+    public function getTook(): int
+    {
+        return $this->meta->getTook();
+    }
+
+    public function getShards(): mixed
+    {
+        return $this->meta->getShards();
+    }
+
+    public function getTotal(): int
+    {
+        return $this->meta->getTotal();
+    }
+
+    public function getMaxScore(): string
+    {
+        return $this->meta->getMaxScore();
+    }
+
     public function getResults(): array
     {
         return $this->meta->getResults();

@@ -18,7 +18,7 @@ final class QueryMetaData
 
     protected mixed $_id = '';
 
-    protected array $shards = [];
+    protected mixed $shards = [];
 
     protected array $dsl = [];
 
@@ -139,7 +139,7 @@ final class QueryMetaData
         return $this->max_score;
     }
 
-    public function getShards(): array
+    public function getShards(): mixed
     {
         return $this->shards;
     }

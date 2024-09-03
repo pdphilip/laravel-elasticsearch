@@ -27,6 +27,7 @@ class HasOne extends BaseHasOne
     {
         $foreignKey = $this->getForeignKeyName();
 
+        //@phpstan-ignore-next-line
         return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }
 

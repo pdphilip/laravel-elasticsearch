@@ -425,14 +425,6 @@ class Bridge
                     }
                 }
             }
-            ////iterate over the return and return an array of Results
-            //foreach ($response['items'] as $count => $hit) {
-            //
-            //    // We use $params['body'] here again to get the body
-            //    // The index we want is always +1 above our insert index
-            //    $savedData = ['_id' => $hit['index']['_id']] + $params['body'][($count * 2) + 1];
-            //    $finalResponse[] = $this->_return($savedData, $hit['index'], $params, $this->_queryTag(__FUNCTION__));
-            //}
         } catch (Exception $e) {
             $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
