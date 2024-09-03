@@ -1,13 +1,10 @@
 name: ci
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to run the CI on'
-        required: true
-        default: 'github-actions' # You can set this to your main development branch or any other default
-
+  push:
+    branches:
+      - main
+      - github-actions
 jobs:
   test:
     runs-on: ubuntu-22.04
