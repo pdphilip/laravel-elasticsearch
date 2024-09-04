@@ -410,7 +410,7 @@ class Builder extends BaseBuilder
 
         if (isset($results[0])) {
             $result = (array) $results[0];
-            $esResult = new ElasticResult();
+            $esResult = new ElasticResult;
             $esResult->setQueryMeta($results->getQueryMeta());
             $esResult->setValue($result['aggregate']);
 
@@ -813,15 +813,15 @@ class Builder extends BaseBuilder
     /**
      * {@inheritDoc}
      */
-    public function orderByDesc($column, $mode = null, $missing = null): static
+    public function orderByDesc($column): static
     {
-        return $this->orderBy($column, 'desc', $mode, $missing);
+        return $this->orderBy($column, 'desc');
     }
 
     /**
      * {@inheritdoc}
      */
-    public function orderBy($column, $direction = 'asc', $mode = null, $missing = null): static
+    public function orderBy($column, $direction = 'asc'): static
     {
         if (is_string($direction)) {
             $direction = (strtolower($direction) == 'asc' ? 'asc' : 'desc');
@@ -829,9 +829,21 @@ class Builder extends BaseBuilder
 
         $this->orders[$column] = [
             'order' => $direction,
-            'mode' => $mode,
-            'missing' => $missing,
         ];
+
+        return $this;
+    }
+
+    /**
+     * Including outlier sort functions
+     *
+     * @return $this
+     */
+    public function withSort(string $column, string $key, mixed $value): static
+    {
+        $currentColOrder = $this->orders[$column] ?? [];
+        $currentColOrder[$key] = $value;
+        $this->orders[$column] = $currentColOrder;
 
         return $this;
     }
