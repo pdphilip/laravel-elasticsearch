@@ -8,9 +8,10 @@ use Closure;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
-use Illuminate\Pagination\CursorPaginator;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
+use PDPhilip\Elasticsearch\Query\Builder;
 
 /**
  * @method static $this term(string $term, $boostFactor = null)
@@ -72,19 +73,17 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
  * @method static array getIndexSettings()
  * @method static bool indexExists()
  * @method static LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
- * @method static CursorPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
+ * @method static SearchAfterPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
  * @method static string getQualifiedKeyName()
  * @method static string getConnection()
  * @method static void truncate()
- * @method static ElasticCollection insert($values, $returnData = null)
+ * @method static ElasticCollection insert($values, $returnData = null):
  * @method static ElasticCollection insertWithoutRefresh($values, $returnData = null)
  *
  * @property object $search_highlights
  * @property object $with_highlights
  * @property array $search_highlights_as_array
  *
- * @mixin \Illuminate\Database\Query\Builder
+ * @mixin Builder
  */
-trait ModelDocs
-{
-}
+trait ModelDocs {}

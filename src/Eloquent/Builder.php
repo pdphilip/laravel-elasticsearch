@@ -524,12 +524,8 @@ class Builder extends BaseEloquentBuilder
      *
      * @throws MissingOrderException|BindingResolutionException
      */
-    public function cursorPaginate(
-        $perPage = null,
-        $columns = ['*'],
-        $cursorName = 'cursor',
-        $cursor = null
-    ): CursorPaginator {
+    public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null): SearchAfterPaginator
+    {
         if (empty($this->query->orders)) {
             //try set created_at & updated_at
             if (! $this->inferSort()) {

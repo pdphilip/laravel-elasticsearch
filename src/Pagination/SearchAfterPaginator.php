@@ -7,11 +7,12 @@ namespace PDPhilip\Elasticsearch\Pagination;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 
 class SearchAfterPaginator extends CursorPaginator
 {
     /**
-     * @param  \PDPhilip\Elasticsearch\Eloquent\Model  $item
+     * @param  Model  $item
      */
     public function getParametersForItem($item): array
     {
@@ -56,9 +57,9 @@ class SearchAfterPaginator extends CursorPaginator
     {
         $perPage = $this->perPage();
         $currentPage = $this->currentPageNumber();
-        $start = ($currentPage - 1) * $perPage + 1;
 
-        return $start;
+        return ($currentPage - 1) * $perPage + 1;
+
     }
 
     public function showingTo(): int
@@ -66,9 +67,8 @@ class SearchAfterPaginator extends CursorPaginator
         $records = count($this->items);
         $currentPage = $this->currentPageNumber();
         $perPage = $this->perPage();
-        $end = (($currentPage - 1) * $perPage) + $records;
 
-        return $end;
+        return (($currentPage - 1) * $perPage) + $records;
     }
 
     public function lastPage(): int
