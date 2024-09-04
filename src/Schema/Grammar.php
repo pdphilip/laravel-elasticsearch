@@ -1,7 +1,8 @@
 <?php
 
-namespace PDPhilip\Elasticsearch\Schema;
+declare(strict_types=1);
 
+namespace PDPhilip\Elasticsearch\Schema;
 
 class Grammar extends \Illuminate\Database\Schema\Grammars\Grammar
 {

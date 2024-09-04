@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\DSL;
 
 class ParameterBuilder
@@ -8,21 +10,21 @@ class ParameterBuilder
     {
         return [
             'query' => [
-                'match_all' => new \stdClass(),
+                'match_all' => new \stdClass,
             ],
         ];
     }
 
-    public static function queryStringQuery($string): array
-    {
-        return [
-            'query' => [
-                'query_string' => [
-                    'query' => $string,
-                ],
-            ],
-        ];
-    }
+    //    public static function queryStringQuery($string): array
+    //    {
+    //        return [
+    //            'query' => [
+    //                'query_string' => [
+    //                    'query' => $string,
+    //                ],
+    //            ],
+    //        ];
+    //    }
 
     public static function query($dsl): array
     {
@@ -31,24 +33,23 @@ class ParameterBuilder
         ];
     }
 
-
     public static function fieldSort($field, $payload, $allowId = false): array
     {
-        if ($field === '_id' && !$allowId) {
+        if ($field === '_id' && ! $allowId) {
             return [];
         }
-        if (!empty($payload['is_geo'])) {
+        if (! empty($payload['is_geo'])) {
             return self::fieldSortGeo($field, $payload);
         }
-        if (!empty($payload['is_nested'])) {
+        if (! empty($payload['is_nested'])) {
             return self::filterNested($field, $payload);
         }
         $sort = [];
         $sort['order'] = $payload['order'] ?? 'asc';
-        if (!empty($payload['mode'])) {
+        if (! empty($payload['mode'])) {
             $sort['mode'] = $payload['mode'];
         }
-        if (!empty($payload['missing'])) {
+        if (! empty($payload['missing'])) {
             $sort['missing'] = $payload['missing'];
         }
 
@@ -64,10 +65,10 @@ class ParameterBuilder
         $sort['order'] = $payload['order'] ?? 'asc';
         $sort['unit'] = $payload['unit'] ?? 'km';
 
-        if (!empty($payload['mode'])) {
+        if (! empty($payload['mode'])) {
             $sort['mode'] = $payload['mode'];
         }
-        if (!empty($payload['type'])) {
+        if (! empty($payload['type'])) {
             $sort['distance_type'] = $payload['type'];
         }
 
@@ -76,23 +77,56 @@ class ParameterBuilder
         ];
     }
 
-    public static function filterNested($field, $payload)
+    public static function filterNested($field, $payload): array
     {
         $sort = [];
         $pathParts = explode('.', $field);
         $path = $pathParts[0];
         $sort['order'] = $payload['order'] ?? 'asc';
-        if (!empty($payload['mode'])) {
+        if (! empty($payload['mode'])) {
             $sort['mode'] = $payload['mode'];
         }
         $sort['nested'] = [
             'path' => $path,
         ];
 
-
         return [
             $field => $sort,
         ];
+    }
+
+    public static function multipleAggregations($aggregations, $field): array
+    {
+        $aggs = [];
+        foreach ($aggregations as $aggregation) {
+            switch ($aggregation) {
+                case 'max':
+                    $aggs['max_'.$field] = self::maxAggregation($field);
+                    break;
+                case 'min':
+                    $aggs['min_'.$field] = self::minAggregation($field);
+                    break;
+                case 'avg':
+                    $aggs['avg_'.$field] = self::avgAggregation($field);
+                    break;
+                case 'sum':
+                    $aggs['sum_'.$field] = self::sumAggregation($field);
+                    break;
+                case 'matrix':
+                    $aggs['matrix_'.$field] = self::matrixAggregation([$field]);
+                    break;
+                case 'count':
+                    $aggs['count_'.$field] = [
+                        'value_count' => [
+                            'field' => $field,
+                        ],
+                    ];
+                    break;
+            }
+        }
+
+        return $aggs;
+
     }
 
     public static function maxAggregation($field): array
@@ -139,40 +173,4 @@ class ParameterBuilder
             ],
         ];
     }
-
-
-    public static function multipleAggregations($aggregations, $field)
-    {
-        $aggs = [];
-        foreach ($aggregations as $aggregation) {
-            switch ($aggregation) {
-                case 'max':
-                    $aggs['max_'.$field] = self::maxAggregation($field);
-                    break;
-                case 'min':
-                    $aggs['min_'.$field] = self::minAggregation($field);
-                    break;
-                case 'avg':
-                    $aggs['avg_'.$field] = self::avgAggregation($field);
-                    break;
-                case 'sum':
-                    $aggs['sum_'.$field] = self::sumAggregation($field);
-                    break;
-                case 'matrix':
-                    $aggs['matrix_'.$field] = self::matrixAggregation([$field]);
-                    break;
-                case 'count':
-                    $aggs['count_'.$field] = [
-                        'value_count' => [
-                            'field' => $field,
-                        ],
-                    ];
-                    break;
-            }
-        }
-
-        return $aggs;
-
-    }
-
 }

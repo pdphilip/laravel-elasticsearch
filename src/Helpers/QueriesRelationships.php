@@ -1,7 +1,6 @@
 <?php
-/**
- * @credit https://github.com/jenssegers/laravel-mongodb/
- */
+
+declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Helpers;
 
@@ -19,18 +18,22 @@ trait QueriesRelationships
     /**
      * Add a relationship count / exists condition to the query.
      *
-     * @param    Relation|string    $relation
-     * @param    string    $operator
-     * @param    int    $count
-     * @param    string    $boolean
-     * @param    Closure|null    $callback
+     * @param  Relation|string  $relation
+     * @param  string  $operator
+     * @param  int  $count
+     * @param  string  $boolean
      *
-     * @return Builder|static
+     * @throws Exception
      */
-    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', Closure $callback = null)
-    {
+    public function has(
+        $relation,
+        $operator = '>=',
+        $count = 1,
+        $boolean = 'and',
+        ?Closure $callback = null
+    ): Builder|static {
         if (is_string($relation)) {
-            if (strpos($relation, '.') !== false) {
+            if (str_contains($relation, '.')) {
                 return $this->hasNested($relation, $operator, $count, $boolean, $callback);
             }
 
@@ -39,6 +42,7 @@ trait QueriesRelationships
 
         // If this is a hybrid relation then we can not use a normal whereExists() query that relies on a subquery
         // We need to use a `whereIn` query
+        //@phpstan-ignore-next-line
         if ($this->getModel() instanceof Model || $this->isAcrossConnections($relation)) {
             return $this->addHybridHas($relation, $operator, $count, $boolean, $callback);
         }
@@ -46,13 +50,10 @@ trait QueriesRelationships
         // If we only need to check for the existence of the relation, then we can optimize
         // the subquery to only run a "where exists" clause instead of this full "count"
         // clause. This will make these queries run much faster compared with a count.
-        $method = $this->canUseExistsForExistenceCheck($operator, $count)
-            ? 'getRelationExistenceQuery'
-            : 'getRelationExistenceCountQuery';
+        //@phpstan-ignore-next-line
+        $method = $this->canUseExistsForExistenceCheck($operator, $count) ? 'getRelationExistenceQuery' : 'getRelationExistenceCountQuery';
 
-        $hasQuery = $relation->{$method}(
-            $relation->getRelated()->newQuery(), $this
-        );
+        $hasQuery = $relation->{$method}($relation->getRelated()->newQuery(), $this);
 
         // Next we will call any given callback as an "anonymous" scope so they can get the
         // proper logical grouping of the where clauses if needed by this Eloquent query
@@ -61,17 +62,10 @@ trait QueriesRelationships
             $hasQuery->callScope($callback);
         }
 
-        return $this->addHasWhere(
-            $hasQuery, $relation, $operator, $count, $boolean
-        );
+        return $this->addHasWhere($hasQuery, $relation, $operator, $count, $boolean);
     }
 
-    /**
-     * @param    Relation    $relation
-     *
-     * @return bool
-     */
-    protected function isAcrossConnections(Relation $relation)
+    protected function isAcrossConnections(Relation $relation): bool
     {
         return $relation->getParent()->getConnectionName() !== $relation->getRelated()->getConnectionName();
     }
@@ -79,17 +73,16 @@ trait QueriesRelationships
     /**
      * Compare across databases.
      *
-     * @param    Relation    $relation
-     * @param    string    $operator
-     * @param    int    $count
-     * @param    string    $boolean
-     * @param    Closure|null    $callback
      *
-     * @return mixed
      * @throws Exception
      */
-    public function addHybridHas(Relation $relation, $operator = '>=', $count = 1, $boolean = 'and', Closure $callback = null)
-    {
+    public function addHybridHas(
+        Relation $relation,
+        string $operator = '>=',
+        int $count = 1,
+        string $boolean = 'and',
+        ?Closure $callback = null
+    ): mixed {
         $hasQuery = $relation->getQuery();
         if ($callback) {
             $hasQuery->callScope($callback);
@@ -99,7 +92,7 @@ trait QueriesRelationships
         $not = in_array($operator, ['<', '<=', '!=']);
         // If we are comparing to 0, we need an additional $not flip.
         if ($count == 0) {
-            $not = !$not;
+            $not = ! $not;
         }
 
         $relations = $hasQuery->pluck($this->getHasCompareKey($relation));
@@ -109,31 +102,20 @@ trait QueriesRelationships
         return $this->whereIn($this->getRelatedConstraintKey($relation), $relatedIds, $boolean, $not);
     }
 
-    /**
-     * @param    Relation    $relation
-     *
-     * @return string
-     */
-    protected function getHasCompareKey(Relation $relation)
+    protected function getHasCompareKey(Relation $relation): string
     {
         if (method_exists($relation, 'getHasCompareKey')) {
             return $relation->getHasCompareKey();
         }
 
+        //@phpstan-ignore-next-line
         return $relation instanceof HasOneOrMany ? $relation->getForeignKeyName() : $relation->getOwnerKeyName();
     }
 
-    /**
-     * @param $relations
-     * @param $operator
-     * @param $count
-     *
-     * @return array
-     */
-    protected function getConstrainedRelatedIds($relations, $operator, $count)
+    protected function getConstrainedRelatedIds($relations, $operator, $count): array
     {
         $relationCount = array_count_values(array_map(function ($id) {
-            return (string)$id; // Convert Back ObjectIds to Strings
+            return (string) $id; // Convert Back ObjectIds to Strings
         }, is_array($relations) ? $relations : $relations->flatten()->toArray()));
         // Remove unwanted related objects based on the operator and count.
         $relationCount = array_filter($relationCount, function ($counted) use ($count, $operator) {
@@ -161,12 +143,11 @@ trait QueriesRelationships
     /**
      * Returns key we are constraining this parent model's query with.
      *
-     * @param    Relation    $relation
      *
-     * @return string
+     *
      * @throws Exception
      */
-    protected function getRelatedConstraintKey(Relation $relation)
+    protected function getRelatedConstraintKey(Relation $relation): string
     {
         if ($relation instanceof HasOneOrMany) {
             return $relation->getLocalKeyName();
@@ -176,7 +157,7 @@ trait QueriesRelationships
             return $relation->getForeignKeyName();
         }
 
-        if ($relation instanceof BelongsToMany && !$this->isAcrossConnections($relation)) {
+        if ($relation instanceof BelongsToMany && ! $this->isAcrossConnections($relation)) {
             return $this->model->getKeyName();
         }
 

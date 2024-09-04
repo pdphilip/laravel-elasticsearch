@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
@@ -9,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
+use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use RuntimeException;
 
@@ -19,21 +22,26 @@ use RuntimeException;
  */
 abstract class Model extends BaseModel
 {
-    use HybridRelations, ModelDocs;
+    use HasCollection, HybridRelations, ModelDocs;
 
     const MAX_SIZE = 1000;
 
+    /**
+     * The table associated with the model.
+     *
+     * @var string|null
+     */
     protected $index;
 
-    protected $recordIndex;
+    protected ?string $recordIndex;
 
     protected $primaryKey = '_id';
 
     protected $keyType = 'string';
 
-    protected $parentRelation;
+    protected ?Relation $parentRelation;
 
-    protected $_meta = [];
+    protected ?ModelMetaData $_meta;
 
     public function __construct(array $attributes = [])
     {
@@ -43,14 +51,14 @@ abstract class Model extends BaseModel
         $this->forcePrimaryKey();
     }
 
-
-    public function setIndex($index = null)
+    public function forcePrimaryKey(): void
     {
-        if ($index) {
-            return $this->index = $index;
-        }
-        $this->index = $this->index ?? $this->getTable();
-        unset($this->table);
+        $this->primaryKey = '_id';
+    }
+
+    public function getRecordIndex(): ?string
+    {
+        return $this->recordIndex;
     }
 
     public function setRecordIndex($recordIndex = null)
@@ -62,11 +70,9 @@ abstract class Model extends BaseModel
         return $this->recordIndex = $this->index;
     }
 
-    public function getRecordIndex()
-    {
-        return $this->recordIndex;
-    }
-
+    /**
+     * {@inheritdoc}
+     */
     public function setTable($index)
     {
         $this->index = $index;
@@ -75,22 +81,10 @@ abstract class Model extends BaseModel
         return $this;
     }
 
-
-    public function forcePrimaryKey()
-    {
-        $this->primaryKey = '_id';
-    }
-
-
-    public function getMaxSize()
-    {
-        return static::MAX_SIZE;
-    }
-
     public function getIdAttribute($value = null)
     {
         // If no value for id, then set ES's _id
-        if (!$value && array_key_exists('_id', $this->attributes)) {
+        if (! $value && array_key_exists('_id', $this->attributes)) {
             $value = $this->attributes['_id'];
         }
 
@@ -98,116 +92,104 @@ abstract class Model extends BaseModel
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function getQualifiedKeyName()
+    public function getQualifiedKeyName(): string
     {
         return $this->getKeyName();
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function fromDateTime($value)
+    public function getMeta(): ModelMetaData
     {
-        return parent::asDateTime($value);
+        return $this->_meta;
     }
 
-    /**
-     * @inheritdoc
-     */
-    protected function asDateTime($value)
+    public function getMetaAsArray(): array
     {
-
-        return parent::asDateTime($value);
+        return $this->_meta->asArray();
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function getDateFormat()
+    public function setMeta($meta): static
     {
-        return $this->dateFormat ? : 'Y-m-d H:i:s';
-    }
-
-    public function setMeta($meta)
-    {
-        $this->_meta = $meta;
+        $this->_meta = new ModelMetaData($meta);
 
         return $this;
     }
 
-    public function getMeta()
+    public function getSearchHighlightsAttribute(): ?object
     {
-        return (object)$this->_meta;
+        return $this->_meta->parseHighlights();
     }
 
-    public function getSearchHighlightsAttribute()
+    public function getSearchHighlightsAsArrayAttribute(): array
     {
-        if (!empty($this->_meta['highlights'])) {
-            $data = [];
-            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
-
-            return (object)$data;
-        }
-
-        return null;
+        return $this->_meta->getHighlights();
     }
 
-    public function getSearchHighlightsAsArrayAttribute()
-    {
-        if (!empty($this->_meta['highlights'])) {
-            return $this->_meta['highlights'];
-        }
-
-        return [];
-    }
-
-    public function getWithHighlightsAttribute()
+    public function getWithHighlightsAttribute(): object
     {
         $data = $this->attributes;
-        $mutators = array_values(array_diff($this->getMutatedAttributes(), ['id', 'search_highlights', 'search_highlights_as_array', 'with_highlights']));
+        $mutators = array_values(array_diff($this->getMutatedAttributes(), [
+            'id',
+            'search_highlights',
+            'search_highlights_as_array',
+            'with_highlights',
+        ]));
         if ($mutators) {
             foreach ($mutators as $mutator) {
                 $data[$mutator] = $this->{$mutator};
             }
         }
-        if (!empty($this->_meta['highlights'])) {
-            $this->_mergeFlatKeysIntoNestedArray($data, $this->_meta['highlights']);
-        }
 
-        return (object)$data;
+        return (object) $this->_meta->parseHighlights($data);
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function freshTimestamp()
+    public function freshTimestamp(): string
     {
-//        return Carbon::now()->toIso8601String();
+        // return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
     }
 
-    public function getIndex()
+    /**
+     * {@inheritdoc}
+     */
+    public function getDateFormat(): string
     {
-        return $this->index ? : parent::getTable();
+        return $this->dateFormat ?: 'Y-m-d H:i:s';
+    }
+
+    public function getIndex(): string
+    {
+        return $this->index ?: parent::getTable();
+    }
+
+    public function setIndex($index = null)
+    {
+        if ($index) {
+            return $this->index = $index;
+        }
+        $this->index = $this->index ?? $this->getTable();
+        unset($this->table);
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function getTable()
+    public function getTable(): string
     {
         return $this->getIndex();
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function getAttribute($key)
+    public function getAttribute($key): mixed
     {
-        if (!$key) {
-            return;
+        if (! $key) {
+            return null;
         }
 
         // Dot notation support.
@@ -219,22 +201,9 @@ abstract class Model extends BaseModel
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    protected function getAttributeFromArray($key)
-    {
-        // Support keys in dot notation.
-        if (Str::contains($key, '.')) {
-            return Arr::get($this->attributes, $key);
-        }
-
-        return parent::getAttributeFromArray($key);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setAttribute($key, $value)
+    public function setAttribute($key, $value): mixed
     {
 
         if (Str::contains($key, '.')) {
@@ -244,26 +213,40 @@ abstract class Model extends BaseModel
 
             Arr::set($this->attributes, $key, $value);
 
-            return;
+            return null;
         }
 
         return parent::setAttribute($key, $value);
     }
 
+    public function fromDateTime(mixed $value): Carbon
+    {
+        return parent::asDateTime($value);
+    }
+
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function getCasts()
+    protected function asDateTime($value): Carbon
+    {
+
+        return parent::asDateTime($value);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCasts(): array
     {
         return $this->casts;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    public function originalIsEquivalent($key)
+    public function originalIsEquivalent($key): bool
     {
-        if (!array_key_exists($key, $this->original)) {
+        if (! array_key_exists($key, $this->original)) {
             return false;
         }
 
@@ -274,33 +257,68 @@ abstract class Model extends BaseModel
             return true;
         }
 
-        if (null === $attribute) {
+        if ($attribute === null) {
             return false;
         }
 
         if ($this->hasCast($key, static::$primitiveCastTypes)) {
-            return $this->castAttribute($key, $attribute) ===
-                $this->castAttribute($key, $original);
+            return $this->castAttribute($key, $attribute) === $this->castAttribute($key, $original);
         }
 
-        return is_numeric($attribute) && is_numeric($original) && strcmp((string)$attribute, (string)$original) === 0;
+        return is_numeric($attribute) && is_numeric($original) && strcmp((string) $attribute, (string) $original) === 0;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getForeignKey(): string
+    {
+        return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function newEloquentBuilder($query): Builder
+    {
+        $builder = new Builder($query);
+
+        return $builder;
+    }
+
+    public function saveWithoutRefresh(array $options = []): bool
+    {
+        $this->mergeAttributesFromCachedCasts();
+
+        $query = $this->newModelQuery();
+        //@phpstan-ignore-next-line
+        $query->setRefresh(false);
+
+        if ($this->exists) {
+            //@phpstan-ignore-next-line
+            $saved = ! $this->isDirty() || $this->performUpdate($query);
+        } else {
+            //@phpstan-ignore-next-line
+            $saved = $this->performInsert($query);
+        }
+
+        if ($saved) {
+            $this->finishSave($options);
+        }
+
+        return $saved;
+    }
 
     /**
      * Append one or more values to the underlying attribute value and sync with original.
-     *
-     * @param    string    $column
-     * @param    array    $values
-     * @param    bool    $unique
      */
-    protected function pushAttributeValues($column, array $values, $unique = false)
+    protected function pushAttributeValues(string $column, array $values, bool $unique = false): void
     {
-        $current = $this->getAttributeFromArray($column) ? : [];
+        $current = $this->getAttributeFromArray($column) ?: [];
 
         foreach ($values as $value) {
             // Don't add duplicate values when we only want unique values.
-            if ($unique && (!is_array($current) || in_array($value, $current))) {
+            if ($unique && (! is_array($current) || in_array($value, $current))) {
                 continue;
             }
 
@@ -313,14 +331,24 @@ abstract class Model extends BaseModel
     }
 
     /**
-     * Remove one or more values to the underlying attribute value and sync with original.
-     *
-     * @param    string    $column
-     * @param    array    $values
+     * {@inheritdoc}
      */
-    protected function pullAttributeValues($column, array $values)
+    protected function getAttributeFromArray($key): mixed
     {
-        $current = $this->getAttributeFromArray($column) ? : [];
+        // Support keys in dot notation.
+        if (Str::contains($key, '.')) {
+            return Arr::get($this->attributes, $key);
+        }
+
+        return parent::getAttributeFromArray($key);
+    }
+
+    /**
+     * Remove one or more values to the underlying attribute value and sync with original.
+     */
+    protected function pullAttributeValues(string $column, array $values): void
+    {
+        $current = $this->getAttributeFromArray($column) ?: [];
 
         if (is_array($current)) {
             foreach ($values as $value) {
@@ -337,144 +365,88 @@ abstract class Model extends BaseModel
         $this->syncOriginalAttribute($column);
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function getForeignKey()
+    protected function newBaseQueryBuilder(): QueryBuilder
     {
-        return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
-    }
-
-    /**
-     * Set the parent relation.
-     *
-     * @param    \Illuminate\Database\Eloquent\Relations\Relation    $relation
-     */
-    public function setParentRelation(Relation $relation)
-    {
-        $this->parentRelation = $relation;
-    }
-
-    /**
-     * Get the parent relation.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\Relation
-     */
-    public function getParentRelation()
-    {
-        return $this->parentRelation;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function newEloquentBuilder($query)
-    {
-        $builder = new Builder($query);
-
-        return $builder;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function newBaseQueryBuilder()
-    {
+        /** @phpstan-var  Connection $connection */
         $connection = $this->getConnection();
-        if (!($connection instanceof Connection)) {
+        $connection->setIndex($this->getTable());
+        $connection->setMaxSize($this->getMaxSize());
+
+        return new QueryBuilder($connection, $connection->getPostProcessor());
+    }
+
+    /**
+     * Get the database connection instance.
+     *
+     *
+     * @throws \RuntimeException
+     */
+    public function getConnection(): Connection
+    {
+        $connection = clone static::resolveConnection($this->getConnectionName());
+        if (! ($connection instanceof Connection)) {
             $config = $connection->getConfig() ?? null;
-            if (!empty($config['driver'])) {
+            if (! empty($config['driver'])) {
                 throw new RuntimeException('Invalid connection settings; expected "elasticsearch", got "'.$config['driver'].'"');
             } else {
                 throw new RuntimeException('Invalid connection settings; expected "elasticsearch"');
             }
         }
 
-        $connection->setIndex($this->getTable());
-        $connection->setMaxSize($this->getMaxSize());
+        return $connection;
+    }
 
-
-        return new QueryBuilder($connection, $connection->getPostProcessor());
+    public function getMaxSize(): int
+    {
+        return static::MAX_SIZE;
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
-    protected function removeTableFromKey($key)
+    protected function removeTableFromKey($key): string
     {
         return $key;
     }
 
-
     /**
      * Get loaded relations for the instance without parent.
-     *
-     * @return array
      */
-    protected function getRelationsWithoutParent()
+    protected function getRelationsWithoutParent(): array
     {
         $relations = $this->getRelations();
 
-        if ($parentRelation = $this->getParentRelation()) {
+        $parentRelation = $this->getParentRelation();
+        if ($parentRelation instanceof Relation) {
+            //@phpstan-ignore-next-line
             unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
         }
 
         return $relations;
     }
 
-
-    protected function isGuardableColumn($key)
+    /**
+     * Get the parent relation.
+     */
+    public function getParentRelation(): ?Relation
     {
-        return true;
+        return $this->parentRelation ?? null;
     }
 
-
-    public function saveWithoutRefresh(array $options = [])
+    /**
+     * Set the parent relation.
+     */
+    public function setParentRelation(Relation $relation): void
     {
-        $this->mergeAttributesFromCachedCasts();
-
-        $query = $this->newModelQuery();
-        $query->setRefresh(false);
-
-        if ($this->exists) {
-            $saved = $this->isDirty() ? $this->performUpdate($query) : true;
-        } else {
-            $saved = $this->performInsert($query);
-        }
-
-        if ($saved) {
-            $this->finishSave($options);
-        }
-
-        return $saved;
+        $this->parentRelation = $relation;
     }
-
 
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
 
-    protected function _mergeFlatKeysIntoNestedArray(&$data, $attrs)
+    protected function isGuardableColumn($key): bool
     {
-        foreach ($attrs as $key => $value) {
-            if ($value) {
-                $value = implode('......', $value);
-                $parts = explode('.', $key);
-                $current = &$data;
-
-                foreach ($parts as $partIndex => $part) {
-                    if ($partIndex === count($parts) - 1) {
-                        $current[$part] = $value;
-                    } else {
-                        if (!isset($current[$part]) || !is_array($current[$part])) {
-                            $current[$part] = [];
-                        }
-                        $current = &$current[$part];
-                    }
-                }
-            }
-
-        }
+        return true;
     }
-
 }

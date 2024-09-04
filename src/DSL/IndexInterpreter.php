@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\DSL;
 
 use Illuminate\Support\Carbon;
@@ -13,20 +15,20 @@ trait IndexInterpreter
         if ($index) {
             $params['index'] = $index;
         }
-        if (!empty($raw['settings'])) {
+        if (! empty($raw['settings'])) {
             $params['body']['settings'] = $raw['settings'];
         }
-        if (!empty($raw['map'])) {
+        if (! empty($raw['map'])) {
             foreach ($raw['map'] as $key => $value) {
                 $params['body']['mappings'][$key] = $value;
             }
         }
-        if (!empty($raw['properties'])) {
+        if (! empty($raw['properties'])) {
             $properties = [];
             foreach ($raw['properties'] as $prop) {
                 $field = $prop['field'];
                 unset($prop['field']);
-                if (!empty($properties[$field])) {
+                if (! empty($properties[$field])) {
                     $type = $prop['type'];
                     foreach ($prop as $key => $value) {
                         $properties[$field]['fields'][$type][Str::snake($key)] = $value;
@@ -37,7 +39,7 @@ trait IndexInterpreter
                     }
                 }
             }
-            if (!empty($properties)) {
+            if (! empty($properties)) {
                 $params['body']['mappings']['properties'] = $properties;
             }
         }
@@ -69,14 +71,13 @@ trait IndexInterpreter
         return $params;
     }
 
-
     public function catIndices($data, $all = false): array
     {
-        if (!$all && $data) {
+        if (! $all && $data) {
             $indices = $data;
             $data = [];
             foreach ($indices as $index) {
-                if (!(str_starts_with($index['index'], "."))) {
+                if (! (str_starts_with($index['index'], '.'))) {
                     $data[] = $index;
                 }
             }
@@ -97,5 +98,4 @@ trait IndexInterpreter
 
         return $data;
     }
-
 }

@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Schema;
 
-use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -14,13 +15,16 @@ use Illuminate\Support\Facades\Facade;
  * @method static array create(string $index, \Closure $callback)
  * @method static array createIfNotExists(string $index, \Closure $callback)
  * @method static Builder reIndex(string $from, string $to)
+ *
  * @wip static Builder rename(string $from, string $to)
+ *
  * @method static Builder modify(string $index, \Closure $callback)
  * @method static bool delete(string $index)
  * @method static bool deleteIfExists(string $index)
  * @method static array setAnalyser(string $index, \Closure $callback)
  *
  * @wip static Builder createTemplate(string $name, \Closure $callback)
+ *
  * @method static bool hasField(string $index, string $field)
  * @method static bool hasFields(string $index, array $fields)
  * @method static bool hasIndex(string $index)
@@ -32,20 +36,17 @@ use Illuminate\Support\Facades\Facade;
  */
 class Schema extends Facade
 {
-//    protected static $app;
-//
-//    protected static $resolvedInstance;
-//
-//
-//    protected static $cached = false;
+    public static function on($name): Builder
+    {
+        return static::connection($name);
+    }
+
     /**
      * Get a schema builder instance for a connection.
      *
-     * @param    string|null    $name
-     *
-     * @return Builder
+     * @param  string|null  $name
      */
-    public static function connection($name)
+    public static function connection($name): Builder
     {
 
         if ($name === null) {
@@ -55,27 +56,18 @@ class Schema extends Facade
         return static::$app['db']->connection($name)->getSchemaBuilder();
     }
 
-    public static function on($name)
-    {
-        return static::connection($name);
-    }
-
     /**
      * Get a schema builder instance for the default connection.
-     *
-     * @return Builder
      */
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): Builder
     {
         return static::$app['db']->connection('elasticsearch')->getSchemaBuilder();
     }
 
-//
     public static function __callStatic($method, $args)
     {
         $instance = static::getFacadeAccessor();
 
         return $instance->$method(...$args);
     }
-
 }

@@ -1,27 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Schema;
 
-use Illuminate\Database\Schema\ColumnDefinition;
-use PDPhilip\Elasticsearch\Connection;
-use Closure;
 use Illuminate\Support\Fluent;
-use RuntimeException;
+use PDPhilip\Elasticsearch\Connection;
 
 class IndexBlueprint
 {
     /**
      * The Connection object for this blueprint.
-     *
-     * @var Connection
      */
-    protected $connection;
+    protected Connection $connection;
 
-    protected $index;
+    protected string $index = '';
 
-    protected $newIndex;
+    protected ?string $newIndex;
 
-    protected $parameters = [];
+    protected array $parameters = [];
 
     public function __construct($index, $newIndex = null)
     {
@@ -38,10 +35,28 @@ class IndexBlueprint
         return $this->addField('text', $field);
     }
 
+    protected function addField($type, $field, array $parameters = [])
+    {
+        return $this->addFieldDefinition(new Definitions\FieldDefinition(
+            array_merge(compact('type', 'field'), $parameters)
+        ));
+    }
+
+    protected function addFieldDefinition($definition)
+    {
+        $this->parameters['properties'][] = $definition;
+
+        return $definition;
+    }
+
     public function array($field): Definitions\FieldDefinition
     {
         return $this->addField('text', $field);
     }
+
+    //----------------------------------------------------------------------
+    // Numeric Types
+    //----------------------------------------------------------------------
 
     public function boolean($field): Definitions\FieldDefinition
     {
@@ -52,11 +67,6 @@ class IndexBlueprint
     {
         return $this->addField('keyword', $field);
     }
-
-
-    //----------------------------------------------------------------------
-    // Numeric Types
-    //----------------------------------------------------------------------
 
     public function long($field): Definitions\FieldDefinition
     {
@@ -93,6 +103,8 @@ class IndexBlueprint
         return $this->addField('half_float', $field);
     }
 
+    //----------------------------------------------------------------------
+
     public function scaledFloat($field, $scalingFactor = 100): Definitions\FieldDefinition
     {
         return $this->addField('scaled_float', $field, [
@@ -104,8 +116,6 @@ class IndexBlueprint
     {
         return $this->addField('unsigned_long', $field);
     }
-
-    //----------------------------------------------------------------------
 
     public function date($field, $format = null): Definitions\FieldDefinition
     {
@@ -147,6 +157,10 @@ class IndexBlueprint
         $this->parameters['settings'][$key] = $value;
     }
 
+    //----------------------------------------------------------------------
+    // Definitions
+    //----------------------------------------------------------------------
+
     public function map($key, $value): void
     {
         $this->parameters['map'][$key] = $value;
@@ -157,30 +171,11 @@ class IndexBlueprint
         return $this->addField($type, $field, $parameters);
     }
 
-    //----------------------------------------------------------------------
-    // Definitions
-    //----------------------------------------------------------------------
-
-    protected function addField($type, $field, array $parameters = [])
-    {
-        return $this->addFieldDefinition(new Definitions\FieldDefinition(
-            array_merge(compact('type', 'field'), $parameters)
-        ));
-    }
-
-    protected function addFieldDefinition($definition)
-    {
-        $this->parameters['properties'][] = $definition;
-
-        return $definition;
-    }
-
     //======================================================================
     // Builders
     //======================================================================
 
-
-    public function buildIndexCreate(Connection $connection)
+    public function buildIndexCreate(Connection $connection): void
     {
         $connection->setIndex($this->index);
         if ($this->parameters) {
@@ -189,45 +184,10 @@ class IndexBlueprint
         }
     }
 
-    public function buildReIndex(Connection $connection)
-    {
-        return $connection->reIndex($this->index, $this->newIndex);
-    }
-
-    public function buildIndexModify(Connection $connection)
-    {
-        $connection->setIndex($this->index);
-        if ($this->parameters) {
-            $this->_formatParams();
-            $connection->indexModify($this->parameters);
-        }
-    }
-
-
-    //----------------------------------------------------------------------
-    // Internal Laravel init migration catchers
-    // *Case for when ES is the only datasource
-    //----------------------------------------------------------------------
-
-    public function increments($column)
-    {
-        return $this->addField('keyword', $column);
-    }
-
-    public function string($column)
-    {
-        return $this->addField('keyword', $column);
-    }
-
-
-
-    //----------------------------------------------------------------------
-    // Helpers
-    //----------------------------------------------------------------------
-    private function _formatParams()
+    private function _formatParams(): void
     {
         if ($this->parameters) {
-            if (!empty($this->parameters['properties'])) {
+            if (! empty($this->parameters['properties'])) {
                 $properties = [];
                 foreach ($this->parameters['properties'] as $property) {
                     if ($property instanceof Fluent) {
@@ -239,5 +199,38 @@ class IndexBlueprint
                 $this->parameters['properties'] = $properties;
             }
         }
+    }
+
+    //    public function buildReIndex(Connection $connection): void
+    //    {
+    //        return $connection->reIndex($this->index, $this->newIndex);
+    //    }
+
+    //----------------------------------------------------------------------
+    // Internal Laravel init migration catchers
+    // *Case for when ES is the only datasource
+    //----------------------------------------------------------------------
+
+    public function buildIndexModify(Connection $connection): void
+    {
+        $connection->setIndex($this->index);
+        if ($this->parameters) {
+            $this->_formatParams();
+            $connection->indexModify($this->parameters);
+        }
+    }
+
+    public function increments($column): Definitions\FieldDefinition
+    {
+        return $this->addField('keyword', $column);
+    }
+
+    //----------------------------------------------------------------------
+    // Helpers
+    //----------------------------------------------------------------------
+
+    public function string($column): Definitions\FieldDefinition
+    {
+        return $this->addField('keyword', $column);
     }
 }
