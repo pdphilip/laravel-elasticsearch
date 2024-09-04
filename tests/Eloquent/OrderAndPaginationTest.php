@@ -62,7 +62,7 @@ test('products are paginated', function () {
 test('sort products by color with missing values treated as first', function () {
     Product::factory()->state(['color' => null])->create();
     Product::factory()->state(['color' => 'blue'])->create();
-    $products = Product::orderBy('color', 'desc', null, '_first')->get();
+    $products = Product::orderBy('color', 'desc')->withSort('color', 'missing', '_first')->get();
     expect($products->first()->color)->toBeNull();
 });
 
