@@ -82,11 +82,14 @@
       "@build",
       "@php vendor/bin/testbench serve"
     ],
-    "lint": [
-      "@php vendor/bin/phpstan analyse"
-    ],
+    "lint": "pint -v",
+    "test:lint": "pint --test -v",
+    "test:types": "phpstan analyse --ansi",
+    "test:unit": "pest --colors=always",
     "test": [
-      "@php vendor/bin/pest"
+      "@test:lint",
+      "@test:types",
+      "@test:unit"
     ]
   }
 }
