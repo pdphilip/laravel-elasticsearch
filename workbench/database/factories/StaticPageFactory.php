@@ -1,19 +1,19 @@
 <?php
 
-  declare(strict_types=1);
+declare(strict_types=1);
 
-  namespace Workbench\Database\Factories;
+namespace Workbench\Database\Factories;
 
-  use Illuminate\Database\Eloquent\Factories\Factory;
-  use Workbench\App\Models\StaticPage;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Workbench\App\Models\StaticPage;
 
-  /**
-   * Factory for StaticPage model.
-   *
-   * @extends Factory<StaticPage>
-   */
-  class StaticPageFactory extends Factory
-  {
+/**
+ * Factory for StaticPage model.
+ *
+ * @extends Factory<StaticPage>
+ */
+class StaticPageFactory extends Factory
+{
     protected $model = StaticPage::class;
 
     /**
@@ -23,9 +23,9 @@
      */
     public function definition(): array
     {
-      return [
-        'title' => fake()->sentence(),
-        'content' => fake()->text(),
-      ];
+        return [
+            'title' => fake()->sentence(),
+            'content' => fake()->text(),
+        ];
     }
-  }
+}

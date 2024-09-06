@@ -1,29 +1,29 @@
 <?php
 
-  declare(strict_types=1);
+declare(strict_types=1);
 
-  use Carbon\Carbon;
-  use Illuminate\Database\Eloquent\ModelNotFoundException;
-  use PDPhilip\Elasticsearch\Connection;
-  use Workbench\App\Models\Guarded;
-  use Workbench\App\Models\Product;
-  use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-  use Workbench\App\Models\Soft;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use PDPhilip\Elasticsearch\Connection;
+use Workbench\App\Models\Guarded;
+use Workbench\App\Models\Product;
+use Workbench\App\Models\Soft;
 
-  test('New Model', function () {
-    $product        = new Product();
+test('New Model', function () {
+    $product = new Product;
     $this->assertInstanceOf(Connection::class, $product->getConnection());
     $this->assertFalse($product->exists);
     $this->assertEquals('products', $product->getTable());
     $this->assertEquals('_id', $product->getKeyName());
-  });
+});
 
-  test('Insert', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Insert', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id']   = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock']   = 25;
+    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
+    $product['in_stock'] = 25;
 
     $product->save();
 
@@ -36,17 +36,16 @@
     $this->assertNotEquals(0, strlen((string) $product->id));
     $this->assertInstanceOf(Carbon::class, $product->created_at);
 
-
     $this->assertEquals('John Doe', $product->name);
     $this->assertEquals(25, $product->in_stock);
-  });
+});
 
-  test('Update', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Update', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id']   = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock']   = 25;
+    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
+    $product['in_stock'] = 25;
     $product->save();
 
     $this->assertTrue($product->exists);
@@ -56,7 +55,6 @@
     $this->assertInstanceOf(Product::class, $check);
     $check->in_stock = 36;
     $check->save();
-
 
     $this->assertTrue($check->exists);
     $this->assertInstanceOf(Carbon::class, $check->created_at);
@@ -71,21 +69,21 @@
     $check = Product::find($product->id);
     $this->assertEquals(20, $check->in_stock);
 
-    $check->in_stock      = 24;
+    $check->in_stock = 24;
     $check->color = 'blue'; // new field
     $check->save();
 
     $check = Product::find($product->id);
     $this->assertEquals(24, $check->in_stock);
     $this->assertEquals('blue', $check->color);
-  });
+});
 
-  test('Delete', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Delete', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id']   = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock']   = 25;
+    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
+    $product['in_stock'] = 25;
     $product->save();
 
     $this->assertTrue($product->exists);
@@ -95,19 +93,19 @@
 
     $this->assertEquals(0, Product::count());
 
-  });
+});
 
-  test('All', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('All', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock']      = 24;
+    $product['in_stock'] = 24;
     $product->save();
 
-    $product        = new Product();
-    $product['name']  = 'Jane Doe';
+    $product = new Product;
+    $product['name'] = 'Jane Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock']      = 35;
+    $product['in_stock'] = 35;
     $product->save();
 
     $all = Product::all();
@@ -116,13 +114,13 @@
     $this->assertContains('John Doe', $all->pluck('name'));
     $this->assertContains('Jane Doe', $all->pluck('name'));
 
-  });
+});
 
-  test('Find', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Find', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock']      = 35;
+    $product['in_stock'] = 35;
     $product->save();
 
     $check = Product::find($product->id);
@@ -132,34 +130,34 @@
 
     $this->assertEquals('John Doe', $check->name);
     $this->assertEquals(35, $check->in_stock);
-  });
+});
 
-  test('Get', function () {
+test('Get', function () {
     //this also test bulk insert yay!
     Product::insert([
-                   ['name' => 'John Doe'],
-                   ['name' => 'Jane Doe'],
-                 ]);
+        ['name' => 'John Doe'],
+        ['name' => 'Jane Doe'],
+    ]);
 
     $products = Product::get();
     $this->assertCount(2, $products);
     $this->assertInstanceOf(EloquentCollection::class, $products);
     $this->assertInstanceOf(Product::class, $products[0]);
-  });
+});
 
-  test('First', function () {
+test('First', function () {
     //this also test bulk insert yay!
     Product::insert([
-                   ['name' => 'John Doe'],
-                   ['name' => 'Jane Doe'],
-                 ]);
+        ['name' => 'John Doe'],
+        ['name' => 'Jane Doe'],
+    ]);
 
     $product = Product::first();
     $this->assertInstanceOf(Product::class, $product);
     $this->assertEquals('John Doe', $product->name);
-  });
+});
 
-  test('No Document', function () {
+test('No Document', function () {
     $items = Product::where('name', 'nothing')->get();
     $this->assertInstanceOf(EloquentCollection::class, $items);
     $this->assertEquals(0, $items->count());
@@ -170,15 +168,15 @@
     $item = Product::find('51c33d8981fec6813e00000a');
     $this->assertNull($item);
 
-  });
+});
 
-  test('Find Or Fail', function () {
+test('Find Or Fail', function () {
     $this->expectException(ModelNotFoundException::class);
     Product::findOrFail('51c33d8981fec6813e00000a');
 
-  });
+});
 
-  test('Create', function () {
+test('Create', function () {
     $product = Product::create(['name' => 'Jane Poe']);
     $this->assertInstanceOf(Product::class, $product);
 
@@ -188,24 +186,24 @@
     $check = Product::where('name', 'Jane Poe')->first();
     $this->assertInstanceOf(Product::class, $check);
     $this->assertEquals($product->id, $check->id);
-  });
+});
 
-  test('Destroy', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Destroy', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock']      = 35;
+    $product['in_stock'] = 35;
     $product->save();
 
     Product::destroy((string) $product->id);
     $this->assertEquals(0, Product::count());
-  });
+});
 
-  test('Touch', function () {
-    $product        = new Product();
-    $product['name']  = 'John Doe';
+test('Touch', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock']      = 35;
+    $product['in_stock'] = 35;
     $product->save();
 
     $old = $product->updated_at;
@@ -216,9 +214,9 @@
     $this->assertInstanceOf(Product::class, $check);
 
     $this->assertNotEquals($old, $check->updated_at);
-  });
+});
 
-  test('Soft Delete', function () {
+test('Soft Delete', function () {
     Soft::create(['name' => 'John Doe']);
     Soft::create(['name' => 'Jane Doe']);
 
@@ -248,39 +246,39 @@
     $object->restore();
     $this->assertEquals(2, Soft::count());
 
-  })->todo();
+})->todo();
 
-  test('Scope', function () {
+test('Scope', function () {
     Product::insert([
-                   ['name' => 'knife', 'color' => 'green'],
-                   ['name' => 'spoon', 'color' => 'red'],
-                 ]);
+        ['name' => 'knife', 'color' => 'green'],
+        ['name' => 'spoon', 'color' => 'red'],
+    ]);
 
     $green = Product::green()->get();
     $this->assertEquals(1, $green->count());
-  });
+});
 
-  test('To Array', function () {
+test('To Array', function () {
     $product = Product::create(['name' => 'fork', 'color' => 'green']);
 
     $array = $product->toArray();
-    $keys  = array_keys($array);
+    $keys = array_keys($array);
     sort($keys);
     $this->assertEquals(['_id', 'color', 'created_at', 'name', 'updated_at'], $keys);
     $this->assertIsString($array['created_at']);
     $this->assertIsString($array['updated_at']);
     $this->assertIsString($array['_id']);
-  });
+});
 
-  test('Dot Notation', function () {
+test('Dot Notation', function () {
 
     $product = Product::create([
-                           'name' => 'John Doe',
-                           'manufacturer' => [
-                             'name' => 'Paris',
-                             'country' => 'France',
-                           ],
-                         ]);
+        'name' => 'John Doe',
+        'manufacturer' => [
+            'name' => 'Paris',
+            'country' => 'France',
+        ],
+    ]);
 
     $this->assertEquals('Paris', $product->getAttribute('manufacturer.name'));
     $this->assertEquals('Paris', $product['manufacturer.name']);
@@ -288,13 +286,12 @@
 
     // Fill
     //TODO: Fix this it's not working correctly
-//    $product->fill(['manufacturer.name' => 'Strasbourg']);
-//
-//    $this->assertEquals('Strasbourg', $product['manufacturer.name']);
-  });
+    //    $product->fill(['manufacturer.name' => 'Strasbourg']);
+    //
+    //    $this->assertEquals('Strasbourg', $product['manufacturer.name']);
+});
 
-
-  test('Truncate Model', function () {
+test('Truncate Model', function () {
     Product::create(['name' => 'John Doe']);
 
     Product::truncate();
@@ -302,9 +299,9 @@
 
     $this->assertEquals(0, Product::count());
 
-  });
+});
 
-  test('Chunk By Id', function () {
+test('Chunk By Id', function () {
 
     Product::create(['name' => 'fork', 'order_values' => [10, 20]]);
     Product::create(['name' => 'spork', 'order_values' => [10, 35, 20, 30]]);
@@ -312,15 +309,15 @@
 
     $names = [];
     Product::chunkById(2, function (EloquentCollection $items) use (&$names) {
-      $names = array_merge($names, $items->pluck('name')->all());
+        $names = array_merge($names, $items->pluck('name')->all());
     });
 
     $this->assertEquals(['fork', 'spork', 'spoon'], $names);
 
-  });
+});
 
-  test('Guarded Model', function () {
-    $model = new Guarded();
+test('Guarded Model', function () {
+    $model = new Guarded;
 
     // foobar is properly guarded
     $model->fill(['foobar' => 'ignored', 'name' => 'John Doe']);
@@ -340,9 +337,9 @@
     $model->fill(['level1' => $dataValues]);
     $this->assertEquals($dataValues, $model->getAttribute('level1'));
 
-  });
+});
 
-  test('First Or Create', function () {
+test('First Or Create', function () {
     $name = 'Jane Poe';
 
     $user = Product::where('name', $name)->first();
@@ -357,15 +354,15 @@
     $this->assertInstanceOf(Product::class, $check);
     $this->assertEquals($user->id, $check->id);
 
-  });
+});
 
-  test('Update Or Create', function () {
+test('Update Or Create', function () {
     // Insert data to ensure we filter on the correct criteria, and not getting
     // the first document randomly.
     Product::insert([
-                   ['name' => 'fixture@example.com'],
-                   ['name' => 'john.doe@example.com'],
-                 ]);
+        ['name' => 'fixture@example.com'],
+        ['name' => 'john.doe@example.com'],
+    ]);
 
     Carbon::setTestNow('2010-01-01');
     $createdAt = Carbon::now()->getTimestamp();
@@ -374,8 +371,8 @@
 
     // Create
     $product = Product::updateOrCreate(
-      ['name' => 'bar'],
-      ['name' => 'bar', 'in_stock' => 30],
+        ['name' => 'bar'],
+        ['name' => 'bar', 'in_stock' => 30],
     );
 
     $this->assertInstanceOf(Product::class, $product);
@@ -390,8 +387,8 @@
     // Update
     $events = [];
     $product = Product::updateOrCreate(
-      ['name' => 'bar'],
-      ['in_stock' => 25]
+        ['name' => 'bar'],
+        ['in_stock' => 25]
     );
 
     $this->assertInstanceOf(Product::class, $product);
@@ -408,37 +405,36 @@
     $this->assertEquals(25, $checkProduct->in_stock);
     $this->assertEquals($createdAt, $checkProduct->created_at->getTimestamp());
     $this->assertEquals($updatedAt, $checkProduct->updated_at->getTimestamp());
-  });
+});
 
-
-  test('Create With Null Id', function (string $id) {
+test('Create With Null Id', function (string $id) {
     $product = Product::create([$id => null, 'email' => 'foo@bar']);
     $this->assertNotNull($product->id);
     $this->assertSame(1, Product::count());
-  })->with([
+})->with([
     'id',
-//    #TODO: this fails.
-//    '_id'
-             ]);
+    //    #TODO: this fails.
+    //    '_id'
+]);
 
-  function registerModelEvents(string $modelClass, array &$events): void
-  {
+function registerModelEvents(string $modelClass, array &$events): void
+{
     $modelClass::creating(function () use (&$events) {
-      $events[] = 'creating';
+        $events[] = 'creating';
     });
     $modelClass::created(function () use (&$events) {
-      $events[] = 'created';
+        $events[] = 'created';
     });
     $modelClass::updating(function () use (&$events) {
-      $events[] = 'updating';
+        $events[] = 'updating';
     });
     $modelClass::updated(function () use (&$events) {
-      $events[] = 'updated';
+        $events[] = 'updated';
     });
     $modelClass::saving(function () use (&$events) {
-      $events[] = 'saving';
+        $events[] = 'saving';
     });
     $modelClass::saved(function () use (&$events) {
-      $events[] = 'saved';
+        $events[] = 'saved';
     });
-  }
+}

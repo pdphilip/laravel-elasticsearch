@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
 test('save a new product with individual attributes', function () {
-    $product = new Product();
+    $product = new Product;
     $product->name = 'New Product';
     $product->price = 199.99;
     $product->status = 1;
@@ -50,7 +49,7 @@ test('mass update products matching a condition', function () {
 });
 
 test('save product without waiting for index refresh', function () {
-    $product = new Product();
+    $product = new Product;
     $product->name = 'Fast Save Product';
     $product->status = 1;
     $product->saveWithoutRefresh();
@@ -97,7 +96,7 @@ test('validate saving a model with a unique constraint on name', function () {
 });
 
 test('ensure save without refresh accurately models elastic behavior', function () {
-    $product = new Product();
+    $product = new Product;
     $product->name = 'Delayed Visibility Product';
     $product->price = 150;
     $product->saveWithoutRefresh();

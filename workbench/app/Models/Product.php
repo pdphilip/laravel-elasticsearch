@@ -72,10 +72,10 @@ class Product extends Model
         return 'no';
     }
 
-  public function scopeGreen(Builder $query): Builder
-  {
-    return $query->where('color', 'green');
-  }
+    public function scopeGreen(Builder $query): Builder
+    {
+        return $query->where('color', 'green');
+    }
 
     public function getAvgOrdersAttribute(): float|int
     {

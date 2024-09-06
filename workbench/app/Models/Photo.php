@@ -32,7 +32,6 @@ use Workbench\Database\Factories\PhotoFactory;
  */
 class Photo extends Model
 {
-
     use HasFactory;
 
     protected $connection = 'elasticsearch';
@@ -42,8 +41,8 @@ class Photo extends Model
         return $this->morphTo();
     }
 
-  public static function newFactory(): PhotoFactory
-  {
-    return PhotoFactory::new();
-  }
+    public static function newFactory(): PhotoFactory
+    {
+        return PhotoFactory::new();
+    }
 }

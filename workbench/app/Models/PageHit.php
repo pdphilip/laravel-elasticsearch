@@ -13,6 +13,7 @@ class PageHit extends Model
     use HasFactory;
 
     protected $connection = 'elasticsearch';
+
     protected $index = 'page_hits_*';
 
     public static function newFactory(): PageHitFactory

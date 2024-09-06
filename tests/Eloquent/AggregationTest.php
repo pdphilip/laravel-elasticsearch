@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
 test('retrieve distinct product statuses', function () {
