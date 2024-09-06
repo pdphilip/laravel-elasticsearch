@@ -400,12 +400,10 @@ class Bridge
             $finalResponse['hasErrors'] = $response['errors'];
             $finalResponse['took'] = $response['took'];
             foreach ($response['items'] as $count => $hit) {
-
                 $finalResponse['total']++;
                 $payload = $params['body'][($count * 2) + 1];
                 $id = $hit['index']['_id'];
                 $record = ['_id' => $id] + $payload;
-
                 if (! empty($hit['index']['error'])) {
                     $finalResponse['failed']++;
                     $finalResponse['error_bag'][] = [
@@ -420,9 +418,7 @@ class Bridge
                     } else {
                         $finalResponse['modified']++;
                     }
-
                     if ($returnData) {
-
                         $finalResponse['data'][] = $record;
                     }
                 }
