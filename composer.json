@@ -24,7 +24,8 @@
     "illuminate/container": "^10.0|^11.0",
     "illuminate/database": "^10.0|^11.0",
     "illuminate/events": "^10.0|^11.0",
-    "elasticsearch/elasticsearch": "^8.15"
+    "elasticsearch/elasticsearch": "^8.15",
+    "psr/http-factory": "^1.1"
   },
   "require-dev": {
     "orchestra/testbench": "^9.0.0||^8.22.0",
