@@ -1,16 +1,17 @@
-name: 'Run Tests'
-
-on: ['push', 'pull_request']
+name: Test Coverage
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  ci:
+  laravel-tests:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
       matrix:
         os: [ubuntu-latest]
-        php: [8.2, 8.3]
-        laravel: [10.*, 11.*]
+        php: [8.2]
+        laravel: [11.*]
         dependency-version: [prefer-stable]
 
     env:
@@ -42,16 +43,11 @@ jobs:
           - 6379/tcp
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
-    name: Tests P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
+    name: Coverage P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
+
     steps:
       - name: Checkout 🛎
         uses: actions/checkout@v4
-
-      - name: Cache dependencies 🍬
-        uses: actions/cache@v1
-        with:
-          path: ~/.composer/cache/files
-          key: dependencies-php-${{ matrix.php }}-L${{ matrix.laravel }}-${{ matrix.dependency-version }}-composer-${{ hashFiles('composer.json') }}
 
       - name: Verify Elasticsearch connection 🧩
         run: |
@@ -62,7 +58,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
-          coverage: none
+          coverage: xdebug
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, mysql
 
       - name: Require Laravel Version ✈
@@ -80,10 +76,19 @@ jobs:
       - name: List Installed Dependencies 📦
         run: composer show -D
 
-      - name: Run tests 🧪
+      # Code quality
+
+      - name: Run tests with coverage 🧪
         run: |
           ./vendor/bin/pest  --version
-          ./vendor/bin/pest
+          ./vendor/bin/pest --coverage-clover clover.xml
         env:
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
           ELASTICSEARCH_PORT: ${{ job.services.elasticsearch.ports['9200'] }}
+
+      - name: Generate test coverage badge 🖼
+        uses: timkrase/phpunit-coverage-badge@v1.2.0
+        with:
+          coverage_badge_path: 'badge-coverage.svg'
+          push_badge: true
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
