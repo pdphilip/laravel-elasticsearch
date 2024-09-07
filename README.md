@@ -3,9 +3,11 @@
 # Laravel-Elasticsearch
 
 [![Latest Stable Version](http://img.shields.io/github/release/pdphilip/laravel-elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain) 
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain)
+[![Test Coverage](badge-coverage.svg)](https://packagist.org/packages/pdphilip/elasticsearchy)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/phpstan.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/phpstan.yml?query=branch%3Amain++)
 [![Total Downloads](http://img.shields.io/packagist/dm/pdphilip/elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
+
 ### Laravel-Elasticsearch: An Elasticsearch implementation of Laravel's Eloquent ORM
 
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
@@ -38,10 +40,15 @@ $search = UserProfile::phrase('loves espressos')->highlight()->search();
 ```
 
 ### Read the [Documentation](https://elasticsearch.pdphilip.com/)
+
 ---
+
 > #### Using [OpenSearch](https://opensearch.pdphilip.com/)? [Github](https://github.com/pdphilip/laravel-opensearch)
+
 ---
+
 > #### [Package Tests](https://github.com/pdphilip/laravel-elasticsearch-tests)
+
 ---
 
 ## Installation
@@ -55,26 +62,26 @@ composer require pdphilip/elasticsearch
 ```
 
 | Laravel Version | Command                                        | Maintained |
-|-----------------|------------------------------------------------|------------|
-| Laravel 10 & 11 | `composer require pdphilip/elasticsearch:~4 `  | ✅          |
-| Laravel 9       | `composer require pdphilip/elasticsearch:~3.9` | ✅          |
-| Laravel 8       | `composer require pdphilip/elasticsearch:~3.8` | ✅          |
+| --------------- | ---------------------------------------------- | ---------- |
+| Laravel 10 & 11 | `composer require pdphilip/elasticsearch:~4 `  | ✅         |
+| Laravel 9       | `composer require pdphilip/elasticsearch:~3.9` | ✅         |
+| Laravel 8       | `composer require pdphilip/elasticsearch:~3.8` | ✅         |
 
 ### Unmaintained versions (Elasticsearch 8.x):
 
 | Laravel Version   | Command                                        | Maintained |
-|-------------------|------------------------------------------------|------------|
-| Laravel 7.x       | `composer require pdphilip/elasticsearch:~2.7` | ❌          |
-| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~2.6` | ❌          |
+| ----------------- | ---------------------------------------------- | ---------- |
+| Laravel 7.x       | `composer require pdphilip/elasticsearch:~2.7` | ❌         |
+| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~2.6` | ❌         |
 
 ### Unmaintained versions (Elasticsearch 7.x):
 
 | Laravel Version   | Command                                        | Maintained |
-|-------------------|------------------------------------------------|------------|
-| Laravel 9.x       | `composer require pdphilip/elasticsearch:~1.9` | ❌          |
-| Laravel 8.x       | `composer require pdphilip/elasticsearch:~1.8` | ❌          |
-| Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌          |
-| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌          |
+| ----------------- | ---------------------------------------------- | ---------- |
+| Laravel 9.x       | `composer require pdphilip/elasticsearch:~1.9` | ❌         |
+| Laravel 8.x       | `composer require pdphilip/elasticsearch:~1.8` | ❌         |
+| Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌         |
+| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌         |
 
 ## Configuration
 
