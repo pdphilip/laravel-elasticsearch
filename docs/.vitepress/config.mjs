@@ -4,6 +4,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'Laravel-Elasticsearch',
   description: "An Elasticsearch implementation of Laravel's Eloquent ORM",
+  lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: '/logo.svg',
