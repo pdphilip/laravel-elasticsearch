@@ -1,7 +1,3 @@
----
-
-## title: Eloquent lang: en-US
-
 # Extending the Base model
 
 In this section, we'll dive into how to hook your Laravel models into Elasticsearch by extending the base model, allowing you to work with Elasticsearch indices as if they were regular Eloquent models.
@@ -46,7 +42,7 @@ class Product extends Model
 }
 ```
 
-::: tip You can also set [Dynamic indices](/dynamic-indices) which will allow you to use the same model for multiple indices.
+::: tip You can also set [Dynamic indices](/eloquent/dynamic-indices) which will allow you to use the same model for multiple indices.
 :::
 
 ### Timestamps
@@ -69,7 +65,7 @@ class Product extends Model
 
 ```
 
-::: tip You can also set [Dynamic indices](/dynamic-indices) which will allow you to use the same model for multiple indices.
+::: tip You can also set [Dynamic indices](/eloquent/dynamic-indices) which will allow you to use the same model for multiple indices.
 :::
 
 ### Limits
@@ -88,7 +84,7 @@ class Product extends Model
 }
 ```
 
-::: tip You can also set [Dynamic indices](/dynamic-indices) which will allow you to use the same model for multiple indices.
+::: tip You can also set [Dynamic indices](/eloquent/dynamic-indices) which will allow you to use the same model for multiple indices.
 :::
 
 ## Mutators & Casting
@@ -109,7 +105,7 @@ $product = Product::where('color', 'green')->first();
 return $product->getMeta();
 ```
 
-::: tip You can also set [Dynamic indices](/dynamic-indices) which will allow you to use the same model for multiple indices.
+::: tip You can also set [Dynamic indices](/eloquent/dynamic-indices) which will allow you to use the same model for multiple indices.
 :::
 
 returns:
