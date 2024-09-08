@@ -67,6 +67,9 @@
                 max_execution_time = 90
               '';
             };
+
+            javascript.enable = true;
+            javascript.npm.enable = true;
           };
 
           services = {
@@ -83,13 +86,10 @@
             treefmt = {
               settings.formatter = {
                 # Laravel Pint Formating
-                "laravel-pint" = {
-                  command = "${php}";
+                "pint" = {
+                  command = "${composer}";
                   options = [
-                    "${rootDir}/vendor/bin/pint"
-                    #make it verbose
-                    "-v"
-                    "--repair"
+                    "lint"
                   ];
                   includes = ["*.php"];
                 };
