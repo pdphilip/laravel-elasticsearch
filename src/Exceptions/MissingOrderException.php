@@ -14,11 +14,4 @@ class MissingOrderException extends Exception
     {
         parent::__construct($message, $code, $previous);
     }
-
-    public function render($request): \Illuminate\Http\JsonResponse
-    {
-        return response()->json([
-            'error' => $this->getMessage(),
-        ], 400);
-    }
 }
