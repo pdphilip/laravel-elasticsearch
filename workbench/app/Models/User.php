@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
+use PDPhilip\Elasticsearch\Relations\HasMany;
 use Workbench\Database\Factories\UserFactory;
 
 class User extends Authenticatable
@@ -18,7 +19,8 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
     ];
@@ -46,7 +48,7 @@ class User extends Authenticatable
         ];
     }
 
-    public function userLogs()
+    public function userLogs(): HasMany
     {
         return $this->hasMany(UserLog::class);
     }

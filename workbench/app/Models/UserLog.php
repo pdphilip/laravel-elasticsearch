@@ -47,6 +47,12 @@ class UserLog extends Model
 
     protected $connection = 'elasticsearch';
 
+  protected $fillable = [
+    'title',
+    'code',
+    'user_id',
+  ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
