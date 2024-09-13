@@ -47,7 +47,8 @@ it('re-indexs data', function () {
     try {
         Product::filterGeoPoint('manufacturer.location', '10000km', [0, 0])->get();
     } catch (QueryException $exception) {
-        expect($exception->getMessage())->toContain('failed to find geo field');
+        expect($exception->getMessage())->toContain('failed to find geo field')
+            ->and($exception->getDetails())->toBeArray('failed to find geo field');
     }
 
     $reindex = Schema::reIndex('products', 'holding_products');
