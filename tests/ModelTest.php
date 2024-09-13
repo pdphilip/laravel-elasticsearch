@@ -132,6 +132,29 @@ test('Find', function () {
     $this->assertEquals(35, $check->in_stock);
 });
 
+test('Meta', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
+    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
+    $product['in_stock'] = 35;
+    $product['_id'] = "foo-bar";
+    $product->save();
+
+    $check = Product::find($product->id);
+
+    $meta = $check->getMeta();
+
+    expect($meta)->not()->toBeNull()
+    ->and($meta->getIndex())->not()->toBeNull()
+    ->and($meta->getScore())->not()->toBeNull()
+    ->and($meta->getHighlights())->not()->toBeNull()
+    ->and($meta->getHighlights())->toBeArray()
+    ->and($meta->getId())->toBe('foo-bar')
+    ->and($meta->getQuery())->toBeArray()
+    ->and($meta->asArray())->toBeArray()
+    ;
+});
+
 test('Get', function () {
     //this also test bulk insert yay!
     Product::insert([
