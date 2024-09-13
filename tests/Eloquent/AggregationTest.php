@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Eloquent\Factories\Sequence;
 use Workbench\App\Models\Product;
 
 test('retrieve distinct product statuses', function () {
@@ -39,4 +40,78 @@ test('get distinct statuses with their counts', function () {
     $statuses = Product::select('status')->distinct(true)->orderByDesc('status_count')->get();
 
     expect($statuses->first()->status_count)->toEqual(5);
+});
+
+test('Count', function () {
+    $products = Product::factory(10)->make();
+    Product::insert($products->toArray());
+    expect(Product::count())->toBe(10);
+});
+
+test('Max', function () {
+    $products = Product::factory(10)
+        ->state(new Sequence(
+            ['price' => 10.0],
+            ['price' => 120.0],
+        ))->make();
+    Product::insert($products->toArray());
+    expect(Product::max('price'))->toBe(120.0);
+});
+
+test('Min', function () {
+    $products = Product::factory(10)
+        ->state(new Sequence(
+            ['price' => 10.0],
+            ['price' => 120.0],
+        ))->make();
+    Product::insert($products->toArray());
+    expect(Product::min('price'))->toBe(10.0);
+});
+
+test('Avg', function () {
+    $products = Product::factory(10)
+        ->state(new Sequence(
+            ['price' => 10.0],
+            ['price' => 120.0],
+        ))->make();
+    Product::insert($products->toArray());
+    expect(Product::avg('price'))->toBe(65.0);
+});
+
+test('Sum', function () {
+    $products = Product::factory(10)
+        ->state(['price' => 10.0])->make();
+    Product::insert($products->toArray());
+    expect(Product::sum('price'))->toBe(100.0);
+});
+
+test('Multiple fields at once', function () {
+    $products = Product::factory(10)
+        ->state(new Sequence(
+            ['price' => 10.0, 'discount_amount' => 5.0],
+            ['price' => 120.0, 'discount_amount' => 7.0],
+        ))->make();
+    Product::insert($products->toArray());
+
+    $max = Product::max(['price', 'discount_amount']);
+
+    expect($max)->toBeArray()
+        ->and($max['max_price'])->toBe(120.0)
+        ->and($max['max_discount_amount'])->toBe(7.0);
+});
+
+test('Matrix', function () {
+    $products = Product::factory(100)
+        ->state(new Sequence(
+            ['color' => 'red'],
+            ['color' => 'green'],
+            ['color' => 'blue'],
+            ['color' => 'yellow'],
+        ))->make();
+    Product::insert($products->toArray());
+
+    $matrix = Product::whereNotIn('color', ['red', 'green'])->matrix('price');
+
+    expect($matrix)->toBeArray()
+        ->and($matrix['fields'])->toBeArray();
 });
