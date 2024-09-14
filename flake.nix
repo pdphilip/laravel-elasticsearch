@@ -40,12 +40,14 @@
               ./vendor/bin/pest
             '';
             coverage.exec = ''
-               XDEBUG_MODE=coverage
+               export XDEBUG_MODE=coverage
               ./vendor/bin/pest --coverage
+              unset XDEBUG_MODE
             '';
             coverage-xml.exec = ''
-               XDEBUG_MODE=coverage
+               export XDEBUG_MODE=coverage
               ./vendor/bin/pest --coverage --coverage-clover clover.xml
+              unset XDEBUG_MODE
             '';
 
             # swap a and artisan commands for testbench
@@ -70,8 +72,8 @@
                 max_execution_time = 90
 
                 [xdebug]
-                zend_extension="xdebug.so"
-                xdebug.start_with_request = yes
+                xdebug.start_with_request=yes
+                xdebug.start_upon_error=yes
               '';
             };
           };
