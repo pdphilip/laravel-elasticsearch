@@ -12,7 +12,7 @@ it('re-indexs data', function () {
     Schema::deleteIfExists('holding_products');
 
     //Create the Schema For this data set before each test
-    $productsSchema = Schema::create('products', function (IndexBlueprint $index) {
+    $productsSchema = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');
@@ -20,7 +20,7 @@ it('re-indexs data', function () {
         $index->date('updated_at');
     });
 
-    $productsHoldingSchema = Schema::create('holding_products', function (IndexBlueprint $index) {
+    $productsHoldingSchema = Schema::connection('elasticsearch')->create('holding_products', function (IndexBlueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');
@@ -36,10 +36,8 @@ it('re-indexs data', function () {
         ->and(! empty($productsHoldingSchema['holding_products']['settings']))->toBeTrue();
 
     $pf = Product::factory()->count(100)->make();
-    $pf->each(function ($product) {
-        $product->saveWithoutRefresh();
-    });
-    sleep(2);
+    Product::insert($pf->toArray());
+
     $find = Product::all();
 
     expect(count($find) === 100)->toBeTrue();
@@ -52,7 +50,7 @@ it('re-indexs data', function () {
     }
 
     $reindex = Schema::reIndex('products', 'holding_products');
-    expect($reindex->data['created'] == 100)->toBeTrue();
+    expect($reindex->getMetaData()->isSuccessful())->toBeTrue();
 
     sleep(2);
     $findOld = DB::connection('elasticsearch')->table('products')->count();
@@ -61,12 +59,11 @@ it('re-indexs data', function () {
     expect($findOld === 100)->toBeTrue()
         ->and($findNew === 100)->toBeTrue();
 
-    Schema::deleteIfExists('products');
-    expect(Schema::hasIndex('products'))->toBeFalse();
+    Schema::connection('elasticsearch')->deleteIfExists('products');
+    expect(Schema::connection('elasticsearch')->hasIndex('products'))->toBeFalse();
 
-    sleep(2);
     //Now let's create the products index again but with proper mapping
-    $product = Schema::create('products', function (IndexBlueprint $index) {
+    $product = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');
@@ -80,7 +77,7 @@ it('re-indexs data', function () {
 
     //now we move new to old.
     $reindex = Schema::reIndex('holding_products', 'products');
-    expect($reindex->data['created'] == 100)->toBeTrue();
+    expect($reindex->getMetaData()->isSuccessful())->toBeTrue();
     //Sleep to allow ES to catch up
     sleep(2);
 
@@ -100,4 +97,4 @@ it('re-indexs data', function () {
     expect(Schema::hasIndex('products'))->toBeFalse()
         ->and(Schema::hasIndex('holding_products'))->toBeFalse();
 
-})->group('schema')->todo();
+})->group('schema');
