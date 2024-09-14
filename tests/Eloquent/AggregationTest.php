@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Workbench\App\Models\Product;
+use Workbench\App\Models\UserLog;
 
 test('retrieve distinct product statuses', function () {
     Product::factory()->state(['status' => 1])->count(3)->create();
@@ -40,6 +41,53 @@ test('get distinct statuses with their counts', function () {
     $statuses = Product::select('status')->distinct(true)->orderByDesc('status_count')->get();
 
     expect($statuses->first()->status_count)->toEqual(5);
+});
+
+it('should perform aggregate sum on distinct and groupBy queries', function () {
+    createCompanyData(
+        logsPerUser: 50
+    );
+
+    $dist = UserLog::where('status', 9)->distinct()->sum('code');
+    $grp = UserLog::where('status', 9)->groupBy(['code'])->sum('code');
+
+    expect($dist)->toEqual($grp);
+});
+
+it('should perform aggregate max on distinct and groupBy queries', function () {
+    createCompanyData(
+        logsPerUser: 50
+    );
+
+    $dist = UserLog::where('status', 9)->distinct()->max('code');
+    $grp = UserLog::where('status', 9)->groupBy(['code'])->max('code');
+
+    expect($dist)->toEqual($grp);
+
+});
+
+it('should perform aggregate min on distinct and groupBy queries', function () {
+    createCompanyData(
+        logsPerUser: 50
+    );
+
+    $dist = UserLog::where('status', 9)->distinct()->min('code');
+    $grp = UserLog::where('status', 9)->groupBy(['code'])->min('code');
+
+    expect($dist)->toEqual($grp);
+
+});
+
+it('should perform aggregate avg on distinct and groupBy queries', function () {
+    createCompanyData(
+        logsPerUser: 50
+    );
+
+    $dist = UserLog::where('status', 9)->distinct()->avg('code');
+    $grp = UserLog::where('status', 9)->groupBy(['code'])->avg('code');
+
+    expect($dist)->toEqual($grp);
+
 });
 
 test('Count', function () {
