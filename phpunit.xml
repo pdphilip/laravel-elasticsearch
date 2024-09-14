@@ -7,7 +7,6 @@
   colors="true"
   failOnRisky="true"
 >
-  <coverage includeUncoveredFiles="false"/>
   <testsuites>
     <testsuite name="Tests">
       <directory suffix="Test.php">./tests</directory>
