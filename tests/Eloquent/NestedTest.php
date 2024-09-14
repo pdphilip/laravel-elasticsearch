@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\Factories\Sequence;
 use Workbench\App\Models\BlogPost;
 
 test('retrieve blog posts with specific comments', function () {
@@ -34,18 +35,29 @@ test('exclude blog posts with comments from a specific country', function () {
 });
 
 test('order blog posts by comments likes descending', function () {
-    BlogPost::factory()->create([
-        'status' => 1,
-        'comments' => [
-            ['name' => 'John Doe', 'country' => 'Peru', 'likes' => 5],
-            ['name' => 'Jane Smith', 'country' => 'USA', 'likes' => 8],
-        ],
-    ]);
+    $blogPosts = BlogPost::factory(15)
+        ->state(new Sequence(
+            ['status' => 1,
+                'comments' => [
+                    ['name' => 'John Doe', 'country' => 'Peru', 'likes' => 5],
+                ],
+            ],
+            ['status' => 1,
+                'comments' => [
+                    ['name' => 'Jane Doe', 'country' => 'Peru', 'likes' => 8],
+                ],
+            ],
+            ['status' => 1,
+                'comments' => [
+                    ['name' => 'Bob Doe', 'country' => 'Peru', 'likes' => 1],
+                ],
+            ],
+        ))->make();
+    BlogPost::insert($blogPosts->toArray());
 
-    // FIXME: @pdphilip I can't get this to sort for the life of me not sure what I am doing wrong.
     $posts = BlogPost::where('status', 1)->orderByNested('comments.likes', 'desc', 'sum')->get();
     expect($posts->first()->comments[0]['likes'])->toEqual(8);
-})->todo();
+});
 
 test('filter blog posts by comments from Switzerland ordered by likes', function () {
     BlogPost::factory()->create([
