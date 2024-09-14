@@ -17,7 +17,7 @@ class CompanyProfileFactory extends Factory
         return [
             'address' => fake()->address(),
             'website' => fake()->url(),
-            'status' => fake()->randomNumber(),
+            'status' => fake()->numberBetween(1, 10),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];
