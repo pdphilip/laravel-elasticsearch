@@ -100,6 +100,20 @@ test('Multiple fields at once', function () {
         ->and($max['max_discount_amount'])->toBe(7.0);
 });
 
+test('Multiple aggs', function () {
+    $products = Product::factory(10)
+        ->state(new Sequence(
+            ['price' => 10.0, 'discount_amount' => 5.0],
+            ['price' => 120.0, 'discount_amount' => 7.0],
+        ))->make();
+    Product::insert($products->toArray());
+
+    $max = Product::agg(['count', 'avg', 'min', 'max', 'sum'], 'price');
+
+    expect($max)->toBeArray()
+        ->and($max)->toHaveKeys(['max_price', 'min_price', 'count_price', 'avg_price', 'sum_price']);
+});
+
 test('Matrix', function () {
     $products = Product::factory(100)
         ->state(new Sequence(
