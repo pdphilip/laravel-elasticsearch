@@ -14,6 +14,8 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use PDPhilip\Elasticsearch\Query\Builder;
 
 /**
+ * @method static $this query()
+ * @method static $this find($id)
  * @method static $this term(string $term, $boostFactor = null)
  * @method static $this andTerm(string $term, $boostFactor = null)
  * @method static $this orTerm(string $term, $boostFactor = null)
