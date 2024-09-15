@@ -475,9 +475,8 @@ class Builder extends BaseBuilder
     // Clause Operators
     //----------------------------------------------------------------------
 
-    public function wherePhrase($column, $value): static
+    public function wherePhrase($column, $value, $boolean = 'and'): static
     {
-        $boolean = 'and';
         $this->wheres[] = [
             'column' => $column,
             'type' => 'Basic',
@@ -489,9 +488,8 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function wherePhrasePrefix($column, $value): static
+    public function wherePhrasePrefix($column, $value, $boolean = 'and'): static
     {
-        $boolean = 'and';
         $this->wheres[] = [
             'column' => $column,
             'type' => 'Basic',
@@ -503,78 +501,13 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    /**
-     * @return $this
-     */
-    public function whereExact($column, $value): static
+    public function whereExact($column, $value, $boolean = 'and'): static
     {
-        $boolean = 'and';
         $this->wheres[] = [
             'column' => $column,
             'type' => 'Basic',
             'value' => $value,
             'operator' => 'exact',
-            'boolean' => $boolean,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     */
-    public function queryNested($column, $callBack): static
-    {
-        $boolean = 'and';
-        $query = $this->newQuery();
-        $callBack($query);
-        $wheres = $query->compileWheres();
-        $options = $query->compileOptions();
-        $this->wheres[] = [
-            'column' => $column,
-            'type' => 'QueryNested',
-            'wheres' => $wheres,
-            'options' => $options,
-            'boolean' => $boolean,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     */
-    public function whereNestedObject($column, $callBack, $scoreMode = 'avg'): static
-    {
-        $boolean = 'and';
-        $query = $this->newQuery();
-        $callBack($query);
-        $wheres = $query->compileWheres();
-        $this->wheres[] = [
-            'column' => $column,
-            'type' => 'NestedObject',
-            'wheres' => $wheres,
-            'score_mode' => $scoreMode,
-            'boolean' => $boolean,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     */
-    public function whereNotNestedObject($column, $callBack, $scoreMode = 'avg'): static
-    {
-        $boolean = 'and';
-        $query = $this->newQuery();
-        $callBack($query);
-        $wheres = $query->compileWheres();
-        $this->wheres[] = [
-            'column' => $column,
-            'type' => 'NotNestedObject',
-            'wheres' => $wheres,
-            'score_mode' => $scoreMode,
             'boolean' => $boolean,
         ];
 
@@ -598,19 +531,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function whereRegex($column, $expression): static
+    public function whereRegex($column, $expression, $boolean = 'and'): static
     {
         $type = 'regex';
-        $boolean = 'and';
-        $this->wheres[] = compact('column', 'type', 'expression', 'boolean');
-
-        return $this;
-    }
-
-    public function orWhereRegex($column, $expression): static
-    {
-        $type = 'regex';
-        $boolean = 'or';
         $this->wheres[] = compact('column', 'type', 'expression', 'boolean');
 
         return $this;
@@ -626,6 +549,85 @@ class Builder extends BaseBuilder
         $this->wheres[] = compact('column', 'type', 'boolean', 'values', 'not');
 
         return $this;
+    }
+
+    public function queryNested($column, $callBack): static
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $options = $query->compileOptions();
+        $this->wheres[] = [
+            'column' => $column,
+            'type' => 'QueryNested',
+            'wheres' => $wheres,
+            'options' => $options,
+            'boolean' => $boolean,
+        ];
+
+        return $this;
+    }
+
+    public function whereNestedObject($column, $callBack, $scoreMode = 'avg'): static
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column' => $column,
+            'type' => 'NestedObject',
+            'wheres' => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean' => $boolean,
+        ];
+
+        return $this;
+    }
+
+    public function whereNotNestedObject($column, $callBack, $scoreMode = 'avg'): static
+    {
+        $boolean = 'and';
+        $query = $this->newQuery();
+        $callBack($query);
+        $wheres = $query->compileWheres();
+        $this->wheres[] = [
+            'column' => $column,
+            'type' => 'NotNestedObject',
+            'wheres' => $wheres,
+            'score_mode' => $scoreMode,
+            'boolean' => $boolean,
+        ];
+
+        return $this;
+    }
+
+    // Ors ----------------------------------------------------------------
+
+    public function orWherePhrase($column, $value): static
+    {
+        return $this->wherePhrase($column, $value, 'or');
+    }
+
+    public function orWherePhrasePrefix($column, $value): static
+    {
+        return $this->wherePhrasePrefix($column, $value, 'or');
+    }
+
+    public function orWhereExact($column, $value): static
+    {
+        return $this->whereExact($column, $value, 'or');
+    }
+
+    public function orWhereTimestamp($column, $operator = null, $value = null): static
+    {
+        return $this->whereTimestamp($column, $operator, $value, 'or');
+    }
+
+    public function orWhereRegex($column, $expression): static
+    {
+        return $this->whereRegex($column, $expression, 'or');
     }
 
     //----------------------------------------------------------------------
