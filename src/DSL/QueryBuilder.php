@@ -270,6 +270,10 @@ trait QueryBuilder
             }
         }
 
+        if ($field == 'multi_match') {
+            return $this->_buildMultiMatch($condition['multi_match']);
+        }
+
         $value = current($condition);
 
         if (! is_array($value)) {
@@ -412,6 +416,22 @@ trait QueryBuilder
 
             return $queryPart;
         }
+    }
+
+    private function _buildMultiMatch($payload): array
+    {
+        $query = [
+            'multi_match' => [
+                'query' => $payload['query'],
+                'type' => $payload['type'],
+                'fields' => $payload['fields'],
+            ],
+        ];
+        if (! empty($payload['settings'])) {
+            $query['multi_match'] = array_merge($query['multi_match'], $payload['settings']);
+        }
+
+        return $query;
     }
 
     /**

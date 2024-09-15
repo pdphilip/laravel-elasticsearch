@@ -634,89 +634,142 @@ class Builder extends BaseBuilder
     // Clause Operators (full text search)
     //----------------------------------------------------------------------
 
-    public function searchTerm($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchFor($value, $columns = ['*'], $settings = [], $boolean = 'and'): static
+    {
+        $values = explode(' ', $value);
+        if (count($values) > 1) {
+            return $this->searchPhrase($value, $columns, $settings, $boolean);
+        }
+
+        return $this->searchTerm($value, $columns, $settings, $boolean);
+    }
+
+    public function searchTerm($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
 
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
             'value' => $term,
-            'operator' => 'search_best_fields',
+            'operator' => 'best_fields',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
     }
 
-    public function searchTermMost($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchTermMost($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
             'value' => $term,
-            'operator' => 'search_most_fields',
+            'operator' => 'most_fields',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
     }
 
-    public function searchTermCross($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchTermCross($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
             'value' => $term,
-            'operator' => 'search_most_fields',
+            'operator' => 'cross_fields',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
     }
 
-    public function searchPhrase($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchPhrase($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
-            'value' => $term,
-            'operator' => 'search_phrase',
+            'value' => $phrase,
+            'operator' => 'phrase',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
     }
 
-    public function searchPhrasePrefix($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchPhrasePrefix($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
-            'value' => $term,
-            'operator' => 'search_phrase_prefix',
+            'value' => $phrase,
+            'operator' => 'phrase_prefix',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
     }
 
-    public function searchBoolPrefix($term, $fields = ['*'], $settings = [], $boolean = 'and')
+    public function searchBoolPrefix($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
-            'column' => $fields,
+            'column' => '*',
             'type' => 'Multi',
-            'value' => $term,
-            'operator' => 'search_bool_prefix',
+            'value' => $phrase,
+            'operator' => 'bool_prefix',
             'boolean' => $boolean,
+            'fields' => $fields,
             'settings' => $settings,
         ];
 
         return $this;
+    }
+
+    // Ors ----------------------------------------------------------------
+
+    public function orSearchFor($value, $columns = ['*'], $settings = []): static
+    {
+        return $this->searchFor($value, $columns, $settings, 'or');
+    }
+
+    public function orSearchTerm($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchTerm($term, $fields, $settings, 'or');
+    }
+
+    public function orSearchTermMost($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchTermMost($term, $fields, $settings, 'or');
+    }
+
+    public function orSearchTermCross($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchTermCross($term, $fields, $settings, 'or');
+    }
+
+    public function orSearchPhrase($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchPhrase($term, $fields, $settings, 'or');
+    }
+
+    public function orSearchPhrasePrefix($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchPhrasePrefix($term, $fields, $settings, 'or');
+    }
+
+    public function orSearchBoolPrefix($term, $fields = ['*'], $settings = []): static
+    {
+        return $this->searchBoolPrefix($term, $fields, $settings, 'or');
     }
 
     //----------------------------------------------------------------------
@@ -1331,33 +1384,27 @@ class Builder extends BaseBuilder
     protected function _parseWhereMulti(array $where): array
     {
         $operator = $where['operator'];
-        $column = $where['column'];
         $value = $where['value'];
-        $boolean = $where['boolean'] ?? null;
         $settings = $where['settings'] ?? [];
+        $fields = $where['fields'] ?? [];
 
-        if ($boolean === 'and not') {
-            $operator = '!=';
-        }
-        if ($boolean === 'or not') {
-            $operator = '!=';
-        }
-        if ($operator === 'not like') {
-            $operator = 'not_like';
-        }
+        //        if ($boolean === 'and not') {
+        //            $operator = '!=';
+        //        }
+        //        if ($boolean === 'or not') {
+        //            $operator = '!=';
+        //        }
+        //        if ($operator === 'not like') {
+        //            $operator = 'not_like';
+        //        }
 
-        if (! isset($operator) || $operator == '=') {
-            $query = [$column => $value];
-        } elseif (array_key_exists($operator, $this->conversion)) {
-            $query = [$column => [$this->conversion[$operator] => $value]];
-        } else {
-            if (is_callable($column)) {
-                throw new RuntimeException('Invalid closure for where clause');
-            }
-            $query = [$column => [$operator => $value]];
-        }
+        return ['multi_match' => [
+            'query' => $value,
+            'fields' => $fields,
+            'type' => $operator,
+            'settings' => $settings,
+        ]];
 
-        return $query;
     }
 
     protected function _parseWhereNotNull(array $where): array
