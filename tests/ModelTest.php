@@ -173,7 +173,36 @@ test('No Document', function () {
 test('Find Or Fail', function () {
     $this->expectException(ModelNotFoundException::class);
     Product::findOrFail('51c33d8981fec6813e00000a');
+});
 
+test('Document Or New', function () {
+    $product = Product::documentOrNew('51c33d8981fec6813e00000a');
+    expect($product->exists)->toBe(false)
+        ->and($product['_id'])->toBe('51c33d8981fec6813e00000a');
+
+    $product['name'] = 'John Doe';
+    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
+    $product['in_stock'] = 35;
+    $product->save();
+
+    $getDocument = Product::documentOrNew('51c33d8981fec6813e00000a');
+    expect($getDocument->exists)->toBe(true)->and($product['_id'])->toBe('51c33d8981fec6813e00000a');
+});
+
+test('Document Or Fail', function () {
+    $this->expectException(ModelNotFoundException::class);
+    Product::documentOrFail('51c33d8981fec6813e00000a');
+});
+
+test('Document Or Fail (Found)', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
+    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
+    $product['in_stock'] = 24;
+    $product['_id'] = '51c33d8981fec6813e00000a';
+    $product->save();
+    $getDocument = Product::documentOrFail('51c33d8981fec6813e00000a');
+    expect($getDocument->exists)->toBe(true)->and($product['_id'])->toBe('51c33d8981fec6813e00000a');
 });
 
 test('Create', function () {

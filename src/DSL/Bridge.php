@@ -241,6 +241,35 @@ class Bridge
     /**
      * @throws QueryException
      */
+    public function processGetDocument($id): Results
+    {
+        $params = [
+            'index' => $this->index,
+            'id' => $id,
+        ];
+
+        return $this->_returnDocument($params, __FUNCTION__);
+    }
+
+    /**
+     * @throws QueryException
+     */
+    protected function _returnDocument($params, $source): Results
+    {
+
+        $process = [];
+        try {
+            $process = $this->client->get($params);
+        } catch (Exception $e) {
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $this->_sanitizeGetResponse($process, $params, $this->_queryTag($source));
+    }
+
+    /**
+     * @throws QueryException
+     */
     protected function _returnSearch($params, $source): Results
     {
         if (empty($params['size'])) {
@@ -1177,6 +1206,28 @@ class Bridge
         }
 
         return $this->_return($data, $meta, $params, $queryTag);
+    }
+
+    private function _sanitizeGetResponse($response): Results
+    {
+
+        //Fake the Meta Response
+        $meta['took'] = 0;
+        $meta['timed_out'] = false;
+        $meta['total'] = 1;
+        $meta['max_score'] = 0;
+        $meta['shards'] = [];
+
+        $response = $response->asArray();
+        $data = [...$response['_source']];
+        $data['_index'] = $response['_index'];
+        $data['_id'] = $response['_id'];
+        $data['_meta']['_index'] = $response['_index'];
+        $data['_meta']['_id'] = $response['_id'];
+
+        //Hook in to the general return statement
+        return $this->_return([$data], $meta, [], '');
+
     }
 
     private function _sanitizeDistinctResponse($response, $columns, $includeDocCount): array

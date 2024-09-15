@@ -27,6 +27,7 @@ use RuntimeException;
  * @method Results aggregate(string $function, array $wheres, array $options, array $columns)
  * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
  * @method Results find(array $wheres, array $options, array $columns)
+ * @method Results getDocument(string $id)
  * @method Results save(array $data, string $refresh)
  * @method array insertBulk(array $data, bool $returnData = false, string|null $refresh = false)
  * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)

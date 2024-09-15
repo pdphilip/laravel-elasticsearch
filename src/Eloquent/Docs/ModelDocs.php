@@ -53,6 +53,8 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static $this whereRegex(string $column, string $regex)
  * @method static $this whereNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
  * @method static $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg')
+ * @method static $this documentOrNew(string $id)
+ * @method static $this documentOrFail(string $id)
  * @method static $this firstOrCreate(array $attributes, array $values = [])
  * @method static $this firstOrCreateWithoutRefresh(array $attributes, array $values = [])
  * @method static $this orderBy(string $column, string $direction = 'asc')

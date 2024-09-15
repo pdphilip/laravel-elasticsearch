@@ -8,11 +8,14 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
+use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
+use PDPhilip\Elasticsearch\Exceptions\DocumentFoundException;
 use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
@@ -197,6 +200,37 @@ class Builder extends BaseEloquentBuilder
         }
 
         return $this->create(array_merge($attributes, $values));
+    }
+
+    public function documentOrNew(string $id): Model
+    {
+      try {
+        $d = $this->getConnection()->getDocument($id);
+        //We use hydrate for the model, but we get the first result.
+        return $this->hydrate($d->data)->first();
+      } catch (QueryException $e){
+        // Create a new model instance but set the ID since we are looking for a specific ID here.
+        $newModel = $this->newModelInstance();
+        $newModel['_id'] = $id;
+        return $newModel;
+      }
+    }
+
+  /**
+   * @param string $id
+   *
+   * @return Model
+   * @throws ModelNotFoundException
+   */
+  public function documentOrFail(string $id): Model
+    {
+      try {
+        $d = $this->getConnection()->getDocument($id);
+        //We use hydrate for the model, but we get the first result.
+        return $this->hydrate($d->data)->first();
+      } catch (\Exception $e){
+        throw new ModelNotFoundException($e->getMessage());
+      }
     }
 
     private function _instanceBuilder(array $attributes = [])
