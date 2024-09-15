@@ -1311,9 +1311,8 @@ class Builder extends BaseBuilder
         $this->searchOptions['highlight'] = $highlight;
     }
 
-    public function search($columns = '*'): Collection
+    public function search($columns = '*'): ElasticCollection
     {
-
         $searchParams = $this->searchQuery;
         if (! $searchParams) {
             throw new RuntimeException('No search parameters. Add terms to search for.');
@@ -1326,8 +1325,10 @@ class Builder extends BaseBuilder
         $search = $this->connection->search($searchParams, $searchOptions, $wheres, $options, $fields, $columns);
         if ($search->isSuccessful()) {
             $data = $search->data;
+            $collection = new ElasticCollection($data);
+            $collection->setQueryMeta($search->getMetaData());
 
-            return new Collection($data);
+            return $collection;
         } else {
             throw new RuntimeException('Error: '.$search->errorMessage);
         }

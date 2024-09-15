@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
@@ -171,22 +170,30 @@ class Builder extends BaseEloquentBuilder
 
         $data = $this->query->search($columns);
         $results = $this->model->hydrate($data->all())->all();
+        $meta = $data->getQueryMeta();
 
-        return ['results' => $results];
+        return [
+            'results' => $results,
+            'meta' => $meta,
+        ];
     }
 
     /**
      * @see get($columns = ['*'])
      */
-    public function search($columns = ['*']): Collection
+    public function search($columns = ['*']): ElasticCollection
     {
         $builder = $this->applyScopes();
         $fetch = $builder->searchModels($columns);
+        $meta = $fetch['meta'];
         if (count($models = $fetch['results']) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
+        $elasticCollection = $builder->getModel()->newCollection($models);
 
-        return $builder->getModel()->newCollection($models);
+        $elasticCollection->setQueryMeta($meta);
+
+        return $elasticCollection;
     }
 
     public function firstOrCreate(array $attributes = [], array $values = []): Model
