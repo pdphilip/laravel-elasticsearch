@@ -634,17 +634,17 @@ class Builder extends BaseBuilder
     // Clause Operators (full text search)
     //----------------------------------------------------------------------
 
-    public function searchFor($value, $columns = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchFor($value, $columns = ['*'], $options = [], $boolean = 'and'): static
     {
         $values = explode(' ', $value);
         if (count($values) > 1) {
-            return $this->searchPhrase($value, $columns, $settings, $boolean);
+            return $this->searchPhrase($value, $columns, $options, $boolean);
         }
 
-        return $this->searchTerm($value, $columns, $settings, $boolean);
+        return $this->searchTerm($value, $columns, $options, $boolean);
     }
 
-    public function searchTerm($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchTerm($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
 
         $this->wheres[] = [
@@ -654,13 +654,13 @@ class Builder extends BaseBuilder
             'operator' => 'best_fields',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
     }
 
-    public function searchTermMost($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchTermMost($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
             'column' => '*',
@@ -669,13 +669,13 @@ class Builder extends BaseBuilder
             'operator' => 'most_fields',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
     }
 
-    public function searchTermCross($term, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchTermCross($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
             'column' => '*',
@@ -684,13 +684,13 @@ class Builder extends BaseBuilder
             'operator' => 'cross_fields',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
     }
 
-    public function searchPhrase($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchPhrase($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
             'column' => '*',
@@ -699,13 +699,13 @@ class Builder extends BaseBuilder
             'operator' => 'phrase',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
     }
 
-    public function searchPhrasePrefix($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchPhrasePrefix($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
             'column' => '*',
@@ -714,13 +714,13 @@ class Builder extends BaseBuilder
             'operator' => 'phrase_prefix',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
     }
 
-    public function searchBoolPrefix($phrase, $fields = ['*'], $settings = [], $boolean = 'and'): static
+    public function searchBoolPrefix($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
         $this->wheres[] = [
             'column' => '*',
@@ -729,7 +729,7 @@ class Builder extends BaseBuilder
             'operator' => 'bool_prefix',
             'boolean' => $boolean,
             'fields' => $fields,
-            'settings' => $settings,
+            'options' => $options,
         ];
 
         return $this;
@@ -737,39 +737,39 @@ class Builder extends BaseBuilder
 
     // Ors ----------------------------------------------------------------
 
-    public function orSearchFor($value, $columns = ['*'], $settings = []): static
+    public function orSearchFor($value, $columns = ['*'], $options = []): static
     {
-        return $this->searchFor($value, $columns, $settings, 'or');
+        return $this->searchFor($value, $columns, $options, 'or');
     }
 
-    public function orSearchTerm($term, $fields = ['*'], $settings = []): static
+    public function orSearchTerm($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchTerm($term, $fields, $settings, 'or');
+        return $this->searchTerm($term, $fields, $options, 'or');
     }
 
-    public function orSearchTermMost($term, $fields = ['*'], $settings = []): static
+    public function orSearchTermMost($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchTermMost($term, $fields, $settings, 'or');
+        return $this->searchTermMost($term, $fields, $options, 'or');
     }
 
-    public function orSearchTermCross($term, $fields = ['*'], $settings = []): static
+    public function orSearchTermCross($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchTermCross($term, $fields, $settings, 'or');
+        return $this->searchTermCross($term, $fields, $options, 'or');
     }
 
-    public function orSearchPhrase($term, $fields = ['*'], $settings = []): static
+    public function orSearchPhrase($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchPhrase($term, $fields, $settings, 'or');
+        return $this->searchPhrase($term, $fields, $options, 'or');
     }
 
-    public function orSearchPhrasePrefix($term, $fields = ['*'], $settings = []): static
+    public function orSearchPhrasePrefix($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchPhrasePrefix($term, $fields, $settings, 'or');
+        return $this->searchPhrasePrefix($term, $fields, $options, 'or');
     }
 
-    public function orSearchBoolPrefix($term, $fields = ['*'], $settings = []): static
+    public function orSearchBoolPrefix($term, $fields = ['*'], $options = []): static
     {
-        return $this->searchBoolPrefix($term, $fields, $settings, 'or');
+        return $this->searchBoolPrefix($term, $fields, $options, 'or');
     }
 
     //----------------------------------------------------------------------
@@ -1385,24 +1385,14 @@ class Builder extends BaseBuilder
     {
         $operator = $where['operator'];
         $value = $where['value'];
-        $settings = $where['settings'] ?? [];
+        $options = $where['options'] ?? [];
         $fields = $where['fields'] ?? [];
-
-        //        if ($boolean === 'and not') {
-        //            $operator = '!=';
-        //        }
-        //        if ($boolean === 'or not') {
-        //            $operator = '!=';
-        //        }
-        //        if ($operator === 'not like') {
-        //            $operator = 'not_like';
-        //        }
 
         return ['multi_match' => [
             'query' => $value,
             'fields' => $fields,
             'type' => $operator,
-            'settings' => $settings,
+            'options' => $options,
         ]];
 
     }

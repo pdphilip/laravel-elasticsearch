@@ -427,8 +427,8 @@ trait QueryBuilder
                 'fields' => $payload['fields'],
             ],
         ];
-        if (! empty($payload['settings'])) {
-            $query['multi_match'] = array_merge($query['multi_match'], $payload['settings']);
+        if (! empty($payload['options'])) {
+            $query['multi_match'] = array_merge($query['multi_match'], $payload['options']);
         }
 
         return $query;
