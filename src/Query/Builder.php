@@ -639,7 +639,7 @@ class Builder extends BaseBuilder
 
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_best_fields',
             'boolean' => $boolean,
@@ -653,7 +653,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_most_fields',
             'boolean' => $boolean,
@@ -667,7 +667,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_most_fields',
             'boolean' => $boolean,
@@ -681,7 +681,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_phrase',
             'boolean' => $boolean,
@@ -695,7 +695,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_phrase_prefix',
             'boolean' => $boolean,
@@ -709,7 +709,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => $fields,
-            'type' => 'Basic',
+            'type' => 'Multi',
             'value' => $term,
             'operator' => 'search_bool_prefix',
             'boolean' => $boolean,
@@ -1298,6 +1298,76 @@ class Builder extends BaseBuilder
     // Parsers
     //----------------------------------------------------------------------
 
+    protected function _parseWhereBasic(array $where): array
+    {
+        $operator = $where['operator'];
+        $column = $where['column'];
+        $value = $where['value'];
+        $boolean = $where['boolean'] ?? null;
+        if ($boolean === 'and not') {
+            $operator = '!=';
+        }
+        if ($boolean === 'or not') {
+            $operator = '!=';
+        }
+        if ($operator === 'not like') {
+            $operator = 'not_like';
+        }
+
+        if (! isset($operator) || $operator == '=') {
+            $query = [$column => $value];
+        } elseif (array_key_exists($operator, $this->conversion)) {
+            $query = [$column => [$this->conversion[$operator] => $value]];
+        } else {
+            if (is_callable($column)) {
+                throw new RuntimeException('Invalid closure for where clause');
+            }
+            $query = [$column => [$operator => $value]];
+        }
+
+        return $query;
+    }
+
+    protected function _parseWhereMulti(array $where): array
+    {
+        $operator = $where['operator'];
+        $column = $where['column'];
+        $value = $where['value'];
+        $boolean = $where['boolean'] ?? null;
+        $settings = $where['settings'] ?? [];
+
+        if ($boolean === 'and not') {
+            $operator = '!=';
+        }
+        if ($boolean === 'or not') {
+            $operator = '!=';
+        }
+        if ($operator === 'not like') {
+            $operator = 'not_like';
+        }
+
+        if (! isset($operator) || $operator == '=') {
+            $query = [$column => $value];
+        } elseif (array_key_exists($operator, $this->conversion)) {
+            $query = [$column => [$this->conversion[$operator] => $value]];
+        } else {
+            if (is_callable($column)) {
+                throw new RuntimeException('Invalid closure for where clause');
+            }
+            $query = [$column => [$operator => $value]];
+        }
+
+        return $query;
+    }
+
+    protected function _parseWhereNotNull(array $where): array
+    {
+        $where['operator'] = 'exists';
+        $where['value'] = null;
+
+        return $this->_parseWhereBasic($where);
+    }
+
     protected function _parseWhereNested(array $where): array
     {
 
@@ -1501,47 +1571,6 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
-
-    protected function _parseWhereBasic(array $where): array
-    {
-        $operator = $where['operator'];
-        $column = $where['column'];
-        $value = $where['value'];
-        $boolean = $where['boolean'] ?? null;
-        if ($boolean === 'and not') {
-            $operator = '!=';
-        }
-        if ($boolean === 'or not') {
-            $operator = '!=';
-        }
-        if ($operator === 'not like') {
-            $operator = 'not_like';
-        }
-
-        if (! isset($operator) || $operator == '=') {
-            $query = [$column => $value];
-        } elseif (array_key_exists($operator, $this->conversion)) {
-            $query = [$column => [$this->conversion[$operator] => $value]];
-        } else {
-            if (is_callable($column)) {
-                throw new RuntimeException('Invalid closure for where clause');
-            }
-            $query = [$column => [$operator => $value]];
-        }
-
-        return $query;
-    }
-
-    /**
-     * @return array
-     */
-    protected function _parseWhereNotNull(array $where)
-    {
-        $where['operator'] = 'exists';
-        $where['value'] = null;
-
-        return $this->_parseWhereBasic($where);
-    }
 
     //----------------------------------------------------------------------
     // Pagination overrides
