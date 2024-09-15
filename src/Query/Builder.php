@@ -54,6 +54,8 @@ class Builder extends BaseBuilder
 
     public array $filters = [];
 
+    public array $highlights = [];
+
     /**
      * Clause ops.
      *
@@ -772,6 +774,41 @@ class Builder extends BaseBuilder
         return $this->searchBoolPrefix($term, $fields, $options, 'or');
     }
 
+    public function withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = []): static
+    {
+        $highlightFields = [
+            '*' => (object) [],
+        ];
+        if (! empty($fields)) {
+            $highlightFields = [];
+            foreach ($fields as $field => $payload) {
+                if (is_int($field)) {
+                    $highlightFields[$payload] = (object) [];
+                } else {
+                    $highlightFields[$field] = $payload;
+                }
+            }
+        }
+        if (! is_array($preTag)) {
+            $preTag = [$preTag];
+        }
+        if (! is_array($postTag)) {
+            $postTag = [$postTag];
+        }
+
+        $highlight = [];
+        if ($globalOptions) {
+            $highlight = $globalOptions;
+        }
+        $highlight['pre_tags'] = $preTag;
+        $highlight['post_tags'] = $postTag;
+        $highlight['fields'] = $highlightFields;
+
+        $this->highlights = $highlight;
+
+        return $this;
+    }
+
     //----------------------------------------------------------------------
     // Options
     //----------------------------------------------------------------------
@@ -1313,6 +1350,9 @@ class Builder extends BaseBuilder
         }
         if ($this->filters) {
             $options['filters'] = $this->filters;
+        }
+        if ($this->highlights) {
+            $options['highlights'] = $this->highlights;
         }
 
         return $options;

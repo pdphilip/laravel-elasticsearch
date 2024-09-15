@@ -474,6 +474,9 @@ trait QueryBuilder
                             $this->_parseFilter($filterType, $filerValues);
                         }
                         break;
+                    case 'highlights':
+                        $return['body']['highlight'] = $value;
+                        break;
 
                     case 'multiple':
                     case 'searchOptions':
