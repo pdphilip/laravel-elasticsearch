@@ -651,7 +651,7 @@ class Builder extends BaseBuilder
 
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $term,
             'operator' => 'best_fields',
             'boolean' => $boolean,
@@ -666,7 +666,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $term,
             'operator' => 'most_fields',
             'boolean' => $boolean,
@@ -681,7 +681,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $term,
             'operator' => 'cross_fields',
             'boolean' => $boolean,
@@ -696,7 +696,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $phrase,
             'operator' => 'phrase',
             'boolean' => $boolean,
@@ -711,7 +711,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $phrase,
             'operator' => 'phrase_prefix',
             'boolean' => $boolean,
@@ -726,7 +726,7 @@ class Builder extends BaseBuilder
     {
         $this->wheres[] = [
             'column' => '*',
-            'type' => 'Multi',
+            'type' => 'Search',
             'value' => $phrase,
             'operator' => 'bool_prefix',
             'boolean' => $boolean,
@@ -774,6 +774,10 @@ class Builder extends BaseBuilder
         return $this->searchBoolPrefix($term, $fields, $options, 'or');
     }
 
+    //----------------------------------------------------------------------
+    // Clause Operators options (full text search)
+    //----------------------------------------------------------------------
+
     public function withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = []): static
     {
         $highlightFields = [
@@ -805,6 +809,39 @@ class Builder extends BaseBuilder
         $highlight['fields'] = $highlightFields;
 
         $this->highlights = $highlight;
+
+        return $this;
+    }
+
+    public function asFuzzy(?int $depth = null): static
+    {
+        if (! $depth) {
+            $depth = 'auto';
+        }
+        $wheres = $this->wheres;
+        if (! $wheres) {
+            throw new RuntimeException('No where clause found');
+        }
+        $lastWhere = end($wheres);
+        if ($lastWhere['type'] != 'Search') {
+            throw new RuntimeException('Fuzzy search can only be applied to Search type queries');
+        }
+        $this->_attachOption('fuzziness', $depth);
+
+        return $this;
+    }
+
+    public function setMinShouldMatch(int $value): static
+    {
+        $wheres = $this->wheres;
+        if (! $wheres) {
+            throw new RuntimeException('No where clause found');
+        }
+        $lastWhere = end($wheres);
+        if ($lastWhere['type'] != 'Search') {
+            throw new RuntimeException('Min Should Match can only be applied to Search type queries');
+        }
+        $this->_attachOption('minimum_should_match', $value);
 
         return $this;
     }
@@ -1421,7 +1458,7 @@ class Builder extends BaseBuilder
         return $query;
     }
 
-    protected function _parseWhereMulti(array $where): array
+    protected function _parseWhereSearch(array $where): array
     {
         $operator = $where['operator'];
         $value = $where['value'];
@@ -1449,9 +1486,7 @@ class Builder extends BaseBuilder
     {
 
         $boolean = $where['boolean'];
-        //        if ($boolean !== 'and') {
-        //            throw new RuntimeException('Nested where clause with boolean other than "and" is not supported');
-        //        }
+
         if ($boolean === 'and not') {
             $boolean = 'not';
         }
@@ -1645,9 +1680,6 @@ class Builder extends BaseBuilder
 
         return $result;
     }
-    //----------------------------------------------------------------------
-    // Helpers
-    //----------------------------------------------------------------------
 
     //----------------------------------------------------------------------
     // Pagination overrides
@@ -1684,6 +1716,18 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------
+
+    private function _attachOption($key, $value): void
+    {
+        $wheres = $this->wheres;
+        $where = array_pop($wheres);
+        if (! isset($where['options'])) {
+            $where['options'] = [];
+        }
+        $where['options'][$key] = $value;
+        $wheres[] = $where;
+        $this->wheres = $wheres;
+    }
 
     private function _prepAndBucket($andData): array
     {

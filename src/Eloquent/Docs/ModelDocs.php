@@ -105,6 +105,8 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static $this orSearchPhrasePrefix($phrase, $fields = ['*'], $options = [])
  * @method static $this orSearchBoolPrefix($phrase, $fields = ['*'], $options = [])
  * @method static $this withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
+ * @method static $this asFuzzy(?int $depth = null)
+ * @method static $this setMinShouldMatch(int $value)
  *
  * @property object $search_highlights
  * @property object $with_highlights
