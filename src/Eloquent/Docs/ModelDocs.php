@@ -65,6 +65,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static $this withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
  * @method static $this asFuzzy(?int $depth = null)
  * @method static $this setMinShouldMatch(int $value)
+ * @method static $this setBoost(int $value)
  *
  * Query Executors --------------------------------------------
  * @method static Model|null find($id)

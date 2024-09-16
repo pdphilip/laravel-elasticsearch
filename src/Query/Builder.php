@@ -648,7 +648,7 @@ class Builder extends BaseBuilder
 
     public function searchTerm($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
-
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -664,6 +664,7 @@ class Builder extends BaseBuilder
 
     public function searchTermMost($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -679,6 +680,7 @@ class Builder extends BaseBuilder
 
     public function searchTermCross($term, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -694,6 +696,7 @@ class Builder extends BaseBuilder
 
     public function searchPhrase($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -709,6 +712,7 @@ class Builder extends BaseBuilder
 
     public function searchPhrasePrefix($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -724,6 +728,7 @@ class Builder extends BaseBuilder
 
     public function searchBoolPrefix($phrase, $fields = ['*'], $options = [], $boolean = 'and'): static
     {
+        $this->_ensureValueAsArray($fields);
         $this->wheres[] = [
             'column' => '*',
             'type' => 'Search',
@@ -842,6 +847,21 @@ class Builder extends BaseBuilder
             throw new RuntimeException('Min Should Match can only be applied to Search type queries');
         }
         $this->_attachOption('minimum_should_match', $value);
+
+        return $this;
+    }
+
+    public function setBoost(int $value): static
+    {
+        $wheres = $this->wheres;
+        if (! $wheres) {
+            throw new RuntimeException('No where clause found');
+        }
+        $lastWhere = end($wheres);
+        if ($lastWhere['type'] != 'Search') {
+            throw new RuntimeException('Min Should Match can only be applied to Search type queries');
+        }
+        $this->_attachOption('boost', $value);
 
         return $this;
     }
@@ -1778,6 +1798,13 @@ class Builder extends BaseBuilder
             return (string) Carbon::parse($value)->timestamp;
         } catch (\Exception $e) {
             throw new LogicException('Invalid date or timestamp');
+        }
+    }
+
+    private function _ensureValueAsArray(&$value): void
+    {
+        if (! is_array($value)) {
+            $value = [$value];
         }
     }
 
