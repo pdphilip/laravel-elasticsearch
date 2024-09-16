@@ -189,6 +189,14 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
+    public function find($id, $columns = []): Results
+    {
+        return $this->connection->getId($id, $columns);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function get($columns = []): ElasticCollection|LazyCollection
     {
         return $this->_processGet($columns);
@@ -239,14 +247,6 @@ class Builder extends BaseBuilder
         }
 
         return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function find($id, $columns = [])
-    {
-        return $this->where('_id', $id)->first($columns);
     }
 
     /**

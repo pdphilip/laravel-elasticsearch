@@ -39,6 +39,7 @@ use RuntimeException;
  * @method string openPit(string $keepAlive = '5m')
  * @method bool closePit(string $id)
  * @method Results pitFind(array $wheres, array $options, array $fields, string $pitId, ?array $after, string $keepAlive)
+ * @method Results getId(string $_id, array $columns = [])
  */
 class Connection extends BaseConnection
 {

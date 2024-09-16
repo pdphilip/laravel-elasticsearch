@@ -20,12 +20,11 @@ final class ModelMetaData
 
     public function __construct($meta)
     {
-
         if (isset($meta['score'])) {
-            $this->sort = $meta['score'];
+            $this->score = $meta['score'];
         }
         if (isset($meta['index'])) {
-            $this->sort = $meta['index'];
+            $this->index = $meta['index'];
         }
         if (isset($meta['sort'])) {
             $this->sort = $meta['sort'];
@@ -36,8 +35,8 @@ final class ModelMetaData
         if (isset($meta['_id'])) {
             $this->_id = $meta['_id'];
         }
-        if (isset($meta['_query'])) {
-            $this->_query = $meta['_query'];
+        if (isset($meta['dsl'])) {
+            $this->_query = $meta['dsl'];
         }
         if (isset($meta['highlights'])) {
             $this->highlights = $meta['highlights'];

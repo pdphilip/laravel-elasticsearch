@@ -73,14 +73,8 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processPitFind(
-        $wheres,
-        $options,
-        $columns,
-        $pitId,
-        $searchAfter = false,
-        $keepAlive = '5m'
-    ): Results {
+    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false, $keepAlive = '5m'): Results
+    {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         unset($params['index']);
 
@@ -215,6 +209,35 @@ class Bridge
     //======================================================================
     // Find/Search Queries
     //======================================================================
+
+    /**
+     * @throws QueryException
+     */
+    public function processGetId($id, $columns)
+    {
+        $params = [
+            'index' => $this->index,
+            'id' => $id,
+        ];
+        if ($columns && $columns != '*') {
+            $params['_source'] = $columns;
+        }
+        $process = [];
+        try {
+            $process = $this->client->get($params);
+        } catch (ClientResponseException $e) {
+            //if the error is a 404 continue, else throw it
+            if ($e->getCode() !== 404) {
+                return $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+            }
+
+        } catch (Exception $e) {
+            //Something else went wrong, throw it
+            return $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $this->_sanitizeGetResponse($process, $params, $this->_queryTag(__FUNCTION__));
+    }
 
     /**
      * @throws QueryException
@@ -1101,6 +1124,25 @@ class Bridge
     private function _queryTag($function): string
     {
         return str_replace('process', '', $function);
+    }
+
+    public function _sanitizeGetResponse($response, $params, $queryTag)
+    {
+        $data['_id'] = $params['id'];
+        if (! $response) {
+            //Was not found
+            $result = $this->_return($data, [], $params, $queryTag);
+            $result->setError($data['_id'].' not found', 404);
+
+            return $result;
+        }
+        if (! empty($response['_source'])) {
+            foreach ($response['_source'] as $key => $value) {
+                $data[$key] = $value;
+            }
+        }
+
+        return $this->_return($data, [], $params, $queryTag);
     }
 
     private function _sanitizePitSearchResponse($response, $params, $queryTag)

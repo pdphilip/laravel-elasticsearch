@@ -4,6 +4,8 @@ namespace PDPhilip\Elasticsearch\Meta;
 
 final class QueryMetaData
 {
+    protected string $index = '';
+
     protected string $query = '';
 
     protected bool $success = false;
@@ -70,6 +72,10 @@ final class QueryMetaData
             $this->_id = $meta['_id'];
             unset($meta['_id']);
         }
+        if (isset($meta['index'])) {
+            $this->index = $meta['index'];
+            unset($meta['index']);
+        }
         if ($meta) {
             $this->_meta = $meta;
         }
@@ -78,6 +84,11 @@ final class QueryMetaData
     //----------------------------------------------------------------------
     // Getters
     //----------------------------------------------------------------------
+
+    public function getIndex(): mixed
+    {
+        return $this->index ?? null;
+    }
 
     public function getId(): mixed
     {
@@ -157,6 +168,7 @@ final class QueryMetaData
     public function asArray(): array
     {
         $return = [
+            'index' => $this->index,
             'query' => $this->query,
             'success' => $this->success,
             'timed_out' => $this->timed_out,
@@ -209,6 +221,11 @@ final class QueryMetaData
     //----------------------------------------------------------------------
     // Setters
     //----------------------------------------------------------------------
+    public function setIndex($index): void
+    {
+        $this->index = $index;
+    }
+
     public function setId($id): void
     {
         $this->_id = $id;

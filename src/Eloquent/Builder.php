@@ -8,6 +8,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
@@ -84,6 +85,11 @@ class Builder extends BaseEloquentBuilder
         return $this->query->getConnection();
     }
 
+    public function getModel(): Model
+    {
+        return $this->model;
+    }
+
     /**
      * Override the default getModels
      *
@@ -99,11 +105,6 @@ class Builder extends BaseEloquentBuilder
             'results' => $results,
             'meta' => $meta,
         ];
-    }
-
-    public function getModel(): Model
-    {
-        return $this->model;
     }
 
     /**
@@ -123,6 +124,81 @@ class Builder extends BaseEloquentBuilder
         $elasticCollection->setQueryMeta($meta);
 
         return $elasticCollection;
+    }
+
+    public function firstOrCreate(array $attributes = [], array $values = []): Model
+    {
+        $instance = $this->_instanceBuilder($attributes);
+        if (! is_null($instance)) {
+            return $instance;
+        }
+
+        return $this->create(array_merge($attributes, $values));
+    }
+
+    public function updateWithoutRefresh(array $attributes = []): int
+    {
+        $query = $this->toBase();
+        $query->setRefresh(false);
+
+        return $query->update($this->addUpdatedAtColumn($attributes));
+    }
+
+    public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
+    {
+        $instance = $this->_instanceBuilder($attributes);
+        if (! is_null($instance)) {
+            return $instance;
+        }
+
+        return $this->createWithoutRefresh(array_merge($attributes, $values));
+    }
+
+    /**
+     * Fast create method for 'write and forget'
+     */
+    public function createWithoutRefresh(array $attributes = []): \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|null|Builder
+    {
+        return tap($this->newModelInstance($attributes), function ($instance) {
+            $instance->saveWithoutRefresh();
+        });
+    }
+
+    public function find($id, $columns = ['*']): ?Model
+    {
+        $find = $this->query->find($id, $columns);
+        if ($find->isSuccessful()) {
+            $model = $this->newModelInstance($find->data);
+            $model->setMeta($find->getMetaDataAsArray());
+
+            return $model;
+        }
+
+        return null;
+    }
+
+    public function findOrFail($id, $columns = ['*']): Model
+    {
+        $result = $this->find($id, $columns);
+
+        if (is_null($result)) {
+            throw (new ModelNotFoundException)->setModel(
+                get_class($this->model), $id
+            );
+        }
+
+        return $result;
+    }
+
+    public function findOrNew($id, $columns = ['*']): Model
+    {
+        if (! is_null($model = $this->find($id, $columns))) {
+            return $model;
+        }
+        $model = $this->newModelInstance();
+        $model->_id = $id; //set the id to the model
+
+        return $model;
     }
 
     /**
@@ -162,109 +238,6 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
 
-    /**
-     * @see getModels($columns = ['*'])
-     */
-    public function searchModels($columns = ['*']): array
-    {
-
-        $data = $this->query->search($columns);
-        $results = $this->model->hydrate($data->all())->all();
-        $meta = $data->getQueryMeta();
-
-        return [
-            'results' => $results,
-            'meta' => $meta,
-        ];
-    }
-
-    /**
-     * @see get($columns = ['*'])
-     */
-    public function search($columns = ['*']): ElasticCollection
-    {
-        $builder = $this->applyScopes();
-        $fetch = $builder->searchModels($columns);
-        $meta = $fetch['meta'];
-        if (count($models = $fetch['results']) > 0) {
-            $models = $builder->eagerLoadRelations($models);
-        }
-        $elasticCollection = $builder->getModel()->newCollection($models);
-
-        $elasticCollection->setQueryMeta($meta);
-
-        return $elasticCollection;
-    }
-
-    public function firstOrCreate(array $attributes = [], array $values = []): Model
-    {
-        $instance = $this->_instanceBuilder($attributes);
-        if (! is_null($instance)) {
-            return $instance;
-        }
-
-        return $this->create(array_merge($attributes, $values));
-    }
-
-    private function _instanceBuilder(array $attributes = [])
-    {
-        $instance = clone $this;
-
-        foreach ($attributes as $field => $value) {
-            $method = is_string($value) ? 'whereExact' : 'where';
-
-            if (is_array($value)) {
-                foreach ($value as $v) {
-                    $specificMethod = is_string($v) ? 'whereExact' : 'where';
-                    $instance = $instance->$specificMethod($field, $v);
-                }
-            } else {
-                $instance = $instance->$method($field, $value);
-            }
-        }
-
-        return $instance->first();
-    }
-
-    public function updateWithoutRefresh(array $attributes = []): int
-    {
-        $query = $this->toBase();
-        $query->setRefresh(false);
-
-        return $query->update($this->addUpdatedAtColumn($attributes));
-    }
-
-    protected function addUpdatedAtColumn(array $values): array
-    {
-        if (! $this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
-            return $values;
-        }
-
-        $column = $this->model->getUpdatedAtColumn();
-
-        return array_merge([$column => $this->model->freshTimestampString()], $values);
-    }
-
-    public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
-    {
-        $instance = $this->_instanceBuilder($attributes);
-        if (! is_null($instance)) {
-            return $instance;
-        }
-
-        return $this->createWithoutRefresh(array_merge($attributes, $values));
-    }
-
-    /**
-     * Fast create method for 'write and forget'
-     */
-    public function createWithoutRefresh(array $attributes = []
-    ): \Illuminate\Database\Eloquent\Model|\Illuminate\Support\HigherOrderTapProxy|null|Builder {
-        return tap($this->newModelInstance($attributes), function ($instance) {
-            $instance->saveWithoutRefresh();
-        });
-    }
-
     //----------------------------------------------------------------------
     // ES Filters
     //----------------------------------------------------------------------
@@ -272,13 +245,8 @@ class Builder extends BaseEloquentBuilder
     /**
      * {@inheritdoc}
      */
-    public function chunkById(
-        mixed $count,
-        callable $callback,
-        mixed $column = '_id',
-        mixed $alias = null,
-        string $keepAlive = '5m'
-    ): bool {
+    public function chunkById(mixed $count, callable $callback, mixed $column = '_id', mixed $alias = null, string $keepAlive = '5m'): bool
+    {
         $column ??= $this->defaultKeyName();
         $alias ??= $column;
         //remove sort
@@ -489,6 +457,40 @@ class Builder extends BaseEloquentBuilder
         return $this;
     }
 
+    /**
+     * @see getModels($columns = ['*'])
+     */
+    public function searchModels($columns = ['*']): array
+    {
+
+        $data = $this->query->search($columns);
+        $results = $this->model->hydrate($data->all())->all();
+        $meta = $data->getQueryMeta();
+
+        return [
+            'results' => $results,
+            'meta' => $meta,
+        ];
+    }
+
+    /**
+     * @see get($columns = ['*'])
+     */
+    public function search($columns = ['*']): ElasticCollection
+    {
+        $builder = $this->applyScopes();
+        $fetch = $builder->searchModels($columns);
+        $meta = $fetch['meta'];
+        if (count($models = $fetch['results']) > 0) {
+            $models = $builder->eagerLoadRelations($models);
+        }
+        $elasticCollection = $builder->getModel()->newCollection($models);
+
+        $elasticCollection->setQueryMeta($meta);
+
+        return $elasticCollection;
+    }
+
     //----------------------------------------------------------------------
     // Inherited as is but typed
     //----------------------------------------------------------------------
@@ -599,5 +601,36 @@ class Builder extends BaseEloquentBuilder
     protected function searchAfterPaginator($items, $perPage, $cursor, $options)
     {
         return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact('items', 'perPage', 'cursor', 'options'));
+    }
+
+    protected function addUpdatedAtColumn(array $values): array
+    {
+        if (! $this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
+            return $values;
+        }
+
+        $column = $this->model->getUpdatedAtColumn();
+
+        return array_merge([$column => $this->model->freshTimestampString()], $values);
+    }
+
+    private function _instanceBuilder(array $attributes = [])
+    {
+        $instance = clone $this;
+
+        foreach ($attributes as $field => $value) {
+            $method = is_string($value) ? 'whereExact' : 'where';
+
+            if (is_array($value)) {
+                foreach ($value as $v) {
+                    $specificMethod = is_string($v) ? 'whereExact' : 'where';
+                    $instance = $instance->$specificMethod($field, $v);
+                }
+            } else {
+                $instance = $instance->$method($field, $value);
+            }
+        }
+
+        return $instance->first();
     }
 }
