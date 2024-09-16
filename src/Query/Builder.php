@@ -189,9 +189,9 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function find($id, $columns = []): Results
+    public function find($id, $columns = [], $softDeleteColumn = null): Results
     {
-        return $this->connection->getId($id, $columns);
+        return $this->connection->getId($id, $columns, $softDeleteColumn);
     }
 
     /**

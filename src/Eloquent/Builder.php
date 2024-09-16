@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
@@ -166,10 +167,20 @@ class Builder extends BaseEloquentBuilder
 
     public function find($id, $columns = ['*']): ?Model
     {
-        $find = $this->query->find($id, $columns);
+        $softDeleteColumn = null;
+        if (method_exists($this->model, 'getQualifiedDeletedAtColumn')) {
+            $softDeleteColumn = $this->model->getQualifiedDeletedAtColumn();
+            if (in_array(SoftDeletingScope::class, $this->removedScopes)) {
+                $softDeleteColumn = null;
+            }
+        }
+        $find = $this->query->find($id, $columns, $softDeleteColumn);
         if ($find->isSuccessful()) {
-            $model = $this->newModelInstance($find->data);
+            $instance = $this->newModelInstance();
+            $model = $instance->newFromBuilder($find->data);
             $model->setMeta($find->getMetaDataAsArray());
+            $model->setRecordIndex($find->getMetaData()->getIndex());
+            $model->setIndex($find->getMetaData()->getIndex());
 
             return $model;
         }
