@@ -84,7 +84,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static ElasticCollection insert($values, $returnData = null):
  * @method static ElasticCollection insertWithoutRefresh($values, $returnData = null)
  * @method static array toDsl(array $columns = ['*'])
- * @method static array rawSearch(array $bodyParams, bool $returnRaw = false)
+ * @method static ElasticCollection rawSearch(array $bodyParams, bool $returnRaw = false)
  * @method static array rawAggregation(array $bodyParams)
  * @method static bool chunk(mixed $count, callable $callback, string $keepAlive = '5m')
  * @method static bool chunkById(mixed $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')

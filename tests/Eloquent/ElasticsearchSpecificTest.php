@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use Workbench\App\Models\Product;
+  use PDPhilip\Elasticsearch\Collection\ElasticCollection;
+  use Workbench\App\Models\Product;
 
 test('filter products within a geo box', function () {
 
@@ -65,7 +66,9 @@ test('search for products using regex on color', function () {
 });
 
 test('execute raw DSL query on products', function () {
-    Product::factory()->state(['color' => 'silver'])->create();
+  Product::factory()->state(['color' => 'silver'])->create();
+  Product::factory(2)->state(['color' => 'silver'])->create();
+  Product::factory(1)->state(['color' => 'blue'])->create();
 
     $bodyParams = [
         'query' => [
@@ -75,7 +78,12 @@ test('execute raw DSL query on products', function () {
         ],
     ];
     $products = Product::rawSearch($bodyParams);
-    expect($products)->toHaveCount(1);
+
+    expect($products)
+      ->toBeInstanceOf(ElasticCollection::class)
+      ->toHaveCount(2)
+      ->and($products->first())->toBeInstanceOf(Product::class)
+      ->and($products->first()['color'])->toBe('silver');
 });
 
 test('perform raw aggregation query', function () {
