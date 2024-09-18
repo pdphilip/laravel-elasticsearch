@@ -34,6 +34,37 @@ test('search for products by exact name', function () {
     expect($products->first()->name)->toEqual('John Smith');
 });
 
+test('search for products by exact manufacturer.country (text -> keyword)', function () {
+  Product::factory()->create([
+                               'manufacturer.country' => 'USA',
+                             ]);
+
+  $products = Product::whereExact('manufacturer.country', 'USA')->first();
+
+  expect($products->first()['manufacturer.country'])->toEqual('USA');
+});
+
+test('search for products by exact manufacturer.name (keyword -> text)', function () {
+  Product::factory()->create([
+                               'manufacturer.name' => 'foo bar',
+                             ]);
+
+  $products = Product::whereExact('manufacturer.name', 'foo bar')->first();
+
+  expect($products->first()['manufacturer.name'])->toEqual('foo bar');
+});
+
+test('search for products by exact type (keyword)', function () {
+  Product::factory()->create([
+                               'type' => 'foo bar',
+                             ]);
+
+  $products = Product::whereExact('type', 'foo bar')->first();
+
+  expect($products->first()['type'])->toEqual('foo bar');
+});
+
+
 test('search for products by phrase in description', function () {
     Product::factory()->state(['description' => 'loves espressos'])->create();
 

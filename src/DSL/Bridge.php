@@ -1045,20 +1045,110 @@ class Bridge
      */
     public function parseRequiredKeywordMapping($field): ?string
     {
-        $mappings = $this->processIndexMappings($this->index);
-        $map = reset($mappings);
-        if (! empty($map['mappings']['properties'][$field])) {
-            $fieldMap = $map['mappings']['properties'][$field];
-            if (! empty($fieldMap['type']) && $fieldMap['type'] === 'keyword') {
-                //primary Map is field. Use as is
-                return $field;
-            }
-            if (! empty($fieldMap['fields']['keyword'])) {
-                return $field.'.keyword';
+        $fieldMappings = $this->processFieldMapping($this->index, $field);
+
+        // Check if the field mappings exist
+        if (! isset($fieldMappings[$this->index]['mappings'][$field]['mapping'])) {
+            return null;
+        }
+
+        $mappingData = $fieldMappings[$this->index]['mappings'][$field]['mapping'];
+
+        // Extract the last part of the field name
+        $fieldParts = explode('.', $field);
+        $lastPart = array_pop($fieldParts);
+
+        // Navigate to the mapping of the last field part
+        $fieldMapping = $mappingData[$lastPart] ?? null;
+
+        if (! $fieldMapping) {
+            return null;
+        }
+
+        // Check if the field is of type 'keyword'
+        if (isset($fieldMapping['type']) && $fieldMapping['type'] === 'keyword') {
+            return $field;
+        }
+
+        // Check if the field is of type 'text' with a 'keyword' subfield
+        if (
+            isset($fieldMapping['type']) && $fieldMapping['type'] === 'text' &&
+            isset($fieldMapping['fields']['keyword']['type']) &&
+            $fieldMapping['fields']['keyword']['type'] === 'keyword'
+        ) {
+            // Return the field with '.keyword' appended
+            return $field.'.keyword';
+        }
+
+        // Handle nested properties if necessary
+        if (isset($fieldMapping['properties'])) {
+            $nestedField = $this->searchForKeywordField($fieldMapping['properties'], $fieldParts);
+            if ($nestedField) {
+                return $nestedField;
             }
         }
 
         return null;
+    }
+
+    private function searchForKeywordField(array $properties, array $fieldParts): ?string
+    {
+        if (empty($fieldParts)) {
+            return null;
+        }
+
+        $currentField = array_shift($fieldParts);
+
+        if (! isset($properties[$currentField])) {
+            return null;
+        }
+
+        $currentMapping = $properties[$currentField];
+
+        // If we've reached the last part of the field
+        if (empty($fieldParts)) {
+            if (isset($currentMapping['type']) && $currentMapping['type'] === 'keyword') {
+                return $currentField;
+            }
+
+            if (
+                isset($currentMapping['type']) && $currentMapping['type'] === 'text' &&
+                isset($currentMapping['fields']['keyword']['type']) &&
+                $currentMapping['fields']['keyword']['type'] === 'keyword'
+            ) {
+                return $currentField.'.keyword';
+            }
+
+            return null;
+        }
+
+        // Recurse into nested properties
+        if (isset($currentMapping['properties'])) {
+            $nestedField = $this->searchForKeywordField($currentMapping['properties'], $fieldParts);
+            if ($nestedField) {
+                return $currentField.'.'.$nestedField;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @throws QueryException
+     */
+    public function processFieldMapping(string $index, string $field): array
+    {
+        $params = ['index' => $index, 'fields' => $field];
+        $result = [];
+        try {
+            $responseObject = $this->client->indices()->getFieldMapping($params);
+            $response = $responseObject->asArray();
+            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $result->data;
     }
 
     /**
