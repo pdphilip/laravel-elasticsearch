@@ -73,14 +73,8 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processPitFind(
-        $wheres,
-        $options,
-        $columns,
-        $pitId,
-        $searchAfter = false,
-        $keepAlive = '5m'
-    ): Results {
+    public function processPitFind($wheres, $options, $columns, $pitId, $searchAfter = false, $keepAlive = '5m'): Results
+    {
         $params = $this->buildParams($this->index, $wheres, $options, $columns);
         unset($params['index']);
 
@@ -215,6 +209,44 @@ class Bridge
     //======================================================================
     // Find/Search Queries
     //======================================================================
+
+    /**
+     * @throws QueryException
+     */
+    public function processGetId($id, $columns, $softDeleteColumn): Results
+    {
+        $params = [
+            'index' => $this->index,
+            'id' => $id,
+        ];
+        if (empty($columns)) {
+            $columns = ['*'];
+        }
+        if (! is_array($columns)) {
+            $columns = [$columns];
+        }
+        $allColumns = $columns[0] == '*';
+
+        if ($softDeleteColumn && ! $allColumns && ! in_array($softDeleteColumn, $columns)) {
+            $columns[] = $softDeleteColumn;
+        }
+        $params['_source'] = $columns;
+        $process = [];
+        try {
+            $process = $this->client->get($params);
+        } catch (ClientResponseException $e) {
+            //if the error is a 404 continue, else throw it
+            if ($e->getCode() !== 404) {
+                $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+            }
+
+        } catch (Exception $e) {
+            //Something else went wrong, throw it
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $this->_sanitizeGetResponse($process, $params, $softDeleteColumn, $this->_queryTag(__FUNCTION__));
+    }
 
     /**
      * @throws QueryException
@@ -1191,6 +1223,34 @@ class Bridge
     private function _queryTag($function): string
     {
         return str_replace('process', '', $function);
+    }
+
+    public function _sanitizeGetResponse($response, $params, $softDeleteColumn, $queryTag)
+    {
+        $data['_id'] = $params['id'];
+        $softDeleted = false;
+        if ($softDeleteColumn) {
+            $softDeleted = ! empty($response['_source'][$softDeleteColumn]);
+        }
+
+        if (! $response || $softDeleted) {
+            //Was not found
+            $result = $this->_return($data, [], $params, $queryTag);
+            $result->setError($data['_id'].' not found', 404);
+
+            return $result;
+        }
+
+        if (! empty($response['_source'])) {
+            foreach ($response['_source'] as $key => $value) {
+                $data[$key] = $value;
+            }
+        }
+        if ($softDeleteColumn) {
+            unset($data[$softDeleteColumn]);
+        }
+
+        return $this->_return($data, [], $params, $queryTag);
     }
 
     private function _sanitizePitSearchResponse($response, $params, $queryTag)

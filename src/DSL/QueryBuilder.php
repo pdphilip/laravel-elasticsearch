@@ -270,6 +270,10 @@ trait QueryBuilder
             }
         }
 
+        if ($field == 'multi_match') {
+            return $this->_buildMultiMatch($condition['multi_match']);
+        }
+
         $value = current($condition);
 
         if (! is_array($value)) {
@@ -414,6 +418,22 @@ trait QueryBuilder
         }
     }
 
+    private function _buildMultiMatch($payload): array
+    {
+        $query = [
+            'multi_match' => [
+                'query' => $payload['query'],
+                'type' => $payload['type'],
+                'fields' => $payload['fields'],
+            ],
+        ];
+        if (! empty($payload['options'])) {
+            $query['multi_match'] = array_merge($query['multi_match'], $payload['options']);
+        }
+
+        return $query;
+    }
+
     /**
      * @throws ParameterException
      */
@@ -453,6 +473,9 @@ trait QueryBuilder
                         foreach ($value as $filterType => $filerValues) {
                             $this->_parseFilter($filterType, $filerValues);
                         }
+                        break;
+                    case 'highlights':
+                        $return['body']['highlight'] = $value;
                         break;
 
                     case 'multiple':

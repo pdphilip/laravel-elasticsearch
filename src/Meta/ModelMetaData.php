@@ -12,6 +12,8 @@ final class ModelMetaData
 
     protected array $sort = [];
 
+    protected array $_dsl = [];
+
     protected array $cursor = [];
 
     protected array $highlights = [];
@@ -20,12 +22,11 @@ final class ModelMetaData
 
     public function __construct($meta)
     {
-
         if (isset($meta['score'])) {
-            $this->sort = $meta['score'];
+            $this->score = $meta['score'];
         }
         if (isset($meta['index'])) {
-            $this->sort = $meta['index'];
+            $this->index = $meta['index'];
         }
         if (isset($meta['sort'])) {
             $this->sort = $meta['sort'];
@@ -38,6 +39,9 @@ final class ModelMetaData
         }
         if (isset($meta['_query'])) {
             $this->_query = $meta['_query'];
+        }
+        if (isset($meta['dsl'])) {
+            $this->_dsl = $meta['dsl'];
         }
         if (isset($meta['highlights'])) {
             $this->highlights = $meta['highlights'];
@@ -103,6 +107,7 @@ final class ModelMetaData
             'sort' => $this->sort,
             'cursor' => $this->cursor,
             '_query' => $this->_query,
+            '_dsl' => $this->_dsl,
             'highlights' => $this->highlights,
         ];
     }

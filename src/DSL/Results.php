@@ -21,6 +21,9 @@ class Results
         $this->_meta->setQuery($queryTag);
         $this->_meta->setSuccess();
         $this->_meta->setDsl($params);
+        if (! empty($params['index'])) {
+            $this->_meta->setIndex($params['index']);
+        }
         if (! empty($data['_id'])) {
             $this->_meta->setId($data['_id']);
         }
