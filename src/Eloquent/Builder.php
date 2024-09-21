@@ -67,6 +67,7 @@ class Builder extends BaseEloquentBuilder
         'rawaggregation',
         'getindexsettings',
         'getindexmappings',
+        'getfieldmapping',
         'deleteindexifexists',
         'deleteindex',
         'truncate',

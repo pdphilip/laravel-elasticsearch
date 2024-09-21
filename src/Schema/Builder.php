@@ -196,6 +196,13 @@ class Builder
         return $this->connection->indexMappings($this->connection->getIndex());
     }
 
+    public function getFieldMapping(string $index, string|array $field, bool $raw = false): array
+    {
+        $this->connection->setIndex($index);
+
+        return $this->connection->fieldMapping($this->connection->getIndex(), $field, $raw);
+    }
+
     //----------------------------------------------------------------------
     // Helpers
     //----------------------------------------------------------------------

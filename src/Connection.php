@@ -20,6 +20,7 @@ use RuntimeException;
  * @method bool indexExists(string $index)
  * @method bool indexDelete()
  * @method array indexMappings(string $index)
+ * @method array fieldMapping(string $index, string|array $field, bool $raw)
  * @method Results indicesDsl(string $method, array $params)
  * @method Results reIndex(string $from, string $to)
  * @method bool indexAnalyzerSettings(array $settings)

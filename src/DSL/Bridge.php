@@ -9,6 +9,7 @@ use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
+use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
@@ -743,6 +744,46 @@ class Bridge
         return true;
     }
 
+    /**
+     * @throws QueryException
+     */
+    public function processIndexMappings($index): array
+    {
+        $params = ['index' => $index];
+        $result = [];
+        try {
+            $responseObject = $this->client->indices()->getMapping($params);
+            $response = $responseObject->asArray();
+            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+
+        return $result->data;
+    }
+
+    /**
+     * @throws QueryException
+     */
+    public function processFieldMapping(string $index, string|array $field, bool $raw = false): array
+    {
+        $params = ['index' => $index, 'fields' => $field];
+        $result = [];
+        try {
+            $responseObject = $this->client->indices()->getFieldMapping($params);
+            $response = $responseObject->asArray();
+            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
+        } catch (Exception $e) {
+            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+        }
+        if ($raw) {
+            return $result->data;
+        }
+
+        return $this->_parseFieldMap($result->data);
+
+    }
+
     //----------------------------------------------------------------------
     // Aggregates
     //----------------------------------------------------------------------
@@ -1077,7 +1118,7 @@ class Bridge
      */
     public function parseRequiredKeywordMapping($field): ?string
     {
-        $fieldMappings = $this->processFieldMapping($this->index, $field);
+        $fieldMappings = $this->processFieldMapping($this->index, $field, true);
 
         // Check if the field mappings exist
         if (! isset($fieldMappings[$this->index]['mappings'][$field]['mapping'])) {
@@ -1163,42 +1204,6 @@ class Bridge
         }
 
         return null;
-    }
-
-    /**
-     * @throws QueryException
-     */
-    public function processFieldMapping(string $index, string $field): array
-    {
-        $params = ['index' => $index, 'fields' => $field];
-        $result = [];
-        try {
-            $responseObject = $this->client->indices()->getFieldMapping($params);
-            $response = $responseObject->asArray();
-            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
-        } catch (Exception $e) {
-            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
-        }
-
-        return $result->data;
-    }
-
-    /**
-     * @throws QueryException
-     */
-    public function processIndexMappings($index): array
-    {
-        $params = ['index' => $index];
-        $result = [];
-        try {
-            $responseObject = $this->client->indices()->getMapping($params);
-            $response = $responseObject->asArray();
-            $result = $this->_return($response, $response, $params, $this->_queryTag(__FUNCTION__));
-        } catch (Exception $e) {
-            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
-        }
-
-        return $result->data;
     }
 
     //======================================================================
@@ -1440,6 +1445,33 @@ class Bridge
         }
 
         return $data;
+    }
+
+    private function _parseFieldMap(array $mapping): array
+    {
+        $fields = [];
+        $mapping = $mapping[$this->index]['mappings'];
+        foreach ($mapping as $key => $item) {
+            // Check if 'mapping' key exists and is not empty
+            if (! empty($item['mapping'])) {
+                foreach ($item['mapping'] as $details) {
+                    if (isset($details['type'])) {
+                        $fields[$key] = $details['type'];
+                    }
+                    // Check if nested fields exist within the field's details
+                    if (isset($details['fields'])) {
+                        foreach ($details['fields'] as $subField => $subDetails) {
+                            $subFieldName = $key.'.'.$subField;
+                            $fields[$subFieldName] = $subDetails['type'];
+                        }
+                    }
+                }
+            }
+        }
+        $mappings = Collection::make($fields);
+        $mappings = $mappings->sortKeys();
+
+        return $mappings->toArray();
     }
 
     //======================================================================

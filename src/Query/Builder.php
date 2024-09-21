@@ -1172,6 +1172,11 @@ class Builder extends BaseBuilder
         return Schema::connection($this->connection->getName())->getMappings($this->index);
     }
 
+    public function getFieldMapping(string|array $field = '*', bool $raw = false): array
+    {
+        return Schema::connection($this->connection->getName())->getFieldMapping($this->index, $field, $raw);
+    }
+
     public function getIndexSettings(): array
     {
         return Schema::connection($this->connection->getName())->getSettings($this->index);

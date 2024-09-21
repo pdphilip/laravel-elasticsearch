@@ -98,6 +98,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static bool deleteIndex()
  * @method static bool createIndex(array $options = [])
  * @method static array getIndexMappings()
+ * @method static array getFieldMapping(string|array $field = '*', $raw = false)
  * @method static array getIndexOptions()
  *
  * Search Methods - Due for sunsetting, keep for now
