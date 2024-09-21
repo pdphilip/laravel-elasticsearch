@@ -40,6 +40,8 @@ class Builder extends BaseBuilder
 
     public array $cursor = [];
 
+    public array $randomScore = [];
+
     public mixed $previousSearchAfter = null;
 
     public string $searchQuery = '';
@@ -959,6 +961,19 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    /**
+     * @return $this
+     */
+    public function orderByRandom($column, int $seed = 1): static
+    {
+        $this->randomScore = [
+            'column' => $column,
+            'seed' => $seed,
+        ];
+
+        return $this;
+    }
+
     //Filters
 
     public function groupBy(...$groups): Builder
@@ -1414,6 +1429,12 @@ class Builder extends BaseBuilder
         }
         if ($this->highlights) {
             $options['highlights'] = $this->highlights;
+        }
+        if ($this->fields) {
+            $options['fields'] = $this->fields;
+        }
+        if ($this->randomScore) {
+            $options['random_score'] = $this->randomScore;
         }
 
         return $options;

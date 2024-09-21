@@ -14,6 +14,8 @@ trait QueryBuilder
 
     protected static $filter;
 
+    protected static $functionScore;
+
     //    protected static array $bucketOperators = ['and', 'or'];
     //
     //    protected static array $equivalenceOperators = ['in', 'nin'];
@@ -85,6 +87,10 @@ trait QueryBuilder
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
+        if (self::$functionScore) {
+            $params = $this->_parseFunctionScore($params, self::$functionScore);
+            self::$functionScore = [];
+        }
 
         return $params;
     }
@@ -123,6 +129,10 @@ trait QueryBuilder
         if (self::$filter) {
             $params = $this->_parseFilterParameter($params, self::$filter);
             self::$filter = [];
+        }
+        if (self::$functionScore) {
+            $params = $this->_parseFunctionScore($params, self::$functionScore);
+            self::$functionScore = [];
         }
 
         return $params;
@@ -478,6 +488,15 @@ trait QueryBuilder
                         $return['body']['highlight'] = $value;
                         break;
 
+                    case 'random_score':
+                        self::$functionScore = [
+                            'random_score' => [
+                                'field' => $value['column'],
+                                'seed' => $value['seed'],
+                            ],
+                        ];
+
+                        break;
                     case 'multiple':
                     case 'searchOptions':
 
@@ -562,5 +581,23 @@ trait QueryBuilder
 
         return $params;
 
+    }
+
+    public function _parseFunctionScore($params, $function)
+    {
+        $body = $params['body'];
+        $currentQuery = $body['query'];
+
+        $newBody = [
+            'query' => [
+                'function_score' => [
+                    'query' => $currentQuery,
+                    'random_score' => $function['random_score'],
+                ],
+            ],
+        ];
+        $params['body'] = $newBody;
+
+        return $params;
     }
 }
