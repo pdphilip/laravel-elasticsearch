@@ -369,9 +369,16 @@ class Builder extends BaseBuilder
         return $this->_processDelete();
     }
 
-    public function rawSearch(array $bodyParams, $returnRaw = false): Results
+    public function rawDsl(array $bodyParams): mixed
     {
-      return $this->connection->searchRaw($bodyParams, $returnRaw);
+        $find = $this->connection->searchRaw($bodyParams, true);
+
+        return $find->data;
+    }
+
+    public function rawSearch(array $bodyParams): Results
+    {
+        return $this->connection->searchRaw($bodyParams, false);
     }
 
     public function rawAggregation(array $bodyParams): Collection
