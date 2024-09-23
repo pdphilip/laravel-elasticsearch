@@ -30,6 +30,8 @@ class Bridge
 
     private ?array $stashedMeta;
 
+    private ?Collection $cachedKeywordFields = null;
+
     private ?string $indexPrefix;
 
     public function __construct(Connection $connection)
@@ -765,7 +767,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processFieldMapping(string $index, string|array $field, bool $raw = false): array
+    public function processFieldMapping(string $index, string|array $field, bool $raw = false): array|Collection
     {
         $params = ['index' => $index, 'fields' => $field];
         $result = [];
@@ -1118,21 +1120,28 @@ class Bridge
      */
     public function parseRequiredKeywordMapping($field): ?string
     {
-        $fieldMappings = $this->processFieldMapping($this->index, $field);
+        if (! $this->cachedKeywordFields instanceof Collection) {
+            $mapping = $this->processFieldMapping($this->index, '*');
+            $fullMap = new Collection($mapping);
+            $keywordFields = $fullMap->filter(fn ($value) => $value == 'keyword');
+            $this->cachedKeywordFields = $keywordFields;
+            // Log::info('cached');
 
-        // Check if the field mappings exist
-        if (empty($fieldMappings)) {
+        }
+        // Log::info('returned');
+        $keywordFields = $this->cachedKeywordFields;
+
+        if ($keywordFields->isEmpty()) {
+            //No keyword fields
             return null;
         }
-        //Check if field is already a keyword
-        if ($fieldMappings[$field] == 'keyword') {
+        if ($keywordFields->has($field)) {
+            //Field is a keyword
             return $field;
         }
-        // loop through the field mappings to find the keyword field
-        foreach ($fieldMappings as $key => $value) {
-            if ($value == 'keyword') {
-                return $key;
-            }
+        if ($keywordFields->has($field.'.keyword')) {
+            // Field has a keyword property
+            return $field.'.keyword';
         }
 
         return null;
