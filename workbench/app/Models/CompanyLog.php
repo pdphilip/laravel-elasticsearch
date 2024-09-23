@@ -3,6 +3,7 @@
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use Workbench\Database\Factories\CompanyLogFactory;
 
@@ -28,7 +29,7 @@ use Workbench\Database\Factories\CompanyLogFactory;
  */
 class CompanyLog extends Model
 {
-    use HasFactory;
+    use HasFactory, HybridRelations;
 
     protected $connection = 'elasticsearch';
 

@@ -2,7 +2,9 @@
 
 namespace Workbench\App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use Workbench\Database\Factories\EsPhotoFactory;
 
 /**
  * App\Models\Photo
@@ -18,10 +20,17 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
  */
 class EsPhoto extends Model
 {
+    use HasFactory;
+
     protected $connection = 'elasticsearch';
 
     public function photoable()
     {
         return $this->morphTo();
+    }
+
+    public static function newFactory(): EsPhotoFactory
+    {
+        return EsPhotoFactory::new();
     }
 }

@@ -42,9 +42,8 @@ return new class extends Migration
 
             $index->geo('manufacturer.location');
 
-            $index->keyword('manufacturer.name');
             $index->text('manufacturer.name');
-
+            $index->keyword('manufacturer.name');
             $index->text('manufacturer.country');
             $index->keyword('manufacturer.country');
 

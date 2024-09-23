@@ -132,6 +132,28 @@ test('Find', function () {
     $this->assertEquals(35, $check->in_stock);
 });
 
+test('Meta', function () {
+    $product = new Product;
+    $product['name'] = 'John Doe';
+    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
+    $product['in_stock'] = 35;
+    $product['_id'] = 'foo-bar';
+    $product->save();
+
+    $check = Product::find($product->id);
+
+    $meta = $check->getMeta();
+
+    expect($meta)->not()->toBeNull()
+        ->and($meta->getIndex())->not()->toBeNull()
+        ->and($meta->getScore())->not()->toBeNull()
+        ->and($meta->getHighlights())->not()->toBeNull()
+        ->and($meta->getHighlights())->toBeArray()
+        ->and($meta->getId())->toBe('foo-bar')
+        ->and($meta->getQuery())->toBeArray()
+        ->and($meta->asArray())->toBeArray();
+});
+
 test('Get', function () {
     //this also test bulk insert yay!
     Product::insert([
@@ -217,12 +239,13 @@ test('Touch', function () {
 });
 
 test('Soft Delete', function () {
-    Soft::create(['name' => 'John Doe']);
-    Soft::create(['name' => 'Jane Doe']);
+    Soft::truncate();
+    Soft::create(['name' => 'John Doe', 'status' => 1]);
+    Soft::create(['name' => 'Jane Doe', 'status' => 2]);
 
     $this->assertEquals(2, Soft::count());
 
-    $object = Soft::where('name', 'John Doe')->first();
+    $object = Soft::where('status', 1)->first();
     $this->assertInstanceOf(Soft::class, $object);
     $this->assertTrue($object->exists);
     $this->assertFalse($object->trashed());
@@ -232,13 +255,13 @@ test('Soft Delete', function () {
     $this->assertTrue($object->trashed());
     $this->assertNotNull($object->deleted_at);
 
-    $object = Soft::where('name', 'John Doe')->first();
+    $object = Soft::where('status', 1)->first();
     $this->assertNull($object);
 
     $this->assertEquals(1, Soft::count());
     $this->assertEquals(2, Soft::withTrashed()->count());
 
-    $object = Soft::withTrashed()->where('name', 'John Doe')->first();
+    $object = Soft::withTrashed()->where('status', 1)->first();
     $this->assertNotNull($object);
     $this->assertInstanceOf(Carbon::class, $object->deleted_at);
     $this->assertTrue($object->trashed());
@@ -246,7 +269,7 @@ test('Soft Delete', function () {
     $object->restore();
     $this->assertEquals(2, Soft::count());
 
-})->todo();
+});
 
 test('Scope', function () {
     Product::insert([

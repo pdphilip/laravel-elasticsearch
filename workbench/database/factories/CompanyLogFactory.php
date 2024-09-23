@@ -19,7 +19,7 @@ class CompanyLogFactory extends Factory
             },
             'title' => fake()->word(),
             'desc' => fake()->sentence(),
-            'status' => fake()->randomNumber(),
+            'status' => fake()->numberBetween(0, 5),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];

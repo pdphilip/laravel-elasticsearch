@@ -33,10 +33,18 @@ it('can paginate a large amount of records', function () {
     // Fetch the first page of posts
     $paginator = Post::orderBy('slug.keyword')->cursorPaginate($perPage)->withQueryString();
 
+    expect($paginator->totalRecords())->toBeInt()
+        ->and($paginator->totalRecords())->toBeInt()
+        ->and($paginator->totalRecords())->toBe(25000)
+        ->and($paginator->lastPage())->toBe(250)
+        ->and($paginator->toArray())->toBeArray();
     do {
 
         // Count the number of posts fetched in the current page
         $totalFetched += $paginator->count();
+
+        expect($paginator->currentPageNumber())->toBeInt()
+            ->and($paginator->totalRecords())->toBeInt();
 
         // Move to the next page if possible
         if ($paginator->hasMorePages()) {

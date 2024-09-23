@@ -95,6 +95,15 @@ test('search for products using regex on color', function () {
     expect($regexProducts)->toHaveCount(2);
 });
 
+test('search for products using or regex on color', function () {
+    Product::factory()->state(['color' => 'blue'])->create();
+    Product::factory()->state(['color' => 'black'])->create();
+    Product::factory()->state(['color' => 'red'])->create();
+
+    $regexProducts = Product::where('color', 'red')->orWhereRegex('color', 'bl(ue)?(ack)?')->get();
+    expect($regexProducts)->toHaveCount(3);
+});
+
 test('execute raw DSL query on products', function () {
   Product::factory()->state(['color' => 'silver'])->create();
   Product::factory(2)->state(['color' => 'silver'])->create();

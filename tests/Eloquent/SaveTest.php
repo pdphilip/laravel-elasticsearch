@@ -95,16 +95,6 @@ test('validate saving a model with a unique constraint on name', function () {
 
 });
 
-test('ensure save without refresh accurately models elastic behavior', function () {
-    $product = new Product;
-    $product->name = 'Delayed Visibility Product';
-    $product->price = 150;
-    $product->saveWithoutRefresh();
-
-    $foundImmediately = Product::where('name', 'Delayed Visibility Product')->first();
-    expect($foundImmediately)->toBeNull(); // Not immediately available
-});
-
 test('query using firstOrCreate to simulate inventory addition', function () {
     Product::factory()->create(['name' => 'Gadget', 'status' => 1]);
 

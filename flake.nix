@@ -44,6 +44,11 @@
               ./vendor/bin/pest --coverage
               unset XDEBUG_MODE
             '';
+            coverage-xml.exec = ''
+               export XDEBUG_MODE=coverage
+              ./vendor/bin/pest --coverage --coverage-clover clover.xml
+              unset XDEBUG_MODE
+            '';
 
             # swap a and artisan commands for testbench
             a.exec = ''
@@ -65,6 +70,10 @@
               ini = ''
                 memory_limit = 5G
                 max_execution_time = 90
+
+                [xdebug]
+                xdebug.start_with_request=yes
+                xdebug.start_upon_error=yes
               '';
             };
           };

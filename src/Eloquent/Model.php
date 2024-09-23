@@ -276,16 +276,6 @@ abstract class Model extends BaseModel
         return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function newEloquentBuilder($query): Builder
-    {
-        $builder = new Builder($query);
-
-        return $builder;
-    }
-
     public function saveWithoutRefresh(array $options = []): bool
     {
         $this->mergeAttributesFromCachedCasts();

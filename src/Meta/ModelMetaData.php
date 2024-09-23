@@ -98,7 +98,7 @@ final class ModelMetaData
         return null;
     }
 
-    public function asArray()
+    public function asArray() : array
     {
         return [
             'score' => $this->score,
