@@ -63,6 +63,7 @@ class Builder extends BaseEloquentBuilder
         //ES only:
         'matrix',
         'query',
+        'rawdsl',
         'rawsearch',
         'rawaggregation',
         'getindexsettings',
@@ -211,6 +212,24 @@ class Builder extends BaseEloquentBuilder
         $model->_id = $id; //set the id to the model
 
         return $model;
+    }
+
+    /**
+     * Performs a raw search using the provided body parameters.
+     *
+     * @param  array  $bodyParams  The body parameters to use for the search.
+     * @return ElasticCollection The search results as an ElasticCollection object.
+     */
+    public function rawSearch(array $bodyParams): ElasticCollection
+    {
+        $data = $this->query->rawSearch($bodyParams);
+        $results = $this->model->hydrate($data->data)->all();
+        $meta = $data->getMetaData();
+
+        $elasticCollection = $this->getModel()->newCollection($results);
+        $elasticCollection->setQueryMeta($meta);
+
+        return $elasticCollection;
     }
 
     /**

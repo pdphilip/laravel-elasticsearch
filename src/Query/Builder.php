@@ -40,6 +40,8 @@ class Builder extends BaseBuilder
 
     public array $cursor = [];
 
+    public array $randomScore = [];
+
     public mixed $previousSearchAfter = null;
 
     public string $searchQuery = '';
@@ -369,12 +371,16 @@ class Builder extends BaseBuilder
         return $this->_processDelete();
     }
 
-    public function rawSearch(array $bodyParams, $returnRaw = false): Collection
+    public function rawDsl(array $bodyParams): mixed
     {
-        $find = $this->connection->searchRaw($bodyParams, $returnRaw);
-        $data = $find->data;
+        $find = $this->connection->searchRaw($bodyParams, true);
 
-        return new Collection($data);
+        return $find->data;
+    }
+
+    public function rawSearch(array $bodyParams): Results
+    {
+        return $this->connection->searchRaw($bodyParams, false);
     }
 
     public function rawAggregation(array $bodyParams): Collection
@@ -955,6 +961,19 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    /**
+     * @return $this
+     */
+    public function orderByRandom($column, int $seed = 1): static
+    {
+        $this->randomScore = [
+            'column' => $column,
+            'seed' => $seed,
+        ];
+
+        return $this;
+    }
+
     //Filters
 
     public function groupBy(...$groups): Builder
@@ -1415,6 +1434,9 @@ class Builder extends BaseBuilder
         }
         if ($this->highlights) {
             $options['highlights'] = $this->highlights;
+        }
+        if ($this->randomScore) {
+            $options['random_score'] = $this->randomScore;
         }
 
         return $options;
