@@ -17,7 +17,6 @@ class HasMany extends BaseHasMany
     {
         $foreignKey = $this->getHasCompareKey();
 
-        //@phpstan-ignore-next-line
         return $query->select($foreignKey)->where($foreignKey, 'exists', true);
     }
 

@@ -294,6 +294,7 @@ class Builder extends BaseEloquentBuilder
                 if ($countResults == 0) {
                     break;
                 }
+                //@phpstan-ignore-next-line
                 if ($callback($results, $page) === false) {
                     return true;
                 }
