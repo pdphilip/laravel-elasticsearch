@@ -1,18 +1,13 @@
-name: 'Run Tests'
+name: run-tests
 
-on: ['push', 'pull_request']
-
+on:
+  push:
+    branches:
+      - main
+      - github-actions
 jobs:
-  ci:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest]
-        php: [8.2, 8.3]
-        laravel: [10.*, 11.*]
-        dependency-version: [prefer-stable]
-
+  test:
+    runs-on: ubuntu-22.04
     env:
       BROADCAST_DRIVER: log
       CACHE_DRIVER: redis
@@ -42,16 +37,9 @@ jobs:
           - 6379/tcp
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
-    name: Tests P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
     steps:
       - name: Checkout 🛎
         uses: actions/checkout@v4
-
-      - name: Cache dependencies 🍬
-        uses: actions/cache@v1
-        with:
-          path: ~/.composer/cache/files
-          key: dependencies-php-${{ matrix.php }}-L${{ matrix.laravel }}-${{ matrix.dependency-version }}-composer-${{ hashFiles('composer.json') }}
 
       - name: Verify Elasticsearch connection 🧩
         run: |
@@ -60,22 +48,14 @@ jobs:
       - name: Setup PHP 🏗
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: 8.2
           tools: composer:v2
-          coverage: none
+          coverage: xdebug
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, mysql
 
-      - name: Require Laravel Version ✈
-        run: >
-          composer require
-          "illuminate/support:${{ matrix.laravel }}"
-          "illuminate/container:${{ matrix.laravel }}"
-          "illuminate/database:${{ matrix.laravel }}"
-          "illuminate/events:${{ matrix.laravel }}"
-          --no-interaction --no-update
-
-      - name: Install Composer dependencies 💻
-        run: composer update --${{ matrix.dependency-version }} --no-interaction --prefer-dist --optimize-autoloader
+      - name: Install Project Dependencies 💻
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: List Installed Dependencies 📦
         run: composer show -D
