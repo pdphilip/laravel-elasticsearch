@@ -1430,9 +1430,6 @@ class Builder extends BaseBuilder
         if ($this->highlights) {
             $options['highlights'] = $this->highlights;
         }
-        if ($this->fields) {
-            $options['fields'] = $this->fields;
-        }
         if ($this->randomScore) {
             $options['random_score'] = $this->randomScore;
         }
