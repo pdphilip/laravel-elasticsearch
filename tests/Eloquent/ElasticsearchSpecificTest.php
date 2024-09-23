@@ -104,7 +104,7 @@ test('search for products using or regex on color', function () {
     expect($regexProducts)->toHaveCount(3);
 });
 
-test('execute raw DSL query on products', function () {
+test('execute raw search query on products', function () {
     Product::factory()->state(['color' => 'silver'])->create();
     Product::factory(2)->state(['color' => 'silver'])->create();
     Product::factory(1)->state(['color' => 'blue'])->create();
@@ -120,9 +120,27 @@ test('execute raw DSL query on products', function () {
 
     expect($products)
         ->toBeInstanceOf(ElasticCollection::class)
-        ->toHaveCount(2)
+        ->toHaveCount(3)
         ->and($products->first())->toBeInstanceOf(Product::class)
         ->and($products->first()['color'])->toBe('silver');
+});
+
+test('execute raw DSL query on products', function () {
+    Product::factory()->state(['color' => 'silver'])->create();
+    Product::factory(2)->state(['color' => 'silver'])->create();
+    Product::factory(1)->state(['color' => 'blue'])->create();
+
+    $bodyParams = [
+        'query' => [
+            'match' => [
+                'color' => 'silver',
+            ],
+        ],
+    ];
+    $raw = Product::rawDsl($bodyParams);
+
+    expect($raw['hits']['total']['value'])->toBe(3)
+        ->and($raw['hits']['hits'][0]['_source']['color'])->toBe('silver');
 });
 
 test('perform raw aggregation query', function () {

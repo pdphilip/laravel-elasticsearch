@@ -36,7 +36,7 @@ class ProductFactory extends Factory
                     'country' => fake()->country(),
                 ],
             ],
-            'created_at' => Carbon::now(),
+            'created_at' => $this->faker->dateTimeBetween('-31 days'),
             'updated_at' => Carbon::now(),
             'deleted_at' => null,
         ];

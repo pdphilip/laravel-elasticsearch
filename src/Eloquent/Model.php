@@ -285,10 +285,8 @@ abstract class Model extends BaseModel
         $query->setRefresh(false);
 
         if ($this->exists) {
-            //@phpstan-ignore-next-line
             $saved = ! $this->isDirty() || $this->performUpdate($query);
         } else {
-            //@phpstan-ignore-next-line
             $saved = $this->performInsert($query);
         }
 

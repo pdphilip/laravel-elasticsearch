@@ -46,6 +46,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static $this orderByNested(string $column, string $direction = 'asc', string $mode = null)
  * @method static $this filterGeoBox(string $column, array $topLeftCoords, array $bottomRightCoords)
  * @method static $this filterGeoPoint(string $column, string $distance, array $point)
+ * @method static $this orderByRandom(string $column, int $seed = 1)
  *
  * Full Text Search Methods ---------------------------------
  * @method static $this searchFor($value, $fields = ['*'], $options = [], $boolean = 'and')

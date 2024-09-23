@@ -76,3 +76,18 @@ test('sort products by geographic location farthest from Paris using multiple po
     $products = Product::orderByGeo('manufacturer.location', [[2.3488, 48.85341], [-0.12574, 51.50853]], 'desc', 'km', 'avg', 'plane')->get();
     expect(! empty($products))->toBeTrue();
 });
+
+test('sort products by random', function () {
+    $products = Product::factory(50)->make();
+    Product::insert($products->toArray());
+
+    $sortA = Product::where('orders', '>', 0)->orderByRandom('orders', 5)->limit(5)->get();
+    $sortAFirstId = $sortA->first()->_id;
+    $sortB = Product::where('orders', '>', 0)->orderByRandom('orders', 7)->limit(5)->get();
+    $sortBFirstId = $sortB->first()->_id;
+    expect($sortAFirstId == $sortBFirstId)->toBeFalse('Seed 5 and 7 should have different results');
+    $sortC = Product::where('orders', '>', 0)->orderByRandom('orders', 5)->limit(5)->get();
+    $sortCFirstId = $sortC->first()->_id;
+    expect($sortAFirstId == $sortCFirstId)->toBeTrue('Same Seeds should have same results');
+
+});

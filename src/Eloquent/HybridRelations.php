@@ -114,6 +114,7 @@ trait HybridRelations
         [$type, $id] = $this->getMorphs($name, $type, $id);
 
         if (($class = $this->$type) === null) {
+            //@phpstan-ignore-next-line
             return new MorphTo($this->newQuery(), $this, $id, $ownerKey, $type, $name);
         }
 
@@ -131,6 +132,7 @@ trait HybridRelations
      */
     public function newEloquentBuilder($query): EloquentBuilder|Builder
     {
+        //@phpstan-ignore-next-line
         if (is_subclass_of($this, ParentModel::class)) {
             return new Builder($query);
         }

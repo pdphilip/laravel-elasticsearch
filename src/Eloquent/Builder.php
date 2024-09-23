@@ -218,15 +218,13 @@ class Builder extends BaseEloquentBuilder
      * Performs a raw search using the provided body parameters.
      *
      * @param  array  $bodyParams  The body parameters to use for the search.
-     * @return ElasticCollection The search results as an ElasticCollection object.
+     * @return TCollection
      */
     public function rawSearch(array $bodyParams): ElasticCollection
     {
         $data = $this->query->rawSearch($bodyParams);
-        $results = $this->model->hydrate($data->data)->all();
+        $elasticCollection = $this->hydrate($data->data);
         $meta = $data->getMetaData();
-
-        $elasticCollection = $this->getModel()->newCollection($results);
         $elasticCollection->setQueryMeta($meta);
 
         return $elasticCollection;
