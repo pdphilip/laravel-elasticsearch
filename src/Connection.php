@@ -6,6 +6,7 @@ namespace PDPhilip\Elasticsearch;
 
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
@@ -13,6 +14,9 @@ use PDPhilip\Elasticsearch\DSL\Results;
 use RuntimeException;
 
 use function array_replace_recursive;
+use function in_array;
+use function is_array;
+use function strtolower;
 
 /**
  * @method bool indexModify(array $settings)
@@ -71,7 +75,7 @@ class Connection extends BaseConnection
 
     protected bool $rebuild = false;
 
-    protected string $connectionName = 'elasticsearch';
+    protected string $connectionName;
 
     /**
      * @var Query\Processor
@@ -81,7 +85,6 @@ class Connection extends BaseConnection
     /** {@inheritdoc} */
     public function __construct(array $config)
     {
-
         $this->connectionName = $config['name'];
 
         $this->config = $config;
@@ -136,6 +139,16 @@ class Connection extends BaseConnection
         return $this->indexPrefix;
     }
 
+    /**
+     * Retrieves information about the client.
+     *
+     * @return array An associative array containing the client's information.
+     */
+    public function getClientInfo(): array
+    {
+        return $this->client->info()->asArray();
+    }
+
     /** {@inheritdoc} */
     public function getPostProcessor(): Query\Processor
     {
@@ -172,6 +185,7 @@ class Connection extends BaseConnection
         return $this->getIndex();
     }
 
+    /** {@inheritdoc} */
     public function table($table, $as = null)
     {
         $query = new Query\Builder($this, new Query\Processor);
@@ -296,10 +310,14 @@ class Connection extends BaseConnection
 
     }
 
-    //----------------------------------------------------------------------
-    // Connection Builder
-    //----------------------------------------------------------------------
-
+    /**
+     * Builds and configures a connection to the ElasticSearch client based on
+     * the provided configuration settings.
+     *
+     * @return Client The configured ElasticSearch client.
+     *
+     * @throws AuthenticationException
+     */
     protected function buildConnection(): Client
     {
 
@@ -329,6 +347,11 @@ class Connection extends BaseConnection
         return $cb->build();
     }
 
+    /**
+     * Validates the connection configuration based on the specified authentication type.
+     *
+     * @throws RuntimeException if the configuration is invalid for the specified authentication type.
+     */
     private function _validateConnection(): void
     {
         if (! in_array($this->config['auth_type'], self::VALID_AUTH_TYPES)) {
@@ -339,13 +362,18 @@ class Connection extends BaseConnection
             throw new RuntimeException('auth_type of `cloud` requires `cloud_id` to be set');
         }
 
-        if ($this->config['auth_type'] === 'http' && ! $this->config['hosts']) {
-            throw new RuntimeException('auth_type of `http` requires `hosts` to be set');
+        if ($this->config['auth_type'] === 'http' && (! $this->config['hosts'] || ! is_array($this->config['hosts']))) {
+            throw new RuntimeException('auth_type of `http` requires `hosts` to be set and be an array');
         }
 
     }
 
-    protected function _builderOptions($cb)
+    /**
+     * Configures and returns the client builder with the provided SSL and retry settings.
+     *
+     * @param  ClientBuilder  $cb  The callback builder instance.
+     */
+    protected function _builderOptions(ClientBuilder $cb): ClientBuilder
     {
         $cb->setSSLVerification($this->sslVerification);
         if (isset($this->elasticMetaHeader)) {

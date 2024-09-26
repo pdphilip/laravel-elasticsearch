@@ -34,7 +34,7 @@ test('Disconnect And Create New Connection', function () {
 
   $connection->disconnect();
   $client = $connection->getClient();
-  $this->assertNull($client);
+  expect($client)->toBeNull();
   DB::purge('elasticsearch');
 
   $connection = DB::connection('elasticsearch');
@@ -46,28 +46,37 @@ test('Disconnect And Create New Connection', function () {
 
 test('DB', function () {
   $connection = DB::connection('elasticsearch');
-  $this->assertInstanceOf(Client::class, $connection->getClient());
+  expect($connection->getClient())->toBeInstanceOf(Client::class);
 });
 
 test('Connection Without auth_type', function () {
-  $this->expectException(RuntimeException::class);
-  $this->expectExceptionMessage('Invalid [auth_type] in database config. Must be: http or cloud');
-
   new Connection(['name' => 'test']);
-});
+})->throws(RuntimeException::class, 'Invalid [auth_type] in database config. Must be: http or cloud');
 
 test('Cloud Connection Without cloud_id', function () {
   $this->expectException(RuntimeException::class);
-  $this->expectExceptionMessage('auth_type of `cloud` requires `cloud_id` to be set');
 
   new Connection(['name' => 'test', 'auth_type' => 'cloud']);
-});
+})->throws(RuntimeException::class, 'auth_type of `cloud` requires `cloud_id` to be set');
 
 test('Http Connection Without hosts', function () {
   $this->expectException(RuntimeException::class);
   $this->expectExceptionMessage('auth_type of `http` requires `hosts` to be set');
 
   new Connection(['name' => 'test', 'auth_type' => 'http']);
+})->throws(RuntimeException::class, 'auth_type of `http` requires `hosts` to be set and be an array');
+
+test('Prefix', function () {
+  $config = [
+    'name' => 'test',
+    'auth_type' => 'http',
+    'hosts' => ['http://localhost:9200'],
+    'index_prefix' => 'prefix_',
+  ];
+
+  $connection = new Connection($config);
+
+  expect($connection->getIndexPrefix())->toBe('prefix_');
 });
 
 test('Schema Builder', function () {
@@ -78,4 +87,10 @@ test('Schema Builder', function () {
 test('Driver Name', function () {
     $driver = DB::connection('elasticsearch')->getDriverName();
     expect($driver === 'elasticsearch')->toBeTrue();
+});
+
+test('Info', function () {
+    $info = DB::connection('elasticsearch')->getClientInfo();
+    expect($info['cluster_name'])->toBe('elasticsearch')
+                                 ->and($info['tagline'])->toBe('You Know, for Search');
 });
