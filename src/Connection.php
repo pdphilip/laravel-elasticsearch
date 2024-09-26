@@ -8,6 +8,7 @@ use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use PDPhilip\Elasticsearch\DSL\Results;
@@ -289,6 +290,7 @@ class Connection extends BaseConnection
                 'api_id' => null,
                 'index_prefix' => null,
                 'options' => [
+                    'logging' => false,
                     'allow_id_sort' => false,
                     'ssl_verification' => true,
                     'retires' => null,
@@ -375,25 +377,29 @@ class Connection extends BaseConnection
      */
     protected function _builderOptions(ClientBuilder $cb): ClientBuilder
     {
-        $cb->setSSLVerification($this->sslVerification);
+        $cb = $cb->setSSLVerification($this->sslVerification);
         if (isset($this->elasticMetaHeader)) {
-            $cb->setElasticMetaHeader($this->elasticMetaHeader);
+            $cb = $cb->setElasticMetaHeader($this->elasticMetaHeader);
         }
 
         if (isset($this->retires)) {
-            $cb->setRetries($this->retires);
+            $cb = $cb->setRetries($this->retires);
+        }
+
+        if ($this->config['options']['logging']) {
+            $cb = $cb->setLogger(Log::getLogger());
         }
 
         if ($this->config['ssl_cert']) {
-            $cb->setCABundle($this->config['ssl_cert']);
+            $cb = $cb->setCABundle($this->config['ssl_cert']);
         }
 
         if ($this->config['ssl']['cert']) {
-            $cb->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
+            $cb = $cb->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
         }
 
         if ($this->config['ssl']['key']) {
-            $cb->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
+            $cb = $cb->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
         }
 
         return $cb;

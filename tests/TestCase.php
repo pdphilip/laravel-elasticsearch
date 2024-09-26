@@ -45,6 +45,9 @@ class TestCase extends Orchestra
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
             'hosts' => ['http://localhost:9200'],
+            'options' => [
+              'logging' => true
+            ]
         ]);
     }
 }
