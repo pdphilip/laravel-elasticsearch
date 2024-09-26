@@ -44,6 +44,8 @@ use RuntimeException;
  */
 class Connection extends BaseConnection
 {
+    const VALID_AUTH_TYPES = ['http', 'cloud'];
+
     protected Client $client;
 
     protected string $index = '';
@@ -71,6 +73,7 @@ class Connection extends BaseConnection
      */
     protected $postProcessor;
 
+    /** {@inheritdoc} */
     public function __construct(array $config)
     {
 
@@ -89,11 +92,10 @@ class Connection extends BaseConnection
         $this->useDefaultQueryGrammar();
     }
 
-    public function setOptions($config)
+    public function setOptions($config): void
     {
-        if (! empty($config['index_prefix'])) {
-            $this->indexPrefix = $config['index_prefix'];
-        }
+        $this->indexPrefix = $config['index_prefix'] ?? '';
+
         if (isset($config['options']['allow_id_sort'])) {
             $this->allowIdSort = $config['options']['allow_id_sort'];
         }
@@ -106,26 +108,31 @@ class Connection extends BaseConnection
         if (isset($config['options']['meta_header'])) {
             $this->elasticMetaHeader = $config['options']['meta_header'];
         }
+
         if (! empty($config['error_log_index'])) {
-            if ($this->indexPrefix) {
-                $this->errorLoggingIndex = $this->indexPrefix.'_'.$config['error_log_index'];
-            } else {
-                $this->errorLoggingIndex = $config['error_log_index'];
-            }
+            $this->errorLoggingIndex = $this->indexPrefix
+              ? $this->indexPrefix.'_'.$config['error_log_index']
+              : $config['error_log_index'];
         }
+
     }
 
     protected function buildConnection(): Client
     {
-        $type = config('database.connections.elasticsearch.auth_type') ?? null;
-        $type = strtolower($type);
-        if (! in_array($type, ['http', 'cloud'])) {
-            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
-        }
+        $type = strtolower(config('database.connections.elasticsearch.auth_type', ''));
+        $this->validateAuthType($type);
 
         return $this->{'_'.$type.'Connection'}();
     }
 
+    private function validateAuthType(string $type): void
+    {
+        if (! in_array($type, self::VALID_AUTH_TYPES)) {
+            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
+        }
+    }
+
+    /** {@inheritdoc} */
     public function getTablePrefix(): ?string
     {
         return $this->getIndexPrefix();
@@ -136,6 +143,7 @@ class Connection extends BaseConnection
         return $this->indexPrefix;
     }
 
+    /** {@inheritdoc} */
     public function getPostProcessor(): Query\Processor
     {
         return $this->postProcessor;
@@ -151,6 +159,7 @@ class Connection extends BaseConnection
         return $this->errorLoggingIndex;
     }
 
+    /** {@inheritdoc} */
     public function getSchemaGrammar(): Schema\Grammar
     {
         return new Schema\Grammar;
@@ -161,14 +170,11 @@ class Connection extends BaseConnection
         return $this->index;
     }
 
-    public function setIndex($index): string
+    public function setIndex(string $index): string
     {
-        $this->index = $index;
-        if ($this->indexPrefix) {
-            if (! (str_contains($this->index, $this->indexPrefix.'_'))) {
-                $this->index = $this->indexPrefix.'_'.$index;
-            }
-        }
+        $this->index = $this->indexPrefix && ! str_contains($index, $this->indexPrefix.'_')
+          ? $this->indexPrefix.'_'.$index
+          : $index;
 
         return $this->getIndex();
     }
@@ -188,17 +194,13 @@ class Connection extends BaseConnection
         return new Schema\Builder($this);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    /** {@inheritdoc} */
     public function disconnect(): void
     {
         unset($this->connection);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    /** {@inheritdoc} */
     public function getDriverName(): string
     {
         return 'elasticsearch';
@@ -243,9 +245,7 @@ class Connection extends BaseConnection
         return $bridge->{'process'.Str::studly($method)}(...$parameters);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    /** {@inheritdoc} */
     protected function getDefaultPostProcessor(): Query\Processor
     {
         return new Query\Processor;
@@ -255,17 +255,13 @@ class Connection extends BaseConnection
     // Connection Builder
     //----------------------------------------------------------------------
 
-    /**
-     * {@inheritdoc}
-     */
+    /** {@inheritdoc} */
     protected function getDefaultQueryGrammar(): Query\Grammar
     {
         return new Query\Grammar;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    /** {@inheritdoc} */
     protected function getDefaultSchemaGrammar(): Schema\Grammar
     {
         return new Schema\Grammar;
