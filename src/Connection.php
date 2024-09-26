@@ -12,6 +12,8 @@ use PDPhilip\Elasticsearch\DSL\Bridge;
 use PDPhilip\Elasticsearch\DSL\Results;
 use RuntimeException;
 
+use function array_replace_recursive;
+
 /**
  * @method bool indexModify(array $settings)
  * @method bool indexCreate(array $settings = [])
@@ -46,7 +48,10 @@ class Connection extends BaseConnection
 {
     const VALID_AUTH_TYPES = ['http', 'cloud'];
 
-    protected Client $client;
+    /**
+     * The Elasticsearch connection handler.
+     */
+    protected ?Client $client;
 
     protected string $index = '';
 
@@ -81,7 +86,10 @@ class Connection extends BaseConnection
 
         $this->config = $config;
 
-        $this->setOptions($config);
+        $this->_sanitizeConfig();
+        $this->_validateConnection();
+
+        $this->setOptions();
 
         $this->client = $this->buildConnection();
 
@@ -92,44 +100,29 @@ class Connection extends BaseConnection
         $this->useDefaultQueryGrammar();
     }
 
-    public function setOptions($config): void
+    public function setOptions(): void
     {
-        $this->indexPrefix = $config['index_prefix'] ?? '';
+        $this->indexPrefix = $this->config['index_prefix'] ?? '';
 
-        if (isset($config['options']['allow_id_sort'])) {
-            $this->allowIdSort = $config['options']['allow_id_sort'];
+        if (isset($this->config['options']['allow_id_sort'])) {
+            $this->allowIdSort = $this->config['options']['allow_id_sort'];
         }
-        if (isset($config['options']['ssl_verification'])) {
-            $this->sslVerification = $config['options']['ssl_verification'];
+        if (isset($this->config['options']['ssl_verification'])) {
+            $this->sslVerification = $this->config['options']['ssl_verification'];
         }
-        if (! empty($config['options']['retires'])) {
-            $this->retires = $config['options']['retires'];
+        if (! empty($this->config['options']['retires'])) {
+            $this->retires = $this->config['options']['retires'];
         }
-        if (isset($config['options']['meta_header'])) {
-            $this->elasticMetaHeader = $config['options']['meta_header'];
+        if (isset($this->config['options']['meta_header'])) {
+            $this->elasticMetaHeader = $this->config['options']['meta_header'];
         }
 
-        if (! empty($config['error_log_index'])) {
+        if (! empty($this->config['error_log_index'])) {
             $this->errorLoggingIndex = $this->indexPrefix
-              ? $this->indexPrefix.'_'.$config['error_log_index']
-              : $config['error_log_index'];
+              ? $this->indexPrefix.'_'.$this->config['error_log_index']
+              : $this->config['error_log_index'];
         }
 
-    }
-
-    protected function buildConnection(): Client
-    {
-        $type = strtolower(config('database.connections.elasticsearch.auth_type', ''));
-        $this->validateAuthType($type);
-
-        return $this->{'_'.$type.'Connection'}();
-    }
-
-    private function validateAuthType(string $type): void
-    {
-        if (! in_array($type, self::VALID_AUTH_TYPES)) {
-            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http, cloud or api');
-        }
     }
 
     /** {@inheritdoc} */
@@ -197,7 +190,7 @@ class Connection extends BaseConnection
     /** {@inheritdoc} */
     public function disconnect(): void
     {
-        unset($this->connection);
+        $this->client = null;
     }
 
     /** {@inheritdoc} */
@@ -211,7 +204,7 @@ class Connection extends BaseConnection
         $this->rebuild = true;
     }
 
-    public function getClient(): Client
+    public function getClient(): ?Client
     {
         return $this->client;
     }
@@ -251,10 +244,6 @@ class Connection extends BaseConnection
         return new Query\Processor;
     }
 
-    //----------------------------------------------------------------------
-    // Connection Builder
-    //----------------------------------------------------------------------
-
     /** {@inheritdoc} */
     protected function getDefaultQueryGrammar(): Query\Grammar
     {
@@ -267,23 +256,93 @@ class Connection extends BaseConnection
         return new Schema\Grammar;
     }
 
-    protected function _httpConnection(): Client
+    /**
+     * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
+     * This ensures that all required configuration keys exist, even if they are set to null or default values.
+     */
+    private function _sanitizeConfig(): void
     {
-        $hosts = config('database.connections.'.$this->connectionName.'.hosts') ?? null;
-        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
-        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
-        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
-        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
-        $cb = ClientBuilder::create()->setHosts($hosts);
-        $cb = $this->_builderOptions($cb);
-        if ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass);
+
+        $this->config = array_replace_recursive(
+            [
+                'name' => null,
+                'auth_type' => '',
+                'cloud_id' => null,
+                'hosts' => [],
+                'username' => null,
+                'password' => null,
+                'api_key' => null,
+                'api_id' => null,
+                'index_prefix' => null,
+                'ssl_cert' => null,
+                'options' => [
+                    'allow_id_sort' => null,
+                    'ssl_verification' => null,
+                    'retires' => null,
+                    'error_log_index' => null,
+                    'meta_header' => null,
+                ],
+                'ssl' => [
+                    'key' => null,
+                    'password' => null,
+                    'cert' => null,
+                    'cert_password' => null,
+                ],
+            ],
+            $this->config
+        );
+
+        $this->config['auth_type'] = strtolower($this->config['auth_type']);
+
+    }
+
+    //----------------------------------------------------------------------
+    // Connection Builder
+    //----------------------------------------------------------------------
+
+    protected function buildConnection(): Client
+    {
+
+        $this->_validateConnection();
+
+        $cb = ClientBuilder::create();
+
+        // Set the connection type
+        if ($this->config['auth_type'] === 'http') {
+            $cb = $cb->setHosts($this->config['hosts']);
+        } else {
+            $cb = $cb->setElasticCloudId($this->config['cloud_id']);
         }
-        if ($apiKey) {
-            $cb->setApiKey($apiKey, $apiId);
+
+        // Set Builder options
+        $cb = $this->_builderOptions($cb);
+
+        // Set Authentication
+        if ($this->config['username'] && $this->config['password']) {
+            $cb->setBasicAuthentication($this->config['username'], $this->config['password']);
+        }
+
+        if ($this->config['api_key']) {
+            $cb->setApiKey($this->config['api_key'], $this->config['api_id']);
         }
 
         return $cb->build();
+    }
+
+    private function _validateConnection(): void
+    {
+        if (! in_array($this->config['auth_type'], self::VALID_AUTH_TYPES)) {
+            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http or cloud');
+        }
+
+        if ($this->config['auth_type'] === 'cloud' && ! $this->config['cloud_id']) {
+            throw new RuntimeException('auth_type of `cloud` requires `cloud_id` to be set');
+        }
+
+        if ($this->config['auth_type'] === 'http' && ! $this->config['hosts']) {
+            throw new RuntimeException('auth_type of `http` requires `hosts` to be set');
+        }
+
     }
 
     protected function _builderOptions($cb)
@@ -296,45 +355,19 @@ class Connection extends BaseConnection
         if (isset($this->retires)) {
             $cb->setRetries($this->retires);
         }
-        $caBundle = config('database.connections.'.$this->connectionName.'.ssl_cert') ?? null;
-        if ($caBundle) {
-            $cb->setCABundle($caBundle);
+
+        if ($this->config['ssl_cert']) {
+            $cb->setCABundle($this->config['ssl_cert']);
         }
-        $sslCert = config('database.connections.'.$this->connectionName.'.ssl.cert') ?? null;
-        $sslCertPassword = config('database.connections.'.$this->connectionName.'.ssl.cert_password') ?? null;
-        $sslKey = config('database.connections.'.$this->connectionName.'.ssl.key') ?? null;
-        $sslKeyPassword = config('database.connections.'.$this->connectionName.'.ssl.key_password') ?? null;
-        if ($sslCert) {
-            $cb->setSSLCert($sslCert, $sslCertPassword);
+
+        if ($this->config['ssl']['cert']) {
+            $cb->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
         }
-        if ($sslKey) {
-            $cb->setSSLKey($sslKey, $sslKeyPassword);
+
+        if ($this->config['ssl']['key']) {
+            $cb->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
         }
 
         return $cb;
-    }
-
-    //----------------------------------------------------------------------
-    // Dynamic call routing to DSL bridge
-    //----------------------------------------------------------------------
-
-    protected function _cloudConnection(): Client
-    {
-        $cloudId = config('database.connections.'.$this->connectionName.'.cloud_id') ?? null;
-        $username = config('database.connections.'.$this->connectionName.'.username') ?? null;
-        $pass = config('database.connections.'.$this->connectionName.'.password') ?? null;
-        $apiId = config('database.connections.'.$this->connectionName.'.api_id') ?? null;
-        $apiKey = config('database.connections.'.$this->connectionName.'.api_key') ?? null;
-
-        $cb = ClientBuilder::create()->setElasticCloudId($cloudId);
-        $cb = $this->_builderOptions($cb);
-        if ($username && $pass) {
-            $cb->setBasicAuthentication($username, $pass);
-        }
-        if ($apiKey) {
-            $cb->setApiKey($apiKey, $apiId);
-        }
-
-        return $cb->build();
     }
 }
