@@ -288,20 +288,20 @@ class Connection extends BaseConnection
                 'api_key' => null,
                 'api_id' => null,
                 'index_prefix' => null,
-                'ssl_cert' => null,
                 'options' => [
-                    'allow_id_sort' => null,
-                    'ssl_verification' => null,
+                    'allow_id_sort' => false,
+                    'ssl_verification' => true,
                     'retires' => null,
-                    'error_log_index' => null,
                     'meta_header' => null,
                 ],
+                'ssl_cert' => null,
                 'ssl' => [
                     'key' => null,
-                    'password' => null,
+                    'key_password' => null,
                     'cert' => null,
                     'cert_password' => null,
                 ],
+                'error_log_index' => false,
             ],
             $this->config
         );
