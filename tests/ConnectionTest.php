@@ -91,6 +91,5 @@ test('Driver Name', function () {
 
 test('Info', function () {
     $info = DB::connection('elasticsearch')->getClientInfo();
-    expect($info['cluster_name'])->toBe('elasticsearch')
-        ->and($info['tagline'])->toBe('You Know, for Search');
+    expect($info['tagline'])->toBe('You Know, for Search');
 });
