@@ -1391,19 +1391,21 @@ class Bridge
     private function _parseFieldMap(array $mapping): array
     {
         $fields = [];
-        $mapping = $mapping[$this->index]['mappings'];
-        foreach ($mapping as $key => $item) {
-            // Check if 'mapping' key exists and is not empty
-            if (! empty($item['mapping'])) {
-                foreach ($item['mapping'] as $details) {
-                    if (isset($details['type'])) {
-                        $fields[$key] = $details['type'];
-                    }
-                    // Check if nested fields exist within the field's details
-                    if (isset($details['fields'])) {
-                        foreach ($details['fields'] as $subField => $subDetails) {
-                            $subFieldName = $key.'.'.$subField;
-                            $fields[$subFieldName] = $subDetails['type'];
+        $mapping = reset($mapping);
+        if (! empty($mapping['mappings'])) {
+            foreach ($mapping['mappings'] as $key => $item) {
+                // Check if 'mapping' key exists and is not empty
+                if (! empty($item['mapping'])) {
+                    foreach ($item['mapping'] as $details) {
+                        if (isset($details['type'])) {
+                            $fields[$key] = $details['type'];
+                        }
+                        // Check if nested fields exist within the field's details
+                        if (isset($details['fields'])) {
+                            foreach ($details['fields'] as $subField => $subDetails) {
+                                $subFieldName = $key.'.'.$subField;
+                                $fields[$subFieldName] = $subDetails['type'];
+                            }
                         }
                     }
                 }
