@@ -1678,7 +1678,9 @@ class Builder extends BaseBuilder
         }
         $this->applyBeforeQueryCallbacks();
 
-        collect($values)->chunk(1000)->each(callback: function ($chunk) use (&$response, $returnData) {
+        $insertChunkSize = $this->getConnection()->getConfig('options.insert_chunk_size') ?? 1000;
+
+        collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData) {
             $result = $this->connection->insertBulk($chunk->toArray(), $returnData, $this->refresh);
             if ((bool) $result['hasErrors']) {
                 $response['hasErrors'] = true;

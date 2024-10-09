@@ -46,6 +46,7 @@ class TestCase extends Orchestra
             'auth_type' => 'http',
             'hosts' => ['http://localhost:9200'],
             'options' => [
+                'insert_chunk_size' => 10000,
                 'logging' => true,
             ],
         ]);
