@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -244,7 +245,13 @@ class Connection extends BaseConnection
         }
         $bridge = new Bridge($this);
 
-        return $bridge->{'process'.Str::studly($method)}(...$parameters);
+        $methodName = 'process' . Str::studly($method);
+
+        if (! method_exists($bridge, $methodName)) {
+          throw new LogicException("{$methodName} does not exist on the bridge.");
+        }
+
+        return $bridge->{$methodName}(...$parameters);
     }
 
     /** {@inheritdoc} */
