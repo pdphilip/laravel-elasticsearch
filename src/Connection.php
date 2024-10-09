@@ -288,7 +288,7 @@ class Connection extends BaseConnection
                 'password' => null,
                 'api_key' => null,
                 'api_id' => null,
-                'index_prefix' => null,
+                'index_prefix' => '',
                 'options' => [
                     'logging' => false,
                     'allow_id_sort' => false,
