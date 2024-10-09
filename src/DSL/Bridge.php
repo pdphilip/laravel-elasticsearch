@@ -20,7 +20,7 @@ class Bridge
 
     protected Connection $connection;
 
-    protected Client $client;
+    protected ?Client $client;
 
     protected ?string $errorLogger;
 
