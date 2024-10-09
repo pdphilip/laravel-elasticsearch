@@ -46,6 +46,15 @@ class TestCase extends Orchestra
             'auth_type' => 'http',
             'hosts' => ['http://localhost:9200'],
             'options' => [
+                'logging' => true,
+            ],
+        ]);
+        $app['config']->set('database.connections.elasticsearch_unsafe', [
+            'driver' => 'elasticsearch',
+            'auth_type' => 'http',
+            'hosts' => ['http://localhost:9200'],
+            'options' => [
+                'perform_unsafe_queries' => true,
                 'insert_chunk_size' => 10000,
                 'logging' => true,
             ],

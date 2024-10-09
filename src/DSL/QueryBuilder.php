@@ -367,10 +367,16 @@ trait QueryBuilder
                     $queryPart = ['match_phrase_prefix' => [$field => ['query' => $operand]]];
                     break;
                 case 'exact':
-                    $keywordField = $this->parseRequiredKeywordMapping($field);
-                    if (! $keywordField) {
-                        throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+
+                    if($this->connection->getConfig('options.perform_unsafe_queries')){
+                      $keywordField = $field;
+                    } else {
+                      $keywordField = $this->parseRequiredKeywordMapping($field);
+                      if (! $keywordField ) {
+                          throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+                      }
                     }
+
                     $queryPart = ['term' => [$keywordField => $operand]];
                     break;
                 case 'group':
