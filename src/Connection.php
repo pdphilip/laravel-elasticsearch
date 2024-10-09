@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -73,8 +74,6 @@ class Connection extends BaseConnection
     protected ?int $retires = null; //null will use default
 
     protected mixed $elasticMetaHeader = null;
-
-    protected bool $rebuild = false;
 
     protected string $connectionName;
 
@@ -214,11 +213,6 @@ class Connection extends BaseConnection
         return 'elasticsearch';
     }
 
-    public function rebuildConnection(): void
-    {
-        $this->rebuild = true;
-    }
-
     public function getClient(): ?Client
     {
         return $this->client;
@@ -244,13 +238,20 @@ class Connection extends BaseConnection
         if (! $this->index) {
             $this->index = $this->indexPrefix.'*';
         }
-        if ($this->rebuild) {
+
+        // If we are missing a database connection client we need to reconnect.
+        if (! $this->client) {
             $this->client = $this->buildConnection();
-            $this->rebuild = false;
         }
         $bridge = new Bridge($this);
 
-        return $bridge->{'process'.Str::studly($method)}(...$parameters);
+        $methodName = 'process' . Str::studly($method);
+
+        if (! method_exists($bridge, $methodName)) {
+          throw new LogicException("{$methodName} does not exist on the bridge.");
+        }
+
+        return $bridge->{$methodName}(...$parameters);
     }
 
     /** {@inheritdoc} */
@@ -288,8 +289,10 @@ class Connection extends BaseConnection
                 'password' => null,
                 'api_key' => null,
                 'api_id' => null,
-                'index_prefix' => null,
+                'index_prefix' => '',
                 'options' => [
+                    'perform_unsafe_queries' => false, // This skips the safety checks for Elastic Specific queries.
+                    'insert_chunk_size' => 1000, // This is the maximum insert chunk size to use when bulk inserting
                     'logging' => false,
                     'allow_id_sort' => false,
                     'ssl_verification' => true,

@@ -20,7 +20,7 @@ class Bridge
 
     protected Connection $connection;
 
-    protected Client $client;
+    protected ?Client $client;
 
     protected ?string $errorLogger;
 
@@ -1120,6 +1120,10 @@ class Bridge
      */
     public function parseRequiredKeywordMapping($field): ?string
     {
+        if ($this->connection->getConfig('options.perform_unsafe_queries')) {
+            return null;
+        }
+
         if (! $this->cachedKeywordFields instanceof Collection) {
             $mapping = $this->processFieldMapping($this->index, '*');
             $fullMap = new Collection($mapping);
@@ -1430,7 +1434,6 @@ class Bridge
         $errorMsg = $exception->getMessage();
         $errorCode = $exception->getCode();
         $queryTag = str_replace('_', '', $queryTag);
-        $this->connection->rebuildConnection();
         $error = new Results([], [], $params, $queryTag);
         $error->setError($errorMsg, $errorCode);
 

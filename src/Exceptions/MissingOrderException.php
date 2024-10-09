@@ -6,7 +6,7 @@ namespace PDPhilip\Elasticsearch\Exceptions;
 
 use Exception;
 
-class MissingOrderException extends Exception
+class MissingOrderException extends LaravelElasticsearchException
 {
     //    private array $_details;
 
