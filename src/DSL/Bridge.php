@@ -1434,7 +1434,6 @@ class Bridge
         $errorMsg = $exception->getMessage();
         $errorCode = $exception->getCode();
         $queryTag = str_replace('_', '', $queryTag);
-        $this->connection->rebuildConnection();
         $error = new Results([], [], $params, $queryTag);
         $error->setError($errorMsg, $errorCode);
 

@@ -74,8 +74,6 @@ class Connection extends BaseConnection
 
     protected mixed $elasticMetaHeader = null;
 
-    protected bool $rebuild = false;
-
     protected string $connectionName;
 
     /**
@@ -214,11 +212,6 @@ class Connection extends BaseConnection
         return 'elasticsearch';
     }
 
-    public function rebuildConnection(): void
-    {
-        $this->rebuild = true;
-    }
-
     public function getClient(): ?Client
     {
         return $this->client;
@@ -244,9 +237,10 @@ class Connection extends BaseConnection
         if (! $this->index) {
             $this->index = $this->indexPrefix.'*';
         }
-        if ($this->rebuild) {
+
+        // If we are missing a database connection client we need to reconnect.
+        if (! $this->client) {
             $this->client = $this->buildConnection();
-            $this->rebuild = false;
         }
         $bridge = new Bridge($this);
 
