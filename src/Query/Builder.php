@@ -1678,7 +1678,7 @@ class Builder extends BaseBuilder
         }
         $this->applyBeforeQueryCallbacks();
 
-        $insertChunkSize = $this->getConnection()->getInsertChunkSize() ?? 1000;
+        $insertChunkSize = $this->getConnection()->getInsertChunkSize();
 
         collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData) {
             $result = $this->connection->insertBulk($chunk->toArray(), $returnData, $this->refresh);
