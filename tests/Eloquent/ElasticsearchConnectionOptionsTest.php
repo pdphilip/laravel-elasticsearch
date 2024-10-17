@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-  use Workbench\App\Models\Post;
-  use Workbench\App\Models\PostUnsafe;
-  use Workbench\App\Models\Product;
-  use Workbench\App\Models\ProductUnsafe;
+use Workbench\App\Models\Post;
+use Workbench\App\Models\PostUnsafe;
+use Workbench\App\Models\Product;
+use Workbench\App\Models\ProductUnsafe;
 
 test('whereExact when Unsafe queries is used and a keyword is not specified.', function () {
     Product::factory()->state(['name' => 'John Smith'])->create();

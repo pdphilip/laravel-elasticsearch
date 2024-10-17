@@ -23,6 +23,7 @@ class PostUnsafe extends Model
     use HasFactory;
 
     protected $connection = 'elasticsearch_unsafe';
+
     protected $index = 'products';
 
     //    const MAX_SIZE = 5;

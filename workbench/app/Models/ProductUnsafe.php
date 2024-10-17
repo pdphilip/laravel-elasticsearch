@@ -41,6 +41,7 @@ class ProductUnsafe extends Model
     use SoftDeletes;
 
     protected $connection = 'elasticsearch_unsafe';
+
     protected $index = 'products';
 
     const MAX_SIZE = 10000;
