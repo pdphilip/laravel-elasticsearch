@@ -337,20 +337,28 @@ trait QueryBuilder
                     $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
                     break;
                 case 'in':
-                    $keywordField = $this->parseRequiredKeywordMapping($field);
-                    if (! $keywordField) {
+                    if ($this->connection->getBypassMapValidation()) {
                         $queryPart = ['terms' => [$field => $operand]];
                     } else {
-                        $queryPart = ['terms' => [$keywordField => $operand]];
+                        $keywordField = $this->parseRequiredKeywordMapping($field);
+                        if (! $keywordField) {
+                            $queryPart = ['terms' => [$field => $operand]];
+                        } else {
+                            $queryPart = ['terms' => [$keywordField => $operand]];
+                        }
                     }
 
                     break;
                 case 'nin':
-                    $keywordField = $this->parseRequiredKeywordMapping($field);
-                    if (! $keywordField) {
+                    if ($this->connection->getBypassMapValidation()) {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
                     } else {
-                        $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
+                        $keywordField = $this->parseRequiredKeywordMapping($field);
+                        if (! $keywordField) {
+                            $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
+                        } else {
+                            $queryPart = ['bool' => ['must_not' => ['terms' => [$keywordField => $operand]]]];
+                        }
                     }
 
                     break;
@@ -368,13 +376,13 @@ trait QueryBuilder
                     break;
                 case 'exact':
 
-                    if($this->connection->getConfig('options.perform_unsafe_queries')){
-                      $keywordField = $field;
+                    if ($this->connection->getBypassMapValidation()) {
+                        $keywordField = $field;
                     } else {
-                      $keywordField = $this->parseRequiredKeywordMapping($field);
-                      if (! $keywordField ) {
-                          throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
-                      }
+                        $keywordField = $this->parseRequiredKeywordMapping($field);
+                        if (! $keywordField) {
+                            throw new ParameterException('Field ['.$field.'] is not a keyword field which is required for the [exact] operator.');
+                        }
                     }
 
                     $queryPart = ['term' => [$keywordField => $operand]];

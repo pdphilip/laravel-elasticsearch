@@ -1120,19 +1120,13 @@ class Bridge
      */
     public function parseRequiredKeywordMapping($field): ?string
     {
-        if ($this->connection->getConfig('options.perform_unsafe_queries')) {
-            return null;
-        }
-
         if (! $this->cachedKeywordFields instanceof Collection) {
             $mapping = $this->processFieldMapping($this->index, '*');
             $fullMap = new Collection($mapping);
             $keywordFields = $fullMap->filter(fn ($value) => $value == 'keyword');
             $this->cachedKeywordFields = $keywordFields;
-            // Log::info('cached');
 
         }
-        // Log::info('returned');
         $keywordFields = $this->cachedKeywordFields;
 
         if ($keywordFields->isEmpty()) {

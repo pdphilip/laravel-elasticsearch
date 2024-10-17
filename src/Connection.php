@@ -77,6 +77,10 @@ class Connection extends BaseConnection
 
     protected string $connectionName;
 
+    protected bool $byPassMapValidation = false;
+
+    protected int $insertChunkSize = 1000;
+
     /**
      * @var Query\Processor
      */
@@ -90,6 +94,7 @@ class Connection extends BaseConnection
         $this->config = $config;
 
         $this->_sanitizeConfig();
+
         $this->_validateConnection();
 
         $this->setOptions();
@@ -126,7 +131,33 @@ class Connection extends BaseConnection
               : $this->config['error_log_index'];
         }
 
+        if (! empty($this->config['options']['bypass_map_validation'])) {
+            $this->byPassMapValidation = $this->config['options']['bypass_map_validation'];
+        }
+
+        if (! empty($this->config['options']['insert_chunk_size'])) {
+            $this->insertChunkSize = $this->config['options']['insert_chunk_size'];
+        }
+
     }
+
+    /** {@inheritdoc} */
+    public function table($table, $as = null)
+    {
+        $query = new Query\Builder($this, new Query\Processor);
+
+        return $query->from($table);
+    }
+
+    /** {@inheritdoc} */
+    public function disconnect(): void
+    {
+        $this->client = null;
+    }
+
+    //----------------------------------------------------------------------
+    // Getters
+    //----------------------------------------------------------------------
 
     /** {@inheritdoc} */
     public function getTablePrefix(): ?string
@@ -176,37 +207,6 @@ class Connection extends BaseConnection
         return $this->index;
     }
 
-    public function setIndex(string $index): string
-    {
-        $this->index = $this->indexPrefix && ! str_contains($index, $this->indexPrefix.'_')
-          ? $this->indexPrefix.'_'.$index
-          : $index;
-
-        return $this->getIndex();
-    }
-
-    /** {@inheritdoc} */
-    public function table($table, $as = null)
-    {
-        $query = new Query\Builder($this, new Query\Processor);
-
-        return $query->from($table);
-    }
-
-    /**
-     * Override the default schema builder.
-     */
-    public function getSchemaBuilder(): Schema\Builder
-    {
-        return new Schema\Builder($this);
-    }
-
-    /** {@inheritdoc} */
-    public function disconnect(): void
-    {
-        $this->client = null;
-    }
-
     /** {@inheritdoc} */
     public function getDriverName(): string
     {
@@ -223,9 +223,12 @@ class Connection extends BaseConnection
         return $this->maxSize;
     }
 
-    public function setMaxSize($value): void
+    /**
+     * Override the default schema builder.
+     */
+    public function getSchemaBuilder(): Schema\Builder
     {
-        $this->maxSize = $value;
+        return new Schema\Builder($this);
     }
 
     public function getAllowIdSort(): bool
@@ -233,25 +236,14 @@ class Connection extends BaseConnection
         return $this->allowIdSort;
     }
 
-    public function __call($method, $parameters)
+    public function getBypassMapValidation(): bool
     {
-        if (! $this->index) {
-            $this->index = $this->indexPrefix.'*';
-        }
+        return $this->byPassMapValidation;
+    }
 
-        // If we are missing a database connection client we need to reconnect.
-        if (! $this->client) {
-            $this->client = $this->buildConnection();
-        }
-        $bridge = new Bridge($this);
-
-        $methodName = 'process' . Str::studly($method);
-
-        if (! method_exists($bridge, $methodName)) {
-          throw new LogicException("{$methodName} does not exist on the bridge.");
-        }
-
-        return $bridge->{$methodName}(...$parameters);
+    public function getInsertChunkSize(): int
+    {
+        return $this->insertChunkSize;
     }
 
     /** {@inheritdoc} */
@@ -270,6 +262,45 @@ class Connection extends BaseConnection
     protected function getDefaultSchemaGrammar(): Schema\Grammar
     {
         return new Schema\Grammar;
+    }
+
+    //----------------------------------------------------------------------
+    // Setters
+    //----------------------------------------------------------------------
+
+    public function setIndex(string $index): string
+    {
+        $this->index = $this->indexPrefix && ! str_contains($index, $this->indexPrefix.'_')
+            ? $this->indexPrefix.'_'.$index
+            : $index;
+
+        return $this->getIndex();
+    }
+
+    public function setMaxSize($value): void
+    {
+        $this->maxSize = $value;
+    }
+
+    public function __call($method, $parameters)
+    {
+        if (! $this->index) {
+            $this->index = $this->indexPrefix.'*';
+        }
+
+        // If we are missing a database connection client we need to reconnect.
+        if (! $this->client) {
+            $this->client = $this->buildConnection();
+        }
+        $bridge = new Bridge($this);
+
+        $methodName = 'process'.Str::studly($method);
+
+        if (! method_exists($bridge, $methodName)) {
+            throw new LogicException("{$methodName} does not exist on the bridge.");
+        }
+
+        return $bridge->{$methodName}(...$parameters);
     }
 
     /**
@@ -291,7 +322,7 @@ class Connection extends BaseConnection
                 'api_id' => null,
                 'index_prefix' => '',
                 'options' => [
-                    'perform_unsafe_queries' => false, // This skips the safety checks for Elastic Specific queries.
+                    'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
                     'insert_chunk_size' => 1000, // This is the maximum insert chunk size to use when bulk inserting
                     'logging' => false,
                     'allow_id_sort' => false,
