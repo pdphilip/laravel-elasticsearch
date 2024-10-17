@@ -54,7 +54,7 @@ class TestCase extends Orchestra
             'auth_type' => 'http',
             'hosts' => ['http://localhost:9200'],
             'options' => [
-                'perform_unsafe_queries' => true,
+                'bypass_map_validation' => true,
                 'insert_chunk_size' => 10000,
                 'logging' => true,
             ],
