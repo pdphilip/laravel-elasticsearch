@@ -17,13 +17,14 @@ secrets.nix
 
 .phpunit*
 
+# Ignore Docs Cache
+docs/.vitepress/cache
 
 .idea
 .phpunit.cache
 build
 composer.lock
 coverage
-docs
 phpunit.xml
 phpstan.neon
 testbench.yaml
