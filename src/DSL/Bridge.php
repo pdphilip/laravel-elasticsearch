@@ -10,6 +10,7 @@ use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
@@ -363,6 +364,11 @@ class Bridge
         ];
         if ($id) {
             $params['id'] = $id;
+        } else {
+            // If we don't have an ID we have Laravel make one.
+            // This simplifies problems with saveWithOutRefresh since now we always have an ID coming back.
+            // This also makes polymorphic relationships possible.
+            $params['id'] = Str::uuid();
         }
         if ($refresh) {
             $params['refresh'] = $refresh;
