@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Relations\MorphToMany;
 
 trait QueriesRelationships
 {
@@ -95,11 +96,44 @@ trait QueriesRelationships
             $not = ! $not;
         }
 
-        $relations = $hasQuery->pluck($this->getHasCompareKey($relation));
+        $relations = match (true) {
+            $relation instanceof MorphToMany => $relation->getInverse() ?
+              $this->handleMorphedByMany($hasQuery, $relation) :
+              $this->handleMorphToMany($hasQuery, $relation),
+            default => $hasQuery->pluck($this->getHasCompareKey($relation))
+        };
 
         $relatedIds = $this->getConstrainedRelatedIds($relations, $operator, $count);
 
         return $this->whereIn($this->getRelatedConstraintKey($relation), $relatedIds, $boolean, $not);
+    }
+
+    /**
+     * @param  Builder  $hasQuery
+     * @param  Relation  $relation
+     * @return Collection
+     */
+    private function handleMorphedByMany($hasQuery, $relation)
+    {
+        $hasQuery->whereNotNull($relation->getForeignPivotKeyName());
+
+        return $hasQuery->pluck($relation->getForeignPivotKeyName())->flatten(1);
+    }
+
+    /**
+     * @param  Builder  $hasQuery
+     * @param  Relation  $relation
+     * @return Collection
+     */
+    private function handleMorphToMany($hasQuery, $relation)
+    {
+        // First we select the parent models that have a relation to our related model,
+        // Then extracts related model's ids from the pivot column
+        $hasQuery->where($relation->getTable().'.'.$relation->getMorphType(), $relation->getParent()::class);
+        $relations = $hasQuery->pluck($relation->getTable());
+        $relations = $relation->extractIds($relations->flatten(1)->toArray(), $relation->getForeignPivotKeyName());
+
+        return collect($relations);
     }
 
     protected function getHasCompareKey(Relation $relation): string

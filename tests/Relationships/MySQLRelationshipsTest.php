@@ -35,14 +35,14 @@ it('should show user relationships to ES models', function () {
     );
     $user = User::first();
 
-    expect($user->company->_id)->not()->toBeEmpty()
-        ->and($user->company->avatar->_id)->not()->toBeEmpty()
+    expect($user->company->id)->not()->toBeEmpty()
+        ->and($user->company->avatar->id)->not()->toBeEmpty()
         ->and($user->photos)->not()->toBeEmpty()
         ->and(count($user->photos))->toBe($photosPerUser)
         ->and($user->userLogs)->not()->toBeEmpty()
         ->and(count($user->userLogs))->toBe($logsPerUser)
-        ->and($user->userProfile->_id)->not()->toBeEmpty()
-        ->and($user->avatar->_id)->not()->toBeEmpty();
+        ->and($user->userProfile->id)->not()->toBeEmpty()
+        ->and($user->avatar->id)->not()->toBeEmpty();
 
 });
 
@@ -62,11 +62,11 @@ it('should show user log (ES) relationship to user', function () {
     $userLog = UserLog::first();
 
     expect($userLog->user->id)->not()->toBeEmpty()
-        ->and($userLog->user->company->_id)->not()->toBeEmpty()
-        ->and($userLog->user->userProfile->_id)->not()->toBeEmpty()
-        ->and($userLog->company->_id)->not()->toBeEmpty()
+        ->and($userLog->user->company->id)->not()->toBeEmpty()
+        ->and($userLog->user->userProfile->id)->not()->toBeEmpty()
+        ->and($userLog->company->id)->not()->toBeEmpty()
         ->and($userLog->company->users)->toHaveCount($usersPerCompany)
-        ->and($userLog->company->companyProfile->_id)->not()->toBeEmpty();
+        ->and($userLog->company->companyProfile->id)->not()->toBeEmpty();
 
 });
 
@@ -86,7 +86,7 @@ it('should show 1 to 1 ES relationships for user and company', function () {
     $companyProfile = CompanyProfile::first();
     $userProfile = UserProfile::first();
 
-    expect($companyProfile->company->_id)->not()->toBeEmpty()
+    expect($companyProfile->company->id)->not()->toBeEmpty()
         ->and($userProfile->user->id)->not()->toBeEmpty();
 
 });

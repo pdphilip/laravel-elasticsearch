@@ -344,12 +344,12 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processSave($data, $refresh): Results
+    public function processSave($data, bool $waitForRefresh = true): Results
     {
         $id = null;
-        if (isset($data['_id'])) {
-            $id = $data['_id'];
-            unset($data['_id']);
+        if (isset($data['id'])) {
+            $id = $data['id'];
+            unset($data['id']);
         }
         if (isset($data['_index'])) {
             unset($data['_index']);
@@ -361,23 +361,17 @@ class Bridge
         $params = [
             'index' => $this->index,
             'body' => $data,
+            'refresh' => $waitForRefresh,
         ];
         if ($id) {
             $params['id'] = $id;
-        } else {
-            // If we don't have an ID we have Laravel make one.
-            // This simplifies problems with saveWithOutRefresh since now we always have an ID coming back.
-            // This also makes polymorphic relationships possible.
-            $params['id'] = Str::uuid();
         }
-        if ($refresh) {
-            $params['refresh'] = $refresh;
-        }
+
         $response = [];
         $savedData = [];
         try {
             $response = $this->client->index($params);
-            $savedData = ['_id' => $response['_id']] + $data;
+            $savedData = ['id' => $response['_id']] + $data;
         } catch (Exception $e) {
             $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
@@ -395,23 +389,27 @@ class Bridge
      *
      * @throws QueryException
      */
-    public function processInsertBulk(array $records, bool $returnData = false, string|bool|null $refresh = null): array
+    public function processInsertBulk(array $records, bool $returnData = false, bool $waitForRefresh = true): array
     {
-        $params = ['body' => []];
-
-        // If we don't want to wait for elastic to refresh this needs to be set.
-        if ($refresh) {
-            $params['refresh'] = $refresh;
-        }
+        $params = [
+          'body' => [],
+          // If we don't want to wait for elastic to refresh this needs to be set.
+          'refresh' => $waitForRefresh
+        ];
 
         // Create action/metadata pairs
         foreach ($records as $data) {
             $recordHeader['_index'] = $this->index;
 
-            if (isset($data['_id'])) {
-                $recordHeader['_id'] = $data['_id'];
-                unset($data['_id']);
+            // We should ALWAYS have an ID however there are
+            // some scenarios where we don't like when inserting records in to Pivot tables.
+            //
+            // we need to set that ID to be thew records _id
+            if(isset($data['id'])){
+              $recordHeader['_id'] = $data['id'];
             }
+            unset($data['id']);
+
             if (isset($data['_index'])) {
                 unset($data['_index']);
             }
@@ -444,7 +442,7 @@ class Bridge
                 $finalResponse['total']++;
                 $payload = $params['body'][($count * 2) + 1];
                 $id = $hit['index']['_id'];
-                $record = ['_id' => $id] + $payload;
+                $record = ['id' => $id] + $payload;
                 if (! empty($hit['index']['error'])) {
                     $finalResponse['failed']++;
                     $finalResponse['error_bag'][] = [
@@ -474,16 +472,16 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processInsertOne($values, $refresh): Results
+    public function processInsertOne($values, bool $waitForRefresh = true): Results
     {
-        return $this->processSave($values, $refresh);
+        return $this->processSave($values, $waitForRefresh);
     }
 
     /**
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processUpdateMany($wheres, $newValues, $options, $refresh = null): Results
+    public function processUpdateMany($wheres, $newValues, $options, bool $waitForRefresh = true): Results
     {
         $resultMeta['modified'] = 0;
         $resultMeta['failed'] = 0;
@@ -496,7 +494,7 @@ class Bridge
                 foreach ($newValues as $field => $value) {
                     $currentData[$field] = $value;
                 }
-                $updated = $this->processSave($currentData, $refresh);
+                $updated = $this->processSave($currentData, $waitForRefresh);
                 if ($updated->isSuccessful()) {
                     $resultMeta['modified']++;
                     $resultData[] = $updated->data;
@@ -517,7 +515,7 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processIncrementMany($wheres, $newValues, $options, $refresh): Results
+    public function processIncrementMany($wheres, $newValues, $options, bool $waitForRefresh = true): Results
     {
         //TODO INC on nested objects - maybe
 
@@ -541,7 +539,7 @@ class Bridge
                         $currentData[$field] = $value;
                     }
                 }
-                $updated = $this->processSave($currentData, $refresh);
+                $updated = $this->processSave($currentData, $waitForRefresh);
                 if ($updated->isSuccessful()) {
                     $resultMeta['modified']++;
                     $resultData[] = $updated->data;
@@ -565,12 +563,14 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processDeleteAll($wheres, $options = []): Results
+    public function processDeleteAll($wheres, $options = [], bool $waitForRefresh = true): Results
     {
+
         if (isset($wheres['_id'])) {
             $params = [
                 'index' => $this->index,
                 'id' => $wheres['_id'],
+                'refresh' => $waitForRefresh,
             ];
             try {
                 $responseObject = $this->client->delete($params);
@@ -1177,7 +1177,7 @@ class Bridge
 
     public function _sanitizeGetResponse($response, $params, $softDeleteColumn, $queryTag)
     {
-        $data['_id'] = $params['id'];
+        $data['id'] = $params['id'];
         $softDeleted = false;
         if ($softDeleteColumn) {
             $softDeleted = ! empty($response['_source'][$softDeleteColumn]);
@@ -1186,7 +1186,7 @@ class Bridge
         if (! $response || $softDeleted) {
             //Was not found
             $result = $this->_return($data, [], $params, $queryTag);
-            $result->setError($data['_id'].' not found', 404);
+            $result->setError($data['id'].' not found', 404);
 
             return $result;
         }
@@ -1215,7 +1215,7 @@ class Bridge
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
                 $datum['_index'] = $hit['_index'];
-                $datum['_id'] = $hit['_id'];
+                $datum['id'] = $hit['_id'];
                 if (! empty($hit['_source'])) {
                     foreach ($hit['_source'] as $key => $value) {
                         $datum[$key] = $value;
@@ -1243,7 +1243,7 @@ class Bridge
             foreach ($response['hits']['hits'] as $hit) {
                 $datum = [];
                 $datum['_index'] = $hit['_index'];
-                $datum['_id'] = $hit['_id'];
+                $datum['id'] = $hit['_id'];
                 if (! empty($hit['_source'])) {
 
                     foreach ($hit['_source'] as $key => $value) {

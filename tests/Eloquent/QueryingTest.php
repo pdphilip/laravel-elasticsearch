@@ -12,7 +12,7 @@ test('retrieve all products', function () {
 
 test('find a product by primary key', function () {
     $product = Product::factory()->create();
-    $found = Product::find($product->_id);
+    $found = Product::find($product->id);
     expect($found)->toBeInstanceOf(Product::class);
 });
 

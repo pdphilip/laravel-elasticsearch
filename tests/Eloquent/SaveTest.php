@@ -35,7 +35,7 @@ test('update a product attribute and save', function () {
     $product->status = 2;
     $product->save();
 
-    $updated = Product::find($product->_id);
+    $updated = Product::find($product->id);
     expect($updated->status)->toEqual(2);
 });
 

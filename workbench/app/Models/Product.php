@@ -7,7 +7,6 @@ namespace Workbench\App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 use Workbench\Database\Factories\ProductFactory;
 
 /**
@@ -38,14 +37,13 @@ use Workbench\Database\Factories\ProductFactory;
 class Product extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     protected $connection = 'elasticsearch';
 
     const MAX_SIZE = 10000;
 
     protected $fillable = [
-        '_id',
+        'id',
         'name',
         'description',
         'in_stock',

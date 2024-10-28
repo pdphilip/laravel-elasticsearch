@@ -6,10 +6,10 @@ namespace PDPhilip\Elasticsearch\Relations;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany as BaseBelongsToMany;
-use RuntimeException;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany as EloquentBelongsToMany;
+use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 
-class BelongsToMany extends BaseBelongsToMany
+class BelongsToMany extends EloquentBelongsToMany
 {
     public function __construct(
         Builder $query,

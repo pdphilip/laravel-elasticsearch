@@ -10,7 +10,7 @@ use Workbench\App\Models\Photo;
 
 test('company has many company logs', function () {
     $company = Company::factory()->create();
-    $logs = CompanyLog::factory(3)->create(['company_id' => $company->_id]);
+    $logs = CompanyLog::factory(3)->create(['company_id' => $company->id]);
     $fetchedLogs = $company->companyLogs;
 
     expect($fetchedLogs)->toHaveCount(3)
@@ -19,25 +19,25 @@ test('company has many company logs', function () {
 
 test('company has one company profile', function () {
     $company = Company::factory()->create();
-    $profile = CompanyProfile::factory()->create(['company_id' => $company->_id]);
+    $profile = CompanyProfile::factory()->create(['company_id' => $company->id]);
     $fetchedProfile = $company->companyProfile;
 
     expect($fetchedProfile)->toBeInstanceOf(CompanyProfile::class)
-        ->and($fetchedProfile->_id)->toEqual($profile->_id);
+        ->and($fetchedProfile->id)->toEqual($profile->id);
 });
 
 test('company has one avatar using morphOne', function () {
     $company = Company::factory()->create();
-    $avatar = Avatar::factory()->create(['imageable_id' => $company->_id, 'imageable_type' => Company::class]);
+    $avatar = Avatar::factory()->create(['imageable_id' => $company->id, 'imageable_type' => Company::class]);
     $fetchedAvatar = $company->avatar;
 
     expect($fetchedAvatar)->toBeInstanceOf(Avatar::class)
-        ->and($fetchedAvatar->_id)->toEqual($avatar->_id);
+        ->and($fetchedAvatar->id)->toEqual($avatar->id);
 });
 
 test('company has many photos using morphMany', function () {
     $company = Company::factory()->create();
-    $photos = Photo::factory(5)->create(['photoable_id' => $company->_id, 'photoable_type' => Company::class]);
+    $photos = Photo::factory(5)->create(['photoable_id' => $company->id, 'photoable_type' => Company::class]);
     $fetchedPhotos = $company->photos;
 
     expect($fetchedPhotos)->toHaveCount(5)

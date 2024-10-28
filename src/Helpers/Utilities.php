@@ -18,4 +18,18 @@ trait Utilities
 
         return $value;
     }
+
+  /**
+   * Convert column ID
+   *
+   * Converts the column name from 'id' to '_id'.
+   *
+   * @param string $value The column name to convert.
+   *
+   * @return string The converted column name.
+   */
+  public function convertColumnID(string $value): string
+  {
+    return $value == 'id' ? '_id' : $value;
+  }
 }

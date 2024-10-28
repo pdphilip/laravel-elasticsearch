@@ -3,6 +3,7 @@
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use Workbench\Database\Factories\PostFactory;
 
@@ -27,6 +28,14 @@ class Post extends Model
     //    const MAX_SIZE = 5;
 
     protected $fillable = ['title', 'slug', 'content'];
+
+    /**
+     * Get all of the tags for the post.
+     */
+    public function tags(): MorphToMany
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
 
     public static function newFactory(): PostFactory
     {

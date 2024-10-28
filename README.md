@@ -3,7 +3,7 @@
 # Laravel-Elasticsearch
 
 [![Latest Stable Version](http://img.shields.io/github/release/pdphilip/laravel-elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain) 
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/phpstan.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/phpstan.yml?query=branch%3Amain++)
 [![Total Downloads](http://img.shields.io/packagist/dm/pdphilip/elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
 ### Laravel-Elasticsearch: An Elasticsearch implementation of Laravel's Eloquent ORM
@@ -267,3 +267,6 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 - [Grouped Queries](https://elasticsearch.pdphilip.com/querying-models#grouped-queries): Queries can be grouped allowing multiple conditions to be nested within a single query block.
 
 ---
+
+### Roadmap
+- Add Global modifer on model to add a *, or an index modifer to end of the table. that way you can do global search or add to a sub index.

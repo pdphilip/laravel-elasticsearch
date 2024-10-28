@@ -209,7 +209,7 @@ class Builder extends BaseEloquentBuilder
             return $model;
         }
         $model = $this->newModelInstance();
-        $model->_id = $id; //set the id to the model
+        $model->id = $id; //set the id to the model
 
         return $model;
     }

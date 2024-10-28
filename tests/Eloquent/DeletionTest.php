@@ -5,12 +5,13 @@ declare(strict_types=1);
 ini_set('memory_limit', '1024M');
 
 use Workbench\App\Models\Product;
+  use Workbench\App\Models\Soft;
 
-test('delete a single model', function () {
+  test('delete a single model', function () {
     $product = Product::factory()->create();
-    $retrieved = Product::find($product->_id);
+    $retrieved = Product::find($product->id);
     $retrieved->delete();
-    $deleted = Product::find($product->_id);
+    $deleted = Product::find($product->id);
     expect($deleted)->toBeNull();
 });
 
@@ -31,30 +32,30 @@ test('truncate all documents from an index', function () {
     expect($products)->toBeEmpty();
 });
 
-test('destroy a product by _id', function () {
+test('destroy a product by id', function () {
     $product = Product::factory()->create();
-    Product::destroy($product->_id);
-    $deleted = Product::find($product->_id);
+    Product::destroy($product->id);
+    $deleted = Product::find($product->id);
     expect($deleted)->toBeNull();
 });
 
 test('destroy multiple products by _ids', function () {
     $product1 = Product::factory()->create();
     $product2 = Product::factory()->create();
-    Product::destroy([$product1->_id, $product2->_id]);
-    $deleted1 = Product::find($product1->_id);
-    $deleted2 = Product::find($product2->_id);
+    Product::destroy([$product1->id, $product2->id]);
+    $deleted1 = Product::find($product1->id);
+    $deleted2 = Product::find($product2->id);
     expect($deleted1)->toBeNull()
         ->and($deleted2)->toBeNull();
 });
 
 test('soft deletes a product and restores it', function () {
-    $product = Product::factory()->create();
+    $product = Soft::factory()->create();
     $product->delete();
-    $trashed = Product::withTrashed()->find($product->_id);
+    $trashed = Soft::withTrashed()->find($product->id);
     expect($trashed->trashed())->toBeTrue();
     $trashed->restore();
-    $restored = Product::find($product->_id);
+    $restored = Soft::find($product->id);
     expect($restored->trashed())->toBeFalse();
 });
 
@@ -78,11 +79,11 @@ test('delete multiple models by complex query', function () {
 });
 
 test('test soft deletion query visibility', function () {
-    $product = Product::factory()->create();
+    $product = Soft::factory()->create();
     $product->delete();
-    $visibleProduct = Product::find($product->_id);
+    $visibleProduct = Soft::find($product->id);
     expect($visibleProduct)->toBeNull();
-    $trashedProduct = Product::withTrashed()->find($product->_id);
+    $trashedProduct = Soft::withTrashed()->find($product->id);
     expect($trashedProduct)->not()->toBeNull()
         ->and($trashedProduct->trashed())->toBeTrue();
 });

@@ -82,12 +82,12 @@ test('sort products by random', function () {
     Product::insert($products->toArray());
 
     $sortA = Product::where('orders', '>', 0)->orderByRandom('orders', 5)->limit(5)->get();
-    $sortAFirstId = $sortA->first()->_id;
+    $sortAFirstId = $sortA->first()->id;
     $sortB = Product::where('orders', '>', 0)->orderByRandom('orders', 7)->limit(5)->get();
-    $sortBFirstId = $sortB->first()->_id;
+    $sortBFirstId = $sortB->first()->id;
     expect($sortAFirstId == $sortBFirstId)->toBeFalse('Seed 5 and 7 should have different results');
     $sortC = Product::where('orders', '>', 0)->orderByRandom('orders', 5)->limit(5)->get();
-    $sortCFirstId = $sortC->first()->_id;
+    $sortCFirstId = $sortC->first()->id;
     expect($sortAFirstId == $sortCFirstId)->toBeTrue('Same Seeds should have same results');
 
 });

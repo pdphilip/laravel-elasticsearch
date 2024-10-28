@@ -103,7 +103,7 @@ class Builder extends BaseBuilder
 
     protected string $index = '';
 
-    protected string|bool $refresh = 'wait_for';
+    protected bool $waitForRefresh = true;
 
     /**
      * Operator conversion.
@@ -138,9 +138,9 @@ class Builder extends BaseBuilder
         return $this->connection;
     }
 
-    public function setRefresh($value): void
+    public function setRefresh(bool $value): void
     {
-        $this->refresh = $value;
+        $this->waitForRefresh = $value;
     }
 
     public function initCursor($cursor): array
@@ -276,12 +276,12 @@ class Builder extends BaseBuilder
      */
     public function insert(array $values, $returnData = false): ElasticCollection
     {
-        return $this->_processInsert($values, $returnData, false);
+        return $this->_processInsert($values, $returnData);
     }
 
     public function insertWithoutRefresh(array $values, $returnData = false): ElasticCollection
     {
-        return $this->_processInsert($values, $returnData, true);
+        return $this->_processInsert($values, $returnData, false);
     }
 
     /**
@@ -289,7 +289,7 @@ class Builder extends BaseBuilder
      */
     public function insertGetId(array $values, $sequence = null): int|array|string|null
     {
-        $result = $this->connection->save($values, $this->refresh);
+        $result = $this->connection->save($values, $this->waitForRefresh);
 
         if ($result->isSuccessful()) {
             // Return id
@@ -361,14 +361,13 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function delete($id = null): int
+    public function delete($id = null, bool $waitForRefresh = true): int
     {
-
         if ($id !== null) {
-            $this->where('_id', '=', $id);
+            $this->where('id', '=', $id);
         }
 
-        return $this->_processDelete();
+        return $this->_processDelete($waitForRefresh);
     }
 
     public function rawDsl(array $bodyParams): mixed
@@ -1330,11 +1329,11 @@ class Builder extends BaseBuilder
         }
     }
 
-    protected function _processDelete(): int
+    protected function _processDelete(bool $waitForRefresh = true): int
     {
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
-        $result = $this->connection->deleteAll($wheres, $options);
+        $result = $this->connection->deleteAll($wheres, $options, $waitForRefresh);
         if ($result->isSuccessful()) {
             return $result->getDeletedCount();
         }
@@ -1349,7 +1348,7 @@ class Builder extends BaseBuilder
             $options['multiple'] = true;
         }
         $wheres = $this->compileWheres();
-        $result = $this->connection->{$method}($wheres, $values, $options, $this->refresh);
+        $result = $this->connection->{$method}($wheres, $values, $options, $this->waitForRefresh);
         if ($result->isSuccessful()) {
             return $result->getModifiedCount();
         }
@@ -1478,7 +1477,8 @@ class Builder extends BaseBuilder
     protected function _parseWhereBasic(array $where): array
     {
         $operator = $where['operator'];
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
+
         $value = $where['value'];
         $boolean = $where['boolean'] ?? null;
         if ($boolean === 'and not') {
@@ -1555,7 +1555,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereQueryNested(array $where): array
     {
         return [
-            $where['column'] => [
+          $this->convertColumnID($where['column']) => [
                 'innerNested' => [
                     'wheres' => $where['wheres'],
                     'options' => $where['options'],
@@ -1566,7 +1566,8 @@ class Builder extends BaseBuilder
 
     protected function _parseWhereIn(array $where): array
     {
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
+
         $values = $where['values'];
 
         return [$column => ['in' => array_values($values)]];
@@ -1574,7 +1575,9 @@ class Builder extends BaseBuilder
 
     protected function _parseWhereNotIn(array $where): array
     {
-        $column = $where['column'];
+        // if we are looking by ID we need to convert the key.
+        $column = $this->convertColumnID($where['column']);
+
         $values = $where['values'];
 
         return [$column => ['nin' => array_values($values)]];
@@ -1592,7 +1595,7 @@ class Builder extends BaseBuilder
     {
         $not = $where['not'] ?? false;
         $values = $where['values'];
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
 
         if ($not) {
             return [
@@ -1625,7 +1628,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereRegex(array $where): array
     {
         $value = $where['expression'];
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
 
         return [$column => ['regex' => $value]];
     }
@@ -1633,7 +1636,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereNestedObject(array $where): array
     {
         $wheres = $where['wheres'];
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
         $scoreMode = $where['score_mode'];
 
         return [
@@ -1644,7 +1647,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereNotNestedObject(array $where): array
     {
         $wheres = $where['wheres'];
-        $column = $where['column'];
+        $column = $this->convertColumnID($where['column']);
         $scoreMode = $where['score_mode'];
 
         return [
@@ -1652,7 +1655,7 @@ class Builder extends BaseBuilder
         ];
     }
 
-    protected function _processInsert(array $values, bool $returnData, bool $saveWithoutRefresh): ElasticCollection
+    protected function _processInsert(array $values, bool $returnData, bool $waitForRefresh = true): ElasticCollection
     {
         $response = [
             'hasErrors' => false,
@@ -1669,9 +1672,6 @@ class Builder extends BaseBuilder
             return $this->_parseBulkInsertResult($response, $returnData);
         }
 
-        if ($saveWithoutRefresh) {
-            $this->refresh = false;
-        }
 
         if (! is_array(reset($values))) {
             $values = [$values];
@@ -1680,8 +1680,8 @@ class Builder extends BaseBuilder
 
         $insertChunkSize = $this->getConnection()->getInsertChunkSize();
 
-        collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData) {
-            $result = $this->connection->insertBulk($chunk->toArray(), $returnData, $this->refresh);
+        collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData, $waitForRefresh) {
+            $result = $this->connection->insertBulk($chunk->toArray(), $returnData, $waitForRefresh);
             if ((bool) $result['hasErrors']) {
                 $response['hasErrors'] = true;
             }

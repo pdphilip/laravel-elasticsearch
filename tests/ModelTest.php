@@ -15,7 +15,7 @@ test('New Model', function () {
     $this->assertInstanceOf(Connection::class, $product->getConnection());
     $this->assertFalse($product->exists);
     $this->assertEquals('products', $product->getTable());
-    $this->assertEquals('_id', $product->getKeyName());
+    $this->assertEquals('id', $product->getKeyName());
 });
 
 test('Insert', function () {
@@ -137,7 +137,6 @@ test('Meta', function () {
     $product['name'] = 'John Doe';
     $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
     $product['in_stock'] = 35;
-    $product['_id'] = 'foo-bar';
     $product->save();
 
     $check = Product::find($product->id);
@@ -149,7 +148,6 @@ test('Meta', function () {
         ->and($meta->getScore())->not()->toBeNull()
         ->and($meta->getHighlights())->not()->toBeNull()
         ->and($meta->getHighlights())->toBeArray()
-        ->and($meta->getId())->toBe('foo-bar')
         ->and($meta->getQuery())->toBeArray()
         ->and($meta->asArray())->toBeArray();
 });
@@ -217,7 +215,7 @@ test('Destroy', function () {
     $product['in_stock'] = 35;
     $product->save();
 
-    Product::destroy((string) $product->id);
+    Product::destroy($product->id);
     $this->assertEquals(0, Product::count());
 });
 
@@ -285,12 +283,11 @@ test('To Array', function () {
     $product = Product::create(['name' => 'fork', 'color' => 'green']);
 
     $array = $product->toArray();
-    $keys = array_keys($array);
-    sort($keys);
-    $this->assertEquals(['_id', 'color', 'created_at', 'name', 'updated_at'], $keys);
-    $this->assertIsString($array['created_at']);
-    $this->assertIsString($array['updated_at']);
-    $this->assertIsString($array['_id']);
+
+    expect($array)->toHaveKeys(['id', 'color', 'created_at', 'name', 'updated_at'])
+        ->and($array['created_at'])->toBeString()
+        ->and($array['updated_at'])->toBeString()
+        ->and($array['id'])->toBeString();
 });
 
 test('Dot Notation', function () {

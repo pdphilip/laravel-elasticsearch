@@ -30,8 +30,8 @@ it('should show company relationships', function () {
 
     expect($company->companyLogs)->not()->toBeEmpty()
         ->and(count($company->companyLogs))->toBe($logsPerCompany)
-        ->and($company->companyProfile->_id)->not()->toBeEmpty()
-        ->and($company->avatar->_id)->not()->toBeEmpty()
+        ->and($company->companyProfile->id)->not()->toBeEmpty()
+        ->and($company->avatar->id)->not()->toBeEmpty()
         ->and($company->photos)->not()->toBeEmpty()
         ->and(count($company->photos))->toBe($photosPerCompany);
 
@@ -41,14 +41,14 @@ it('should show user log (ES) relationship to user', function () {
     createCompanyData();
 
     $companyLog = CompanyLog::first();
-    expect($companyLog->company->_id)->not()->toBeEmpty()
-        ->and($companyLog->company->companyProfile->_id)->not()->toBeEmpty();
+    expect($companyLog->company->id)->not()->toBeEmpty()
+        ->and($companyLog->company->companyProfile->id)->not()->toBeEmpty();
 
 });
 
 it('should show 1 to 1 ES relationships for user and company', function () {
     createCompanyData();
     $companyProfile = CompanyProfile::first();
-    expect($companyProfile->company->_id)->not()->toBeEmpty();
+    expect($companyProfile->company->id)->not()->toBeEmpty();
 
 });
