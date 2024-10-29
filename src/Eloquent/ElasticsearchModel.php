@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
+use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
@@ -260,7 +261,7 @@ trait ElasticsearchModel
 
         $query = $this->newModelQuery();
         //@phpstan-ignore-next-line
-        $query->setRefresh(false);
+        $query->setRefresh(WaitFor::FALSE);
 
         if ($this->exists) {
             $saved = ! $this->isDirty() || $this->performUpdate($query);
@@ -406,6 +407,7 @@ trait ElasticsearchModel
     {
         $this->parentRelation = $relation;
     }
+
 
     //----------------------------------------------------------------------
     // Helpers

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\DSL\Bridge;
 use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use RuntimeException;
 
@@ -36,10 +37,10 @@ use function strtolower;
  * @method Results aggregate(string $function, array $wheres, array $options, array $columns)
  * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
  * @method Results find(array $wheres, array $options, array $columns)
- * @method Results save(array $data, boolean $waitForRefresh = TRUE)
- * @method array insertBulk(array $data, bool $returnData = false, boolean $waitForRefresh = TRUE)
+ * @method Results save(array $data, WaitFor $waitForRefresh = WaitFor::WAITFOR)
+ * @method array insertBulk(array $data, bool $returnData = false, WaitFor $waitForRefresh = WaitFor::WAITFOR)
  * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)
- * @method Results deleteAll(array $wheres, array $options = [], bool $waitForRefresh = TRUE)
+ * @method Results deleteAll(array $wheres, array $options = [], WaitFor $waitForRefresh = WaitFor::WAITFOR)
  * @method Results searchRaw(array $bodyParams, bool $returnRaw = false)
  * @method Results aggregationRaw(array $bodyParams)
  * @method Results search(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)

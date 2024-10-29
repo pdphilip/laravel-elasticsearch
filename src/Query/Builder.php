@@ -17,6 +17,7 @@ use PDPhilip\Elasticsearch\Collection\ElasticResult;
 use PDPhilip\Elasticsearch\Collection\LazyElasticCollection;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
 use PDPhilip\Elasticsearch\Meta\QueryMetaData;
 use PDPhilip\Elasticsearch\Schema\Schema;
@@ -103,7 +104,7 @@ class Builder extends BaseBuilder
 
     protected string $index = '';
 
-    protected bool $waitForRefresh = true;
+    protected WaitFor $waitForRefresh = WaitFor::WAITFOR;
 
     /**
      * Operator conversion.
@@ -138,9 +139,42 @@ class Builder extends BaseBuilder
         return $this->connection;
     }
 
-    public function setRefresh(bool $value): void
+    public function setRefresh(WaitFor $value): void
     {
         $this->waitForRefresh = $value;
+    }
+
+    public function waitForPendingTasks(int $timeout = 30): void
+    {
+      $client = $this->connection->getClient();
+
+      $start = time();
+      do {
+        $result = $client->indices()->stats([
+                                          'index' => $this->index,
+                                          'metric' => 'docs,indexing'
+                                        ]);
+        $tasks = $result->asArray();
+
+        sleep(1);
+
+        $result = $client->indices()->stats([
+                                              'index' => $this->index,
+                                              'metric' => 'docs,indexing'
+                                            ]);
+        $tasks = $result->asArray();
+
+        $count = 0;
+//        foreach ($tasks as $task) {
+//          if (empty($task)) {
+//            continue;
+//          }
+//          if (str_contains($task, $this->index)) {
+//            $count++;
+//          }
+//        }
+        sleep(1);
+      } while ($count > 0 && time() < ($start + $timeout));
     }
 
     public function initCursor($cursor): array
@@ -281,7 +315,7 @@ class Builder extends BaseBuilder
 
     public function insertWithoutRefresh(array $values, $returnData = false): ElasticCollection
     {
-        return $this->_processInsert($values, $returnData, false);
+        return $this->_processInsert($values, $returnData, WaitFor::FALSE);
     }
 
     /**
@@ -361,7 +395,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function delete($id = null, bool $waitForRefresh = true): int
+    public function delete($id = null, WaitFor $waitForRefresh = WaitFor::WAITFOR): int
     {
         if ($id !== null) {
             $this->where('id', '=', $id);
@@ -1329,7 +1363,7 @@ class Builder extends BaseBuilder
         }
     }
 
-    protected function _processDelete(bool $waitForRefresh = true): int
+    protected function _processDelete(WaitFor $waitForRefresh = WaitFor::WAITFOR): int
     {
         $wheres = $this->compileWheres();
         $options = $this->compileOptions();
@@ -1655,7 +1689,7 @@ class Builder extends BaseBuilder
         ];
     }
 
-    protected function _processInsert(array $values, bool $returnData, bool $waitForRefresh = true): ElasticCollection
+    protected function _processInsert(array $values, bool $returnData, WaitFor $waitForRefresh = WaitFor::WAITFOR): ElasticCollection
     {
         $response = [
             'hasErrors' => false,

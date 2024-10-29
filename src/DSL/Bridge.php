@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
+use PDPhilip\Elasticsearch\Enums\WaitFor;
 
 class Bridge
 {
@@ -344,7 +345,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processSave($data, bool $waitForRefresh = true): Results
+    public function processSave($data, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
     {
         $id = null;
         if (isset($data['id'])) {
@@ -361,7 +362,7 @@ class Bridge
         $params = [
             'index' => $this->index,
             'body' => $data,
-            'refresh' => $waitForRefresh,
+            'refresh' => $waitForRefresh->get(),
         ];
         if ($id) {
             $params['id'] = $id;
@@ -389,12 +390,12 @@ class Bridge
      *
      * @throws QueryException
      */
-    public function processInsertBulk(array $records, bool $returnData = false, bool $waitForRefresh = true): array
+    public function processInsertBulk(array $records, bool $returnData = false, WaitFor $waitForRefresh = WaitFor::WAITFOR): array
     {
         $params = [
           'body' => [],
           // If we don't want to wait for elastic to refresh this needs to be set.
-          'refresh' => $waitForRefresh
+          'refresh' => $waitForRefresh->get()
         ];
 
         // Create action/metadata pairs
@@ -472,7 +473,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processInsertOne($values, bool $waitForRefresh = true): Results
+    public function processInsertOne($values, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
     {
         return $this->processSave($values, $waitForRefresh);
     }
@@ -481,7 +482,7 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processUpdateMany($wheres, $newValues, $options, bool $waitForRefresh = true): Results
+    public function processUpdateMany($wheres, $newValues, $options, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
     {
         $resultMeta['modified'] = 0;
         $resultMeta['failed'] = 0;
@@ -563,14 +564,14 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
-    public function processDeleteAll($wheres, $options = [], bool $waitForRefresh = true): Results
+    public function processDeleteAll($wheres, $options = [], WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
     {
 
         if (isset($wheres['_id'])) {
             $params = [
                 'index' => $this->index,
                 'id' => $wheres['_id'],
-                'refresh' => $waitForRefresh,
+                'refresh' => $waitForRefresh->get(),
             ];
             try {
                 $responseObject = $this->client->delete($params);

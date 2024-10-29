@@ -15,7 +15,7 @@ test('process large dataset using basic chunking', function () {
             $product->saveWithoutRefresh();
         }
     });
-    sleep(3);
+    Product::waitForPendingTasks();
 
     $updatedProduct = Product::first();
     expect($updatedProduct->price)->toBeGreaterThan(50);
@@ -24,7 +24,6 @@ test('process large dataset using basic chunking', function () {
 test('process large dataset using basic chunking with extended keepAlive', function () {
     $products = Product::factory(100)->state(['price' => 50])->make();
     Product::insert($products->toArray());
-    sleep(3);
 
     Product::chunk(1000, function ($products) {
         foreach ($products as $product) {
@@ -32,7 +31,7 @@ test('process large dataset using basic chunking with extended keepAlive', funct
             $product->saveWithoutRefresh();
         }
     }, '20m'); // Using an extended keepAlive period
-    sleep(3);
+    Product::waitForPendingTasks();
 
     $updatedProduct = Product::first();
     expect($updatedProduct->price)->toBeGreaterThan(50);
