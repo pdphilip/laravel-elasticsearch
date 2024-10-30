@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Query;
 use AllowDynamicProperties;
 use Carbon\Carbon;
 use Closure;
+use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -144,38 +145,24 @@ class Builder extends BaseBuilder
         $this->waitForRefresh = $value;
     }
 
-    public function waitForPendingTasks(int $timeout = 30): void
-    {
-      $client = $this->connection->getClient();
 
-      $start = time();
-      do {
-        $result = $client->indices()->stats([
-                                          'index' => $this->index,
-                                          'metric' => 'docs,indexing'
-                                        ]);
-        $tasks = $result->asArray();
+  /**
+   * Refreshes the Elasticsearch index.
+   *
+   * @return array The refresh status of the shards.
+   * @throws ClientResponseException
+   * @throws ServerResponseException
+   */
+  public function refreshIndex(): array
+  {
+    $client = $this->connection->getClient();
 
-        sleep(1);
+    $result = $client->indices()->refresh([
+                                            'index' => $this->index
+                                          ]);
 
-        $result = $client->indices()->stats([
-                                              'index' => $this->index,
-                                              'metric' => 'docs,indexing'
-                                            ]);
-        $tasks = $result->asArray();
-
-        $count = 0;
-//        foreach ($tasks as $task) {
-//          if (empty($task)) {
-//            continue;
-//          }
-//          if (str_contains($task, $this->index)) {
-//            $count++;
-//          }
-//        }
-        sleep(1);
-      } while ($count > 0 && time() < ($start + $timeout));
-    }
+    return Arr::get($result->asArray(), '_shards');
+  }
 
     public function initCursor($cursor): array
     {

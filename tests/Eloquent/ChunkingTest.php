@@ -15,7 +15,7 @@ test('process large dataset using basic chunking', function () {
             $product->saveWithoutRefresh();
         }
     });
-    Product::waitForPendingTasks();
+    Product::refreshIndex();
 
     $updatedProduct = Product::first();
     expect($updatedProduct->price)->toBeGreaterThan(50);
@@ -31,7 +31,7 @@ test('process large dataset using basic chunking with extended keepAlive', funct
             $product->saveWithoutRefresh();
         }
     }, '20m'); // Using an extended keepAlive period
-    Product::waitForPendingTasks();
+    Product::refreshIndex();
 
     $updatedProduct = Product::first();
     expect($updatedProduct->price)->toBeGreaterThan(50);
@@ -48,7 +48,7 @@ test('chunk by ID on a specific column with custom keepAlive', function () {
             $product->saveWithoutRefresh();
         }
     }, 'product_id.keyword', null, '5m');
-    sleep(3);
+    Product::refreshIndex();
 
     $updatedProduct = Product::first();
     expect($updatedProduct->price)->toBeGreaterThan(50);
