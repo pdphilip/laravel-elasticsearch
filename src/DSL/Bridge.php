@@ -10,7 +10,6 @@ use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
@@ -393,9 +392,9 @@ class Bridge
     public function processInsertBulk(array $records, bool $returnData = false, WaitFor $waitForRefresh = WaitFor::WAITFOR): array
     {
         $params = [
-          'body' => [],
-          // If we don't want to wait for elastic to refresh this needs to be set.
-          'refresh' => $waitForRefresh->get()
+            'body' => [],
+            // If we don't want to wait for elastic to refresh this needs to be set.
+            'refresh' => $waitForRefresh->get(),
         ];
 
         // Create action/metadata pairs
@@ -406,8 +405,8 @@ class Bridge
             // some scenarios where we don't like when inserting records in to Pivot tables.
             //
             // we need to set that ID to be thew records _id
-            if(isset($data['id'])){
-              $recordHeader['_id'] = $data['id'];
+            if (isset($data['id'])) {
+                $recordHeader['_id'] = $data['id'];
             }
             unset($data['id']);
 
@@ -585,6 +584,7 @@ class Bridge
         }
         $response = [];
         $params = $this->buildParams($this->index, $wheres, $options);
+        $params['refresh'] = $waitForRefresh->getDelete();
         try {
             $responseObject = $this->client->deleteByQuery($params);
             $response = $responseObject->asArray();

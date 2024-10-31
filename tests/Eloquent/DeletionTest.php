@@ -19,7 +19,7 @@ test('mass deletion of models where color is null', function () {
     Product::factory(5)->state(['color' => null])->create();
     Product::factory(3)->state(['color' => 'blue'])->create();
     Product::whereNull('color')->delete();
-    Product::refreshIndex();
+
     $products = Product::all();
     expect($products)->toHaveCount(3);
 });
@@ -27,7 +27,6 @@ test('mass deletion of models where color is null', function () {
 test('truncate all documents from an index', function () {
     Product::factory(10)->create();
     Product::truncate();
-    sleep(3);
 
     $products = Product::all();
     expect($products)->toBeEmpty();
@@ -64,7 +63,6 @@ test('ensure deletion of models with a specific status', function () {
     Product::factory(3)->state(['status' => 5])->create();
     Product::factory(2)->state(['status' => 1])->create();
     Product::where('status', 5)->delete();
-    Product::refreshIndex();
 
     $remainingProducts = Product::all();
     expect($remainingProducts)->toHaveCount(2)
@@ -75,7 +73,6 @@ test('delete multiple models by complex query', function () {
     Product::factory()->state(['is_active' => true, 'color' => 'blue'])->create();
     Product::factory()->state(['is_active' => false, 'color' => 'blue'])->create();
     Product::where('is_active', true)->where('color', 'blue')->delete();
-    Product::refreshIndex();
 
     $activeBlue = Product::where('is_active', true)->where('color', 'blue')->first();
     expect($activeBlue)->toBeNull();

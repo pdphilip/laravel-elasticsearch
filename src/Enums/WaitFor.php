@@ -18,4 +18,12 @@ enum WaitFor
             WaitFor::WAITFOR => 'wait_for',
         };
     }
+
+    public function getDelete(): bool
+    {
+        return match ($this) {
+            WaitFor::TRUE, WaitFor::WAITFOR => true,
+            WaitFor::FALSE => false,
+        };
+    }
 }
