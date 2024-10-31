@@ -7,7 +7,7 @@ use Workbench\App\Models\Product;
 test('process large dataset using basic chunking', function () {
     $products = Product::factory(100)->state(['price' => 50])->make();
     Product::insert($products->toArray());
-    sleep(3);
+    Product::refreshIndex();
 
     Product::chunk(10, function ($products) {
         foreach ($products as $product) {
@@ -24,6 +24,7 @@ test('process large dataset using basic chunking', function () {
 test('process large dataset using basic chunking with extended keepAlive', function () {
     $products = Product::factory(100)->state(['price' => 50])->make();
     Product::insert($products->toArray());
+    Product::refreshIndex();
 
     Product::chunk(1000, function ($products) {
         foreach ($products as $product) {
@@ -40,6 +41,7 @@ test('process large dataset using basic chunking with extended keepAlive', funct
 test('chunk by ID on a specific column with custom keepAlive', function () {
     $products = Product::factory(100)->state(['price' => 50])->make();
     Product::insert($products->toArray());
+    Product::refreshIndex();
 
     // Assuming 'product_id' is a unique identifier in the dataset
     Product::chunkById(1000, function ($products) {

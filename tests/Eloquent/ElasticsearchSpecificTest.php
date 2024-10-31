@@ -176,5 +176,5 @@ test('convert query to DSL', function () {
     $dslQuery = Product::where('price', '>', 100)->toDSL();
 
     expect($dslQuery)->toBeArray()
-        ->and($dslQuery['body']['query']['bool']['must'][0]['range'])->toBeArray();
+        ->and($dslQuery['body']['query']['range']['price'])->toBeArray();
 });
