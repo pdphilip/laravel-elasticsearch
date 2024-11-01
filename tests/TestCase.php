@@ -41,6 +41,15 @@ class TestCase extends Orchestra
     protected function getEnvironmentSetUp($app): void
     {
         $app['config']->set('database.default', 'testing');
+
+        $app['config']->set('database.connections.sqlite', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'charset' => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix' => '',
+        ]);
+
         $app['config']->set('database.connections.elasticsearch', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
@@ -49,6 +58,7 @@ class TestCase extends Orchestra
                 'logging' => true,
             ],
         ]);
+
         $app['config']->set('database.connections.elasticsearch_unsafe', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',

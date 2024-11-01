@@ -10,7 +10,7 @@ declare(strict_types=1);
     Post::truncate();
     Video::truncate();
     Tag::truncate();
-});
+  });
 
 it('Morph To Many Elastic To Elastic Model', function () {
 

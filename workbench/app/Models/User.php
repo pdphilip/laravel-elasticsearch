@@ -1,90 +1,135 @@
 <?php
 
-namespace Workbench\App\Models;
+  declare(strict_types=1);
 
+  namespace Workbench\App\Models;
+
+use Carbon\Carbon;
+use DateTimeInterface;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
-use PDPhilip\Elasticsearch\Relations\HasMany;
-use Workbench\Database\Factories\UserFactory;
+use PDPhilip\Elasticsearch\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 
-class User extends Authenticatable
+/**
+ * @property string $id
+ * @property string $name
+ * @property string $email
+ * @property string $title
+ * @property int $age
+ * @property Carbon $birthday
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property string $username
+ * @property MemberStatus member_status
+ */
+class User extends Model implements AuthenticatableContract, CanResetPasswordContract
 {
     use HasFactory, HybridRelations, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'first_name',
-        'last_name',
-        'email',
-        'password',
-    ];
+    use Authenticatable;
+    use CanResetPassword;
+    use Notifiable;
+    use MassPrunable;
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+  protected $connection = 'elasticsearch';
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
 
-    public function userLogs(): HasMany
-    {
-        return $this->hasMany(UserLog::class);
-    }
+  protected $casts = [
+    'birthday' => 'datetime',
+    'entry.date' => 'datetime',
+    'member_status' => MemberStatus::class,
+  ];
 
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
+  protected $fillable = [
+    'name',
+    'email',
+    'title',
+    'age',
+    'birthday',
+    'username',
+    'member_status',
+  ];
+  protected static $unguarded = true;
 
-    public function userProfile()
-    {
-        return $this->hasOne(UserProfile::class);
-    }
+  public function books()
+  {
+    return $this->hasMany(Book::class, 'author_id');
+  }
 
-    public function avatar()
-    {
-        return $this->morphOne(Avatar::class, 'imageable');
-    }
+  public function softs()
+  {
+    return $this->hasMany(Soft::class);
+  }
 
-    public function photos()
-    {
-        return $this->morphMany(Photo::class, 'photoable');
-    }
+  public function softsWithTrashed()
+  {
+    return $this->hasMany(Soft::class)->withTrashed();
+  }
 
-    public function getFullNameAttribute()
-    {
-        return $this->first_name.' '.$this->last_name;
-    }
+  public function sqlBooks()
+  {
+    return $this->hasMany(SqlBook::class, 'author_id');
+  }
 
-    public function getFirstNameAttribute($value)
-    {
-        return strtoupper($value);
-    }
+  public function items()
+  {
+    return $this->hasMany(Item::class);
+  }
 
-    public static function newFactory(): UserFactory
-    {
-        return UserFactory::new();
-    }
+  public function role()
+  {
+    return $this->hasOne(Role::class);
+  }
+
+  public function sqlRole()
+  {
+    return $this->hasOne(SqlRole::class);
+  }
+
+  public function clients()
+  {
+    return $this->belongsToMany(Client::class);
+  }
+
+  public function groups()
+  {
+    return $this->belongsToMany(Group::class, 'groups', 'users', 'groups', 'id', 'id', 'groups');
+  }
+
+  public function photos()
+  {
+    return $this->morphMany(Photo::class, 'has_image');
+  }
+
+  public function labels()
+  {
+    return $this->morphToMany(Label::class, 'labelled');
+  }
+
+  protected function serializeDate(DateTimeInterface $date)
+  {
+    return $date->format('l jS \of F Y h:i:s A');
+  }
+
+  protected function username(): Attribute
+  {
+    return Attribute::make(
+      get: fn ($value) => $value,
+      set: fn ($value) => Str::slug($value),
+    );
+  }
+
+  public function prunable(): Builder
+  {
+    return $this->where('age', '>', 18);
+  }
 }

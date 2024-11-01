@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+
 use Illuminate\Support\Str;
-use PDPhilip\Elasticsearch\Eloquent\Model as ParentModel;
+use PDPhilip\Elasticsearch\Helpers\EloquentBuilder;
 use PDPhilip\Elasticsearch\Relations\BelongsTo;
 use PDPhilip\Elasticsearch\Relations\BelongsToMany;
 use PDPhilip\Elasticsearch\Relations\HasMany;
@@ -21,7 +21,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function hasOne($related, $foreignKey = null, $localKey = null): HasOne
+    public function hasOne($related, $foreignKey = null, $localKey = null)
     {
 
         // Check if it is a relation with an original model.
@@ -60,7 +60,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function hasMany($related, $foreignKey = null, $localKey = null): HasMany
+    public function hasMany($related, $foreignKey = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
         if (! Model::isElasticsearchModel($related)) {
@@ -101,7 +101,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null): BelongsTo
+    public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null)
     {
 
         if ($relation === null) {
@@ -251,7 +251,7 @@ trait HybridRelations
     $relatedKey = null,
     $relation = null,
     $inverse = false
-  ): MorphToMany
+  )
     {
       if ($relation === null) {
         $relation = $relation ?: $this->guessBelongsToManyRelation();
@@ -340,12 +340,11 @@ trait HybridRelations
     /**
      * {@inheritdoc}
      */
-    public function newEloquentBuilder($query): EloquentBuilder|Builder
+    public function newEloquentBuilder($query)
     {
-        //@phpstan-ignore-next-line
-        if (is_subclass_of($this, ParentModel::class)) {
-            return new Builder($query);
-        }
+      if (Model::isElasticsearchModel($this)) {
+        return new Builder($query);
+      }
 
         return new EloquentBuilder($query);
     }
