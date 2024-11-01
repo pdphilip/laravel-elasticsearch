@@ -4,8 +4,10 @@
 
   namespace Workbench\App\Models;
 
+  use Illuminate\Database\Eloquent\Relations\MorphToMany;
   use PDPhilip\Elasticsearch\Eloquent\Model;
-  use PDPhilip\Elasticsearch\Relations\MorphToMany;
+  use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+  use PDPhilip\Elasticsearch\Schema\Schema;
 
   /**
    * @property string $title
@@ -51,4 +53,30 @@
         'cclient_id',
       );
     }
+
+
+    /**
+     * Check if we need to run the schema.
+     */
+    public static function executeSchema()
+    {
+      $schema = Schema::connection('elasticsearch');
+
+      $schema->deleteIfExists('labeleds');
+      $schema->create('labeleds', function (IndexBlueprint $table) {
+//        $table->string('skill_ids');
+//        $table->string('sql_user_ids');
+        $table->date('created_at');
+        $table->date('updated_at');
+      });
+
+      $schema->deleteIfExists('labels');
+      $schema->create('labels', function (IndexBlueprint $table) {
+        $table->string('name');
+        $table->string('author');
+        $table->date('created_at');
+        $table->date('updated_at');
+      });
+    }
+
   }

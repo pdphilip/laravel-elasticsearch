@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Model as EloquentModel;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\SQLiteBuilder;
 use Illuminate\Support\Facades\Schema;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
-use PDPhilip\Elasticsearch\Relations\MorphToMany;
+
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 
 use function assert;
 
@@ -21,9 +24,7 @@ class SqlUser extends EloquentModel
     use HybridRelations;
 
     protected $connection = 'sqlite';
-
     protected $table = 'users';
-
     protected static $unguarded = true;
 
     public function books(): HasMany
@@ -38,7 +39,7 @@ class SqlUser extends EloquentModel
 
     public function skills(): BelongsToMany
     {
-        return $this->belongsToMany(Skill::class, relatedPivotKey: 'skills');
+        return $this->belongsToMany(Skill::class);
     }
 
     public function sqlBooks(): HasMany
