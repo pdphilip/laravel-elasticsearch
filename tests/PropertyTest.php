@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\HiddenAnimal;
 
 beforeEach(function () {
-    Schema::deleteIfExists('hidden_animals');
+    HiddenAnimal::executeSchema();
 });
 
-test('Can Hide Certain Properties', function () {
+it('can hide certain properties', function () {
     HiddenAnimal::create([
         'name' => 'Sheep',
         'country' => 'Ireland',
@@ -20,7 +19,8 @@ test('Can Hide Certain Properties', function () {
     expect($hiddenAnimal)->toBeInstanceOf(HiddenAnimal::class)
         ->and($hiddenAnimal->country)->toBe('Ireland')
         ->and($hiddenAnimal->can_be_eaten)->toBeTrue()
-        ->and($hiddenAnimal->toArray())->toHaveKeys(['name', 'can_be_eaten'])
-        ->and(! array_key_exists('country', $hiddenAnimal->toArray()))->toBeTrue();
+        ->and($hiddenAnimal->toArray())->toHaveKey('name')
+        ->and($hiddenAnimal->toArray())->not->toHaveKey('country', 'the country column should be hidden')
+        ->and($hiddenAnimal->toArray())->toHaveKey('can_be_eaten');
 
 });

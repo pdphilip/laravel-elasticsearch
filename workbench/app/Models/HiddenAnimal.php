@@ -3,6 +3,8 @@
 namespace Workbench\App\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
  * @property string $name
@@ -22,4 +24,20 @@ final class HiddenAnimal extends Model
     ];
 
     protected $hidden = ['country'];
+
+  /**
+   * Check if we need to run the schema.
+   */
+  public static function executeSchema()
+  {
+    $schema = Schema::connection('elasticsearch');
+
+    $schema->deleteIfExists('hidden_animals');
+    $schema->create('hidden_animals', function (IndexBlueprint $table) {
+
+      $table->date('created_at');
+      $table->date('updated_at');
+    });
+  }
+
 }
