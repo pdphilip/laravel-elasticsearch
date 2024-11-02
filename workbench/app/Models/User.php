@@ -18,6 +18,8 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
  * @property string $id
@@ -132,4 +134,22 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
   {
     return $this->where('age', '>', 18);
   }
+
+  /**
+   * Check if we need to run the schema.
+   */
+  public static function executeSchema()
+  {
+    $schema = Schema::connection('elasticsearch');
+
+    $schema->deleteIfExists('users');
+    $schema->create('users', function (IndexBlueprint $table) {
+      $table->text('name');
+      $table->keyword('name');
+      $table->date('birthday');
+      $table->date('created_at');
+      $table->date('updated_at');
+    });
+  }
+
 }

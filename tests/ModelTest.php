@@ -5,456 +5,526 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Eloquent\Model;
+use Workbench\App\Models\Book;
 use Workbench\App\Models\Guarded;
-use Workbench\App\Models\Product;
+use Workbench\App\Models\Item;
 use Workbench\App\Models\Soft;
+use Workbench\App\Models\User;
 
-test('New Model', function () {
-    $product = new Product;
-    $this->assertInstanceOf(Connection::class, $product->getConnection());
-    $this->assertFalse($product->exists);
-    $this->assertEquals('products', $product->getTable());
-    $this->assertEquals('id', $product->getKeyName());
+beforeEach(function () {
+    User::executeSchema();
+});
+it('tests new model', function () {
+    $user = new User;
+
+    expect(Model::isElasticsearchModel($user))->toBeTrue()
+        ->and($user->getConnection())->toBeInstanceOf(Connection::class)
+        ->and($user->exists)->toBeFalse()
+        ->and($user->getTable())->toBe('users')
+        ->and($user->getKeyName())->toBe('id');
 });
 
-test('Insert', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock'] = 25;
+it('tests insert', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
 
-    $product->save();
+    $user->save();
 
-    $this->assertTrue($product->exists);
-    $this->assertEquals(1, Product::count());
+    expect($user->exists)->toBeTrue()
+        ->and(User::count())->toBe(1)
+        ->and(isset($user->id))->toBeTrue()
+        ->and($user->id)->toBeString()->not->toBeEmpty()
+        ->and($user->id)->not->toHaveLength(0)
+        ->and($user->created_at)->toBeInstanceOf(Carbon::class)
+        ->and($user->name)->toBe('John Doe')
+        ->and($user->age)->toBe(35);
 
-    $this->assertTrue(isset($product->id));
-    $this->assertIsString($product->id);
-    $this->assertNotEquals('', (string) $product->id);
-    $this->assertNotEquals(0, strlen((string) $product->id));
-    $this->assertInstanceOf(Carbon::class, $product->created_at);
-
-    $this->assertEquals('John Doe', $product->name);
-    $this->assertEquals(25, $product->in_stock);
 });
 
-test('Update', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock'] = 25;
-    $product->save();
+it('tests update', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    $this->assertTrue($product->exists);
-    $this->assertTrue(isset($product->id));
-
-    $check = Product::find($product->id);
-    $this->assertInstanceOf(Product::class, $check);
-    $check->in_stock = 36;
+    $check = User::find($user->id);
+    expect($check)->toBeInstanceOf(User::class);
+    $check->age = 36;
     $check->save();
 
-    $this->assertTrue($check->exists);
-    $this->assertInstanceOf(Carbon::class, $check->created_at);
-    $this->assertInstanceOf(Carbon::class, $check->updated_at);
-    $this->assertEquals(1, Product::count());
+    expect($check->exists)->toBeTrue()
+        ->and($check->created_at)->toBeInstanceOf(Carbon::class)
+        ->and($check->updated_at)->toBeInstanceOf(Carbon::class)
+        ->and(User::count())->toBe(1)
+        ->and($check->name)->toBe('John Doe')
+        ->and($check->age)->toBe(36);
 
-    $this->assertEquals('John Doe', $check->name);
-    $this->assertEquals(36, $check->in_stock);
+    $user->update(['age' => 20]);
 
-    $product->update(['in_stock' => 20]);
+    $check = User::find($user->id);
+    expect($check->age)->toBe(20);
 
-    $check = Product::find($product->id);
-    $this->assertEquals(20, $check->in_stock);
-
-    $check->in_stock = 24;
-    $check->color = 'blue'; // new field
+    $check->age = 24;
+    $check->fullname = 'Hans Thomas'; // new field
     $check->save();
 
-    $check = Product::find($product->id);
-    $this->assertEquals(24, $check->in_stock);
-    $this->assertEquals('blue', $check->color);
+    $check = User::find($user->id);
+    expect($check->age)->toBe(24)
+        ->and($check->fullname)->toBe('Hans Thomas');
 });
 
-test('Delete', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['product_id'] = 'c1b5f730-7e5c-11e9-8f9e-2a86e4085a59';
-    $product['in_stock'] = 25;
-    $product->save();
+it('tests upsert', function () {
+    $result = User::upsert([
+        ['email' => 'foo', 'name' => 'bar'],
+        ['name' => 'bar2', 'email' => 'foo2'],
+    ], ['email']);
 
-    $this->assertTrue($product->exists);
-    $this->assertEquals(1, Product::count());
+    expect($result)->toBe(2)
+        ->and(User::count())->toBe(2)
+        ->and(User::where('email', 'foo')->first()->name)->toBe('bar');
 
-    $product->delete();
+    // Update 1 document
+    $result = User::upsert([
+        ['email' => 'foo', 'name' => 'bar2'],
+        ['name' => 'bar2', 'email' => 'foo2'],
+    ], 'email', ['name']);
 
-    $this->assertEquals(0, Product::count());
+    expect($result)->toBe(2)
+        ->and(User::count())->toBe(2)
+        ->and(User::where('email', 'foo')->first()->name)->toBe('bar2');
 
+    // Test single document update
+    $result = User::upsert(['email' => 'foo', 'name' => 'bar3'], 'email');
+
+    expect($result)->toBe(1)
+        ->and(User::count())->toBe(2)
+        ->and(User::where('email', 'foo')->first()->name)->toBe('bar3');
+})->todo();
+
+it('tests manual string id', function () {
+    $user = new User;
+    $user->id = '4af9f23d8ead0e1d32000000';
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
+
+    expect($user->exists)->toBeTrue()
+        ->and($user->id)->toBe('4af9f23d8ead0e1d32000000');
+
+    $user = new User;
+    $user->id = 'customId';
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
+
+    expect($user->exists)->toBeTrue()
+        ->and($user->id)->toBe('customId');
+
+    $raw = $user->getAttributes();
+    expect($raw['id'])->toBeString();
 });
 
-test('All', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 24;
-    $product->save();
+it('tests manual int id', function () {
+    $user = new User;
+    $user->id = 1;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    $product = new Product;
-    $product['name'] = 'Jane Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 35;
-    $product->save();
+    expect($user->exists)->toBeTrue()
+        ->and($user->id)->toBe(1);
 
-    $all = Product::all();
-
-    $this->assertCount(2, $all);
-    $this->assertContains('John Doe', $all->pluck('name'));
-    $this->assertContains('Jane Doe', $all->pluck('name'));
-
+    $raw = $user->getAttributes();
+    expect($raw['id'])->toBeInt();
 });
 
-test('Find', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 35;
-    $product->save();
+it('tests delete', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    $check = Product::find($product->id);
-    $this->assertInstanceOf(Product::class, $check);
-    $this->assertTrue($check->exists);
-    $this->assertEquals($product->id, $check->id);
+    expect($user->exists)->toBeTrue()
+        ->and(User::count())->toBe(1);
 
-    $this->assertEquals('John Doe', $check->name);
-    $this->assertEquals(35, $check->in_stock);
+    $user->delete();
+
+    expect(User::count())->toBe(0);
 });
 
-test('Meta', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 35;
-    $product->save();
+it('tests all', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    $check = Product::find($product->id);
+    $user = new User;
+    $user->name = 'Jane Doe';
+    $user->title = 'user';
+    $user->age = 32;
+    $user->save();
 
-    $meta = $check->getMeta();
+    $all = User::all();
 
-    expect($meta)->not()->toBeNull()
-        ->and($meta->getIndex())->not()->toBeNull()
-        ->and($meta->getScore())->not()->toBeNull()
-        ->and($meta->getHighlights())->not()->toBeNull()
-        ->and($meta->getHighlights())->toBeArray()
-        ->and($meta->getQuery())->toBeArray()
-        ->and($meta->asArray())->toBeArray();
+    expect($all)->toHaveCount(2)
+        ->and($all->pluck('name'))->toContain('John Doe', 'Jane Doe');
 });
 
-test('Get', function () {
-    //this also test bulk insert yay!
-    Product::insert([
+it('tests find', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
+
+    $check = User::find($user->id);
+    expect($check)->toBeInstanceOf(User::class)
+        ->and(Model::isElasticsearchModel($check))->toBeTrue()
+        ->and($check->exists)->toBeTrue()
+        ->and($check->id)->toBe($user->id)
+        ->and($check->name)->toBe('John Doe')
+        ->and($check->age)->toBe(35);
+});
+
+it('tests insert empty', function () {
+    $success = User::insert([]);
+    expect($success->getQueryMetaAsArray()['success'])->toBeTrue();
+});
+
+it('tests get', function () {
+    User::insert([
         ['name' => 'John Doe'],
         ['name' => 'Jane Doe'],
     ]);
 
-    $products = Product::get();
-    $this->assertCount(2, $products);
-    $this->assertInstanceOf(EloquentCollection::class, $products);
-    $this->assertInstanceOf(Product::class, $products[0]);
+    $users = User::get();
+    expect($users)->toHaveCount(2)
+        ->and($users)->toBeInstanceOf(EloquentCollection::class)
+        ->and($users[0])->toBeInstanceOf(User::class);
 });
 
-test('First', function () {
-    //this also test bulk insert yay!
-    Product::insert([
+it('tests first', function () {
+    User::insert([
         ['name' => 'John Doe'],
         ['name' => 'Jane Doe'],
     ]);
 
-    $product = Product::first();
-    $this->assertInstanceOf(Product::class, $product);
-    $this->assertEquals('John Doe', $product->name);
+    $user = User::first();
+    expect($user)->toBeInstanceOf(User::class)
+        ->and(Model::isElasticsearchModel($user))->toBeTrue()
+        ->and($user->name)->toBe('John Doe');
 });
 
-test('No Document', function () {
-    $items = Product::where('name', 'nothing')->get();
-    $this->assertInstanceOf(EloquentCollection::class, $items);
-    $this->assertEquals(0, $items->count());
+it('tests no document', function () {
+    $items = Item::where('name', 'nothing')->get();
+    expect($items)->toBeInstanceOf(EloquentCollection::class)
+        ->and($items->count())->toBe(0);
 
-    $item = Product::where('name', 'nothing')->first();
-    $this->assertNull($item);
+    $item = Item::where('name', 'nothing')->first();
+    expect($item)->toBeNull();
 
-    $item = Product::find('51c33d8981fec6813e00000a');
-    $this->assertNull($item);
-
+    $item = Item::find('51c33d8981fec6813e00000a');
+    expect($item)->toBeNull();
 });
 
-test('Find Or Fail', function () {
-    $this->expectException(ModelNotFoundException::class);
-    Product::findOrFail('51c33d8981fec6813e00000a');
-
+it('tests find or fail', function () {
+    expect(fn () => User::findOrFail('51c33d8981fec6813e00000a'))
+        ->toThrow(ModelNotFoundException::class);
 });
 
-test('Create', function () {
-    $product = Product::create(['name' => 'Jane Poe']);
-    $this->assertInstanceOf(Product::class, $product);
+it('tests create', function () {
+    $user = User::create(['name' => 'Jane Poe']);
+    expect($user)->toBeInstanceOf(User::class)
+        ->and(Model::isElasticsearchModel($user))->toBeTrue()
+        ->and($user->exists)->toBeTrue()
+        ->and($user->name)->toBe('Jane Poe');
 
-    $this->assertTrue($product->exists);
-    $this->assertEquals('Jane Poe', $product->name);
-
-    $check = Product::where('name', 'Jane Poe')->first();
-    $this->assertInstanceOf(Product::class, $check);
-    $this->assertEquals($product->id, $check->id);
+    $check = User::where('name', 'Jane Poe')->first();
+    expect($check)->toBeInstanceOf(User::class)
+        ->and($check->id)->toBe($user->id);
 });
 
-test('Destroy', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 35;
-    $product->save();
+it('tests destroy', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    Product::destroy($product->id);
-    $this->assertEquals(0, Product::count());
+    User::destroy((string) $user->id);
+
+    expect(User::count())->toBe(0);
 });
 
-test('Touch', function () {
-    $product = new Product;
-    $product['name'] = 'John Doe';
-    $product['description'] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.';
-    $product['in_stock'] = 35;
-    $product->save();
+it('tests touch', function () {
+    $user = new User;
+    $user->name = 'John Doe';
+    $user->title = 'admin';
+    $user->age = 35;
+    $user->save();
 
-    $old = $product->updated_at;
+    $old = $user->updated_at;
     sleep(1);
-    $product->touch();
+    $user->touch();
 
-    $check = Product::find($product->id);
-    $this->assertInstanceOf(Product::class, $check);
-
-    $this->assertNotEquals($old, $check->updated_at);
+    $check = User::find($user->id);
+    expect($check)->toBeInstanceOf(User::class)
+        ->and($check->updated_at)->not->toBe($old);
 });
 
-test('Soft Delete', function () {
-    Soft::truncate();
-    Soft::create(['name' => 'John Doe', 'status' => 1]);
-    Soft::create(['name' => 'Jane Doe', 'status' => 2]);
+it('tests soft delete', function () {
+    Soft::create(['name' => 'John Doe']);
+    Soft::create(['name' => 'Jane Doe']);
 
-    $this->assertEquals(2, Soft::count());
+    expect(Soft::count())->toBe(2);
 
-    $object = Soft::where('status', 1)->first();
-    $this->assertInstanceOf(Soft::class, $object);
-    $this->assertTrue($object->exists);
-    $this->assertFalse($object->trashed());
-    $this->assertNull($object->deleted_at);
+    $object = Soft::where('name', 'John Doe')->first();
+    expect($object)->toBeInstanceOf(Soft::class)
+        ->and($object->exists)->toBeTrue()
+        ->and($object->trashed())->toBeFalse()
+        ->and($object->deleted_at)->toBeNull();
 
     $object->delete();
-    $this->assertTrue($object->trashed());
-    $this->assertNotNull($object->deleted_at);
+    expect($object->trashed())->toBeTrue()
+        ->and($object->deleted_at)->not->toBeNull();
 
-    $object = Soft::where('status', 1)->first();
-    $this->assertNull($object);
+    $object = Soft::where('name', 'John Doe')->first();
+    expect($object)->toBeNull()
+        ->and(Soft::count())->toBe(1)
+        ->and(Soft::withTrashed()->count())->toBe(2);
 
-    $this->assertEquals(1, Soft::count());
-    $this->assertEquals(2, Soft::withTrashed()->count());
-
-    $object = Soft::withTrashed()->where('status', 1)->first();
-    $this->assertNotNull($object);
-    $this->assertInstanceOf(Carbon::class, $object->deleted_at);
-    $this->assertTrue($object->trashed());
+    $object = Soft::withTrashed()->where('name', 'John Doe')->first();
+    expect($object)->not->toBeNull()
+        ->and($object->deleted_at)->toBeInstanceOf(Carbon::class)
+        ->and($object->trashed())->toBeTrue();
 
     $object->restore();
-    $this->assertEquals(2, Soft::count());
+    expect(Soft::count())->toBe(2);
+})->todo();
 
-});
-
-test('Scope', function () {
-    Product::insert([
-        ['name' => 'knife', 'color' => 'green'],
-        ['name' => 'spoon', 'color' => 'red'],
+it('tests scope', function () {
+    Item::insert([
+        ['name' => 'knife', 'type' => 'sharp'],
+        ['name' => 'spoon', 'type' => 'round'],
     ]);
 
-    $green = Product::green()->get();
-    $this->assertEquals(1, $green->count());
+    $sharp = Item::sharp()->get();
+    expect($sharp->count())->toBe(1);
 });
 
-test('To Array', function () {
-    $product = Product::create(['name' => 'fork', 'color' => 'green']);
+it('tests to array', function () {
+    $item = Item::create(['name' => 'fork', 'type' => 'sharp']);
 
-    $array = $product->toArray();
-
-    expect($array)->toHaveKeys(['id', 'color', 'created_at', 'name', 'updated_at'])
+    $array = $item->toArray();
+    $keys = array_keys($array);
+    sort($keys);
+    expect($keys)->toEqual([
+        'created_at',
+        'id',
+        'name',
+        'type',
+        'updated_at',
+    ])
         ->and($array['created_at'])->toBeString()
         ->and($array['updated_at'])->toBeString()
         ->and($array['id'])->toBeString();
 });
 
-test('Dot Notation', function () {
+it('tests dates', function () {
+    $user = User::create(['name' => 'John Doe', 'birthday' => new DateTime('1965/1/1')]);
+    expect($user->birthday)->toBeInstanceOf(Carbon::class);
 
-    $product = Product::create([
-        'name' => 'John Doe',
-        'manufacturer' => [
-            'name' => 'Paris',
-            'country' => 'France',
-        ],
+    $user = User::whereTimestamp('birthday', '<', new DateTime('1968/1/1'))->first();
+    expect($user->name)->toBe('John Doe');
+
+    $user = User::create(['name' => 'John Doe', 'birthday' => new DateTime('1980/1/1')]);
+    expect($user->birthday)->toBeInstanceOf(Carbon::class);
+
+    $check = User::find($user->id);
+
+    expect($check->birthday)->toBeInstanceOf(Carbon::class)
+        ->and($check->birthday->format('U'))->toBe($user->birthday->format('U'));
+
+    $user = User::whereTimestamp('birthday', '>', new DateTime('1975/1/1'))->first();
+    expect($user->name)->toBe('John Doe');
+
+    // test custom date format for json output
+    $json = $user->toArray();
+    expect($json['birthday'])->toBe($user->birthday->format('l jS \of F Y h:i:s A'))
+        ->and($json['created_at'])->toBe($user->created_at->format('l jS \of F Y h:i:s A'));
+
+    // test created_at
+    $item = Item::create(['name' => 'sword']);
+
+    expect($item->getRawOriginal('created_at'))->toBeInstanceOf(Carbon::class)
+        ->and($item->getRawOriginal('created_at')->toDateTime()->getTimestamp())
+        ->toBe($item->created_at->getTimestamp())
+        ->and(abs(time() - $item->created_at->getTimestamp()))->toBeLessThan(2);
+
+    $item = Item::create(['name' => 'sword']);
+    expect($item)->toBeInstanceOf(Item::class);
+    $json = $item->toArray();
+    expect($json['created_at'])->toBe($item->created_at->toISOString());
+});
+
+it('tests date null', function () {
+    $user = User::create(['name' => 'Jane Doe', 'birthday' => null]);
+    expect($user->birthday)->toBeNull();
+
+    $user->setAttribute('birthday', new DateTime);
+    $user->setAttribute('birthday', null);
+    expect($user->birthday)->toBeNull();
+
+    $user->save();
+
+    // Re-fetch to be sure
+    $user = User::find($user->id);
+    expect($user->birthday)->toBeNull();
+
+    // Nested field with dot notation
+    $user = User::create(['name' => 'Jane Doe', 'entry' => ['date' => null]]);
+    expect($user->getAttribute('entry.date'))->toBeNull();
+
+    $user->setAttribute('entry.date', new DateTime);
+    $user->setAttribute('entry.date', null);
+    expect($user->getAttribute('entry.date'))->toBeNull();
+
+    // Re-fetch to be sure
+    $user = User::find($user->id);
+    expect($user->getAttribute('entry.date'))->toBeNull();
+});
+
+it('tests id attribute', function () {
+    $user = User::create(['name' => 'John Doe']);
+    expect($user)->toBeInstanceOf(User::class)
+        ->and($user->id)->toBe($user->_id);
+
+    $user = User::create(['id' => 'custom_id', 'name' => 'John Doe']);
+    expect($user->id)->toBe($user->_id);
+})->todo();
+
+it('tests attribute mutator', function () {
+    $username = 'JaneDoe';
+    $usernameSlug = Str::slug($username);
+    $user = User::create([
+        'name' => 'Jane Doe',
+        'username' => $username,
     ]);
 
-    $this->assertEquals('Paris', $product->getAttribute('manufacturer.name'));
-    $this->assertEquals('Paris', $product['manufacturer.name']);
-    $this->assertEquals('Paris', $product->{'manufacturer.name'});
-
-    // Fill
-    //TODO: Fix this it's not working correctly
-    //    $product->fill(['manufacturer.name' => 'Strasbourg']);
-    //
-    //    $this->assertEquals('Strasbourg', $product['manufacturer.name']);
+    expect($user->getAttribute('username'))->not->toBe($username)
+        ->and($user['username'])->not->toBe($username)
+        ->and($user->username)->not->toBe($username)
+        ->and($user->getAttribute('username'))->toBe($usernameSlug)
+        ->and($user['username'])->toBe($usernameSlug)
+        ->and($user->username)->toBe($usernameSlug);
 });
 
-test('Truncate Model', function () {
-    Product::create(['name' => 'John Doe']);
-
-    Product::truncate();
-    sleep(2);
-
-    $this->assertEquals(0, Product::count());
+it('tests multiple level dot notation', function () {
+    $book = Book::create([
+        'title' => 'A Game of Thrones',
+        'chapters' => [
+            'one' => ['title' => 'The first chapter'],
+        ],
+    ]);
+    expect($book)->toBeInstanceOf(Book::class)
+        ->and($book->chapters)->toBe(['one' => ['title' => 'The first chapter']])
+        ->and($book['chapters.one'])->toBe(['title' => 'The first chapter'])
+        ->and($book['chapters.one.title'])->toBe('The first chapter');
 
 });
 
-test('Chunk By Id', function () {
-
-    Product::create(['name' => 'fork', 'order_values' => [10, 20]]);
-    Product::create(['name' => 'spork', 'order_values' => [10, 35, 20, 30]]);
-    Product::create(['name' => 'spoon', 'order_values' => [20, 30]]);
+it('tests chunk by id', function () {
+    User::create(['name' => 'fork', 'tags' => ['sharp', 'pointy']]);
+    User::create(['name' => 'spork', 'tags' => ['sharp', 'pointy', 'round', 'bowl']]);
+    User::create(['name' => 'spoon', 'tags' => ['round', 'bowl']]);
 
     $names = [];
-    Product::chunkById(2, function (EloquentCollection $items) use (&$names) {
+    User::chunkById(2, function (EloquentCollection $items) use (&$names) {
         $names = array_merge($names, $items->pluck('name')->all());
     });
 
-    $this->assertEquals(['fork', 'spork', 'spoon'], $names);
-
+    expect($names)->toBe(['fork', 'spork', 'spoon']);
 });
 
-test('Guarded Model', function () {
+it('tests truncate model', function () {
+    User::create(['name' => 'John Doe']);
+
+    User::truncate();
+
+    expect(User::count())->toBe(0);
+});
+
+it('tests guarded model', function () {
     $model = new Guarded;
 
     // foobar is properly guarded
     $model->fill(['foobar' => 'ignored', 'name' => 'John Doe']);
-    $this->assertFalse(isset($model->foobar));
-    $this->assertSame('John Doe', $model->name);
+    expect(isset($model->foobar))->toBeFalse()
+        ->and($model->name)->toBe('John Doe');
 
     // foobar is guarded to any level
     $model->fill(['foobar->level2' => 'v2']);
-    $this->assertNull($model->getAttribute('foobar->level2'));
+    expect($model->getAttribute('foobar->level2'))->toBeNull();
 
     // multi level statement also guarded
     $model->fill(['level1->level2' => 'v1']);
-    $this->assertNull($model->getAttribute('level1->level2'));
+    expect($model->getAttribute('level1->level2'))->toBeNull();
 
     // level1 is still writable
     $dataValues = ['array', 'of', 'values'];
     $model->fill(['level1' => $dataValues]);
-    $this->assertEquals($dataValues, $model->getAttribute('level1'));
-
+    expect($model->getAttribute('level1'))->toBe($dataValues);
 });
 
-test('First Or Create', function () {
+it('tests first or create', function () {
     $name = 'Jane Poe';
 
-    $user = Product::where('name', $name)->first();
-    $this->assertNull($user);
+    $user = User::where('name', $name)->first();
+    expect($user)->toBeNull();
 
-    $user = Product::firstOrCreate(['name' => $name]);
-    $this->assertInstanceOf(Product::class, $user);
-    $this->assertTrue($user->exists);
-    $this->assertEquals($name, $user->name);
+    $user = User::firstOrCreate(['name' => $name]);
+    expect($user)->toBeInstanceOf(User::class)
+        ->and(Model::isElasticsearchModel($user))->toBeTrue()
+        ->and($user->exists)->toBeTrue()
+        ->and($user->name)->toBe($name);
 
-    $check = Product::where('name', $name)->first();
-    $this->assertInstanceOf(Product::class, $check);
-    $this->assertEquals($user->id, $check->id);
-
+    $check = User::where('name', $name)->first();
+    expect($check)->toBeInstanceOf(User::class)
+        ->and($check->id)->toBe($user->id);
 });
 
-test('Update Or Create', function () {
-    // Insert data to ensure we filter on the correct criteria, and not getting
-    // the first document randomly.
-    Product::insert([
-        ['name' => 'fixture@example.com'],
-        ['name' => 'john.doe@example.com'],
-    ]);
+it('tests numeric field name', function () {
+    $user = new User;
+    $user->{1} = 'one';
+    $user->{2} = ['3' => 'two.three'];
+    $user->save();
 
-    Carbon::setTestNow('2010-01-01');
-    $createdAt = Carbon::now()->getTimestamp();
-    $events = [];
-    registerModelEvents(Product::class, $events);
+    $found = User::where('1', 'one')->first();
+    expect($found)->toBeInstanceOf(User::class)
+        ->and($found[1])->toBe('one');
 
-    // Create
-    $product = Product::updateOrCreate(
-        ['name' => 'bar'],
-        ['name' => 'bar', 'in_stock' => 30],
-    );
-
-    $this->assertInstanceOf(Product::class, $product);
-    $this->assertEquals('bar', $product->name);
-    $this->assertEquals(30, $product->in_stock);
-    $this->assertEquals($createdAt, $product->created_at->getTimestamp());
-    $this->assertEquals($createdAt, $product->updated_at->getTimestamp());
-    $this->assertEquals(['saving', 'creating', 'created', 'saved'], $events);
-    Carbon::setTestNow('2010-02-01');
-    $updatedAt = Carbon::now()->getTimestamp();
-
-    // Update
-    $events = [];
-    $product = Product::updateOrCreate(
-        ['name' => 'bar'],
-        ['in_stock' => 25]
-    );
-
-    $this->assertInstanceOf(Product::class, $product);
-    $this->assertEquals('bar', $product->name);
-    $this->assertEquals(25, $product->in_stock);
-    $this->assertEquals($createdAt, $product->created_at->getTimestamp());
-    $this->assertEquals($updatedAt, $product->updated_at->getTimestamp());
-    $this->assertEquals(['saving', 'updating', 'updated', 'saved'], $events);
-
-    // Stored data
-    $checkProduct = Product::where(['name' => 'bar'])->first();
-    $this->assertInstanceOf(Product::class, $checkProduct);
-    $this->assertEquals('bar', $checkProduct->name);
-    $this->assertEquals(25, $checkProduct->in_stock);
-    $this->assertEquals($createdAt, $checkProduct->created_at->getTimestamp());
-    $this->assertEquals($updatedAt, $checkProduct->updated_at->getTimestamp());
+    $found = User::where('2.3', 'two.three')->first();
+    expect($found)->toBeInstanceOf(User::class)
+        ->and($found[2])->toBe([3 => 'two.three']);
 });
 
-test('Create With Null Id', function (string $id) {
-    $product = Product::create([$id => null, 'email' => 'foo@bar']);
-    $this->assertNotNull($product->id);
-    $this->assertSame(1, Product::count());
+it('tests create with null id', function (string $id) {
+    $user = User::create([$id => null, 'email' => 'foo@bar']);
+    expect($user->id)->toBeString()->
+    and(! isset($user->_id))->toBeTrue()
+        ->and(User::count())->toBe(1);
 })->with([
     'id',
-    //    #TODO: this fails.
-    //    '_id'
+    '_id',
 ]);
-
-function registerModelEvents(string $modelClass, array &$events): void
-{
-    $modelClass::creating(function () use (&$events) {
-        $events[] = 'creating';
-    });
-    $modelClass::created(function () use (&$events) {
-        $events[] = 'created';
-    });
-    $modelClass::updating(function () use (&$events) {
-        $events[] = 'updating';
-    });
-    $modelClass::updated(function () use (&$events) {
-        $events[] = 'updated';
-    });
-    $modelClass::saving(function () use (&$events) {
-        $events[] = 'saving';
-    });
-    $modelClass::saved(function () use (&$events) {
-        $events[] = 'saved';
-    });
-}

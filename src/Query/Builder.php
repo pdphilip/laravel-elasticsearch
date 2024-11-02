@@ -1641,6 +1641,12 @@ class Builder extends BaseBuilder
 
     protected function _parseWhereTimestamp(array $where): array
     {
+
+      # Convert Timestamp in to Unix Millis
+      if($where['value'] instanceof \DateTime){
+        $where['value'] = $where['value']->format('U') * 1000;
+      }
+
         $where['value'] = $this->_formatTimestamp($where['value']);
 
         return $this->_parseWhereBasic($where);

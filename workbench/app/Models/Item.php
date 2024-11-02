@@ -16,6 +16,7 @@
     protected $connection = 'elasticsearch';
     protected $index = 'skills';
     protected static $unguarded = true;
+
     public function user(): BelongsTo
     {
       return $this->belongsTo(User::class);
