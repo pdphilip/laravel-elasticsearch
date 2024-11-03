@@ -62,14 +62,6 @@
     {
       $schema = Schema::connection('elasticsearch');
 
-      $schema->deleteIfExists('labeleds');
-      $schema->create('labeleds', function (IndexBlueprint $table) {
-//        $table->string('skill_ids');
-//        $table->string('sql_user_ids');
-        $table->date('created_at');
-        $table->date('updated_at');
-      });
-
       $schema->deleteIfExists('labels');
       $schema->create('labels', function (IndexBlueprint $table) {
         $table->string('name');

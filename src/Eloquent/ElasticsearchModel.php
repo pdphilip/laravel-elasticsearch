@@ -168,6 +168,8 @@ trait ElasticsearchModel
             return null;
         }
 
+        $key = (string) $key;
+
         // Dot notation support.
         if (Str::contains($key, '.') && Arr::has($this->attributes, $key)) {
             return $this->getAttributeValue($key);
@@ -276,6 +278,53 @@ trait ElasticsearchModel
         return $saved;
     }
 
+  /** @inheritdoc */
+  public function push()
+  {
+    $parameters = func_get_args();
+    if ($parameters) {
+      $unique = false;
+
+      if (count($parameters) === 3) {
+        [$column, $values, $unique] = $parameters;
+      } else {
+        [$column, $values] = $parameters;
+      }
+
+      // Do batch push by default.
+      $values = Arr::wrap($values);
+
+      $query = $this->setKeysForSaveQuery($this->newQuery());
+
+      $this->pushAttributeValues($column, $values, $unique);
+
+      return $query->push($column, $values, $unique);
+    }
+
+    return parent::push();
+  }
+
+
+  /**
+   * Remove one or more values from an array.
+   *
+   * @param  string $column
+   * @param  mixed  $values
+   *
+   * @return mixed
+   */
+  public function pull($column, $values)
+  {
+    // Do batch pull by default.
+    $values = Arr::wrap($values);
+
+    $query = $this->setKeysForSaveQuery($this->newQuery());
+
+    $this->pullAttributeValues($column, $values);
+
+    return $query->pull($column, $values);
+  }
+
     /**
      * Append one or more values to the underlying attribute value and sync with original.
      */
@@ -381,15 +430,14 @@ trait ElasticsearchModel
      */
     protected function getRelationsWithoutParent(): array
     {
-        $relations = $this->getRelations();
+      $relations = $this->getRelations();
 
-        $parentRelation = $this->getParentRelation();
-        if ($parentRelation instanceof Relation) {
-            //@phpstan-ignore-next-line
-            unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
-        }
+      $parentRelation = $this->getParentRelation();
+      if ($parentRelation) {
+        unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
+      }
 
-        return $relations;
+      return $relations;
     }
 
     /**

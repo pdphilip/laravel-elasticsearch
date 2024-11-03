@@ -481,6 +481,28 @@ class Bridge
      * @throws QueryException
      * @throws ParameterException
      */
+    public function processUpdateByQuery($wheres, $newValues, $options, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
+    {
+      $params = $this->buildParams($this->index, $wheres, $options, []);
+
+      $params['body'] = [...$params['body'], ...$newValues];
+      $params['refresh'] = $waitForRefresh->getDelete();
+
+      $process = [];
+      try {
+        $process = $this->client->updateByQuery($params);
+      } catch (Exception $e) {
+        $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
+      }
+
+      return $this->_return([], $process, $params, $this->_queryTag(__FUNCTION__));
+
+    }
+
+    /**
+     * @throws QueryException
+     * @throws ParameterException
+     */
     public function processUpdateMany($wheres, $newValues, $options, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
     {
         $resultMeta['modified'] = 0;

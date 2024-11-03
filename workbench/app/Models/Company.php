@@ -7,31 +7,6 @@ use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use Workbench\Database\Factories\CompanyFactory;
 
-/**
- * App\Models\Company
- *
- ******Fields*******
- *
- * @property string $_id
- * @property string $name
- * @property int $status
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- *
- ******Relationships*******
- * @property-read User $user
- * @property-read Avatar $avatar
- * @property-read CompanyLog $companyLogs
- * @property-read CompanyProfile $companyProfile
- * @property-read EsPhoto $esPhotos
- * @property-read Photo $photos
- * @property-read UserLog $userLogs
- * @property-read Client $clients
- * @property-read mixed $status_name
- * @property-read mixed $status_color
- *
- * @mixin Model
- */
 class Company extends Model
 {
     use HasFactory, HybridRelations;

@@ -14,22 +14,12 @@
    * @property string $author
    * @property array $chapters
    */
-  class Book extends Model
+  class Address extends Model
   {
 
     protected $connection = 'elasticsearch';
-    protected $index = 'books';
+    protected $index = 'address';
     protected static $unguarded = true;
-
-    public function author(): BelongsTo
-    {
-      return $this->belongsTo(User::class, 'author_id');
-    }
-
-    public function sqlAuthor(): BelongsTo
-    {
-      return $this->belongsTo(SqlUser::class, 'author_id');
-    }
 
     /**
      * Check if we need to run the schema.
@@ -38,8 +28,8 @@
     {
       $schema = Schema::connection('elasticsearch');
 
-      $schema->deleteIfExists('books');
-      $schema->create('books', function (IndexBlueprint $table) {
+      $schema->deleteIfExists('address');
+      $schema->create('address', function (IndexBlueprint $table) {
         $table->date('created_at');
         $table->date('updated_at');
       });

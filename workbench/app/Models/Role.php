@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
  * @property string $title
@@ -15,7 +17,7 @@ class Role extends Model
 {
     protected $connection = 'elasticsearch';
 
-    protected $index = 'skills';
+    protected $index = 'roles';
 
     protected static $unguarded = true;
 
@@ -27,5 +29,19 @@ class Role extends Model
     public function sqlUser()
     {
         return $this->belongsTo(SqlUser::class);
+    }
+
+    /**
+     * Check if we need to run the schema.
+     */
+    public static function executeSchema()
+    {
+        $schema = Schema::connection('elasticsearch');
+
+        $schema->deleteIfExists('roles');
+        $schema->create('roles', function (IndexBlueprint $table) {
+            $table->date('created_at');
+            $table->date('updated_at');
+        });
     }
 }

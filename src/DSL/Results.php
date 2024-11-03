@@ -79,6 +79,11 @@ class Results
         return $this->_meta->getModified();
     }
 
+    public function getTotalCount(): int
+    {
+        return $this->_meta->getTotal();
+    }
+
     public function getDeletedCount(): int
     {
         return $this->_meta->getDeleted();

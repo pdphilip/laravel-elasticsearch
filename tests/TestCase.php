@@ -22,21 +22,6 @@ class TestCase extends Orchestra
         ];
     }
 
-    /**
-     * Define database migrations.
-     */
-    protected function defineDatabaseMigrations(): void
-    {
-        // Testing migrations are located in workbench database/migrations
-        $this->loadMigrationsFrom(
-            workbench_path('database/migrations')
-        );
-    }
-
-    protected function defineDatabaseSeeders(): void
-    {
-        $this->seed(DatabaseSeeder::class);
-    }
 
     protected function getEnvironmentSetUp($app): void
     {

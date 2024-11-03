@@ -104,10 +104,7 @@ class Builder extends BaseEloquentBuilder
         $meta = $data->getQueryMeta();
         $results = $this->model->hydrate($data->all())->all();
 
-        return [
-            'results' => $results,
-            'meta' => $meta,
-        ];
+        return $results;
     }
 
     /**
@@ -117,14 +114,15 @@ class Builder extends BaseEloquentBuilder
     public function get($columns = ['*']): ElasticCollection
     {
         $builder = $this->applyScopes();
-        $fetch = $builder->getModels($columns);
-        $meta = $fetch['meta'];
-        if (count($models = $fetch['results']) > 0) {
+      $models = $builder->getModels($columns);
+//        $meta = $fetch['meta'];
+        if (count($models) > 0) {
             $models = $builder->eagerLoadRelations($models);
         }
         $elasticCollection = $builder->getModel()->newCollection($models);
 
-        $elasticCollection->setQueryMeta($meta);
+        // TODO: How do we get both meta and the items here? Prob need a special item for ElasticCollection
+//        $elasticCollection->setQueryMeta([]);
 
         return $elasticCollection;
     }
@@ -176,6 +174,7 @@ class Builder extends BaseEloquentBuilder
                 $softDeleteColumn = null;
             }
         }
+
         $find = $this->query->find($id, $columns, $softDeleteColumn);
         if ($find->isSuccessful()) {
             $instance = $this->newModelInstance();

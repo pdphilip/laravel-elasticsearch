@@ -88,6 +88,9 @@ trait HybridRelations
 
         $instance = new $related;
 
+        // Here we will gather up the morph type and ID for the relationship so that we
+        // can properly query the intermediate table of a relation. Finally, we will
+        // get the table and create the relationship instances for the developers.
         [$type, $id] = $this->getMorphs($name, $type, $id);
 
         $table = $instance->getTable();
@@ -103,10 +106,11 @@ trait HybridRelations
     public function belongsTo($related, $foreignKey = null, $otherKey = null, $relation = null)
     {
 
+        // If no relation name was given, we will use this debug backtrace to extract
+        // the calling method's name and use that as the relationship name as most
+        // of the time this will be what we desire to use for the relationships.
         if ($relation === null) {
-            [$current, $caller] = debug_backtrace(0, 2);
-
-            $relation = $caller['function'];
+            $relation = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'];
         }
 
         // Check if it is a relation with an original model.
@@ -130,17 +134,21 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null): MorphTo
+    public function morphTo($name = null, $type = null, $id = null, $ownerKey = null)
     {
         if ($name === null) {
             [$current, $caller] = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
 
-            $name = Str::snake($caller['function']);
+            $name = $caller['function'];
         }
 
-        [$type, $id] = $this->getMorphs($name, $type, $id);
+        [$type, $id] = $this->getMorphs(Str::snake($name), $type, $id);
 
-        if (($class = $this->$type) === null) {
+        // If the type value is null it is probably safe to assume we're eager loading
+        // the relationship. When that is the case we will pass in a dummy query as
+        // there are multiple types in the morph and we can't use single queries.
+        $class = $this->$type;
+        if ($class === null) {
             //@phpstan-ignore-next-line
             return new MorphTo($this->newQuery(), $this, $id, $ownerKey, $type, $name);
         }
@@ -214,8 +222,8 @@ trait HybridRelations
         // If no table name was provided, we can guess it by concatenating the two
         // models using underscores in alphabetical order. The two model names
         // are transformed to snake case from their default CamelCase also.
-        if (is_null($table)) {
-            $table = $this->joiningTable($related, $instance);
+        if ($table === null) {
+            $table = $instance->getIndex();
         }
 
         // Now we're ready to create a new query builder for the related model and
@@ -268,7 +276,7 @@ trait HybridRelations
             );
         }
 
-        $instance = $this->newRelatedInstance($related);
+        $instance = new $related;
 
         $foreignPivotKey = $foreignPivotKey ?: $name.'_id';
         $relatedPivotKey = $relatedPivotKey ?: $instance->getForeignKey();
@@ -321,7 +329,8 @@ trait HybridRelations
             // For the inverse of the polymorphic many-to-many relations, we will change
             // the way we determine the foreign and other keys, as it is the opposite
             // of the morph-to-many method since we're figuring out these inverses.
-            $foreignPivotKey = $foreignPivotKey ?: Str::plural($this->getForeignKey());
+            //            $foreignPivotKey = $foreignPivotKey ?: Str::plural($this->getForeignKey());
+            $foreignPivotKey = $foreignPivotKey ?: $this->getForeignKey();
 
             $relatedPivotKey = $relatedPivotKey ?: $name.'_id';
         }
@@ -349,17 +358,5 @@ trait HybridRelations
         }
 
         return new EloquentBuilder($query);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    protected function guessBelongsToManyRelation(): string
-    {
-        if (method_exists($this, 'getBelongsToManyCaller')) {
-            return $this->getBelongsToManyCaller();
-        }
-
-        return parent::guessBelongsToManyRelation();
     }
 }

@@ -12,6 +12,7 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
+use InvalidArgumentException;
 use LogicException;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Collection\ElasticResult;
@@ -338,7 +339,100 @@ class Builder extends BaseBuilder
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
 
-    /**
+  /**
+   * Append one or more values to an array.
+   *
+   * @param  string|array $column
+   * @param  mixed        $value
+   * @param  bool         $unique
+   *
+   * @return int
+   */
+  public function push($column, $value = NULL, $unique = FALSE)
+  {
+    // Check if we are pushing multiple values.
+    $batch = is_array($value) && array_is_list($value);
+    $params = [];
+
+    $value = $batch ? $value : [$value];
+//    foreach ($value as $key => $v){
+//      if(is_array($v)){
+//      $value[$key] = base64_encode(json_encode($v));
+//      }
+//    }
+
+    // Prepare the script for unique or non-unique addition.
+    if ($unique) {
+      $scriptSource = "
+            if (ctx._source.{$column} == null) {
+                ctx._source.{$column} = [];
+            }
+            for (item in params.values) {
+                if (!ctx._source.{$column}.contains(item)) {
+                    ctx._source.{$column}.add(item);
+                }
+            }
+        ";
+    } else {
+      $scriptSource = "
+            if (ctx._source.{$column} == null) {
+                ctx._source.{$column} = [];
+            }
+            ctx._source.{$column}.addAll(params.values);
+        ";
+    }
+
+    // Prepare parameters for the script.
+    $params['values'] = $value;
+
+    return $this->_processUpdateByQuery([
+                                          'script' => [
+                                            'source' => $scriptSource,
+                                            'params' => $params,
+                                          ]
+                                        ]);
+  }
+
+  /**
+   * Remove one or more values from an array.
+   *
+   * @param string|array $column
+   * @param mixed        $value
+   *
+   * @return int
+   */
+  public function pull($column, $value = NULL)
+  {
+    // Check if we are pulling multiple values.
+    $batch = is_array($value) && array_is_list($value);
+    $params = [];
+
+    // Prepare the script for pulling/removing values.
+    $scriptSource = "
+        if (ctx._source.{$column} != null) {
+            ctx._source.{$column}.removeIf(item -> {
+                for (removeItem in params.values) {
+                    if (item == removeItem) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+    ";
+
+    // Prepare parameters for the script.
+    $params['values'] = $batch ? $value : [$value];
+
+    return $this->_processUpdateByQuery([
+                                  'script' => [
+                                    'source' => $scriptSource,
+                                    'params' => $params,
+                                  ]
+                                ]);
+  }
+
+  /**
      * {@inheritdoc}
      */
     public function increment($column, $amount = 1, $extra = [], $options = [])
@@ -1372,6 +1466,20 @@ class Builder extends BaseBuilder
         $result = $this->connection->{$method}($wheres, $values, $options, $this->waitForRefresh);
         if ($result->isSuccessful()) {
             return $result->getModifiedCount();
+        }
+
+        return 0;
+    }
+
+    protected function _processUpdateByQuery($values, array $options = []): int
+    {
+
+        $wheres = $this->compileWheres();
+        $result = $this->connection->updateByQuery($wheres, $values, $options, $this->waitForRefresh);
+
+
+        if ($result->isSuccessful()) {
+            return $result->getTotalCount();
         }
 
         return 0;
