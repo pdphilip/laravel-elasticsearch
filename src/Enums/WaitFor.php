@@ -19,7 +19,7 @@ enum WaitFor
         };
     }
 
-    public function getDelete(): bool
+    public function getOperation(): bool
     {
         return match ($this) {
             WaitFor::TRUE, WaitFor::WAITFOR => true,

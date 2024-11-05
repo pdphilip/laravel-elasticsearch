@@ -11,6 +11,7 @@ use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Exception;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Contracts\ArrayStore;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
 use PDPhilip\Elasticsearch\Enums\WaitFor;
@@ -344,7 +345,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processSave($data, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
+    public function processSave($data, ArrayStore $options): Results
     {
         $id = null;
         if (isset($data['id'])) {
@@ -389,7 +390,7 @@ class Bridge
      *
      * @throws QueryException
      */
-    public function processInsertBulk(array $records, bool $returnData = false, WaitFor $waitForRefresh = WaitFor::WAITFOR): array
+    public function processInsertBulk(array $records, ArrayStore $options): array
     {
         $params = [
             'body' => [],
@@ -472,7 +473,7 @@ class Bridge
     /**
      * @throws QueryException
      */
-    public function processInsertOne($values, WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
+    public function processInsertOne($values, ArrayStore $options): Results
     {
         return $this->processSave($values, $waitForRefresh);
     }
@@ -486,7 +487,7 @@ class Bridge
       $params = $this->buildParams($this->index, $wheres, $options, []);
 
       $params['body'] = [...$params['body'], ...$newValues];
-      $params['refresh'] = $waitForRefresh->getDelete();
+      $params['refresh'] = $waitForRefresh->getOperation();
 
       $process = [];
       try {
@@ -606,7 +607,7 @@ class Bridge
         }
         $response = [];
         $params = $this->buildParams($this->index, $wheres, $options);
-        $params['refresh'] = $waitForRefresh->getDelete();
+        $params['refresh'] = $waitForRefresh->getOperation();
         try {
             $responseObject = $this->client->deleteByQuery($params);
             $response = $responseObject->asArray();

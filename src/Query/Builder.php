@@ -12,7 +12,6 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
-use InvalidArgumentException;
 use LogicException;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Collection\ElasticResult;
@@ -23,6 +22,7 @@ use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
 use PDPhilip\Elasticsearch\Meta\QueryMetaData;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
 
 /**
@@ -33,9 +33,8 @@ use RuntimeException;
 #[AllowDynamicProperties]
 class Builder extends BaseBuilder
 {
+    use HasOptions;
     use Utilities;
-
-    public array $options = [];
 
     public bool $paginating = false;
 
@@ -106,8 +105,6 @@ class Builder extends BaseBuilder
 
     protected string $index = '';
 
-    protected WaitFor $waitForRefresh = WaitFor::WAITFOR;
-
     /**
      * Operator conversion.
      */
@@ -141,29 +138,38 @@ class Builder extends BaseBuilder
         return $this->connection;
     }
 
-    public function setRefresh(WaitFor $value): void
+    /**
+     * Set whether to refresh during delete by query
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html
+     *
+     * @throws \Exception
+     */
+    public function withoutRefresh(WaitFor $option = WaitFor::WAITFOR): self
     {
-        $this->waitForRefresh = $value;
+        $this->options->add('waitForRefresh', $option);
+
+        return $this;
     }
 
+    /**
+     * Refreshes the Elasticsearch index.
+     *
+     * @return array The refresh status of the shards.
+     *
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function refreshIndex(): array
+    {
+        $client = $this->connection->getClient();
 
-  /**
-   * Refreshes the Elasticsearch index.
-   *
-   * @return array The refresh status of the shards.
-   * @throws ClientResponseException
-   * @throws ServerResponseException
-   */
-  public function refreshIndex(): array
-  {
-    $client = $this->connection->getClient();
+        $result = $client->indices()->refresh([
+            'index' => $this->index,
+        ]);
 
-    $result = $client->indices()->refresh([
-                                            'index' => $this->index
-                                          ]);
-
-    return Arr::get($result->asArray(), '_shards');
-  }
+        return Arr::get($result->asArray(), '_shards');
+    }
 
     public function initCursor($cursor): array
     {
@@ -301,11 +307,6 @@ class Builder extends BaseBuilder
         return $this->_processInsert($values, $returnData);
     }
 
-    public function insertWithoutRefresh(array $values, $returnData = false): ElasticCollection
-    {
-        return $this->_processInsert($values, $returnData, WaitFor::FALSE);
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -339,31 +340,30 @@ class Builder extends BaseBuilder
         return $this->increment($column, -1 * $amount, $extra, $options);
     }
 
-  /**
-   * Append one or more values to an array.
-   *
-   * @param  string|array $column
-   * @param  mixed        $value
-   * @param  bool         $unique
-   *
-   * @return int
-   */
-  public function push($column, $value = NULL, $unique = FALSE)
-  {
-    // Check if we are pushing multiple values.
-    $batch = is_array($value) && array_is_list($value);
-    $params = [];
+    /**
+     * Append one or more values to an array.
+     *
+     * @param  string|array  $column
+     * @param  mixed  $value
+     * @param  bool  $unique
+     * @return int
+     */
+    public function push($column, $value = null, $unique = false)
+    {
+        // Check if we are pushing multiple values.
+        $batch = is_array($value) && array_is_list($value);
+        $params = [];
 
-    $value = $batch ? $value : [$value];
-//    foreach ($value as $key => $v){
-//      if(is_array($v)){
-//      $value[$key] = base64_encode(json_encode($v));
-//      }
-//    }
+        $value = $batch ? $value : [$value];
+        //    foreach ($value as $key => $v){
+        //      if(is_array($v)){
+        //      $value[$key] = base64_encode(json_encode($v));
+        //      }
+        //    }
 
-    // Prepare the script for unique or non-unique addition.
-    if ($unique) {
-      $scriptSource = "
+        // Prepare the script for unique or non-unique addition.
+        if ($unique) {
+            $scriptSource = "
             if (ctx._source.{$column} == null) {
                 ctx._source.{$column} = [];
             }
@@ -373,42 +373,41 @@ class Builder extends BaseBuilder
                 }
             }
         ";
-    } else {
-      $scriptSource = "
+        } else {
+            $scriptSource = "
             if (ctx._source.{$column} == null) {
                 ctx._source.{$column} = [];
             }
             ctx._source.{$column}.addAll(params.values);
         ";
+        }
+
+        // Prepare parameters for the script.
+        $params['values'] = $value;
+
+        return $this->_processUpdateByQuery([
+            'script' => [
+                'source' => $scriptSource,
+                'params' => $params,
+            ],
+        ]);
     }
 
-    // Prepare parameters for the script.
-    $params['values'] = $value;
+    /**
+     * Remove one or more values from an array.
+     *
+     * @param  string|array  $column
+     * @param  mixed  $value
+     * @return int
+     */
+    public function pull($column, $value = null)
+    {
+        // Check if we are pulling multiple values.
+        $batch = is_array($value) && array_is_list($value);
+        $params = [];
 
-    return $this->_processUpdateByQuery([
-                                          'script' => [
-                                            'source' => $scriptSource,
-                                            'params' => $params,
-                                          ]
-                                        ]);
-  }
-
-  /**
-   * Remove one or more values from an array.
-   *
-   * @param string|array $column
-   * @param mixed        $value
-   *
-   * @return int
-   */
-  public function pull($column, $value = NULL)
-  {
-    // Check if we are pulling multiple values.
-    $batch = is_array($value) && array_is_list($value);
-    $params = [];
-
-    // Prepare the script for pulling/removing values.
-    $scriptSource = "
+        // Prepare the script for pulling/removing values.
+        $scriptSource = "
         if (ctx._source.{$column} != null) {
             ctx._source.{$column}.removeIf(item -> {
                 for (removeItem in params.values) {
@@ -421,18 +420,18 @@ class Builder extends BaseBuilder
         }
     ";
 
-    // Prepare parameters for the script.
-    $params['values'] = $batch ? $value : [$value];
+        // Prepare parameters for the script.
+        $params['values'] = $batch ? $value : [$value];
 
-    return $this->_processUpdateByQuery([
-                                  'script' => [
-                                    'source' => $scriptSource,
-                                    'params' => $params,
-                                  ]
-                                ]);
-  }
+        return $this->_processUpdateByQuery([
+            'script' => [
+                'source' => $scriptSource,
+                'params' => $params,
+            ],
+        ]);
+    }
 
-  /**
+    /**
      * {@inheritdoc}
      */
     public function increment($column, $amount = 1, $extra = [], $options = [])
@@ -1153,7 +1152,7 @@ class Builder extends BaseBuilder
      */
     public function options(array $options): static
     {
-        $this->options = $options;
+        $this->options->set($options);
 
         return $this;
     }
@@ -1477,7 +1476,6 @@ class Builder extends BaseBuilder
         $wheres = $this->compileWheres();
         $result = $this->connection->updateByQuery($wheres, $values, $options, $this->waitForRefresh);
 
-
         if ($result->isSuccessful()) {
             return $result->getTotalCount();
         }
@@ -1684,7 +1682,7 @@ class Builder extends BaseBuilder
     protected function _parseWhereQueryNested(array $where): array
     {
         return [
-          $this->convertColumnID($where['column']) => [
+            $this->convertColumnID($where['column']) => [
                 'innerNested' => [
                     'wheres' => $where['wheres'],
                     'options' => $where['options'],
@@ -1750,10 +1748,10 @@ class Builder extends BaseBuilder
     protected function _parseWhereTimestamp(array $where): array
     {
 
-      # Convert Timestamp in to Unix Millis
-      if($where['value'] instanceof \DateTime){
-        $where['value'] = $where['value']->format('U') * 1000;
-      }
+        // Convert Timestamp in to Unix Millis
+        if ($where['value'] instanceof \DateTime) {
+            $where['value'] = $where['value']->format('U') * 1000;
+        }
 
         $where['value'] = $this->_formatTimestamp($where['value']);
 
@@ -1790,7 +1788,7 @@ class Builder extends BaseBuilder
         ];
     }
 
-    protected function _processInsert(array $values, bool $returnData, WaitFor $waitForRefresh = WaitFor::WAITFOR): ElasticCollection
+    protected function _processInsert(array $values, bool $returnData): ElasticCollection
     {
         $response = [
             'hasErrors' => false,
@@ -1807,7 +1805,6 @@ class Builder extends BaseBuilder
             return $this->_parseBulkInsertResult($response, $returnData);
         }
 
-
         if (! is_array(reset($values))) {
             $values = [$values];
         }
@@ -1815,8 +1812,8 @@ class Builder extends BaseBuilder
 
         $insertChunkSize = $this->getConnection()->getInsertChunkSize();
 
-        collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData, $waitForRefresh) {
-            $result = $this->connection->insertBulk($chunk->toArray(), $returnData, $waitForRefresh);
+        collect($values)->chunk($insertChunkSize)->each(callback: function ($chunk) use (&$response, $returnData) {
+            $result = $this->connection->insertBulk($chunk->toArray(), $returnData);
             if ((bool) $result['hasErrors']) {
                 $response['hasErrors'] = true;
             }
