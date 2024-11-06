@@ -8,13 +8,10 @@ use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use PDPhilip\Elasticsearch\Contracts\ArrayStore;
-use PDPhilip\Elasticsearch\DSL\Bridge;
-use PDPhilip\Elasticsearch\DSL\Results;
-use PDPhilip\Elasticsearch\Enums\WaitFor;
-use PDPhilip\Elasticsearch\Exceptions\LogicException;
+use PDPhilip\Elasticsearch\Exceptions\QueryException;
+use PDPhilip\Elasticsearch\Traits\Bridge\Bridgeable;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -22,38 +19,10 @@ use function in_array;
 use function is_array;
 use function strtolower;
 
-/**
- * @method bool indexModify(array $settings)
- * @method bool indexCreate(array $settings = [])
- * @method array indexSettings(string $index)
- * @method array getIndices(bool $all = false)
- * @method bool indexExists(string $index)
- * @method bool indexDelete()
- * @method array indexMappings(string $index)
- * @method array fieldMapping(string $index, string|array $field, bool $raw)
- * @method Results indicesDsl(string $method, array $params)
- * @method Results reIndex(string $from, string $to)
- * @method bool indexAnalyzerSettings(array $settings)
- * @method Results distinctAggregate(string $function, array $wheres, array $options, array $columns)
- * @method Results aggregate(string $function, array $wheres, array $options, array $columns)
- * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
- * @method Results find(array $wheres, array $options, array $columns)
- * @method Results save(array $data, ArrayStore $options)
- * @method array insertBulk(array $data, ArrayStore $options)
- * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)
- * @method Results deleteAll(array $wheres, ArrayStore $options)
- * @method Results searchRaw(array $bodyParams, bool $returnRaw = false)
- * @method Results aggregationRaw(array $bodyParams)
- * @method Results search(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
- * @method array toDsl(array $wheres, array $options, array $columns)
- * @method array toDslForSearch(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
- * @method string openPit(string $keepAlive = '5m')
- * @method bool closePit(string $id)
- * @method Results pitFind(array $wheres, array $options, array $fields, string $pitId, ?array $after, string $keepAlive)
- * @method Results getId(string $_id, array $columns = [],$softDeleteColumn = null)
- */
 class Connection extends BaseConnection
 {
+    use Bridgeable;
+
     const VALID_AUTH_TYPES = ['http', 'cloud'];
 
     /**
@@ -108,6 +77,13 @@ class Connection extends BaseConnection
         $this->useDefaultSchemaGrammar();
 
         $this->useDefaultQueryGrammar();
+    }
+
+    public function reconnectIfMissingConnection()
+    {
+        if (is_null($this->client)) {
+            $this->buildConnection();
+        }
     }
 
     public function setOptions(): void
@@ -284,26 +260,26 @@ class Connection extends BaseConnection
         $this->maxSize = $value;
     }
 
-    public function __call($method, $parameters)
-    {
-        if (! $this->index) {
-            $this->index = $this->indexPrefix.'*';
-        }
-
-        // If we are missing a database connection client we need to reconnect.
-        if (! $this->client) {
-            $this->client = $this->buildConnection();
-        }
-        $bridge = new Bridge($this);
-
-        $methodName = 'process'.Str::studly($method);
-
-        if (! method_exists($bridge, $methodName)) {
-            throw new LogicException("{$methodName} does not exist on the bridge.");
-        }
-
-        return $bridge->{$methodName}(...$parameters);
-    }
+    //    public function __call($method, $parameters)
+    //    {
+    //        if (! $this->index) {
+    //            $this->index = $this->indexPrefix.'*';
+    //        }
+    //
+    //        // If we are missing a database connection client we need to reconnect.
+    //        if (! $this->client) {
+    //            $this->client = $this->buildConnection();
+    //        }
+    //        $bridge = new Bridge($this);
+    //
+    //        $methodName = 'process'.Str::studly($method);
+    //
+    //        if (! method_exists($bridge, $methodName)) {
+    //            throw new LogicException("{$methodName} does not exist on the bridge.");
+    //        }
+    //
+    //        return $bridge->{$methodName}(...$parameters);
+    //    }
 
     /**
      * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
@@ -439,5 +415,34 @@ class Connection extends BaseConnection
         }
 
         return $cb;
+    }
+
+    /**
+     * Log a query in the connection's query log.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  float|null  $time
+     * @return void
+     */
+    public function logQuery($query, $bindings, $time = null)
+    {
+        $this->event(new QueryExecuted(json_encode($query), $bindings, $time, $this));
+
+        if ($this->loggingQueries) {
+            $this->queryLog[] = compact('query', 'bindings', 'time');
+        }
+    }
+
+    /** {@inheritdoc} */
+    protected function runQueryCallback($query, $bindings, \Closure $callback)
+    {
+        try {
+            $result = $callback($query, $bindings);
+        } catch (\Exception $e) {
+            throw new QueryException($query, $bindings, $e);
+        }
+
+        return $result;
     }
 }

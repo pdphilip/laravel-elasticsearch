@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL\exceptions;
+namespace PDPhilip\Elasticsearch\Exceptions;
 
 use Exception;
 
@@ -12,7 +12,7 @@ class QueryException extends Exception
 
     public function __construct($message, $code = 0, ?Exception $previous = null, $details = [])
     {
-        parent::__construct($message, $code, $previous);
+        parent::__construct($previous->getMessage(), $previous->code, $previous);
 
         $this->_details = $details;
     }

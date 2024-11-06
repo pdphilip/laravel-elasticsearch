@@ -17,7 +17,7 @@ use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Collection\ElasticResult;
 use PDPhilip\Elasticsearch\Collection\LazyElasticCollection;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\DSL\Results;
+use PDPhilip\Elasticsearch\Data\Result;
 use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
 use PDPhilip\Elasticsearch\Meta\QueryMetaData;
@@ -138,6 +138,14 @@ class Builder extends BaseBuilder
         return $this->connection;
     }
 
+  /**
+   * @return mixed|null
+   */
+  public function getOption(string $option): mixed
+  {
+    return $this->options()->get($option);
+  }
+
     /**
      * Set whether to refresh during delete by query
      *
@@ -145,7 +153,7 @@ class Builder extends BaseBuilder
      *
      * @throws \Exception
      */
-    public function withoutRefresh(WaitFor $option = WaitFor::WAITFOR): self
+    public function withoutRefresh(WaitFor $option = WaitFor::FALSE): self
     {
         $this->options->add('waitForRefresh', $option);
 
@@ -203,7 +211,7 @@ class Builder extends BaseBuilder
 
     public function all($columns = []): ElasticCollection
     {
-        return $this->_processGet($columns);
+        return $this->processGet($columns);
     }
 
     /**
@@ -219,7 +227,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function find($id, $columns = [], $softDeleteColumn = null): Results
+    public function find($id, $columns = [], $softDeleteColumn = null): Result
     {
         return $this->connection->getId($id, $columns, $softDeleteColumn);
     }
@@ -229,7 +237,7 @@ class Builder extends BaseBuilder
      */
     public function get($columns = []): ElasticCollection|LazyCollection
     {
-        return $this->_processGet($columns);
+        return $this->processGet($columns);
     }
 
     /**
@@ -284,7 +292,7 @@ class Builder extends BaseBuilder
      */
     public function cursor($columns = []): LazyCollection
     {
-        $result = $this->_processGet($columns, true);
+        $result = $this->processGet($columns, true);
         if ($result instanceof LazyCollection) {
             return $result;
         }
@@ -302,9 +310,27 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values, $returnData = false): ElasticCollection
+    public function insert(array $values): bool
     {
-        return $this->_processInsert($values, $returnData);
+
+      // Since every insert gets treated like a batch insert, we will have to detect
+      // if the user is inserting a single document or an array of documents.
+      $batch = true;
+
+      foreach ($values as $value) {
+        // As soon as we find a value that is not an array we assume the user is
+        // inserting a single document.
+        if (!is_array($value)) {
+          $batch = false;
+          break;
+        }
+      }
+
+      if (!$batch) {
+        $values = [$values];
+      }
+
+        return $this->connection->insert($this->grammar->compileInsert($this, $values));
     }
 
     /**
@@ -1144,19 +1170,6 @@ class Builder extends BaseBuilder
         ];
     }
 
-    /**
-     * Set custom options for the query.
-     *
-     *
-     * @return $this
-     */
-    public function options(array $options): static
-    {
-        $this->options->set($options);
-
-        return $this;
-    }
-
     //----------------------------------------------------------------------
     // ES Search query methods
     //----------------------------------------------------------------------
@@ -1361,7 +1374,7 @@ class Builder extends BaseBuilder
     /**
      * @return ElasticCollection|LazyElasticCollection|void
      */
-    protected function _processGet(array|string $columns = [], bool $returnLazy = false)
+    protected function processGet(array|string $columns = [], bool $returnLazy = false)
     {
 
         $wheres = $this->compileWheres();
@@ -1462,7 +1475,7 @@ class Builder extends BaseBuilder
             $options['multiple'] = true;
         }
         $wheres = $this->compileWheres();
-        $result = $this->connection->{$method}($wheres, $values, $options, $this->waitForRefresh);
+        $result = $this->connection->{$method}($wheres, $values, $options);
         if ($result->isSuccessful()) {
             return $result->getModifiedCount();
         }

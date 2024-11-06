@@ -22,32 +22,77 @@ beforeEach(function () {
         ['name' => 'Yvonne Yoe', 'age' => 35, 'title' => 'admin'],
         ['name' => 'Error', 'age' => null, 'title' => null],
     ]);
-    dd(1);
 
-    Birthday::create(['name' => 'Mark Moe', 'birthday' => new DateTimeImmutable('2020-04-10 10:53:11')]);
-    Birthday::create(['name' => 'Jane Doe', 'birthday' => new DateTimeImmutable('2021-05-12 10:53:12')]);
-    Birthday::create(['name' => 'Harry Hoe', 'birthday' => new DateTimeImmutable('2021-05-11 10:53:13')]);
-    Birthday::create(['name' => 'Robert Doe', 'birthday' => new DateTimeImmutable('2021-05-12 10:53:14')]);
-    Birthday::create(['name' => 'Mark Moe', 'birthday' => new DateTimeImmutable('2021-05-12 10:53:15')]);
-    Birthday::create(['name' => 'Mark Moe', 'birthday' => new DateTimeImmutable('2022-05-12 10:53:16')]);
-    Birthday::create(['name' => 'Boo']);
+    Birthday::insert([
+       ['name' => 'Mark Moe', 'birthday' => new DateTime('2020-04-10 10:53:11')],
+       ['name' => 'Jane Doe', 'birthday' => new DateTime('2021-05-12 10:53:12')],
+       ['name' => 'Harry Hoe', 'birthday' => new DateTime('2021-05-11 10:53:13')],
+       ['name' => 'Robert Doe', 'birthday' => new DateTime('2021-05-12 10:53:14')],
+       ['name' => 'Mark Moe', 'birthday' => new DateTime('2021-05-12 10:53:15')],
+       ['name' => 'Mark Moe', 'birthday' => new DateTime('2022-05-12 10:53:16')],
+       ['name' => 'Boo']
+    ]);
 
 });
 
-it('tests has many', function () {
-    $author = User::create(['name' => 'George R. R. Martin']);
-    Book::create(['title' => 'A Game of Thrones', 'author_id' => $author->id]);
-    Book::create(['title' => 'A Clash of Kings', 'author_id' => $author->id]);
+  it('tests where clause', function () {
+    $users = User::where('age', 35)->get();
+    expect($users)->toHaveCount(3);
 
-    $books = $author->books;
-    expect($books)->toHaveCount(2);
+    $users = User::where('age', '=', 35)->get();
+    expect($users)->toHaveCount(3);
 
-    $user = User::create(['name' => 'John Doe']);
-    Item::create(['type' => 'knife', 'user_id' => $user->id]);
-    Item::create(['type' => 'shield', 'user_id' => $user->id]);
-    Item::create(['type' => 'sword', 'user_id' => $user->id]);
-    Item::create(['type' => 'bag', 'user_id' => null]);
+    $users = User::where('age', '>=', 35)->get();
+    expect($users)->toHaveCount(4);
 
-    $items = $user->items;
-    expect($items)->toHaveCount(3);
-});
+    $users = User::where('age', '<=', 18)->get();
+    expect($users)->toHaveCount(1);
+
+    $users = User::where('age', '!=', 35)->get();
+    expect($users)->toHaveCount(6);
+
+    $users = User::where('age', '<>', 35)->get();
+    expect($users)->toHaveCount(6);
+  });
+
+  it('tests and where clause', function () {
+    $users = User::where('age', 35)->where('title', 'admin')->get();
+    expect($users)->toHaveCount(2);
+
+    $users = User::where('age', '>=', 35)->where('title', 'user')->get();
+    expect($users)->toHaveCount(2);
+  });
+
+  it('tests regexp clause', function () {
+    User::create(['name' => 'Simple', 'company' => 'acme']);
+    User::create(['name' => 'With slash', 'company' => 'oth/er']);
+
+    $users = User::whereRegex('company', '/^acme$/')->get();
+    expect($users)->toHaveCount(1);
+
+    $users = User::whereRegex('company', '/^ACME$/i')->get();
+    expect($users)->toHaveCount(1);
+
+    $users = User::whereRegex('company', '/^oth\/er$/')->get();
+    expect($users)->toHaveCount(1);
+  })->todo();
+
+  it('tests like clause', function () {
+    $users = User::where('name', 'like', '%doe')->get();
+    expect($users)->toHaveCount(2);
+
+    $users = User::where('name', 'like', '%y%')->get();
+    expect($users)->toHaveCount(3);
+
+    $users = User::where('name', 'LIKE', '%y%')->get();
+    expect($users)->toHaveCount(3);
+
+    $users = User::where('name', 'like', 't%')->get();
+    expect($users)->toHaveCount(1);
+
+    $users = User::where('name', 'like', 'j___ doe')->get();
+    expect($users)->toHaveCount(2);
+
+    $users = User::where('name', 'like', '_oh_ _o_')->get();
+    expect($users)->toHaveCount(1);
+  });

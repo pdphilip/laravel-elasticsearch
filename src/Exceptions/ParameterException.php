@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL\exceptions;
+namespace PDPhilip\Elasticsearch\Exceptions;
 
 use Exception;
 

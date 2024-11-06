@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL;
+  namespace PDPhilip\Elasticsearch\Traits\Bridge;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;

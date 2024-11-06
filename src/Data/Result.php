@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL;
+namespace PDPhilip\Elasticsearch\Data;
 
 use PDPhilip\Elasticsearch\Meta\QueryMetaData;
 
-class Results
+class Result
 {
     public mixed $data;
 
@@ -14,11 +14,18 @@ class Results
 
     private QueryMetaData $_meta;
 
-    public function __construct($data, $meta, $params, $queryTag)
+    public function __construct($data, $meta, $params)
     {
         $this->data = $data;
+
+      if (is_object($meta)) {
+          $meta = [];
+          if (method_exists($meta, 'asArray')) {
+            $meta = $meta->asArray();
+          }
+        }
+
         $this->_meta = new QueryMetaData($meta);
-        $this->_meta->setQuery($queryTag);
         $this->_meta->setSuccess();
         $this->_meta->setDsl($params);
         if (! empty($params['index'])) {

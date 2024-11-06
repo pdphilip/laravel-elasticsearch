@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL;
+namespace PDPhilip\Elasticsearch\Traits\Bridge;
 
+use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
+use PDPhilip\Elasticsearch\Helpers\ParameterBuilder;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
 
 trait QueryBuilder
@@ -32,8 +34,8 @@ trait QueryBuilder
      */
     public function buildSearchParams($index, $searchQuery, $searchOptions, $wheres = [], $options = [], $fields = [], $columns = []): array
     {
-        $searchOptions = $this->_clearAndStashMeta($searchOptions);
-        $options = $this->_clearAndStashMeta($options);
+        $searchOptions = $this->clearAndStashMeta($searchOptions);
+        $options = $this->clearAndStashMeta($options);
         $params = [];
         if ($index) {
             $params['index'] = $index;
@@ -64,7 +66,7 @@ trait QueryBuilder
             }
         }
         $wheres = $this->addSearchToWheres($wheres, $queryString);
-        $dsl = $this->_buildQuery($wheres);
+        $dsl = $this->buildQuery($wheres);
 
         $params['body']['query'] = $dsl['query'];
 
@@ -72,7 +74,7 @@ trait QueryBuilder
             $params['body']['_source'] = $columns;
         }
         if ($options) {
-            $opts = $this->_buildOptions($options);
+            $opts = $this->buildOptions($options);
             if ($opts) {
                 foreach ($opts as $key => $value) {
                     if (isset($params[$key])) {
@@ -84,11 +86,11 @@ trait QueryBuilder
             }
         }
         if (self::$filter) {
-            $params = $this->_parseFilterParameter($params, self::$filter);
+            $params = $this->parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
         if (self::$functionScore) {
-            $params = $this->_parseFunctionScore($params, self::$functionScore);
+            $params = $this->parseFunctionScore($params, self::$functionScore);
             self::$functionScore = [];
         }
 
@@ -101,7 +103,7 @@ trait QueryBuilder
      */
     public function buildParams($index, $wheres, $options = [], $columns = [], $_id = null): array
     {
-        $options = $this->_clearAndStashMeta($options);
+        $options = $this->clearAndStashMeta($options);
         if ($index) {
             $params = [
                 'index' => $index,
@@ -112,11 +114,11 @@ trait QueryBuilder
             $params['id'] = $_id;
         }
 
-        $params['body'] = $this->_buildQuery($wheres);
+        $params['body'] = $this->buildQuery($wheres);
         if ($columns && $columns != '*') {
             $params['body']['_source'] = $columns;
         }
-        $opts = $this->_buildOptions($options);
+        $opts = $this->buildOptions($options);
         if ($opts) {
             foreach ($opts as $key => $value) {
                 if (isset($params[$key])) {
@@ -127,11 +129,11 @@ trait QueryBuilder
             }
         }
         if (self::$filter) {
-            $params = $this->_parseFilterParameter($params, self::$filter);
+            $params = $this->parseFilterParameter($params, self::$filter);
             self::$filter = [];
         }
         if (self::$functionScore) {
-            $params = $this->_parseFunctionScore($params, self::$functionScore);
+            $params = $this->parseFunctionScore($params, self::$functionScore);
             self::$functionScore = [];
         }
 
@@ -203,21 +205,21 @@ trait QueryBuilder
      * @throws ParameterException
      * @throws QueryException
      */
-    private function _buildQuery($wheres): array
+    private function buildQuery($wheres): array
     {
         if (! $wheres) {
             return ParameterBuilder::matchAll();
         }
 
-        $dsl = $this->_convertWheresToDSL($wheres);
+        $dsl = $this->convertWheresToDSL($wheres);
 
         return ParameterBuilder::query($dsl);
     }
 
-    private function _clearAndStashMeta($options): array
+    private function clearAndStashMeta($options): array
     {
         if (! empty($options['_meta'])) {
-            $this->_stashMeta($options['_meta']);
+            $this->stashMeta($options['_meta']);
             unset($options['_meta']);
         }
 
@@ -228,7 +230,7 @@ trait QueryBuilder
      * @throws ParameterException
      * @throws QueryException
      */
-    public function _convertWheresToDSL($wheres, $parentField = false): array
+    public function convertWheresToDSL($wheres, $parentField = false): array
     {
         $dsl = ['bool' => []];
         foreach ($wheres as $logicalOperator => $conditions) {
@@ -236,7 +238,7 @@ trait QueryBuilder
                 case 'and':
                     $dsl['bool']['must'] = [];
                     foreach ($conditions as $condition) {
-                        $parsedCondition = $this->_parseCondition($condition, $parentField);
+                        $parsedCondition = $this->parseCondition($condition, $parentField);
                         if (! empty($parsedCondition)) {
                             $dsl['bool']['must'][] = $parsedCondition;
                         }
@@ -248,7 +250,7 @@ trait QueryBuilder
                         $boolClause = ['bool' => ['must' => []]];
                         foreach ($conditionGroup as $subConditions) {
                             foreach ($subConditions as $subCondition) {
-                                $parsedCondition = $this->_parseCondition($subCondition, $parentField);
+                                $parsedCondition = $this->parseCondition($subCondition, $parentField);
                                 if (! empty($parsedCondition)) {
                                     $boolClause['bool']['must'][] = $parsedCondition;
                                 }
@@ -260,7 +262,7 @@ trait QueryBuilder
                     }
                     break;
                 default:
-                    return $this->_parseCondition($wheres, $parentField);
+                    return $this->parseCondition($wheres, $parentField);
             }
         }
 
@@ -271,7 +273,7 @@ trait QueryBuilder
      * @throws ParameterException
      * @throws QueryException
      */
-    private function _parseCondition($condition, $parentField = null): array
+    private function parseCondition($condition, $parentField = null): array
     {
         $field = key($condition);
         if ($parentField) {
@@ -281,7 +283,7 @@ trait QueryBuilder
         }
 
         if ($field == 'multi_match') {
-            return $this->_buildMultiMatch($condition['multi_match']);
+            return $this->buildMultiMatch($condition['multi_match']);
         }
 
         $value = current($condition);
@@ -337,7 +339,7 @@ trait QueryBuilder
                     $queryPart = ['bool' => ['must_not' => [['match' => [$field => $operand]]]]];
                     break;
                 case 'in':
-                    if ($this->connection->getBypassMapValidation()) {
+                    if ($this->getBypassMapValidation()) {
                         $queryPart = ['terms' => [$field => $operand]];
                     } else {
                         $keywordField = $this->parseRequiredKeywordMapping($field);
@@ -350,7 +352,7 @@ trait QueryBuilder
 
                     break;
                 case 'nin':
-                    if ($this->connection->getBypassMapValidation()) {
+                    if ($this->getBypassMapValidation()) {
                         $queryPart = ['bool' => ['must_not' => ['terms' => [$field => $operand]]]];
                     } else {
                         $keywordField = $this->parseRequiredKeywordMapping($field);
@@ -376,7 +378,7 @@ trait QueryBuilder
                     break;
                 case 'exact':
 
-                    if ($this->connection->getBypassMapValidation()) {
+                    if ($this->getBypassMapValidation()) {
                         $keywordField = $field;
                     } else {
                         $keywordField = $this->parseRequiredKeywordMapping($field);
@@ -389,13 +391,13 @@ trait QueryBuilder
                     break;
                 case 'group':
                     $must = $field;
-                    $queryPart = ['bool' => [$must => $this->_convertWheresToDSL($operand['wheres'])]];
+                    $queryPart = ['bool' => [$must => $this->convertWheresToDSL($operand['wheres'])]];
                     break;
                 case 'nested':
                     $queryPart = [
                         'nested' => [
                             'path' => $field,
-                            'query' => $this->_convertWheresToDSL($operand['wheres'], $field),
+                            'query' => $this->convertWheresToDSL($operand['wheres'], $field),
                             'score_mode' => $operand['score_mode'],
                         ],
                     ];
@@ -407,7 +409,7 @@ trait QueryBuilder
                                 [
                                     'nested' => [
                                         'path' => $field,
-                                        'query' => $this->_convertWheresToDSL($operand['wheres']),
+                                        'query' => $this->convertWheresToDSL($operand['wheres']),
                                         'score_mode' => $operand['score_mode'],
                                     ],
                                 ],
@@ -417,13 +419,13 @@ trait QueryBuilder
                     ];
                     break;
                 case 'innerNested':
-                    $options = $this->_buildNestedOptions($operand['options'], $field);
+                    $options = $this->buildNestedOptions($operand['options'], $field);
                     if (! $options) {
                         $options['size'] = 100;
                     }
                     $query = ParameterBuilder::matchAll()['query'];
                     if (! empty($operand['wheres'])) {
-                        $query = $this->_convertWheresToDSL($operand['wheres'], $field);
+                        $query = $this->convertWheresToDSL($operand['wheres'], $field);
                     }
                     $queryPart = [
                         'nested' => [
@@ -442,7 +444,7 @@ trait QueryBuilder
         }
     }
 
-    private function _buildMultiMatch($payload): array
+    private function buildMultiMatch($payload): array
     {
         $query = [
             'multi_match' => [
@@ -461,7 +463,7 @@ trait QueryBuilder
     /**
      * @throws ParameterException
      */
-    private function _buildOptions($options): array
+    private function buildOptions($options): array
     {
         $return = [];
         if ($options) {
@@ -481,7 +483,7 @@ trait QueryBuilder
                             $return['body']['sort'] = [];
                         }
                         foreach ($value as $field => $sortPayload) {
-                            $sort = ParameterBuilder::fieldSort($field, $sortPayload, $this->connection->getAllowIdSort());
+                            $sort = ParameterBuilder::fieldSort($field, $sortPayload, $this->getAllowIdSort());
                             if ($sort) {
                                 $return['body']['sort'][] = $sort;
                             }
@@ -495,7 +497,7 @@ trait QueryBuilder
                         break;
                     case 'filters':
                         foreach ($value as $filterType => $filerValues) {
-                            $this->_parseFilter($filterType, $filerValues);
+                            $this->parseFilter($filterType, $filerValues);
                         }
                         break;
                     case 'highlights':
@@ -528,9 +530,9 @@ trait QueryBuilder
     /**
      * @throws ParameterException
      */
-    private function _buildNestedOptions($options, $field): array
+    private function buildNestedOptions($options, $field): array
     {
-        $options = $this->_buildOptions($options);
+        $options = $this->buildOptions($options);
         if (! empty($options['body'])) {
             $body = $options['body'];
             unset($options['body']);
@@ -554,7 +556,7 @@ trait QueryBuilder
         return $options;
     }
 
-    public function _parseFilter($filterType, $filterPayload): void
+    public function parseFilter($filterType, $filterPayload): void
     {
         switch ($filterType) {
             case 'filterGeoBox':
@@ -576,7 +578,7 @@ trait QueryBuilder
         }
     }
 
-    public function _parseFilterParameter($params, $filer): array
+    public function parseFilterParameter($params, $filer): array
     {
         $body = $params['body'];
         $currentQuery = $body['query'];
@@ -597,7 +599,7 @@ trait QueryBuilder
 
     }
 
-    public function _parseFunctionScore($params, $function)
+    public function parseFunctionScore($params, $function)
     {
         $body = $params['body'];
         $currentQuery = $body['query'];
@@ -613,5 +615,35 @@ trait QueryBuilder
         $params['body'] = $newBody;
 
         return $params;
+    }
+
+    /**
+     * @throws QueryException
+     */
+    public function parseRequiredKeywordMapping($field): ?string
+    {
+        if (! $this->cachedKeywordFields instanceof Collection) {
+            $mapping = $this->processFieldMapping($this->index, '*');
+            $fullMap = new Collection($mapping);
+            $keywordFields = $fullMap->filter(fn ($value) => $value == 'keyword');
+            $this->cachedKeywordFields = $keywordFields;
+
+        }
+        $keywordFields = $this->cachedKeywordFields;
+
+        if ($keywordFields->isEmpty()) {
+            //No keyword fields
+            return null;
+        }
+        if ($keywordFields->has($field)) {
+            //Field is a keyword
+            return $field;
+        }
+        if ($keywordFields->has($field.'.keyword')) {
+            // Field has a keyword property
+            return $field.'.keyword';
+        }
+
+        return null;
     }
 }

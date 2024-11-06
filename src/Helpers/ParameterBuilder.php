@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\DSL;
+namespace PDPhilip\Elasticsearch\Helpers;
 
-class ParameterBuilder
+final class ParameterBuilder
 {
     public static function matchAll(): array
     {
