@@ -141,9 +141,9 @@ class Builder extends BaseBuilder
   /**
    * @return mixed|null
    */
-  public function getOption(string $option): mixed
+  public function getOption(string $option, $default = null): mixed
   {
-    return $this->options()->get($option);
+    return $this->options()->get($option, $default);
   }
 
     /**
@@ -338,7 +338,7 @@ class Builder extends BaseBuilder
      */
     public function insertGetId(array $values, $sequence = null): int|array|string|null
     {
-        $result = $this->connection->save($values, $this->waitForRefresh);
+        $result = $this->connection->save($values);
 
         if ($result->isSuccessful()) {
             // Return id
@@ -501,13 +501,18 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function delete($id = null, WaitFor $waitForRefresh = WaitFor::WAITFOR): int
+    public function delete($id = null): int
     {
         if ($id !== null) {
             $this->where('id', '=', $id);
         }
+        $this->applyBeforeQueryCallbacks();
 
-        return $this->_processDelete($waitForRefresh);
+          return $this->connection->delete(
+            $this->grammar->compileDelete($this), $this->cleanBindings(
+            $this->grammar->prepareBindingsForDelete($this->bindings)
+          )
+        );
     }
 
     public function rawDsl(array $bodyParams): mixed
@@ -1293,13 +1298,7 @@ class Builder extends BaseBuilder
      */
     public function truncate(): int
     {
-        $result = $this->connection->deleteAll([]);
-
-        if ($result->isSuccessful()) {
-            return $result->getDeletedCount();
-        }
-
-        return 0;
+      return $this->delete();
     }
 
     public function deleteIndex(): bool
@@ -1499,7 +1498,7 @@ class Builder extends BaseBuilder
     //----------------------------------------------------------------------
     // Compilers
     //----------------------------------------------------------------------
-    protected function compileWheres(): array
+    public function compileWheres(): array
     {
         $wheres = $this->wheres ?: [];
         $compiledWheres = [];
@@ -1537,7 +1536,7 @@ class Builder extends BaseBuilder
         return $compiledWheres;
     }
 
-    protected function compileOptions(): array
+    public function compileOptions(): array
     {
         $options = [];
         if ($this->orders) {
@@ -1576,6 +1575,13 @@ class Builder extends BaseBuilder
         }
         if ($this->randomScore) {
             $options['random_score'] = $this->randomScore;
+        }
+
+        // We always wait for refresh. However
+        if ($waitFor = $this->getOption('waitForRefresh')) {
+          $options['refresh'] = $waitFor;
+        } else {
+          $options['refresh'] = WaitFor::WAITFOR;
         }
 
         return $options;

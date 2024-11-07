@@ -46,11 +46,16 @@
       }
       $params['_source'] = $columns;
 
-      $result = $this->run(
-        $this->addClientParams($params),
-        [],
-        $this->client->get(...)
-      );
+      try {
+        $result = $this->run(
+          $this->addClientParams($params),
+          [],
+          $this->client->get(...)
+        );
+      } catch (QueryException $e) {
+        $e->getCode() == 404 ? $result = null : throw $e;
+      }
+
 
       return $this->sanitizeGetResponse($result, $params, $softDeleteColumn);
     }
@@ -157,8 +162,29 @@
       $params['queryOptions'] = $options;
       $params['updateValues'] = $newValues;
 
-      return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
+      return new Result($resultData, $resultMeta, $params);
     }
+
+    /**
+     * Run a delete statement against the database.
+     *
+     * @param  array  $params
+     * @param  array  $bindings
+     * @return int
+     */
+    public function delete($params, $bindings = [])
+    {
+      $deleteMethod = isset($params['body']['query']) ? 'deleteByQuery' : 'delete';
+      $result = $this->run(
+        $this->addClientParams($params),
+        [],
+        $this->client->$deleteMethod(...)
+      );
+
+      return $result->getStatusCode() == 200 ? 1 : 0;
+
+    }
+
 
     /**
      * Run an insert statement against the database.

@@ -260,27 +260,6 @@ class Connection extends BaseConnection
         $this->maxSize = $value;
     }
 
-    //    public function __call($method, $parameters)
-    //    {
-    //        if (! $this->index) {
-    //            $this->index = $this->indexPrefix.'*';
-    //        }
-    //
-    //        // If we are missing a database connection client we need to reconnect.
-    //        if (! $this->client) {
-    //            $this->client = $this->buildConnection();
-    //        }
-    //        $bridge = new Bridge($this);
-    //
-    //        $methodName = 'process'.Str::studly($method);
-    //
-    //        if (! method_exists($bridge, $methodName)) {
-    //            throw new LogicException("{$methodName} does not exist on the bridge.");
-    //        }
-    //
-    //        return $bridge->{$methodName}(...$parameters);
-    //    }
-
     /**
      * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
      * This ensures that all required configuration keys exist, even if they are set to null or default values.

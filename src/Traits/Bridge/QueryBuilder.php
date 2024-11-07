@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Traits\Bridge;
 
 use Illuminate\Support\Collection;
-use PDPhilip\Elasticsearch\DSL\exceptions\ParameterException;
-use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
+use PDPhilip\Elasticsearch\Data\Result;
+use PDPhilip\Elasticsearch\Exceptions\ParameterException;
+use PDPhilip\Elasticsearch\Exceptions\QueryException;
+use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Helpers\ParameterBuilder;
 use PDPhilip\Elasticsearch\Helpers\Utilities;
 
@@ -17,6 +19,8 @@ trait QueryBuilder
     protected static $filter;
 
     protected static $functionScore;
+
+    private ?Collection $cachedKeywordFields = null;
 
     //    protected static array $bucketOperators = ['and', 'or'];
     //
@@ -315,14 +319,14 @@ trait QueryBuilder
                 case 'like':
                     $queryPart = [
                         'query_string' => [
-                            'query' => $field.':*'.$this->_escape($operand).'*',
+                            'query' => $field.':*'.Helpers::escape($operand).'*',
                         ],
                     ];
                     break;
                 case 'not_like':
                     $queryPart = [
                         'query_string' => [
-                            'query' => '(NOT '.$field.':*'.self::_escape($operand).'*)',
+                            'query' => '(NOT '.$field.':*'.Helpers::escape($operand).'*)',
                         ],
                     ];
                     break;
@@ -515,6 +519,7 @@ trait QueryBuilder
                         break;
                     case 'multiple':
                     case 'searchOptions':
+                    case 'refresh':
 
                         //Pass through
                         break;
@@ -646,4 +651,50 @@ trait QueryBuilder
 
         return null;
     }
+
+  public function processFieldMapping(string $index, string|array $field, bool $raw = false): array|Collection
+  {
+    $params = ['index' => $index, 'fields' => $field];
+    $result = [];
+
+    $responseObject = $this->client->indices()->getFieldMapping($params);
+    $response = $responseObject->asArray();
+    $result = new Result($response, $response, $params);
+
+    if ($raw) {
+      return $result->data;
+    }
+
+    return $this->parseFieldMap($result->data);
+  }
+
+  private function parseFieldMap(array $mapping): array
+  {
+    $fields = [];
+    $mapping = reset($mapping);
+    if (! empty($mapping['mappings'])) {
+      foreach ($mapping['mappings'] as $key => $item) {
+        // Check if 'mapping' key exists and is not empty
+        if (! empty($item['mapping'])) {
+          foreach ($item['mapping'] as $details) {
+            if (isset($details['type'])) {
+              $fields[$key] = $details['type'];
+            }
+            // Check if nested fields exist within the field's details
+            if (isset($details['fields'])) {
+              foreach ($details['fields'] as $subField => $subDetails) {
+                $subFieldName = $key.'.'.$subField;
+                $fields[$subFieldName] = $subDetails['type'];
+              }
+            }
+          }
+        }
+      }
+    }
+    $mappings = Collection::make($fields);
+    $mappings = $mappings->sortKeys();
+
+    return $mappings->toArray();
+  }
+
 }

@@ -503,44 +503,6 @@ class Bridge
     // Delete Queries
     //----------------------------------------------------------------------
 
-    /**
-     * @throws QueryException
-     * @throws ParameterException
-     */
-    public function processDeleteAll($wheres, $options = [], WaitFor $waitForRefresh = WaitFor::WAITFOR): Results
-    {
-
-        if (isset($wheres['_id'])) {
-            $params = [
-                'index' => $this->index,
-                'id' => $wheres['_id'],
-                'refresh' => $waitForRefresh->get(),
-            ];
-            try {
-                $responseObject = $this->client->delete($params);
-                $response = $responseObject->asArray();
-                $response['deleteCount'] = $response['result'] === 'deleted' ? 1 : 0;
-
-                return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
-            } catch (Exception $e) {
-                $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
-            }
-        }
-        $response = [];
-        $params = $this->buildParams($this->index, $wheres, $options);
-        $params['refresh'] = $waitForRefresh->getOperation();
-        try {
-            $responseObject = $this->client->deleteByQuery($params);
-            $response = $responseObject->asArray();
-            $response['deleteCount'] = $response['deleted'] ?? 0;
-        } catch (Exception $e) {
-            $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
-        }
-
-        return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
-    }
-
-
 
 
     private function _sanitizeAggsResponse($response, $params, $queryTag): Results
