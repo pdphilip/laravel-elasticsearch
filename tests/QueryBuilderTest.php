@@ -2,8 +2,9 @@
 
   declare(strict_types=1);
 
+  use Illuminate\Support\Facades\Date;
   use Illuminate\Support\Facades\DB;
-  use Workbench\App\Models\HiddenAnimal;
+  use Illuminate\Support\LazyCollection;
   use Workbench\App\Models\Item;
   use Workbench\App\Models\User;
 
@@ -270,10 +271,10 @@
 
   it('tests list', function () {
     DB::table('items')->insert([
-                                 ['name' => 'knife', 'type' => 'sharp', 'amount' => 34],
-                                 ['name' => 'fork', 'type' => 'sharp', 'amount' => 20],
-                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 3],
-                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 14],
+                                 ['name' => 'knife', 'type' => 'sharp', 'amount' => 34, 'cost' => 3.40],
+                                 ['name' => 'fork', 'type' => 'sharp', 'amount' => 20, 'cost' => 2.00],
+                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 3, 'cost' => 3.0],
+                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 14, 'cost' => 1.40],
                                ]);
 
     $list = DB::table('items')->pluck('name')->sort()->values()->toArray();
@@ -282,16 +283,241 @@
 
   it('tests aggregate', function () {
     DB::table('items')->insert([
-                                 ['name' => 'knife', 'type' => 'sharp', 'amount' => 34],
-                                 ['name' => 'fork', 'type' => 'sharp', 'amount' => 20],
-                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 3],
-                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 14],
+                                 ['name' => 'knife', 'type' => 'sharp', 'amount' => 34, 'cost' => 3.40],
+                                 ['name' => 'fork', 'type' => 'sharp', 'amount' => 20, 'cost' => 2.00],
+                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 3, 'cost' => 3.0],
+                                 ['name' => 'spoon', 'type' => 'round', 'amount' => 14, 'cost' => 1.40],
                                ]);
 
-    expect(DB::table('items')->sum('amount'))->toBe(71);
-//    expect(DB::table('items')->count('amount'))->toBe(4);
-//    expect(DB::table('items')->min('amount'))->toBe(3);
-//    expect(DB::table('items')->max('amount'))->toBe(34);
-//    expect(DB::table('items')->avg('amount'))->toBe(17.75);
+    expect(DB::table('items')->sum('amount'))->toBe(71.0)
+                                   ->and(DB::table('items')->count('amount'))->toBe(4)
+                                   ->and(DB::table('items')->min('amount'))->toBe(3.0)
+                                   ->and(DB::table('items')->max('amount'))->toBe(34.0)
+                                   ->and(DB::table('items')->avg('amount'))->toBe(17.75);
   });
 
+  it('tests subdocument aggregate', function () {
+    DB::table('items')->insert([
+                                 ['name' => 'knife', 'amount' => ['hidden' => 10, 'found' => 3]],
+                                 ['name' => 'fork', 'amount' => ['hidden' => 35, 'found' => 12]],
+                                 ['name' => 'spoon', 'amount' => ['hidden' => 14, 'found' => 21]],
+                                 ['name' => 'spoon', 'amount' => ['hidden' => 6, 'found' => 4]],
+                               ]);
+
+    expect(DB::table('items')->sum('amount.hidden'))->toBe(65.0)
+                                                    ->and(DB::table('items')->count('amount.hidden'))->toBe(4)
+                                                    ->and(DB::table('items')->min('amount.hidden'))->toBe(6.0)
+                                                    ->and(DB::table('items')->max('amount.hidden'))->toBe(35.0)
+                                                    ->and(DB::table('items')->avg('amount.hidden'))->toBe(16.25);
+  });
+
+  it('updates subdocument fields', function () {
+    $id = DB::table('users')->insertGetId(['name' => 'John Doe', 'address' => ['country' => 'Belgium']]);
+
+    DB::table('users')->where('id', $id)->update(['address.country' => 'England']);
+
+    $check = DB::table('users')->find($id);
+    expect($check['address']['country'])->toBe('England');
+  });
+
+  it('handles dates correctly', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'birthday' => Date::parse('1980-01-01 00:00:00')],
+                                 ['name' => 'Robert Roe', 'birthday' => Date::parse('1982-01-01 00:00:00')],
+                                 ['name' => 'Mark Moe', 'birthday' => Date::parse('1983-01-01 00:00:00.1')],
+                                 ['name' => 'Frank White', 'birthday' => Date::parse('1975-01-01 12:12:12.1')],
+                               ]);
+
+    $user = DB::table('users')
+              ->where('birthday', Date::parse('1980-01-01 00:00:00'))
+              ->first();
+    expect($user['name'])->toBe('John Doe');
+
+    $user = DB::table('users')
+              ->where('birthday', Date::parse('1975-01-01 12:12:12.1'))
+              ->first();
+    expect($user['name'])->toBe('Frank White');
+    expect($user['birthday'])->toBe('1975-01-01T12:12:12+00:00');
+
+    $user = DB::table('users')->where('birthday', '=', new DateTime('1980-01-01 00:00:00'))->first();
+    expect($user['name'])->toBe('John Doe');
+    expect($user['birthday'])->toBe('1980-01-01T00:00:00+00:00');
+
+    $start = new DateTime('1950-01-01 00:00:00');
+    $stop  = new DateTime('1981-01-01 00:00:00');
+
+    $users = DB::table('users')->whereBetween('birthday', [$start, $stop])->get();
+    expect($users)->toHaveCount(2);
+  });
+
+  it('uses various query operators', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30],
+                                 ['name' => 'Jane Doe'],
+                                 ['name' => 'Robert Roe', 'age' => 'thirty-one'],
+                               ]);
+
+    $results = DB::table('users')->where('age', 'exists', true)->get();
+    expect($results)->toHaveCount(2);
+    expect($results->pluck('name'))->toContain('John Doe', 'Robert Roe');
+
+    $results = DB::table('users')->where('age', 'exists', false)->get();
+    expect($results)->toHaveCount(1);
+    expect($results[0]->name)->toBe('Jane Doe');
+
+    $results = DB::table('users')->where('age', 'type', 2)->get();
+    expect($results)->toHaveCount(1);
+    expect($results[0]->name)->toBe('Robert Roe');
+
+    $results = DB::table('users')->where('age', 'mod', [15, 0])->get();
+    expect($results)->toHaveCount(1);
+    expect($results[0]->name)->toBe('John Doe');
+
+    $results = DB::table('users')->where('age', 'mod', [29, 1])->get();
+    expect($results)->toHaveCount(1);
+    expect($results[0]->name)->toBe('John Doe');
+
+    DB::table('items')->insert([
+                                 ['name' => 'fork', 'tags' => ['sharp', 'pointy']],
+                                 ['name' => 'spork', 'tags' => ['sharp', 'pointy', 'round', 'bowl']],
+                                 ['name' => 'spoon', 'tags' => ['round', 'bowl']],
+                               ]);
+
+    $results = DB::table('items')->where('tags', 'all', ['sharp', 'pointy'])->get();
+    expect($results)->toHaveCount(2);
+
+    $results = DB::table('items')->where('tags', 'size', 2)->get();
+    expect($results)->toHaveCount(2);
+
+    $regex = new Regex('.*doe', 'i');
+    $results = DB::table('users')->where('name', 'regex', $regex)->get();
+    expect($results)->toHaveCount(2);
+
+    DB::table('users')->insert([
+                                 [
+                                   'name' => 'John Doe',
+                                   'addresses' => [
+                                     ['city' => 'Ghent'],
+                                     ['city' => 'Paris'],
+                                   ],
+                                 ],
+                                 [
+                                   'name' => 'Jane Doe',
+                                   'addresses' => [
+                                     ['city' => 'Brussels'],
+                                     ['city' => 'Paris'],
+                                   ],
+                                 ],
+                               ]);
+
+    $users = DB::table('users')->where('addresses', 'elemMatch', ['city' => 'Brussels'])->get();
+    expect($users)->toHaveCount(1);
+    expect($users[0]->name)->toBe('Jane Doe');
+  });
+
+
+  it('increments and decrements user age', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30, 'note' => 'adult'],
+                                 ['name' => 'Jane Doe', 'age' => 10, 'note' => 'minor'],
+                                 ['name' => 'Robert Roe', 'age' => null],
+                                 ['name' => 'Mark Moe'],
+                               ]);
+
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(30);
+
+    DB::table('users')->where('name', 'John Doe')->increment('age');
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(31);
+
+    DB::table('users')->where('name', 'John Doe')->decrement('age');
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(30);
+
+    DB::table('users')->where('name', 'John Doe')->increment('age', 5);
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(35);
+
+    DB::table('users')->where('name', 'John Doe')->decrement('age', 5);
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(30);
+
+    DB::table('users')->where('name', 'Jane Doe')->increment('age', 10, ['note' => 'adult']);
+    $user = DB::table('users')->where('name', 'Jane Doe')->first();
+    expect($user['age'])->toBe(20);
+    expect($user['note'])->toBe('adult');
+
+    DB::table('users')->where('name', 'John Doe')->decrement('age', 20, ['note' => 'minor']);
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user['age'])->toBe(10);
+    expect($user['note'])->toBe('minor');
+
+
+  });
+
+  it('verifies cursor returns lazy collection and checks names', function () {
+    $data = [
+      ['name' => 'fork', 'tags' => ['sharp', 'pointy']],
+      ['name' => 'spork', 'tags' => ['sharp', 'pointy', 'round', 'bowl']],
+      ['name' => 'spoon', 'tags' => ['round', 'bowl']],
+    ];
+    DB::table('items')->insert($data);
+
+    $results = DB::table('items')->orderBy('id', 'asc')->cursor();
+
+    expect($results)->toBeInstanceOf(Generator::class);
+    foreach ($results as $i => $result) {
+      expect($result['name'])->toBe($data[$i]['name']);
+    }
+  });
+
+  it('increments each specified field by respective values', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30, 'note' => 5],
+                                 ['name' => 'Jane Doe', 'age' => 10, 'note' => 6],
+                                 ['name' => 'Robert Roe', 'age' => null],
+                               ]);
+
+    DB::table('users')->incrementEach([
+                                        'age' => 1,
+                                        'note' => 2,
+                                      ]);
+
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user->age)->toBe(31);
+    expect($user->note)->toBe(7);
+
+    $user = DB::table('users')->where('name', 'Jane Doe')->first();
+    expect($user->age)->toBe(11);
+    expect($user->note)->toBe(8);
+
+    $user = DB::table('users')->where('name', 'Robert Roe')->first();
+    expect($user->age)->toBe(1);
+    expect($user->note)->toBe(2);
+
+    DB::table('users')->where('name', 'Jane Doe')->incrementEach([
+                                                                   'age' => 1,
+                                                                   'note' => 2,
+                                                                 ], ['extra' => 'foo']);
+
+    $user = DB::table('users')->where('name', 'Jane Doe')->first();
+    expect($user->age)->toBe(12);
+    expect($user->note)->toBe(10);
+    expect($user->extra)->toBe('foo');
+
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user->age)->toBe(31);
+    expect($user->note)->toBe(7);
+    expect($user)->not->toHaveProperty('extra');
+
+    DB::table('users')->decrementEach([
+                                        'age' => 1,
+                                        'note' => 2,
+                                      ], ['extra' => 'foo']);
+
+    $user = DB::table('users')->where('name', 'John Doe')->first();
+    expect($user->age)->toBe(30);
+    expect($user->note)->toBe(5);
+    expect($user->extra)->toBe('foo');
+  });

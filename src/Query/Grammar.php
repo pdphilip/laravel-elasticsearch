@@ -350,6 +350,15 @@ class Grammar extends BaseGrammar
    * @param array   $where
    * @return array
    */
+  protected function compileWhereMatchAll(Builder $builder, array $where) {
+    return ['match_all' => (object) []];
+  }
+
+  /**
+   * @param Builder $builder
+   * @param array   $where
+   * @return array
+   */
   protected function compileWhereParentId(Builder $builder, array $where) {
     return [
       'parent_id' => [
@@ -1018,7 +1027,7 @@ class Grammar extends BaseGrammar
       ]
     ];
 
-    return $compiled;
+   return $compiled;
   }
 
   /**
@@ -1054,6 +1063,22 @@ class Grammar extends BaseGrammar
   }
 
   /**
+   * Compile count aggregation
+   *
+   * @param  array  $aggregation
+   * @return array
+   */
+  protected function compileCountAggregation(array $aggregation): array
+  {
+    $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+    $aggregation = [];
+    $aggregation['type'] = 'value_count';
+    $aggregation['args']['field'] = $field;
+    $aggregation['args']['script'] = "doc.containsKey('{$field}') && !doc['{$field}'].empty ? 1 : 0";
+    return $this->compileMetricAggregation($aggregation);
+  }
+
+  /**
    * Compile sum aggregation
    *
    * @param  array  $aggregation
@@ -1061,14 +1086,7 @@ class Grammar extends BaseGrammar
    */
   public function compileSumAggregation(array $aggregation): array
   {
-    return [
-      'sum' => [
-        'script' => [
-          'source' => "doc.containsKey('{$aggregation['key']}') && !doc['{$aggregation['key']}'].empty ? doc['{$aggregation['key']}'].value : 0"
-        ]
-      ]
-    ];
-
+    return $this->compileMetricAggregation($aggregation);
   }
 
   /**
@@ -1275,17 +1293,39 @@ class Grammar extends BaseGrammar
   {
     $clause = $this->compileSelect($builder);
     $clause['body']['conflicts'] = 'proceed';
-    $script = [];
+    $scripts = [];
+    $params = [];
 
     foreach($values as $column => $value) {
       $value = $this->getStringValue($value);
       if(Str::startsWith($column, $builder->from . '.')) {
         $column = Str::replaceFirst($builder->from . '.', '', $column);
       }
-      $clause['body']['script']['params'][$column] = $value;
-      $script[] = 'ctx._source.' . $column . ' = params.'.$column.';';
+
+      $param = str($column)->replace('.', '_')->toString();
+
+      $params[$param] = $value;
+      $scripts[] = 'ctx._source.' . $column . ' = params.'.$param.';';
     }
-    $clause['body']['script']['source'] = implode('', $script);
+
+    foreach($builder->scripts as $script) {
+
+      $params = [
+        ...$params,
+        ...$script['options']['params']
+      ];
+      $scripts[] = $script['script'];
+    }
+
+    if(!empty($scripts)) {
+      $clause['body']['script']['source'] = implode(" ", $scripts);
+    }
+
+    if(!empty($params)) {
+      $clause['body']['script']['params'] = $params;
+    }
+
+    //      $clause['body']['script']['params'][$param] = $value;
 
     if ($refresh = $builder->getOption('refresh')) {
       $clause['refresh'] = $refresh;

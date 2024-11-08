@@ -278,6 +278,87 @@ class Connection extends BaseConnection
       $this->indices()->create(compact('index', 'body'));
     }
 
+    /**
+     * Run a select statement against the database and return a generator.
+     *
+     * @param string $query
+     * @param array  $bindings
+     * @param bool   $useReadPdo
+     *
+     * @return \Generator
+     */
+    public function cursor($query, $bindings = [], $useReadPdo = false)
+    {
+      $scrollTimeout = '30s';
+      $limit = $query['size'] ?? 0;
+
+      $scrollParams = [
+        'scroll' => $scrollTimeout,
+        'size' => 100, // Number of results per shard
+        'index' => $query['index'],
+        'body' => $query['body'],
+      ];
+
+      $results = $this->select($scrollParams);
+
+      $scrollId = $results['_scroll_id'];
+
+      $numResults = count($results['hits']['hits']);
+
+      foreach ($results['hits']['hits'] as $result) {
+        yield $result;
+      }
+
+      if (!$limit || $limit > $numResults) {
+        $limit = $limit ? $limit - $numResults : $limit;
+
+        foreach ($this->scroll($scrollId, $scrollTimeout, $limit) as $result) {
+          yield $result;
+        }
+      }
+    }
+
+  /**
+   * Run a select statement against the database using an Elasticsearch scroll cursor.
+   *
+   * @param string $scrollId
+   * @param string $scrollTimeout
+   * @param int    $limit
+   *
+   * @return \Generator
+   */
+  public function scroll(string $scrollId, string $scrollTimeout = '30s', int $limit = 0)
+  {
+    $numResults = 0;
+
+    // Loop until the scroll 'cursors' are exhausted or we have enough results
+    while (!$limit || $numResults < $limit) {
+      // Execute a Scroll request
+      $results = $this->connection->scroll([
+                                             'scroll_id' => $scrollId,
+                                             'scroll' => $scrollTimeout,
+                                           ]);
+
+      // Get new scroll ID in case it's changed
+      $scrollId = $results['_scroll_id'];
+
+      // Break if no results
+      if (empty($results['hits']['hits'])) {
+        break;
+      }
+
+      foreach ($results['hits']['hits'] as $result) {
+        $numResults++;
+
+        if ($limit && $numResults > $limit) {
+          break;
+        }
+
+        yield $result;
+      }
+    }
+  }
+
     /** {@inheritdoc} */
     public function disconnect(): void
     {
