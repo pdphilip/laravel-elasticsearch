@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
@@ -31,7 +31,7 @@ class Birthday extends Model
         $schema = Schema::connection('elasticsearch');
 
         $schema->deleteIfExists('birthday');
-        $schema->create('birthday', function (IndexBlueprint $table) {
+        $schema->create('birthday', function (Blueprint $table) {
             $table->date('birthday');
             $table->date('created_at');
             $table->date('updated_at');

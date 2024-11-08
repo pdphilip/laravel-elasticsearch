@@ -4,26 +4,87 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Schema;
 
-use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
+use \Illuminate\Database\Schema\Blueprint as BlueprintBase;
+use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 
-class IndexBlueprint
+class Blueprint extends BlueprintBase
 {
-    /**
-     * The Connection object for this blueprint.
-     */
-    protected Connection $connection;
 
-    protected string $index = '';
+    /** @var string */
+    protected $alias;
 
-    protected ?string $newIndex;
+    /** @var string */
+    protected $document;
 
-    protected array $parameters = [];
+    /** @var array */
+    protected $meta = [];
 
-    public function __construct($index, $newIndex = null)
+    /** @var array */
+    protected $indexSettings = [];
+
+
+    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar)
     {
-        $this->index = $index;
-        $this->newIndex = $newIndex;
+      foreach ($this->toDSL($connection, $grammar) as $statement) {
+        $connection->statement($statement);
+      }
+    }
+
+  /**
+   * @return string
+   */
+  public function getIndex(): string
+  {
+    return $this->getTable();
+  }
+
+  /**
+   * @return string
+   */
+  public function getAlias(): string
+  {
+    return ($this->alias ?? $this->getTable());
+  }
+
+  public function toDSL(Connection $connection, Grammar $grammar): array
+  {
+    $this->addImpliedCommands($connection, $grammar);
+
+    $statements = [];
+
+    // Each type of command has a corresponding compiler function on the schema
+    // grammar which is used to build the necessary SQL statements to build
+    // the blueprint element, so we'll just call that compilers function.
+    $this->ensureCommandsAreValid($connection);
+
+    foreach ($this->commands as $command) {
+      $method = 'compile' . ucfirst($command->name);
+
+      if (method_exists($grammar, $method)) {
+        if (!is_null($statement = $grammar->$method($this, $command, $connection))) {
+          $statements[] = $statement;
+        }
+      }
+    }
+
+    return $statements;
+  }
+
+  /**
+   * @return array
+   */
+  public function getIndexSettings(): array
+  {
+    return $this->indexSettings;
+  }
+
+    /**
+     * @return array
+     */
+    public function getMeta(): array
+    {
+      return $this->meta;
     }
 
     //----------------------------------------------------------------------
@@ -73,7 +134,7 @@ class IndexBlueprint
         return $this->addField('long', $field);
     }
 
-    public function integer($field): Definitions\FieldDefinition
+    public function integer($field, $autoIncrement = false, $unsigned = false): Definitions\FieldDefinition
     {
         return $this->addField('integer', $field);
     }
@@ -93,7 +154,7 @@ class IndexBlueprint
         return $this->addField('double', $field);
     }
 
-    public function float($field): Definitions\FieldDefinition
+    public function float($field, $precision = 53): Definitions\FieldDefinition
     {
         return $this->addField('float', $field);
     }
@@ -179,25 +240,8 @@ class IndexBlueprint
     {
         $connection->setIndex($this->index);
         if ($this->parameters) {
-            $this->_formatParams();
+            $this->toDSL();
             $connection->indexCreate($this->parameters);
-        }
-    }
-
-    private function _formatParams(): void
-    {
-        if ($this->parameters) {
-            if (! empty($this->parameters['properties'])) {
-                $properties = [];
-                foreach ($this->parameters['properties'] as $property) {
-                    if ($property instanceof Fluent) {
-                        $properties[] = $property->toArray();
-                    } else {
-                        $properties[] = $property;
-                    }
-                }
-                $this->parameters['properties'] = $properties;
-            }
         }
     }
 
@@ -229,8 +273,17 @@ class IndexBlueprint
     // Helpers
     //----------------------------------------------------------------------
 
-    public function string($column): Definitions\FieldDefinition
+    public function string($column, $length = NULL): Definitions\FieldDefinition
     {
         return $this->addField('keyword', $column);
     }
+
+    /**
+     * @return \Illuminate\Support\Fluent
+     */
+    public function update()
+    {
+      return $this->addCommand('update');
+    }
+
 }

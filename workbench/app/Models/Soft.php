@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\MassPrunable;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 use Workbench\Database\Factories\SoftFactory;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 /** @property Carbon $deleted_at */
@@ -48,7 +48,7 @@ class Soft extends Model
     $schema = Schema::connection('elasticsearch');
 
     $schema->deleteIfExists('softs');
-    $schema->create('softs', function (IndexBlueprint $table) {
+    $schema->create('softs', function (Blueprint $table) {
       $table->date('deleted_at');
       $table->date('created_at');
       $table->date('updated_at');

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::deleteIfExists('posts');
-        Schema::createIfNotExists('posts', function (IndexBlueprint $index) {
+        Schema::createIfNotExists('posts', function (Blueprint $index) {
 
             $index->text('title');
             $index->keyword('title');

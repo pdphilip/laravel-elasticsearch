@@ -6,7 +6,7 @@
 
   use Illuminate\Database\Eloquent\Relations\BelongsToMany;
   use PDPhilip\Elasticsearch\Eloquent\Model;
-  use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+  use PDPhilip\Elasticsearch\Schema\Blueprint;
   use PDPhilip\Elasticsearch\Schema\Schema;
 
   /**
@@ -34,7 +34,7 @@
       $schema = Schema::connection('elasticsearch');
 
       $schema->deleteIfExists('skill_sql_user');
-      $schema->create('skill_sql_user', function (IndexBlueprint $table) {
+      $schema->create('skill_sql_user', function (Blueprint $table) {
         $table->string('skill_ids');
         $table->string('sql_user_ids');
         $table->date('created_at');
@@ -42,7 +42,7 @@
       });
 
       $schema->deleteIfExists('skills');
-      $schema->create('skills', function (IndexBlueprint $table) {
+      $schema->create('skills', function (Blueprint $table) {
         $table->string('name');
         $table->date('created_at');
         $table->date('updated_at');

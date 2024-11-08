@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 test('create and modify schemas', function () {
@@ -12,7 +12,7 @@ test('create and modify schemas', function () {
     Schema::connection('elasticsearch')->deleteIfExists('contacts');
 
     //should create an index
-    $contacts = Schema::connection('elasticsearch')->create('contacts', function (IndexBlueprint $index) {
+    $contacts = Schema::connection('elasticsearch')->create('contacts', function (Blueprint $index) {
         //first_name & last_name is automatically added to this field,
         //you can search by full_name without ever writing to full_name
         $index->text('first_name')->copyTo('full_name');
@@ -118,7 +118,7 @@ test('create and modify schemas', function () {
 
     //should not be able to create an index that already exists
     try {
-        Schema::connection('elasticsearch')->create('contacts', function (IndexBlueprint $index) {
+        Schema::connection('elasticsearch')->create('contacts', function (Blueprint $index) {
             $index->text('x_name');
             $index->mapProperty('purchase_history_x', 'flattened');
         });
@@ -128,7 +128,7 @@ test('create and modify schemas', function () {
     }
 
     //should be able to modify an index
-    $contacts = Schema::connection('elasticsearch')->modify('contacts', function (IndexBlueprint $index) {
+    $contacts = Schema::connection('elasticsearch')->modify('contacts', function (Blueprint $index) {
         $index->text('my_favorite_color');
     });
     $this->assertTrue(! empty($contacts['contacts']['mappings']['properties']['my_favorite_color']));
@@ -175,7 +175,7 @@ test('create and modify schemas', function () {
 
 it('should create an index will all numeric type mappings', function () {
     Schema::deleteIfExists('nums_lfg');
-    Schema::create('nums_lfg', function (IndexBlueprint $index) {
+    Schema::create('nums_lfg', function (Blueprint $index) {
         $index->long('lfg_long');
         $index->integer('lfg_int');
         $index->short('lfg_short');

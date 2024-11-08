@@ -7,9 +7,6 @@ namespace PDPhilip\Elasticsearch\Tests;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
 use PDPhilip\Elasticsearch\ElasticServiceProvider;
-use Workbench\Database\Seeders\DatabaseSeeder;
-
-use function Orchestra\Testbench\workbench_path;
 
 class TestCase extends Orchestra
 {
@@ -22,10 +19,9 @@ class TestCase extends Orchestra
         ];
     }
 
-
     protected function getEnvironmentSetUp($app): void
     {
-        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.default', 'elasticsearch');
 
         $app['config']->set('database.connections.sqlite', [
             'driver' => 'sqlite',

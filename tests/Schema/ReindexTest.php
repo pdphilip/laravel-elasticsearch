@@ -2,7 +2,7 @@
 
   use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\DSL\exceptions\QueryException;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
@@ -12,7 +12,7 @@ it('re-indexs data', function () {
     Schema::deleteIfExists('holding_products');
 
     //Create the Schema For this data set before each test
-    $productsSchema = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
+    $productsSchema = Schema::connection('elasticsearch')->create('products', function (Blueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');
@@ -20,7 +20,7 @@ it('re-indexs data', function () {
         $index->date('updated_at');
     });
 
-    $productsHoldingSchema = Schema::connection('elasticsearch')->create('holding_products', function (IndexBlueprint $index) {
+    $productsHoldingSchema = Schema::connection('elasticsearch')->create('holding_products', function (Blueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');
@@ -63,7 +63,7 @@ it('re-indexs data', function () {
     expect(Schema::connection('elasticsearch')->hasIndex('products'))->toBeFalse();
 
     //Now let's create the products index again but with proper mapping
-    $product = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
+    $product = Schema::connection('elasticsearch')->create('products', function (Blueprint $index) {
         $index->text('name');
         $index->float('price');
         $index->integer('status');

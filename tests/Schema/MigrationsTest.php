@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 uses(RefreshDatabase::class);
@@ -14,7 +14,7 @@ beforeEach(function () {
 });
 
 it('creates a new index', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('name');
         $index->integer('age');
         $index->settings('number_of_shards', 1);
@@ -25,7 +25,7 @@ it('creates a new index', function () {
 });
 
 it('deletes an index if it exists', function () {
-    Schema::createIfNotExists('test_index', function (IndexBlueprint $index) {
+    Schema::createIfNotExists('test_index', function (Blueprint $index) {
         $index->text('description');
     });
     $deleted = Schema::deleteIfExists('test_index');
@@ -35,10 +35,10 @@ it('deletes an index if it exists', function () {
 });
 
 it('modifies an existing index by adding a new field', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('title');
     });
-    Schema::modify('test_index', function (IndexBlueprint $index) {
+    Schema::modify('test_index', function (Blueprint $index) {
         $index->integer('year');
     });
     $hasField = Schema::hasField('test_index', 'year');
@@ -46,7 +46,7 @@ it('modifies an existing index by adding a new field', function () {
 });
 
 it('sets a custom analyzer on an index', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('content');
     });
     Schema::setAnalyser('test_index', function (AnalyzerBlueprint $settings) {
@@ -61,7 +61,7 @@ it('sets a custom analyzer on an index', function () {
 });
 
 it('retrieves mappings of an index', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('info');
         $index->keyword('tag');
     });
@@ -71,7 +71,7 @@ it('retrieves mappings of an index', function () {
 });
 
 it('checks if an index has specific fields', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('name');
         $index->integer('age');
     });
@@ -86,7 +86,7 @@ it('fails to delete a non-existent index', function () {
 
 it('overrides index prefix for operations', function () {
     Schema::overridePrefix('test_prefix');
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('message');
     });
     $exists = Schema::hasIndex('test_prefix_test_index');

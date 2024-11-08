@@ -16,7 +16,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 class User extends Model implements AuthenticatableContract, CanResetPasswordContract
@@ -127,8 +127,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('users');
-        $schema->create('users', function (IndexBlueprint $table) {
+        $schema->dropIfExists('users');
+        $schema->create('users', function (Blueprint $table) {
             $table->text('name');
             $table->keyword('name');
             $table->date('birthday');

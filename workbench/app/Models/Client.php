@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
@@ -109,13 +109,13 @@ class Client extends Model
         $schema = Schema::connection('elasticsearch');
 
         $schema->deleteIfExists('clients');
-        $schema->create('clients', function (IndexBlueprint $table) {
+        $schema->create('clients', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
         });
 
         $schema->deleteIfExists('client_user');
-        $schema->create('client_user', function (IndexBlueprint $table) {
+        $schema->create('client_user', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
         });

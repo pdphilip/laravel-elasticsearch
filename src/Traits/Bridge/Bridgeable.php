@@ -88,8 +88,6 @@
         $params['id'] = $id;
       }
 
-      $response = [];
-      $savedData = [];
 
       $result = $this->run(
         $this->addClientParams($params),
@@ -99,7 +97,7 @@
 
       $savedData = ['id' => $result['_id']] + $data;
 
-      return new Result($savedData, $response, $params);
+      return new Result($savedData, $result, $params);
     }
 
     /**
@@ -186,43 +184,5 @@
     }
 
 
-    /**
-     * Run an insert statement against the database.
-     *
-     * @param array $params
-     * @param array $bindings
-     * @return bool
-     * @throws BulkInsertQueryException
-     */
-    public function insert($params, $bindings = [])
-    {
-      $result = $this->run(
-        $this->addClientParams($params),
-        $bindings,
-        $this->client->bulk(...)
-      );
-
-      if (!empty($result['errors'])) {
-        throw new BulkInsertQueryException($result->asArray());
-      }
-
-      return true;
-    }
-
-    /**
-     * Add client-specific parameters to the request params
-     *
-     * @param array $params
-     *
-     * @return array
-     */
-    protected function addClientParams(array $params): array
-    {
-      if ($this->requestTimeout) {
-        $params['client']['timeout'] = $this->requestTimeout;
-      }
-
-      return $params;
-    }
 
   }

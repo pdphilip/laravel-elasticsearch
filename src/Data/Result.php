@@ -4,45 +4,23 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Data;
 
+use Elastic\Elasticsearch\Response\Elasticsearch;
 use PDPhilip\Elasticsearch\Meta\QueryMetaData;
 
 class Result
 {
-    public mixed $data;
+    public mixed $result;
+
+    public Elasticsearch $rawResult;
 
     public mixed $errorMessage;
 
     private QueryMetaData $_meta;
 
-    public function __construct($data, $meta, $params)
+    public function __construct($result, Elasticsearch $rawResult, array $params)
     {
-        $this->data = $data;
-
-      if (is_object($meta)) {
-          $meta = [];
-          if (method_exists($meta, 'asArray')) {
-            $meta = $meta->asArray();
-          }
-        }
-
-        $this->_meta = new QueryMetaData($meta);
-        $this->_meta->setSuccess();
-        $this->_meta->setDsl($params);
-        if (! empty($params['index'])) {
-            $this->_meta->setIndex($params['index']);
-        }
-        if (! empty($data['_id'])) {
-            $this->_meta->setId($data['_id']);
-        }
-        if (! empty($meta['deleteCount'])) {
-            $this->_meta->setDeleted($meta['deleteCount']);
-        }
-        if (! empty($meta['modified'])) {
-            $this->_meta->setModified($meta['modified']);
-        }
-        if (! empty($meta['failed'])) {
-            $this->_meta->setFailed($meta['failed']);
-        }
+        $this->result = $result;
+        $this->rawResult = $rawResult;
     }
 
     public function setError($error, $errorCode): void
@@ -50,9 +28,9 @@ class Result
         $this->_meta->parseAndSetError($error, $errorCode);
     }
 
-    public function isSuccessful(): bool
+    public function getRawResult(): array
     {
-        return $this->_meta->isSuccessful();
+        return $this->rawResult->asArray();
     }
 
     public function getMetaData(): QueryMetaData
@@ -94,5 +72,10 @@ class Result
     public function getDeletedCount(): int
     {
         return $this->_meta->getDeleted();
+    }
+
+    public function __toBoolean(): bool
+    {
+        return true;
     }
 }

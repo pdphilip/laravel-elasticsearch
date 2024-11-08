@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
@@ -39,7 +39,7 @@ class Role extends Model
         $schema = Schema::connection('elasticsearch');
 
         $schema->deleteIfExists('roles');
-        $schema->create('roles', function (IndexBlueprint $table) {
+        $schema->create('roles', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
         });

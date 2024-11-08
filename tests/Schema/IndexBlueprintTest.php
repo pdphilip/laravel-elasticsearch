@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 beforeEach(function () {
@@ -12,7 +12,7 @@ beforeEach(function () {
 });
 
 it('validates text field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('info');
     });
     $mappings = Schema::getMappings('test_index');
@@ -20,7 +20,7 @@ it('validates text field type', function () {
 });
 
 it('validates keyword field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->keyword('tag');
     });
     $mappings = Schema::getMappings('test_index');
@@ -28,7 +28,7 @@ it('validates keyword field type', function () {
 });
 
 it('validates integer field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->integer('age');
     });
     $mappings = Schema::getMappings('test_index');
@@ -36,7 +36,7 @@ it('validates integer field type', function () {
 });
 
 it('validates float field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->float('price');
     });
     $mappings = Schema::getMappings('test_index');
@@ -44,7 +44,7 @@ it('validates float field type', function () {
 });
 
 it('validates date field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->date('birthdate');
     });
     $mappings = Schema::getMappings('test_index');
@@ -52,7 +52,7 @@ it('validates date field type', function () {
 });
 
 it('validates boolean field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->boolean('is_active');
     });
     $mappings = Schema::getMappings('test_index');
@@ -60,7 +60,7 @@ it('validates boolean field type', function () {
 });
 
 it('validates geo_point field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->geo('location');
     });
     $mappings = Schema::getMappings('test_index');
@@ -68,7 +68,7 @@ it('validates geo_point field type', function () {
 });
 
 it('validates ip field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->ip('user_ip');
     });
     $mappings = Schema::getMappings('test_index');
@@ -76,7 +76,7 @@ it('validates ip field type', function () {
 });
 
 it('validates nested field type', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->nested('user', [
             'properties' => [
                 'name' => [
@@ -95,7 +95,7 @@ it('validates nested field type', function () {
 });
 
 it('validates object field type with dot notation', function () {
-    Schema::create('test_index', function (IndexBlueprint $index) {
+    Schema::create('test_index', function (Blueprint $index) {
         $index->text('user.name');
         $index->integer('user.age');
     });
