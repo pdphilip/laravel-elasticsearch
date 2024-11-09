@@ -1325,8 +1325,6 @@ class Grammar extends BaseGrammar
       $clause['body']['script']['params'] = $params;
     }
 
-    //      $clause['body']['script']['params'][$param] = $value;
-
     if ($refresh = $builder->getOption('refresh')) {
       $clause['refresh'] = $refresh;
     } else {

@@ -54,6 +54,11 @@ class Builder extends BaseBuilder
 
     protected array $mapping = [];
 
+    /**
+     * {@inheritdoc}
+     */
+    public $limit = 10000;
+
     /** @var int */
     protected $resultsOffset;
 
@@ -377,7 +382,7 @@ class Builder extends BaseBuilder
                 break;
 
             case 'Weekday':
-                $dateType = 'dayOfWeek';
+                $dateType = 'dayOfWeekEnum.value';
                 break;
         }
 
@@ -385,7 +390,7 @@ class Builder extends BaseBuilder
 
         $operator = $operator == '=' ? '==' : $operator;
 
-        $script = "doc.{$column}.size() > 0 && doc.{$column}.date.{$dateType} {$operator} params.value";
+        $script = "doc.{$column}.size() > 0 && doc.{$column}.value.{$dateType} {$operator} params.value";
 
         $options['params'] = ['value' => (int) $value];
 
@@ -775,6 +780,79 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Append one or more values to an array.
+     *
+     * @param  string|array  $column
+     * @param  mixed  $value
+     * @param  bool  $unique
+     * @return int
+     */
+    public function push($column, $value = null, $unique = false)
+    {
+        // Check if we are pushing multiple values.
+        $batch = is_array($value) && array_is_list($value);
+
+        $value = $batch ? $value : [$value];
+
+        // Prepare the script for unique or non-unique addition.
+        if ($unique) {
+            $script = "
+            if (ctx._source.{$column} == null) {
+                ctx._source.{$column} = [];
+            }
+            for (item in params.push_values) {
+                if (!ctx._source.{$column}.contains(item)) {
+                    ctx._source.{$column}.add(item);
+                }
+            }
+        ";
+        } else {
+            $script = "
+            if (ctx._source.{$column} == null) {
+                ctx._source.{$column} = [];
+            }
+            ctx._source.{$column}.addAll(params.push_values);
+        ";
+        }
+
+        $options['params'] = ['push_values' => $value];
+        $this->scripts[] = compact('script', 'options');
+
+        return $this->update([]);
+    }
+
+    /**
+     * Remove one or more values from an array.
+     *
+     * @param  string|array  $column
+     * @param  mixed  $value
+     * @return int
+     */
+    public function pull($column, $value = null)
+    {
+        $value = is_array($value) ? $value : [$value];
+
+        // Prepare the script for pulling/removing values.
+        $script = "
+        if (ctx._source.{$column} != null) {
+            ctx._source.{$column}.removeIf(item -> {
+                for (removeItem in params.pull_values) {
+                    if (item == removeItem) {
+                        return true;
+                  }
+                }
+                return false;
+            });
+        }
+    ";
+
+        $options['params'] = ['pull_values' => $value];
+        $this->scripts[] = compact('script', 'options');
+
+        return $this->update([]);
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function incrementEach(array $columns, array $extra = [])
@@ -786,7 +864,10 @@ class Builder extends BaseBuilder
                 throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
             }
 
-            $script = "ctx._source.{$column} += params.increment_{$column}_value;";
+            $script = implode('', [
+                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
+                "ctx._source.{$column} += params.increment_{$column}_value;",
+            ]);
             $options['params'] = ["increment_{$column}_value" => (int) $amount];
 
             $this->scripts[] = compact('script', 'options');
@@ -814,10 +895,21 @@ class Builder extends BaseBuilder
                 throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
             }
 
-            $script = "ctx._source.{$column} -= params.decrement_{$column}_value;";
+            $script = implode('', [
+                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
+                "ctx._source.{$column} -= params.decrement_{$column}_value;",
+            ]);
+
             $options['params'] = ["decrement_{$column}_value" => (int) $amount];
 
             $this->scripts[] = compact('script', 'options');
+        }
+
+        if (empty($this->wheres)) {
+            $this->wheres[] = [
+                'type' => 'MatchAll',
+                'boolean' => 'and',
+            ];
         }
 
         return $this->update($extra);
