@@ -83,7 +83,7 @@ class Processor extends BaseProcessor
    */
   public function getRawResponse(): array
   {
-    return $this->rawResponse;
+    return $this->rawResponse->asArray();
   }
 
   /**

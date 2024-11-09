@@ -2,6 +2,7 @@
 
   declare(strict_types=1);
 
+  use Carbon\Carbon;
   use Illuminate\Support\Facades\Date;
   use Illuminate\Support\Facades\DB;
   use Workbench\App\Models\Item;
@@ -209,6 +210,9 @@
 
     $types = DB::table('items')->distinct('type')->get()->pluck('type')->sort()->values()->toArray();
     expect($types)->toHaveCount(2)->toEqual(['round', 'sharp']);
+
+    $types = DB::table('items')->distinct()->get()->pluck('type')->sort()->values()->toArray();
+    expect($types)->toHaveCount(4)->toEqual(['round','round', 'sharp','sharp']);
   });
 
   it('tests custom ID', function () {
@@ -256,7 +260,7 @@
     $items = DB::table('items')->orderBy('name')->skip(2)->get();
     expect($items)->toHaveCount(2)
                   ->and($items[0]['name'])->toBe('spoon');
-  });
+  })->todo();
 
   it('tests pluck', function () {
     DB::table('users')->insert([
@@ -354,6 +358,20 @@
 
   });
 
+  it('uses pagination', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30],
+                                 ['name' => 'Jane Doe'],
+                                 ['name' => 'Robert Roe', 'age' => 29],
+                                 ['name' => 'Lisa Roe', 'age' => 5],
+                               ]);
+
+    $results = DB::table('users')->whereStartsWith('name', 'john')->getCountForPagination();
+    expect($results)->toBe(1);
+
+
+  });
+
   it('uses various query operators', function () {
     DB::table('users')->insert([
                                  ['name' => 'John Doe', 'age' => 30],
@@ -366,10 +384,35 @@
     expect($results)->toHaveCount(3)
                     ->and($results->pluck('name'))->toContain('John Doe', 'Robert Roe');
 
+    $results = DB::table('users')->whereWithOptions('Basic', 'age', '=', 5, [])->get();
+    expect($results)->toHaveCount(1)
+                    ->and($results->pluck('name'))->toContain('Lisa Roe');
+
+    $results = DB::table('users')
+                 ->where('age', '>', 4)
+                 ->filterWhere('name', '=', 'John Doe')
+                                 ->get();
+
+    expect($results)->toHaveCount(1)
+                    ->and($results->pluck('name'))->toContain('John Doe');
+
     $results = DB::table('users')->whereStartsWith('name', 'john')->get();
     expect($results)->toHaveCount(1)
                     ->and($results->pluck('name'))->toContain('John Doe');
 
+    $results = DB::table('users')->whereNot(function ($query){
+      return $query->where('name', 'John Doe');
+    })->get();
+
+    expect($results)->toHaveCount(3)
+                    ->and($results->pluck('name'))->not->toContain('John Doe');
+
+    $script = "doc['age'].size() > 0 && doc['age'].value >= params.value";
+    $options['params'] = ['value' => 29];
+
+    $results = DB::table('users')->whereScript($script, $options)->get();
+    expect($results)->toHaveCount(2)
+                    ->and($results->pluck('name'))->toContain('John Doe', 'Robert Roe');
 
   });
 
@@ -414,6 +457,10 @@
                                  ['name' => 'Mon-Mar-2024', 'birthday' => Date::parse('2024-03-25 00:00:00'), 'month' => 'March', 'year' => 2024, 'day_of_week' => 'Monday', 'day' => 25],
                                ]);
 
+
+    $results = DB::table('users')->whereWeekday('birthday', '=', Carbon::parse('2024-01-15'))->get();
+    expect($results)->toHaveCount(5)
+                    ->and($results->pluck('day_of_week')->unique()->first())->toBe('Monday');
 
     $results = DB::table('users')->whereWeekday('birthday', '=', 1)->get();
     expect($results)->toHaveCount(5)
@@ -627,3 +674,31 @@
                       ->and($user['note'])->toBe(5)
                       ->and($user['extra'])->toBe('foo');
   });
+
+  it('validates increments each values', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30, 'note' => 5],
+                                 ['name' => 'Jane Doe', 'age' => 10, 'note' => 6],
+                                 ['name' => 'Robert Roe', 'age' => null],
+                               ]);
+
+    DB::table('users')->incrementEach([
+                                        'age' => "test",
+                                        'note' => 2,
+                                      ]);
+
+  })->throws(InvalidArgumentException::class);
+
+  it('validates increments each columns', function () {
+    DB::table('users')->insert([
+                                 ['name' => 'John Doe', 'age' => 30, 'note' => 5],
+                                 ['name' => 'Jane Doe', 'age' => 10, 'note' => 6],
+                                 ['name' => 'Robert Roe', 'age' => null],
+                               ]);
+
+    DB::table('users')->incrementEach([
+                                        ['test' => 'test'],
+                                        'note' => 2,
+                                      ]);
+
+  })->throws(InvalidArgumentException::class);

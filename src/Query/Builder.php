@@ -11,7 +11,6 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Data\Aggregation;
 use PDPhilip\Elasticsearch\Data\Result;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
@@ -444,7 +443,7 @@ class Builder extends BaseBuilder
      */
     public function dynamicFilter(string $method, array $args): self
     {
-        $method = lcfirst(substr($method, 6));
+        $method = ucfirst(substr($method, 6));
 
         $numWheres = count($this->wheres);
 
@@ -857,30 +856,7 @@ class Builder extends BaseBuilder
      */
     public function incrementEach(array $columns, array $extra = [])
     {
-        foreach ($columns as $column => $amount) {
-            if (! is_numeric($amount)) {
-                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
-            } elseif (! is_string($column)) {
-                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
-            }
-
-            $script = implode('', [
-                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
-                "ctx._source.{$column} += params.increment_{$column}_value;",
-            ]);
-            $options['params'] = ["increment_{$column}_value" => (int) $amount];
-
-            $this->scripts[] = compact('script', 'options');
-        }
-
-        if (empty($this->wheres)) {
-            $this->wheres[] = [
-                'type' => 'MatchAll',
-                'boolean' => 'and',
-            ];
-        }
-
-        return $this->update($extra);
+      return $this->buildCrementEach($columns, 'increment', $extra);
     }
 
     /**
@@ -888,32 +864,51 @@ class Builder extends BaseBuilder
      */
     public function decrementEach(array $columns, array $extra = [])
     {
-        foreach ($columns as $column => $amount) {
-            if (! is_numeric($amount)) {
-                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
-            } elseif (! is_string($column)) {
-                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
-            }
-
-            $script = implode('', [
-                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
-                "ctx._source.{$column} -= params.decrement_{$column}_value;",
-            ]);
-
-            $options['params'] = ["decrement_{$column}_value" => (int) $amount];
-
-            $this->scripts[] = compact('script', 'options');
-        }
-
-        if (empty($this->wheres)) {
-            $this->wheres[] = [
-                'type' => 'MatchAll',
-                'boolean' => 'and',
-            ];
-        }
-
-        return $this->update($extra);
+        return $this->buildCrementEach($columns, 'decrement', $extra);
     }
+
+  /**
+   * Build and add increment or decrement scripts for the given columns.
+   *
+   * @param array  $columns Associative array of columns and their corresponding increment/decrement amounts.
+   * @param string $type    Type of operation, either 'increment' or 'decrement'.
+   * @param array  $extra   Additional options for the update.
+   *
+   * @return mixed  The result of the update operation.
+   *
+   * @throws InvalidArgumentException  If a non-numeric value is passed as an increment amount
+   *                                   or a non-associative array is passed to the method.
+   */
+  private function buildCrementEach(array $columns, string $type, array $extra = [])
+  {
+    foreach ($columns as $column => $amount) {
+      if (!is_numeric($amount)) {
+        throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
+      } elseif (!is_string($column)) {
+        throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
+      }
+
+      $operator = $type == 'increment' ? '+' : '-';
+
+      $script = implode('', [
+        "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
+        "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
+      ]);
+
+      $options['params'] = ["{$type}_{$column}_value" => (int)$amount];
+
+      $this->scripts[] = compact('script', 'options');
+    }
+
+    if (empty($this->wheres)) {
+      $this->wheres[] = [
+        'type'    => 'MatchAll',
+        'boolean' => 'and',
+      ];
+    }
+
+    return $this->update($extra);
+  }
 
     /**
      * {@inheritdoc}
@@ -962,55 +957,6 @@ class Builder extends BaseBuilder
         $result = $result->asArray();
 
         return $result['aggregations'][$column]['value'];
-    }
-
-    /**
-     * @param  string  $key
-     * @param  string  $type
-     * @param  null  $args
-     * @param  null  $aggregations
-     */
-    public function aggregation($key, $type = null, $args = null, $aggregations = null): self
-    {
-        if ($key instanceof Aggregation) {
-            $aggregation = $key;
-
-            $this->aggregations[] = [
-                'key' => $aggregation->getKey(),
-                'type' => $aggregation->getType(),
-                'args' => $aggregation->getArguments(),
-                'aggregations' => $aggregation($this->newQuery()),
-            ];
-
-            return $this;
-        }
-
-        if (! is_string($args) && is_callable($args)) {
-            call_user_func($args, $args = $this->newQuery());
-        }
-
-        if (! is_string($aggregations) && is_callable($aggregations)) {
-            call_user_func($aggregations, $aggregations = $this->newQuery());
-        }
-
-        $this->aggregations[] = compact(
-            'key',
-            'type',
-            'args',
-            'aggregations'
-        );
-
-        return $this;
-    }
-
-    /**
-     * Get the aggregations returned from query
-     */
-    public function getAggregationResults(): array
-    {
-        $this->getResultsOnce();
-
-        return $this->processor->getAggregationResults();
     }
 
     public function __call($method, $parameters)
