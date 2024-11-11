@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 
 class QueryException extends Exception
 {
-    public function __construct($message, $code = 0, ?Exception $previous = null)
+    public function __construct(Exception $previous)
     {
       parent::__construct($this->formatMessage($previous), $previous->code);
     }
@@ -47,7 +47,7 @@ class QueryException extends Exception
     return match ($error['error']['type']) {
       'search_phase_execution_exception' => $this->formatSearchPhaseExecutionException($error),
       'script_exception' => $this->formatScriptException($error),
-      'parse_exception' => $this->formatParseException($error),
+      'mapper_parsing_exception' ,'parse_exception' => $this->formatParseException($error),
     };
   }
 

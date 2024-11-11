@@ -4,39 +4,188 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Schema;
 
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use \Illuminate\Database\Schema\Blueprint as BlueprintBase;
+use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
+use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
 
 class Blueprint extends BlueprintBase
 {
+  use ManagesDefaultMigrations;
 
-    /** @var string */
-    protected $alias;
+  /** @var string */
+  protected $alias;
 
-    /** @var string */
-    protected $document;
+  /** @var string */
+  protected $document;
 
-    /** @var array */
-    protected $meta = [];
+  /** @var array */
+  protected $meta = [];
 
-    /** @var array */
-    protected $indexSettings = [];
-
-
-    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar)
-    {
-      foreach ($this->toDSL($connection, $grammar) as $statement) {
-        $connection->statement($statement);
-      }
-    }
+  /** @var array */
+  protected $indexSettings = [];
 
   /**
-   * @return string
+   * @inheritDoc
    */
-  public function getIndex(): string
+  public function addColumn($type, $name, array $parameters = [])
   {
-    return $this->getTable();
+    $attributes = ['name'];
+
+    if (isset($type)) {
+      $attributes[] = 'type';
+    }
+
+    $this->columns[] = $column = new PropertyDefinition(
+      array_merge(compact(...$attributes), $parameters)
+    );
+
+    return $column;
+  }
+
+  /**
+   * @param string $key
+   * @param array  $value
+   */
+  public function addIndexSettings(string $key, array $value): void
+  {
+    $this->indexSettings[$key] = $value;
+  }
+
+  /**
+   * @param string $key
+   * @param        $value
+   */
+  public function addMetaField(string $key, $value): void
+  {
+    $this->meta[$key] = $value;
+  }
+
+  /**
+   * @param string $alias
+   */
+  public function alias(string $alias): void
+  {
+    $this->alias = $alias;
+  }
+
+  /**
+   * Execute the blueprint against the database.
+   *
+   * @param \Illuminate\Database\Connection              $connection
+   * @param \Illuminate\Database\Schema\Grammars\Grammar $grammar
+   *
+   * @return void
+   */
+  public function build($connection, $grammar)
+  {
+    foreach ($this->toDSL($connection, $grammar) as $statement) {
+      if ($connection->pretending()) {
+        return;
+      }
+
+      $statement($this, $connection);
+    }
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function date($name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn('date', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function dateRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('date_range', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   */
+  public function document(string $name): void
+  {
+    $this->document = $name;
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function doubleRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('double_range', $name, $parameters);
+  }
+
+  /**
+   * @param bool|string $value
+   */
+  public function dynamic($value): void
+  {
+    $this->addMetaField('dynamic', $value);
+  }
+
+  /**
+   * @return void
+   */
+  public function enableAll(): void
+  {
+    $this->addMetaField('_all', ['enabled' => true]);
+  }
+
+  /**
+   * @return void
+   */
+  public function enableFieldNames(): void
+  {
+    $this->addMetaField('_field_names', ['enabled' => true]);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function floatRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('float_range', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function geoPoint(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn('geo_point', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function geoShape(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn('geo_shape', $name, $parameters);
   }
 
   /**
@@ -47,7 +196,199 @@ class Blueprint extends BlueprintBase
     return ($this->alias ?? $this->getTable());
   }
 
-  public function toDSL(Connection $connection, Grammar $grammar): array
+  /**
+   * @return string
+   */
+  public function getDocumentType(): string
+  {
+    return $this->document ?? Str::singular($this->getTable());
+  }
+
+  /**
+   * @return string
+   */
+  public function getIndex(): string
+  {
+    return $this->getTable();
+  }
+
+  /**
+   * @return array
+   */
+  public function getIndexSettings(): array
+  {
+    return $this->indexSettings;
+  }
+
+  /**
+   * @return array
+   */
+  public function getMeta(): array
+  {
+    return $this->meta;
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function integerRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('integer_range', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function ip(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->ipAddress($name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function ipRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('ip_range', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $relations
+   *
+   * @return PropertyDefinition
+   */
+  public function join(string $name, array $relations): PropertyDefinition
+  {
+    return $this->addColumn('join', $name, compact('relations'));
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function keyword(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn('keyword', $name, $parameters);
+  }
+
+  /**
+   * @param string $name
+   *
+   * @return PropertyDefinition
+   */
+  public function long(string $name):PropertyDefinition
+  {
+    return $this->addColumn('long', $name);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function longRange(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->range('long_range', $name, $parameters);
+  }
+
+  /**
+   * @param array $meta
+   */
+  public function meta(array $meta): void
+  {
+    $this->addMetaField('_meta', $meta);
+  }
+
+  /**
+   * @param string   $name
+   * @param \Closure $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function nested(string $name): PropertyDefinition
+  {
+    return $this->addColumn('nested', $name);
+  }
+
+  /**
+   * @param string   $name
+   * @param \Closure $parameters
+   *
+   * @return PropertyDefinition|\Illuminate\Database\Schema\ColumnDefinition
+   */
+  public function object(string $name)
+  {
+    return $this->addColumn(null, $name);
+  }
+
+  /**
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function percolator(string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn('percolator', $name, $parameters);
+  }
+
+  /**
+   * @param string $type
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
+   */
+  public function range(string $type, string $name, array $parameters = []): PropertyDefinition
+  {
+    return $this->addColumn($type, $name, $parameters);
+  }
+
+  /**
+   * @return void
+   */
+  public function routingRequired(): void
+  {
+    $this->addMetaField('_routing', ['required' => true]);
+  }
+
+  /**
+   * @param string     $column
+   * @param array $parameters
+   * @param boolean $hasKeyword adds a keyword subfield.
+   *
+   * @return PropertyDefinition
+   */
+  public function text($column,  bool $hasKeyword = false, array $parameters = []): PropertyDefinition
+  {
+    if(!$hasKeyword) {
+      return $this->addColumn('text', $column, $parameters);
+    }
+
+    return $this->addColumn('text', $column, $parameters)->fields(function (Blueprint $field) {
+      $field->keyword('keyword', ['ignore_above' => 256]);
+    });
+  }
+
+  /**
+   * @param Connection $connection
+   * @param Grammar    $grammar
+   * @return \Closure[]
+   */
+  public function toDSL(Connection $connection, Grammar $grammar)
   {
     $this->addImpliedCommands($connection, $grammar);
 
@@ -72,218 +413,22 @@ class Blueprint extends BlueprintBase
   }
 
   /**
-   * @return array
+   * @param string $name
+   * @param array  $parameters
+   *
+   * @return PropertyDefinition
    */
-  public function getIndexSettings(): array
+  public function tokenCount(string $name, array $parameters = []): PropertyDefinition
   {
-    return $this->indexSettings;
+    return $this->addColumn('token_count', $name, $parameters);
   }
 
-    /**
-     * @return array
-     */
-    public function getMeta(): array
-    {
-      return $this->meta;
-    }
-
-    //----------------------------------------------------------------------
-    // Index blueprints
-    //----------------------------------------------------------------------
-
-    public function text($field): Definitions\FieldDefinition
-    {
-        return $this->addField('text', $field);
-    }
-
-    protected function addField($type, $field, array $parameters = [])
-    {
-        return $this->addFieldDefinition(new Definitions\FieldDefinition(
-            array_merge(compact('type', 'field'), $parameters)
-        ));
-    }
-
-    protected function addFieldDefinition($definition)
-    {
-        $this->parameters['properties'][] = $definition;
-
-        return $definition;
-    }
-
-    public function array($field): Definitions\FieldDefinition
-    {
-        return $this->addField('text', $field);
-    }
-
-    //----------------------------------------------------------------------
-    // Numeric Types
-    //----------------------------------------------------------------------
-
-    public function boolean($field): Definitions\FieldDefinition
-    {
-        return $this->addField('boolean', $field);
-    }
-
-    public function keyword($field): Definitions\FieldDefinition
-    {
-        return $this->addField('keyword', $field);
-    }
-
-    public function long($field): Definitions\FieldDefinition
-    {
-        return $this->addField('long', $field);
-    }
-
-    public function integer($field, $autoIncrement = false, $unsigned = false): Definitions\FieldDefinition
-    {
-        return $this->addField('integer', $field);
-    }
-
-    public function short($field): Definitions\FieldDefinition
-    {
-        return $this->addField('short', $field);
-    }
-
-    public function byte($field): Definitions\FieldDefinition
-    {
-        return $this->addField('byte', $field);
-    }
-
-    public function double($field): Definitions\FieldDefinition
-    {
-        return $this->addField('double', $field);
-    }
-
-    public function float($field, $precision = 53): Definitions\FieldDefinition
-    {
-        return $this->addField('float', $field);
-    }
-
-    public function halfFloat($field): Definitions\FieldDefinition
-    {
-        return $this->addField('half_float', $field);
-    }
-
-    //----------------------------------------------------------------------
-
-    public function scaledFloat($field, $scalingFactor = 100): Definitions\FieldDefinition
-    {
-        return $this->addField('scaled_float', $field, [
-            'scaling_factor' => $scalingFactor,
-        ]);
-    }
-
-    public function unsignedLong($field): Definitions\FieldDefinition
-    {
-        return $this->addField('unsigned_long', $field);
-    }
-
-    public function date($field, $format = null): Definitions\FieldDefinition
-    {
-        if ($format) {
-            return $this->addField('date', $field, ['format' => $format]);
-        }
-
-        return $this->addField('date', $field);
-
-    }
-
-    public function geo($field): Definitions\FieldDefinition
-    {
-        return $this->addField('geo_point', $field);
-    }
-
-    public function nested($field, $params = []): Definitions\FieldDefinition
-    {
-        return $this->addField('nested', $field, $params);
-    }
-
-    public function alias($field, $path): Definitions\FieldDefinition
-    {
-        return $this->addField('alias', $field, ['path' => $path]);
-    }
-
-    public function ip($field): Definitions\FieldDefinition
-    {
-        return $this->addField('ip', $field);
-    }
-
-    public function mapProperty($field, $type): Definitions\FieldDefinition
-    {
-        return $this->addField($type, $field);
-    }
-
-    public function settings($key, $value): void
-    {
-        $this->parameters['settings'][$key] = $value;
-    }
-
-    //----------------------------------------------------------------------
-    // Definitions
-    //----------------------------------------------------------------------
-
-    public function map($key, $value): void
-    {
-        $this->parameters['map'][$key] = $value;
-    }
-
-    public function field($type, $field, array $parameters = [])
-    {
-        return $this->addField($type, $field, $parameters);
-    }
-
-    //======================================================================
-    // Builders
-    //======================================================================
-
-    public function buildIndexCreate(Connection $connection): void
-    {
-        $connection->setIndex($this->index);
-        if ($this->parameters) {
-            $this->toDSL();
-            $connection->indexCreate($this->parameters);
-        }
-    }
-
-    //    public function buildReIndex(Connection $connection): void
-    //    {
-    //        return $connection->reIndex($this->index, $this->newIndex);
-    //    }
-
-    //----------------------------------------------------------------------
-    // Internal Laravel init migration catchers
-    // *Case for when ES is the only datasource
-    //----------------------------------------------------------------------
-
-    public function buildIndexModify(Connection $connection): void
-    {
-        $connection->setIndex($this->index);
-        if ($this->parameters) {
-            $this->_formatParams();
-            $connection->indexModify($this->parameters);
-        }
-    }
-
-    public function increments($column): Definitions\FieldDefinition
-    {
-        return $this->addField('keyword', $column);
-    }
-
-    //----------------------------------------------------------------------
-    // Helpers
-    //----------------------------------------------------------------------
-
-    public function string($column, $length = NULL): Definitions\FieldDefinition
-    {
-        return $this->addField('keyword', $column);
-    }
-
-    /**
-     * @return \Illuminate\Support\Fluent
-     */
-    public function update()
-    {
-      return $this->addCommand('update');
-    }
+  /**
+   * @return \Illuminate\Support\Fluent
+   */
+  public function update()
+  {
+    return $this->addCommand('update');
+  }
 
 }

@@ -275,7 +275,11 @@ class Connection extends BaseConnection
      */
     public function createIndex(string $index, array $body): void
     {
-      $this->indices()->create(compact('index', 'body'));
+      try {
+        $this->indices()->create(compact('index', 'body'));
+      } catch (\Exception $e) {
+        throw new QueryException($e);
+      }
     }
 
     /**
@@ -600,7 +604,7 @@ class Connection extends BaseConnection
         try {
             $result = $callback($query, $bindings);
         } catch (\Exception $e) {
-            throw new QueryException($query, $bindings, $e);
+            throw new QueryException($e);
         }
 
         return $result;

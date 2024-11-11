@@ -104,4 +104,24 @@ class Processor extends BaseProcessor
     return $last['index']['_id'] ?? null;
   }
 
+  /**
+   * Process the results of a tables query.
+   *
+   * @param  array  $results
+   * @return array
+   */
+  public function processTables($results)
+  {
+    return array_map(function ($result) {
+      return [
+        'name' => $result['index'],
+        'status' => $result['status'] ?? null,
+        'health' => $result['health'] ?? null,
+        'uuid' => $result['uuid'] ?? null,
+        'docs_count' => $result['docs.count'] ?? 0,
+        'docs_deleted' => $result['docs.deleted'] ?? 0,
+      ];
+    }, $results);
+  }
+
 }

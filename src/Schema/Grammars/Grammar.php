@@ -15,7 +15,7 @@ use PDPhilip\Elasticsearch\Schema\Blueprint;
 class Grammar extends BaseGrammar
 {
     /** @var array */
-    protected $modifiers = ['Boost', 'Dynamic', 'Fields', 'Format', 'Index', 'Properties'];
+    protected $modifiers = ['Boost', 'Dynamic', 'Fields', 'Format', 'Index', 'Properties', 'NullValue'];
 
     public function compileCreate(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
     {
@@ -33,8 +33,7 @@ class Grammar extends BaseGrammar
             );
 
             $alias = $blueprint->getAlias();
-
-            if (! $connection->indices()->existsAlias(['name' => $alias])) {
+            if (! $connection->indices()->existsAlias(['name' => $alias])->asBool()) {
                 $connection->createAlias($index, $alias);
             }
         };
@@ -44,7 +43,7 @@ class Grammar extends BaseGrammar
     {
         return function (Blueprint $blueprint, Connection $connection): void {
             $connection->dropIndex(
-                collect($connection->cat()->indices())->sort()->last()['index']
+              $blueprint->getTable()
             );
         };
     }
@@ -148,11 +147,30 @@ class Grammar extends BaseGrammar
     /**
      * @return Fluent
      */
+    protected function modifyNullValue(Blueprint $blueprint, Fluent $property)
+    {
+
+      if (! empty($property->nullValue) || $property->nullValue === false || $property->nullValue === 0) {
+
+        if($property->type == "text"){
+          throw new \InvalidArgumentException('text feilds can\'t have a nullValue', 400);
+        }
+
+        $property->null_value = $property->nullValue;
+        unset($property->nullValue);
+      }
+
+      return $property;
+    }
+
+    /**
+     * @return Fluent
+     */
     protected function modifyFields(Blueprint $blueprint, Fluent $property)
     {
         if (! is_null($property->fields)) {
             $fields = $property->fields;
-            $fields($blueprint = $this->createBlueprint());
+            $fields && $fields($blueprint = $this->createBlueprint());
 
             $property->fields = $this->getColumns($blueprint);
         }
@@ -167,7 +185,7 @@ class Grammar extends BaseGrammar
     {
         if (! is_null($property->properties)) {
             $properties = $property->properties;
-            $properties($blueprint = $this->createBlueprint());
+            $properties && $properties($blueprint = $this->createBlueprint());
 
             $property->properties = $this->getColumns($blueprint);
         }
