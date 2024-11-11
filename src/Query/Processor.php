@@ -14,6 +14,8 @@ class Processor extends BaseProcessor
 
   protected $aggregations;
 
+  protected $query;
+
   /**
    * Process the results of a "select" query.
    *

@@ -47,7 +47,7 @@ class QueryException extends Exception
     return match ($error['error']['type']) {
       'search_phase_execution_exception' => $this->formatSearchPhaseExecutionException($error),
       'script_exception' => $this->formatScriptException($error),
-      'resource_already_exists_exception', 'mapper_parsing_exception' ,'parse_exception' => $this->formatParseException($error),
+      default => $this->formatParseException($error),
     };
   }
 

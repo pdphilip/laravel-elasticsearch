@@ -189,10 +189,9 @@ class Builder extends BaseBuilder
      *
      * @param  string  $column
      * @param  array  $coords
-     * @param  string  $distance
      * @param  string  $boolean
      */
-    public function whereGeoDistance($column, array $location, $distance, $boolean = 'and', bool $not = false): self
+    public function whereGeoDistance($column, array $location, string $distance, $boolean = 'and', bool $not = false): self
     {
         $type = 'GeoDistance';
 
@@ -775,7 +774,7 @@ class Builder extends BaseBuilder
             $values = [$values];
         }
 
-        return !$this->connection->insert($this->grammar->compileInsert($this, $values))['errors'];
+        return ! $this->connection->insert($this->grammar->compileInsert($this, $values))['errors'];
     }
 
     /**
@@ -856,7 +855,7 @@ class Builder extends BaseBuilder
      */
     public function incrementEach(array $columns, array $extra = [])
     {
-      return $this->buildCrementEach($columns, 'increment', $extra);
+        return $this->buildCrementEach($columns, 'increment', $extra);
     }
 
     /**
@@ -867,48 +866,47 @@ class Builder extends BaseBuilder
         return $this->buildCrementEach($columns, 'decrement', $extra);
     }
 
-  /**
-   * Build and add increment or decrement scripts for the given columns.
-   *
-   * @param array  $columns Associative array of columns and their corresponding increment/decrement amounts.
-   * @param string $type    Type of operation, either 'increment' or 'decrement'.
-   * @param array  $extra   Additional options for the update.
-   *
-   * @return mixed  The result of the update operation.
-   *
-   * @throws InvalidArgumentException  If a non-numeric value is passed as an increment amount
-   *                                   or a non-associative array is passed to the method.
-   */
-  private function buildCrementEach(array $columns, string $type, array $extra = [])
-  {
-    foreach ($columns as $column => $amount) {
-      if (!is_numeric($amount)) {
-        throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
-      } elseif (!is_string($column)) {
-        throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
-      }
+    /**
+     * Build and add increment or decrement scripts for the given columns.
+     *
+     * @param  array  $columns  Associative array of columns and their corresponding increment/decrement amounts.
+     * @param  string  $type  Type of operation, either 'increment' or 'decrement'.
+     * @param  array  $extra  Additional options for the update.
+     * @return mixed The result of the update operation.
+     *
+     * @throws InvalidArgumentException If a non-numeric value is passed as an increment amount
+     *                                  or a non-associative array is passed to the method.
+     */
+    private function buildCrementEach(array $columns, string $type, array $extra = [])
+    {
+        foreach ($columns as $column => $amount) {
+            if (! is_numeric($amount)) {
+                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
+            } elseif (! is_string($column)) {
+                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
+            }
 
-      $operator = $type == 'increment' ? '+' : '-';
+            $operator = $type == 'increment' ? '+' : '-';
 
-      $script = implode('', [
-        "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
-        "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
-      ]);
+            $script = implode('', [
+                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
+                "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
+            ]);
 
-      $options['params'] = ["{$type}_{$column}_value" => (int)$amount];
+            $options['params'] = ["{$type}_{$column}_value" => (int) $amount];
 
-      $this->scripts[] = compact('script', 'options');
+            $this->scripts[] = compact('script', 'options');
+        }
+
+        if (empty($this->wheres)) {
+            $this->wheres[] = [
+                'type' => 'MatchAll',
+                'boolean' => 'and',
+            ];
+        }
+
+        return $this->update($extra);
     }
-
-    if (empty($this->wheres)) {
-      $this->wheres[] = [
-        'type'    => 'MatchAll',
-        'boolean' => 'and',
-      ];
-    }
-
-    return $this->update($extra);
-  }
 
     /**
      * {@inheritdoc}
