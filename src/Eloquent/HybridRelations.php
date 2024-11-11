@@ -223,7 +223,7 @@ trait HybridRelations
         // models using underscores in alphabetical order. The two model names
         // are transformed to snake case from their default CamelCase also.
         if ($table === null) {
-            $table = $instance->getIndex();
+            $table = $instance->getTable();
         }
 
         // Now we're ready to create a new query builder for the related model and

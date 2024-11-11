@@ -888,14 +888,14 @@ declare(strict_types=1);
   it('tests nested keys', function () {
     $client = Client::create([
                                'data' => [
-                                 'client_id' => 35298,
+                                 'client_id' => '35298',
                                  'name' => 'John Doe',
                                ],
                              ]);
 
     $client->addresses()->create([
                                    'data' => [
-                                     'address_id' => 1432,
+                                     'address_id' => '1432',
                                      'city' => 'Paris',
                                    ],
                                  ]);

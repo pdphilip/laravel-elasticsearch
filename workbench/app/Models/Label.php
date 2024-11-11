@@ -63,7 +63,7 @@ class Label extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('labels');
+        $schema->dropIfExists('labels');
         $schema->create('labels', function (Blueprint $table) {
             $table->string('name');
             $table->string('author');

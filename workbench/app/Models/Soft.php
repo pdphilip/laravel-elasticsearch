@@ -47,7 +47,7 @@ class Soft extends Model
   {
     $schema = Schema::connection('elasticsearch');
 
-    $schema->deleteIfExists('softs');
+    $schema->dropIfExists('softs');
     $schema->create('softs', function (Blueprint $table) {
       $table->date('deleted_at');
       $table->date('created_at');

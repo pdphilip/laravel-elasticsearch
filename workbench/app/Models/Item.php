@@ -40,11 +40,8 @@ class Item extends Model
         $schema->dropIfExists('items');
         $schema->create('items', function (Blueprint $table) {
 
-            $table->text('name');
-            $table->keyword('name');
-
+            $table->text('name', hasKeyword: true);
             $table->keyword('user_id');
-            $table->text('user_id');
 
             $table->date('created_at');
             $table->date('updated_at');

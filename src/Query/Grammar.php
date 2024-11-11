@@ -7,9 +7,11 @@ namespace PDPhilip\Elasticsearch\Query;
 use DateTime;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
 
@@ -81,25 +83,17 @@ class Grammar extends BaseGrammar
      */
     public function getKeywordField(string $textField, Builder $builder): string
     {
+        $mapping = collect(Arr::dot($builder->getMapping()))->filter(function ($value, $key) use ($textField) {
+          return $value == 'keyword' && str($key)->containsAll(explode('.', $textField));
+        })->map(function ($value, $key) use ($textField, $builder) {
+          return str($key)->replace(["{$builder->from}.", "mappings.", "fields.", "properties.", ".type"], '')->squish()->trim()->toString();
+        })->first();
 
-        $mapping = $builder->getMapping();
-
-        foreach ($mapping[$builder->from]['mappings']['properties'] as $field => $props) {
-            if ($field == $textField) {
-                // If the feild is a keyword field exit early.
-                if ($props['type'] == 'keyword') {
-                    return $field;
-                }
-
-                foreach ($props['fields'] as $subField => $subProps) {
-                    if (isset($subProps['type']) && $subProps['type'] == 'keyword') {
-                        return $field.'.'.$subField;
-                    }
-                }
-            }
+        if(!empty($mapping)){
+          return $mapping;
         }
 
-        throw new QueryException("{$textField} does not have a keyword field.");
+        throw new BuilderException("{$textField} does not have a keyword field.");
     }
 
     /**

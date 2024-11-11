@@ -108,13 +108,13 @@ class Client extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('clients');
+        $schema->dropIfExists('clients');
         $schema->create('clients', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
         });
 
-        $schema->deleteIfExists('client_user');
+        $schema->dropIfExists('client_user');
         $schema->create('client_user', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');

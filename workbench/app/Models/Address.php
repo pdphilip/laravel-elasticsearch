@@ -28,7 +28,7 @@ class Address extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('address');
+        $schema->dropIfExists('address');
         $schema->create('address', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');

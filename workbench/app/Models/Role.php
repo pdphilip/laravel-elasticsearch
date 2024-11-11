@@ -38,7 +38,7 @@ class Role extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('roles');
+        $schema->dropIfExists('roles');
         $schema->create('roles', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');

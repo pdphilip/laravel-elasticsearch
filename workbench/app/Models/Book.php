@@ -39,7 +39,7 @@ class Book extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('books');
+        $schema->dropIfExists('books');
         $schema->create('books', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');

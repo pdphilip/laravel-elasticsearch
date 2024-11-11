@@ -37,7 +37,7 @@ class Photo extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('photos');
+        $schema->dropIfExists('photos');
         $schema->create('photos', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
