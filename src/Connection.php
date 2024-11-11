@@ -426,10 +426,10 @@ class Connection extends BaseConnection
    *
    * @param array $params
    * @param array $bindings
-   * @return Result
+   * @return array
    * @throws BulkInsertQueryException
    */
-  public function insert($params, $bindings = []): Result
+  public function insert($params, $bindings = []): array
   {
     $result = $this->run(
       $this->addClientParams($params),
@@ -441,7 +441,7 @@ class Connection extends BaseConnection
       throw new BulkInsertQueryException($result);
     }
 
-    return new Result(true, $result, $params);
+    return $result->asArray();
   }
 
   /**

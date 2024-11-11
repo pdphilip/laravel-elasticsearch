@@ -756,7 +756,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values): Result
+    public function insert(array $values): bool
     {
         // Since every insert gets treated like a batch insert, we will have to detect
         // if the user is inserting a single document or an array of documents.
@@ -775,7 +775,7 @@ class Builder extends BaseBuilder
             $values = [$values];
         }
 
-        return $this->connection->insert($this->grammar->compileInsert($this, $values));
+        return !$this->connection->insert($this->grammar->compileInsert($this, $values))['errors'];
     }
 
     /**

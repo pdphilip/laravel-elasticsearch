@@ -84,7 +84,7 @@ class Grammar extends BaseGrammar
 
         $mapping = $builder->getMapping();
 
-        foreach ($mapping['items']['mappings']['properties'] as $field => $props) {
+        foreach ($mapping[$builder->from]['mappings']['properties'] as $field => $props) {
             if ($field == $textField) {
                 // If the feild is a keyword field exit early.
                 if ($props['type'] == 'keyword') {
@@ -358,7 +358,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereIn(Builder $builder, array $where, $not = false): array
     {
-        $column = $where['column'];
+        $column = $this->getKeywordField($where['column'], $builder);
         $values = $this->getValueForWhere($builder, $where);
 
         $query = [

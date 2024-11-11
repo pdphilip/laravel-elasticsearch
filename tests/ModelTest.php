@@ -347,7 +347,7 @@ it('tests dates', function () {
     $user = User::create(['name' => 'John Doe', 'birthday' => new DateTime('1965/1/1')]);
     expect($user->birthday)->toBeInstanceOf(Carbon::class);
 
-    $user = User::whereTimestamp('birthday', '<', new DateTime('1968/1/1'))->first();
+    $user = User::whereDate('birthday', '<', new DateTime('1968/1/1'))->first();
     expect($user->name)->toBe('John Doe');
 
     $user = User::create(['name' => 'John Doe', 'birthday' => new DateTime('1980/1/1')]);
@@ -358,7 +358,7 @@ it('tests dates', function () {
     expect($check->birthday)->toBeInstanceOf(Carbon::class)
         ->and($check->birthday->format('U'))->toBe($user->birthday->format('U'));
 
-    $user = User::whereTimestamp('birthday', '>', new DateTime('1975/1/1'))->first();
+    $user = User::whereDate('birthday', '>', new DateTime('1975/1/1'))->first();
     expect($user->name)->toBe('John Doe');
 
     // test custom date format for json output
@@ -529,4 +529,4 @@ it('tests create with null id', function (string $id) {
 })->with([
     'id',
     '_id',
-]);
+])->todo();

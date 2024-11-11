@@ -15,12 +15,11 @@ use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
+use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 
 trait ElasticsearchModel
 {
-    use HasCollection, HasUuids, HybridRelations, ModelDocs;
-
-    const MAX_SIZE = 1000;
+    use HasUuids, HybridRelations, ModelDocs, Searchable;
 
     /**
      * The table associated with the model.
@@ -54,17 +53,6 @@ trait ElasticsearchModel
         }
 
         return $this->recordIndex = $this->index;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setTable($index)
-    {
-        $this->index = $index;
-        unset($this->table);
-
-        return $this;
     }
 
     /**
@@ -135,28 +123,6 @@ trait ElasticsearchModel
     public function getDateFormat(): string
     {
         return $this->dateFormat ?: 'Y-m-d H:i:s';
-    }
-
-    public function getIndex(): string
-    {
-        return $this->index ?: parent::getTable();
-    }
-
-    public function setIndex($index = null)
-    {
-        if ($index) {
-            return $this->index = $index;
-        }
-        $this->index = $this->index ?? $this->getTable();
-        unset($this->table);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getTable(): string
-    {
-        return $this->getIndex();
     }
 
     /**
@@ -381,16 +347,6 @@ trait ElasticsearchModel
         $this->syncOriginalAttribute($column);
     }
 
-    protected function newBaseQueryBuilder(): QueryBuilder
-    {
-        /** @phpstan-var  Connection $connection */
-        $connection = $this->getConnection();
-        $connection->setIndex($this->getTable());
-        $connection->setMaxSize($this->getMaxSize());
-
-        return new QueryBuilder($connection, $connection->getPostProcessor());
-    }
-
     /**
      * Get the database connection instance.
      *
@@ -410,11 +366,6 @@ trait ElasticsearchModel
         }
 
         return $connection;
-    }
-
-    public function getMaxSize(): int
-    {
-        return static::MAX_SIZE;
     }
 
     /**
