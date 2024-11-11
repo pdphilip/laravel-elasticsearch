@@ -52,13 +52,26 @@
       $table->softDeletes();
     });
 
-    Schema::table('newcollection', function (Blueprint $table) {
+    // Alias for table may as well test it here.
+    Schema::index('newcollection', function (Blueprint $table) {
       $table->string('email');
     });
 
     $index = getIndexMapping('newcollection');
     expect($index['email']['type'])->toBe('text')
                                    ->and($index['deleted_at']['type'])->toBe('date');
+  });
+
+
+  it('can add index settings and Meta Data', function () {
+    Schema::create('newcollection', function (Blueprint $table) {
+      $table->addIndexSettings('number_of_shards', 3);
+      $table->meta(['class' => 'MyApp2::User3']);
+    });
+
+    $mapping = DB::indices()->get(['index' => 'newcollection'])->asArray();
+    expect($mapping['newcollection']['mappings']['_meta']['class'])->toBe('MyApp2::User3')
+                                   ->and($mapping['newcollection']['settings']['index']['number_of_shards'])->toBe('3');
   });
 
   it('maps default laravel schemas to ES', function () {
@@ -186,6 +199,42 @@
         ->and($index['uuid']['type'])->toBe('keyword')
         ->and($index['year']['type'])->toBe('date')
         ->and($index['year']['format'])->toBe('yyyy')
+    ;
+  });
+
+
+it('maps ES schemas', function () {
+    Schema::create('newcollection', function (Blueprint $table) {
+      $table->dateRange('date_range');
+      $table->doubleRange('double_range');
+      $table->floatRange('float_range');
+      $table->geoPoint('geo_point');
+      $table->geoShape('geo_shape');
+      $table->integerRange('integer_range');
+      $table->ip('ip');
+      $table->ipRange('ip_range');
+      $table->long('long');
+      $table->longRange('long_range');
+      $table->nested('nested');
+      $table->percolator('percolator');
+      $table->range('integer_range', 'integer_range_2');
+      $table->property('text', 'custom_property');
+    });
+
+    $index = getIndexMapping('newcollection');
+    expect($index['date_range']['type'])->toBe('date_range')
+         ->and($index['double_range']['type'])->toBe('double_range')
+         ->and($index['float_range']['type'])->toBe('float_range')
+         ->and($index['geo_point']['type'])->toBe('geo_point')
+         ->and($index['geo_shape']['type'])->toBe('geo_shape')
+         ->and($index['integer_range']['type'])->toBe('integer_range')
+         ->and($index['integer_range_2']['type'])->toBe('integer_range')
+         ->and($index['ip_range']['type'])->toBe('ip_range')
+         ->and($index['long']['type'])->toBe('long')
+         ->and($index['long_range']['type'])->toBe('long_range')
+         ->and($index['nested']['type'])->toBe('nested')
+         ->and($index['percolator']['type'])->toBe('percolator')
+         ->and($index['custom_property']['type'])->toBe('text')
     ;
   });
 
@@ -361,7 +410,7 @@
                    ->and(count($tables))->toBeGreaterThanOrEqual(2)
                    ->and($tables)->toContain('newcollection', 'newcollection_two');
   });
-  
+
   function getIndexMapping(string $table)
   {
     $mapping = DB::indices()->getMapping(['index' => $table])->asArray();

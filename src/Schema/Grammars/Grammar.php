@@ -33,7 +33,7 @@ class Grammar extends BaseGrammar
             );
 
             $alias = $blueprint->getAlias();
-            if (! $connection->indices()->existsAlias(['name' => $alias])->asBool()) {
+            if ($alias !== $index && ! $connection->indices()->existsAlias(['name' => $alias])->asBool()) {
                 $connection->createAlias($index, $alias);
             }
         };
