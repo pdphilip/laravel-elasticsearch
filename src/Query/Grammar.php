@@ -86,6 +86,11 @@ class Grammar extends BaseGrammar
 
         foreach ($mapping['items']['mappings']['properties'] as $field => $props) {
             if ($field == $textField) {
+                // If the feild is a keyword field exit early.
+                if ($props['type'] == 'keyword') {
+                    return $field;
+                }
+
                 foreach ($props['fields'] as $subField => $subProps) {
                     if (isset($subProps['type']) && $subProps['type'] == 'keyword') {
                         return $field.'.'.$subField;

@@ -366,7 +366,7 @@
                                  ['name' => 'Lisa Roe', 'age' => 5],
                                ]);
 
-    $results = DB::table('users')->whereStartsWith('name', 'john')->getCountForPagination();
+    $results = DB::table('users')->whereStartsWith('name', 'John')->limit(2)->getCountForPagination();
     expect($results)->toBe(1);
 
 
@@ -396,7 +396,7 @@
     expect($results)->toHaveCount(1)
                     ->and($results->pluck('name'))->toContain('John Doe');
 
-    $results = DB::table('users')->whereStartsWith('name', 'john')->get();
+    $results = DB::table('users')->whereStartsWith('name', 'John')->get();
     expect($results)->toHaveCount(1)
                     ->and($results->pluck('name'))->toContain('John Doe');
 
@@ -478,7 +478,7 @@
     expect($results)->toHaveCount(26)
                     ->and($results->pluck('day_of_week'))->not->toContain('Monday');
 
-    $results = DB::table('users')->whereMonth('birthday', '==', 1)->get();
+    $results = DB::table('users')->whereMonth('birthday', '=', 1)->get();
     expect($results)->toHaveCount(12)
                     ->and($results->pluck('month'))->toContain('January');
 
@@ -486,7 +486,7 @@
     expect($results)->toHaveCount(19)
                     ->and($results->pluck('month'))->not->toContain('January');
 
-    $results = DB::table('users')->whereDay('birthday', '==', 20)->get();
+    $results = DB::table('users')->whereDay('birthday', '=', 20)->get();
     expect($results)->toHaveCount(1)
                     ->and($results->pluck('day'))->toContain(20);
 
@@ -498,7 +498,7 @@
     expect($results)->toHaveCount(8)
                     ->and($results->pluck('day'))->not->toContain(20);
 
-    $results = DB::table('users')->whereYear('birthday', '==', 2023)->get();
+    $results = DB::table('users')->whereYear('birthday', '=', 2023)->get();
     expect($results)->toHaveCount(7)
                     ->and($results->pluck('year'))->toContain(2023);
 
