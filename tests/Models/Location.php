@@ -11,16 +11,10 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Location extends Model
 {
     protected $keyType = 'string';
-
     protected $connection = 'elasticsearch';
-
     protected $table = 'locations';
-
     protected static $unguarded = true;
 
-    /**
-     * Check if we need to run the schema.
-     */
     public static function executeSchema()
     {
         $schema = Schema::connection('elasticsearch');

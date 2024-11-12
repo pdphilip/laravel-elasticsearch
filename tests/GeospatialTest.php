@@ -2,18 +2,7 @@
 
   declare(strict_types=1);
 
-  use Carbon\Carbon;
-  use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-  use Illuminate\Database\Eloquent\ModelNotFoundException;
-  use Illuminate\Support\Str;
-  use PDPhilip\Elasticsearch\Connection;
-  use PDPhilip\Elasticsearch\Eloquent\Model;
   use PDPhilip\Elasticsearch\Tests\Models\Location;
-  use Workbench\App\Models\Book;
-  use Workbench\App\Models\Guarded;
-  use Workbench\App\Models\Item;
-  use Workbench\App\Models\Soft;
-  use Workbench\App\Models\User;
 
   beforeEach(function () {
     Location::executeSchema();

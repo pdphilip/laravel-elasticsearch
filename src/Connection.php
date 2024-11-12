@@ -426,10 +426,10 @@ class Connection extends BaseConnection
    *
    * @param array $params
    * @param array $bindings
-   * @return array
+   * @return Elasticsearch
    * @throws BulkInsertQueryException
    */
-  public function insert($params, $bindings = []): array
+  public function insert($params, $bindings = []): Elasticsearch
   {
     $result = $this->run(
       $this->addClientParams($params),
@@ -441,7 +441,7 @@ class Connection extends BaseConnection
       throw new BulkInsertQueryException($result);
     }
 
-    return $result->asArray();
+    return $result;
   }
 
   /**

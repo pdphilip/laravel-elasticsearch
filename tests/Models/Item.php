@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Workbench\App\Models;
+  namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Carbon\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
@@ -15,9 +15,7 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Item extends Model
 {
     protected $connection = 'elasticsearch';
-
     protected $index = 'items';
-
     protected static $unguarded = true;
 
     public function user(): BelongsTo
@@ -30,9 +28,6 @@ class Item extends Model
         return $query->where('type', 'sharp');
     }
 
-    /**
-     * Check if we need to run the schema.
-     */
     public static function executeSchema()
     {
         $schema = Schema::connection('elasticsearch');

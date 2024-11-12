@@ -1,8 +1,7 @@
 <?php
 
-namespace Workbench\App\Models;
+  namespace PDPhilip\Elasticsearch\Tests\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -11,51 +10,13 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
-/**
- * App\Models\Client
- *
- ******Fields*******
- *
- * @property string $_id
- * @property string $company_id
- * @property string $name
- * @property int $status
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- *
- ******Relationships*******
- * @property-read Company $company
- * @property-read ClientLog $clientLogs
- * @property-read ClientProfile $clientProfile
- *
- ******Attributes*******
- * @property-read mixed $status_name
- * @property-read mixed $status_color
- *
- * @mixin \Eloquent
- */
 class Client extends Model
 {
-    use HasFactory;
     use HybridRelations;
 
     protected $connection = 'elasticsearch';
-
     protected $table = 'clients';
-
     protected static $unguarded = true;
-
-    //model definition =====================================
-    public static $statuses = [
-
-        1 => [
-            'name' => 'New',
-            'level' => 1,
-            'color' => 'text-neutral-500',
-            'time_model' => 'created_at',
-        ],
-
-    ];
 
     public function users(): BelongsToMany
     {
@@ -101,9 +62,6 @@ class Client extends Model
         );
     }
 
-    /**
-     * Check if we need to run the schema.
-     */
     public static function executeSchema()
     {
         $schema = Schema::connection('elasticsearch');

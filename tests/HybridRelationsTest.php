@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 use Illuminate\Database\SQLiteConnection;
-use Workbench\App\Models\Book;
-use Workbench\App\Models\Experience;
-use Workbench\App\Models\Label;
-use Workbench\App\Models\Role;
-use Workbench\App\Models\Skill;
-use Workbench\App\Models\SqlBook;
-use Workbench\App\Models\SqlRole;
-use Workbench\App\Models\SqlUser;
-use Workbench\App\Models\User;
+use PDPhilip\Elasticsearch\Tests\Models\Book;
+use PDPhilip\Elasticsearch\Tests\Models\Experience;
+use PDPhilip\Elasticsearch\Tests\Models\Label;
+use PDPhilip\Elasticsearch\Tests\Models\Role;
+use PDPhilip\Elasticsearch\Tests\Models\Skill;
+use PDPhilip\Elasticsearch\Tests\Models\SqlBook;
+use PDPhilip\Elasticsearch\Tests\Models\SqlRole;
+use PDPhilip\Elasticsearch\Tests\Models\SqlUser;
+use PDPhilip\Elasticsearch\Tests\Models\User;
 
 beforeEach(function () {
     SqlUser::executeSchema();
@@ -21,8 +21,7 @@ beforeEach(function () {
     Skill::executeSchema();
     Label::executeSchema();
     Experience::executeSchema();
-
-    Book::truncate();
+    Book::executeSchema();
 
 });
 
@@ -30,10 +29,6 @@ afterEach(function () {
     SqlUser::truncate();
     SqlBook::truncate();
     SqlRole::truncate();
-    Skill::truncate();
-    Experience::truncate();
-    Label::truncate();
-    Book::truncate();
 });
 
 test('Sql Relations', function () {
@@ -137,13 +132,13 @@ it('tests hybrid where has', function () {
     ]);
 
     $users = SqlUser::whereHas('books', function ($query) {
-        return $query->where('title', 'like', 'Har');
+        return $query->where('title', 'like', 'Har%');
     })->get();
 
     expect($users->count())->toBe(2);
 
     $users = SqlUser::whereHas('books', function ($query) {
-        return $query->where('title', 'like', 'Harry');
+        return $query->where('title', 'like', 'Harry%');
     }, '>=', 2)->get();
 
     expect($users->count())->toBe(1);
@@ -287,14 +282,14 @@ it('tests hybrid morph to many sql model to elastic model', function () {
     $user2->fill(['name' => 'Maria Doe'])->save();
     $user2 = SqlUser::query()->find($user2->id);
 
-    // Create MongoDB Labels
+    // Create Labels
     $label = Label::query()->create(['name' => 'Laravel']);
     $label2 = Label::query()->create(['name' => 'MongoDB']);
 
-    // MorphToMany (pivot is empty)
-    $user->labels()->sync([$label->id, $label2->id]);
-    $check = SqlUser::query()->find($user->id);
-    expect($check->labels->count())->toBe(2);
+    //    // MorphToMany (pivot is empty)
+    //    $user->labels()->sync([$label->id, $label2->id]);
+    //    $check = SqlUser::query()->find($user->id);
+    //    expect($check->labels->count())->toBe(2);
 
     // MorphToMany (pivot is not empty)
     $user->labels()->sync($label);

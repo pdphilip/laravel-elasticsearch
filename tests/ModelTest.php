@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
-use Workbench\App\Models\Book;
-use Workbench\App\Models\Guarded;
-use Workbench\App\Models\Item;
-use Workbench\App\Models\Soft;
-use Workbench\App\Models\User;
+use PDPhilip\Elasticsearch\Tests\Models\Book;
+use PDPhilip\Elasticsearch\Tests\Models\Guarded;
+use PDPhilip\Elasticsearch\Tests\Models\Item;
+use PDPhilip\Elasticsearch\Tests\Models\Soft;
+use PDPhilip\Elasticsearch\Tests\Models\User;
 
 beforeEach(function () {
     User::executeSchema();
@@ -313,7 +313,7 @@ it('tests soft delete', function () {
 
     $object->restore();
     expect(Soft::count())->toBe(2);
-})->todo();
+});
 
 it('tests scope', function () {
     Item::insert([

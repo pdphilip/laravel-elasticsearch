@@ -187,7 +187,7 @@ class Grammar extends BaseGrammar
         } elseif ($where['operator'] == 'like') {
             $query = [
                 'wildcard' => [
-                    $where['column'] => str_replace('%', '*', $value),
+                    $this->getKeywordField($where['column'], $builder) => str_replace('%', '*', $value),
                 ],
             ];
         } elseif (in_array($where['operator'], array_keys($operatorsMap))) {

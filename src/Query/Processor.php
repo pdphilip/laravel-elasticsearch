@@ -101,7 +101,9 @@ class Processor extends BaseProcessor
   public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
   {
     $result = $query->getConnection()->insert($sql, $values);
-    $result = $result->getRawResult();
+    $this->rawResponse = $result;
+
+    $result = $result->asArray();
     $last = collect($result['items'])->last();
     return $last['index']['_id'] ?? null;
   }

@@ -2,32 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Workbench\App\Models;
+  namespace PDPhilip\Elasticsearch\Tests\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
-class Photo extends Model
+/**
+ * @property string $title
+ * @property string $author
+ * @property array $chapters
+ */
+class Role extends Model
 {
-    use HasFactory;
-
     protected $connection = 'elasticsearch';
-
-    protected $table = 'photos';
-
+    protected $index = 'roles';
     protected static $unguarded = true;
-
-    public function hasImage(): MorphTo
+    public function user()
     {
-        return $this->morphTo();
+        return $this->belongsTo(User::class);
     }
 
-    public function hasImageWithCustomOwnerKey(): MorphTo
+    public function sqlUser()
     {
-        return $this->morphTo(ownerKey: 'cclient_id');
+        return $this->belongsTo(SqlUser::class);
     }
 
     /**
@@ -37,8 +35,8 @@ class Photo extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->dropIfExists('photos');
-        $schema->create('photos', function (Blueprint $table) {
+        $schema->dropIfExists('roles');
+        $schema->create('roles', function (Blueprint $table) {
             $table->date('created_at');
             $table->date('updated_at');
         });

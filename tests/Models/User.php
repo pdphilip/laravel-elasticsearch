@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Workbench\App\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use DateTimeInterface;
 use Illuminate\Auth\Authenticatable;
@@ -10,7 +10,6 @@ use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -23,7 +22,6 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
 {
     use Authenticatable;
     use CanResetPassword;
-    use HasFactory;
     use MassPrunable;
     use Notifiable;
 

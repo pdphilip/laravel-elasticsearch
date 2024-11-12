@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Workbench\App\Models;
+  namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 
@@ -57,9 +57,6 @@ class SqlUser extends EloquentModel
         return $this->morphedByMany(Experience::class, 'experienced');
     }
 
-    /**
-     * Check if we need to run the schema.
-     */
     public static function executeSchema(): void
     {
         $schema = Schema::connection('sqlite');
