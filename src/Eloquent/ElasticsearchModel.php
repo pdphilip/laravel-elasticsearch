@@ -17,9 +17,12 @@ use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 
+/**
+ * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ */
 trait ElasticsearchModel
 {
-    use HasUuids, HybridRelations, ModelDocs, Searchable;
+    use HasUuids, HybridRelations, Searchable;
 
     /**
      * The table associated with the model.

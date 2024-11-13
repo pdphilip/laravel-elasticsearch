@@ -2,25 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Workbench\App\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
-/**
- * @property string $title
- * @property string $author
- * @property array $chapters
- */
 class Birthday extends Model
 {
     protected $connection = 'elasticsearch';
-
-    protected $index = 'birthday';
-
+    protected $table = 'birthday';
     protected $fillable = ['name', 'birthday'];
-
     protected $casts = ['birthday' => 'datetime'];
 
     /**
@@ -30,7 +22,7 @@ class Birthday extends Model
     {
         $schema = Schema::connection('elasticsearch');
 
-        $schema->deleteIfExists('birthday');
+        $schema->dropIfExists('birthday');
         $schema->create('birthday', function (Blueprint $table) {
             $table->date('birthday');
             $table->date('created_at');

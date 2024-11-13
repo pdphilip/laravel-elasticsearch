@@ -13,6 +13,7 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\Result;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
+use PDPhilip\Elasticsearch\Traits\Query\ManagesParameters;
 
 /**
  * @property Connection $connection
@@ -23,6 +24,7 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
 class Builder extends BaseBuilder
 {
     use HasOptions;
+    use ManagesParameters;
 
     /** @var string[] */
     public const REFRESH = [
@@ -74,8 +76,7 @@ class Builder extends BaseBuilder
      *
      * @var array
      */
-    public $operators = ['=', '<', '>', '<=', '>=', '!=', 'exists', 'like'];
-
+    public $operators = ['=', '<', '>', '<=', '>=', '<>', '!=', 'exists', 'like', 'not like'];
     /**
      * Set the document type the search is targeting.
      *
@@ -196,6 +197,26 @@ class Builder extends BaseBuilder
         $type = 'GeoDistance';
 
         $this->wheres[] = compact('column', 'location', 'distance', 'type', 'boolean', 'not');
+
+        return $this;
+    }
+
+  /**
+   * Add a 'regexp' statement to the query.
+   *
+   * @param string $column
+   * @param string $value
+   * @param string $boolean
+   * @param bool   $not
+   * @param array  $parameters
+   *
+   * @return Builder
+   */
+    public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $parameters = []): self
+    {
+        $type = 'Regex';
+
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'parameters');
 
         return $this;
     }
@@ -372,11 +393,11 @@ class Builder extends BaseBuilder
                 break;
 
             case 'Month':
-                $dateType = 'monthOfYear';
+                $dateType = 'monthOfYear.value';
                 break;
 
             case 'Day':
-                $dateType = 'dayOfMonth';
+                $dateType = 'dayOfMonth.value';
                 break;
 
             case 'Weekday':
@@ -387,8 +408,9 @@ class Builder extends BaseBuilder
         $type = 'Script';
 
         $operator = $operator == '=' ? '==' : $operator;
+        $operator = $operator == '<>' ? '!=' : $operator;
 
-        $script = "doc.{$column}.size() > 0 && doc.{$column}.value.{$dateType} {$operator} params.value";
+        $script = "doc.{$column}.size() > 0 && doc.{$column}.value != null && doc.{$column}.value.{$dateType} {$operator} params.value";
 
         $options['params'] = ['value' => (int) $value];
 

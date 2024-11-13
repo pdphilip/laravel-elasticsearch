@@ -65,6 +65,10 @@ class Grammar extends BaseGrammar
             $params['body']['size'] = $builder->limit;
         }
 
+        if (isset($builder->columns) && $builder->columns[0] !== '*') {
+            $params['_source'] = $builder->columns;
+        }
+
         if (! $params['body']['query']) {
             unset($params['body']['query']);
         }
@@ -182,12 +186,16 @@ class Grammar extends BaseGrammar
             $query = [
                 'exists' => [
                     'field' => $where['column'],
+
                 ],
             ];
-        } elseif ($where['operator'] == 'like') {
+        } elseif (in_array($where['operator'], ['like', 'not like'])) {
             $query = [
                 'wildcard' => [
-                    $this->getKeywordField($where['column'], $builder) => str_replace('%', '*', $value),
+                    $this->getKeywordField($where['column'], $builder) => [
+                      'value' => str_replace('%', '*', $value),
+                      ...($where['parameters'] ?? [])
+                    ],
                 ],
             ];
         } elseif (in_array($where['operator'], array_keys($operatorsMap))) {
@@ -196,6 +204,8 @@ class Grammar extends BaseGrammar
                 'range' => [
                     $where['column'] => [
                         $operator => $value,
+                          ...($where['parameters'] ?? [])
+
                     ],
                 ],
             ];
@@ -203,9 +213,9 @@ class Grammar extends BaseGrammar
             $query = [
                 'match' => [
                     $where['column'] => [
-                        // TODO: This should be an option that can be chnaged.
                         'query' => $value,
                         'operator' => 'and',
+                        ...($where['parameters'] ?? [])
                     ],
                 ],
             ];
@@ -215,6 +225,8 @@ class Grammar extends BaseGrammar
 
         if (
             ! empty($where['not'])
+            || ($where['operator'] == 'not like' && ! is_null($value))
+            || ($where['operator'] == '<>' && ! is_null($value))
             || ($where['operator'] == '!=' && ! is_null($value))
             || ($where['operator'] == '=' && is_null($value))
             || ($where['operator'] == 'exists' && ! $value)
@@ -245,6 +257,22 @@ class Grammar extends BaseGrammar
         }
 
         return $this->compileWhereBasic($builder, $where);
+    }
+
+    /**
+     * Compile a date clause
+     */
+    protected function compileWhereRegex(Builder $builder, array $where): array
+    {
+      return [
+        'regexp' => [
+          $where['column'] => [
+            ...$where['parameters'],
+            'value' => (string) $where['value']
+          ],
+        ],
+      ];
+
     }
 
     /**

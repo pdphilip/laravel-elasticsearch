@@ -4,21 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
-use Illuminate\Container\Container;
-use Illuminate\Contracts\Container\BindingResolutionException;
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Pagination\Cursor;
-use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
-use PDPhilip\Elasticsearch\Exceptions\MissingOrderException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
-use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
-use RuntimeException;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
