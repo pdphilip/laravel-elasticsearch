@@ -4,17 +4,46 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query;
 
+use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 
 class Processor extends BaseProcessor
 {
 
+  protected $aggregations;
+  protected $query;
   protected $rawResponse;
 
-  protected $aggregations;
+  /**
+   * Get the raw aggregation results
+   *
+   * @param array
+   */
+  public function getAggregationResults(): array
+  {
+    return $this->aggregations;
+  }
 
-  protected $query;
+  /**
+   * Get the raw Elasticsearch response
+   *
+   * @param array
+   */
+  public function getRawResponse(): array
+  {
+    return $this->rawResponse->asArray();
+  }
+
+  public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
+  {
+    $result = $query->getConnection()->insert($sql, $values);
+    $this->rawResponse = $result;
+
+    $result = $result->asArray();
+    $last = collect($result['items'])->last();
+    return $last['index']['_id'] ?? null;
+  }
 
   /**
    * Process the results of a "select" query.
@@ -79,36 +108,6 @@ class Processor extends BaseProcessor
   }
 
   /**
-   * Get the raw Elasticsearch response
-   *
-   * @param array
-   */
-  public function getRawResponse(): array
-  {
-    return $this->rawResponse->asArray();
-  }
-
-  /**
-   * Get the raw aggregation results
-   *
-   * @param array
-   */
-  public function getAggregationResults(): array
-  {
-    return $this->aggregations;
-  }
-
-  public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
-  {
-    $result = $query->getConnection()->insert($sql, $values);
-    $this->rawResponse = $result;
-
-    $result = $result->asArray();
-    $last = collect($result['items'])->last();
-    return $last['index']['_id'] ?? null;
-  }
-
-  /**
    * Process the results of a tables query.
    *
    * @param  array  $results
@@ -126,6 +125,20 @@ class Processor extends BaseProcessor
         'docs_deleted' => $result['docs.deleted'] ?? 0,
       ];
     }, $results);
+  }
+
+  /**
+   * Process the results of a tables query.
+   *
+   * @param  Elasticsearch  $results
+   * @return array
+   */
+  public function processUpdate(Builder $query, Elasticsearch $results)
+  {
+    $this->rawResponse = $results;
+    $this->query = $query;
+
+    return $results->asArray()['updated'];
   }
 
 }
