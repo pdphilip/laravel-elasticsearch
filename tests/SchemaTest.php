@@ -5,7 +5,7 @@
   use Illuminate\Support\Facades\DB;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
   use PDPhilip\Elasticsearch\Schema\Schema;
-  use Workbench\App\Models\User;
+  use PDPhilip\Elasticsearch\Tests\Models\User;
 
   beforeEach(function () {
     Schema::dropIfExists('newcollection');

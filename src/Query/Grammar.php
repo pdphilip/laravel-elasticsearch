@@ -91,7 +91,7 @@ class Grammar extends BaseGrammar
         }
 
         if ($builder->aggregations) {
-            $params['body']['aggregations'] = $this->compileAggregations($builder);
+            $params = array_merge($params, $this->compileAggregations($builder));
         }
 
         // Apply order, offset and limit
@@ -111,7 +111,7 @@ class Grammar extends BaseGrammar
             $params['_source'] = $builder->columns;
         }
 
-        if (! $params['body']['query']) {
+        if (isset($params['body']['query']) && ! $params['body']['query']) {
             unset($params['body']['query']);
         }
 
@@ -904,11 +904,16 @@ class Grammar extends BaseGrammar
             return '_id';
         }
 
-        $mapping = collect(Arr::dot($builder->getMapping()))->reject(function ($value, $key) use ($textField) {
-            return in_array($value, ['text', 'binary']) || ! str($key)->containsAll(explode('.', $textField));
-        })->map(function ($value, $key) use ($builder) {
-            return str($key)->replace(["{$builder->from}.", 'mappings.', 'fields.', 'properties.', '.type'], '')->squish()->trim()->toString();
-        })->first();
+        $mapping = collect(Arr::dot($builder->getMapping()))
+            ->mapWithKeys(function ($value, $key) {
+                return [str($key)->after('.')->beforeLast('.')->toString() => $value];
+            })
+            ->filter(function ($value, $key) use ($textField) {
+                return ! in_array($value, ['text', 'binary']) && str($key)->containsAll(explode('.', $textField));
+            })
+            ->map(function ($value, $key) {
+                return str($key)->replace(['mappings.', 'fields.', 'properties.'], '')->squish()->trim()->toString();
+            })->first();
 
         if (! empty($mapping)) {
             return $mapping;

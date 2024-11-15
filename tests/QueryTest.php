@@ -126,16 +126,14 @@ it('selects specific columns for users', function () {
 });
 
 it('filters users with whereNot', function () {
-    expect(User::whereNot('title', 'admin')->get())->toHaveCount(6);
-    expect(User::whereNot(fn ($builder) => $builder->where('title', 'admin'))->get())->toHaveCount(6);
-    expect(User::whereNot('title', '!=', 'admin')->get())->toHaveCount(3);
-    expect(User::whereNot(fn ($builder) => $builder->whereNot('title', 'admin'))->get())->toHaveCount(3);
-    expect(User::whereNot('title', '=', 'admin')->get())->toHaveCount(6);
-    expect(User::whereNot('title', ['$in' => ['admin']])->get())->toHaveCount(6);
-    expect(User::whereNot('title', new Regex('^admin$'))->get())->toHaveCount(6);
-    expect(User::whereNot('title', null)->get())->toHaveCount(8);
-    expect(User::whereNot(fn ($builder) => $builder->where('title', 'admin')->orWhere('age', 35))->get())->toHaveCount(5);
-})->todo();
+    expect(User::whereNot('title', 'admin')->get())->toHaveCount(6)
+                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin'))->get())->toHaveCount(6)
+                                                   ->and(User::whereNot('title', '!=', 'admin')->get())->toHaveCount(3)
+                                                   ->and(User::whereNot(fn($builder) => $builder->whereNot('title', 'admin'))->get())->toHaveCount(3)
+                                                   ->and(User::whereNot('title', '=', 'admin')->get())->toHaveCount(6)
+                                                   ->and(User::whereNot('title', NULL)->get())->toHaveCount(8)
+                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin')->orWhere('age', 35))->get())->toHaveCount(5);
+});
 
 it('filters users with orWhere', function () {
     expect(User::where('age', 13)->orWhere('title', 'admin')->get())->toHaveCount(4)
@@ -164,11 +162,32 @@ it('filters users within range with whereBetween', function () {
 });
 
 it('filters users with whereIn and whereNotIn', function () {
-    expect(User::whereIn('age', [13, 23])->get())->toHaveCount(2);
-    expect(User::whereIn('age', [33, 35, 13])->get())->toHaveCount(6);
-    expect(User::whereNotIn('age', [33, 35])->get())->toHaveCount(4);
-    expect(User::whereNotNull('age')->whereNotIn('age', [33, 35])->get())->toHaveCount(3);
-})->todo('this needs to be text base');
+    expect(
+      User::whereIn('age', [
+        13,
+        23
+      ])->get()
+    )->toHaveCount(2)
+     ->and(
+       User::whereIn('age', [
+         33,
+         35,
+         13
+       ])->get()
+     )->toHaveCount(6)
+     ->and(
+       User::whereNotIn('age', [
+         33,
+         35
+       ])->get()
+     )->toHaveCount(4)
+     ->and(
+       User::whereNotNull('age')->whereNotIn('age', [
+         33,
+         35
+       ])->get()
+     )->toHaveCount(3);
+});
 
 it('filters users by null values with whereNull', function () {
     expect(User::whereNull('age')->get())->toHaveCount(1);
@@ -227,28 +246,6 @@ it('orders users by age', function () {
     $user = User::whereNotNull('age')->orderBy('age', 'desc')->first();
     expect($user->age)->toBe(37);
 });
-
-  it('groups users by title and age', function () {
-    expect(User::groupBy('title')->get())->toHaveCount(3);
-    expect(User::groupBy('age')->get())->toHaveCount(6);
-    expect(User::groupBy('age')->skip(1)->get())->toHaveCount(5);
-    expect(User::groupBy('age')->take(2)->get())->toHaveCount(2);
-
-    $users = User::groupBy('age')->orderBy('age', 'desc')->get();
-    expect($users[0]->age)->toBe(37);
-    expect($users[1]->age)->toBe(35);
-    expect($users[2]->age)->toBe(33);
-
-    $users = User::groupBy('age')->skip(1)->take(2)->orderBy('age', 'desc')->get();
-    expect($users)->toHaveCount(2);
-    expect($users[0]->age)->toBe(35);
-    expect($users[1]->age)->toBe(33);
-    expect($users[0]->name)->toBeNull();
-
-    $users = User::select('name')->groupBy('age')->skip(1)->take(2)->orderBy('age', 'desc')->get();
-    expect($users)->toHaveCount(2);
-    expect($users[0]->name)->not()->toBeNull();
-  })->todo();
 
   it('counts users with specific age criteria', function () {
     expect(User::where('age', '<>', 35)->count())->toBe(6)
@@ -342,25 +339,14 @@ it('orders users by age', function () {
                              ->and($results->first()->title)->toBeNull();
   });
 
-  it('groups paginated results by age', function () {
-    $results = User::groupBy('age')->paginate(2);
-    expect($results->count())->toBe(2);
-    expect($results->total())->toBe(6);
-    expect($results->lastPage())->toBe(3);
-    expect($results->currentPage())->toBe(1);
+  it('aggregates results by age', function () {
 
-    $results = User::groupBy('age')->paginate(4, page: 2);
-    expect($results->count())->toBe(2);
-    expect($results->total())->toBe(6);
-    expect($results->lastPage())->toBe(2);
-    expect($results->currentPage())->toBe(2);
+    expect(User::max('age'))->toBe(37.0);
+    expect(User::min('age'))->toBe(13.0);
+    expect(User::avg('age'))->toBe(30.5);
+    expect(User::sum('age'))->toBe(244.0);
 
-    $results = User::where('title', 'admin')->groupBy('age')->paginate(4);
-    expect($results->count())->toBe(2);
-    expect($results->total())->toBe(2);
-    expect($results->lastPage())->toBe(1);
-    expect($results->currentPage())->toBe(1);
-  })->todo();
+  });
 
   it('updates records', function () {
     expect(User::where(['name' => 'John Doe'])->update(['name' => 'Jim Morrison']))->toBe(1)
