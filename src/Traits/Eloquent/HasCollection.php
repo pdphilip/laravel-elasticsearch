@@ -1,6 +1,6 @@
 <?php
 
-namespace PDPhilip\Elasticsearch\Eloquent;
+namespace PDPhilip\Elasticsearch\Traits\Eloquent;
 
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 

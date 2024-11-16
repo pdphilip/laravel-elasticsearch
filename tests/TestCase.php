@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests;
 
-use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
 use PDPhilip\Elasticsearch\ElasticServiceProvider;
 
 class TestCase extends Orchestra
 {
-    use WithWorkbench;
 
     protected function getPackageProviders($app): array
     {

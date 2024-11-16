@@ -648,7 +648,7 @@ class Builder extends BaseBuilder
      */
     public function suffix(): string
     {
-        return $this->options->get('suffix', '');
+        return $this->options()->get('suffix', '');
     }
 
     public function truncate()
