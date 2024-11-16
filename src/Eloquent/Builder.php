@@ -37,7 +37,7 @@ class Builder extends BaseEloquentBuilder
 
         $this->query->from($model->getSearchIndex());
 
-        $this->query->suffix($model->getSuffix());
+        $this->query->options()->add('suffix', $model->getSuffix());
 
         $this->query->type($model->getSearchType());
 
@@ -46,10 +46,20 @@ class Builder extends BaseEloquentBuilder
 
     public function withSuffix($suffix): self
     {
-        $this->query->suffix = $suffix;
+        $this->query->options()->add('suffix', $suffix);
 
         return $this;
     }
+
+  /**
+   * sets the model to not wait for elastic to refresh.
+   */
+  public function withoutRefresh(): Model
+  {
+    $this->query->options()->add('refresh', false);
+    $this->model->options()->add('refresh', false);
+    return $this->model;
+  }
 
     /**
      * Execute the query as a "select" statement.

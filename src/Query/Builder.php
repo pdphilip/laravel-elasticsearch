@@ -62,10 +62,6 @@ class Builder extends BaseBuilder
 
     public $scripts = [];
 
-    /**
-     * The table suffix which the query is targeting.
-     */
-    public string $suffix = '';
 
     public $type;
 
@@ -318,9 +314,9 @@ class Builder extends BaseBuilder
     /**
      * @return mixed|null
      */
-    public function getOption(string $option)
+    public function getOption(string $option, mixed $default = null)
     {
-        return $this->options()->get($option);
+        return $this->options()->get($option, $default);
     }
 
     /**
@@ -650,11 +646,9 @@ class Builder extends BaseBuilder
     /**
      * Set the suffix that is appended to from.
      */
-    public function suffix($suffix): self
+    public function suffix(): string
     {
-        $this->suffix = $suffix;
-
-        return $this;
+        return $this->options->get('suffix', '');
     }
 
     public function truncate()

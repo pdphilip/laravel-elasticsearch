@@ -69,7 +69,7 @@ class Grammar extends BaseGrammar
         $query = $this->compileWheres($builder);
 
         $params = [
-            'index' => $builder->from.$builder->suffix,
+            'index' => $builder->from.$builder->suffix(),
             'body' => [
                 'query' => $query['query'],
             ],
@@ -145,7 +145,7 @@ class Grammar extends BaseGrammar
         ];
 
         $compiled = [
-            'index' => $builder->from.$builder->suffix,
+            'index' => $builder->from.$builder->suffix(),
             'body' => [
                 'aggs' => $compiled,
             ],
@@ -229,7 +229,7 @@ class Grammar extends BaseGrammar
                 foreach ($doc['child_documents'] as $childDoc) {
                     $params['body'][] = [
                         'index' => [
-                            '_index' => $builder->from.$builder->suffix,
+                            '_index' => $builder->from.$builder->suffix(),
                             '_id' => $childDoc['id'],
                             'parent' => $doc['id'],
                         ],
@@ -242,7 +242,7 @@ class Grammar extends BaseGrammar
             }
 
             $index = [
-                '_index' => $builder->from.$builder->suffix,
+                '_index' => $builder->from.$builder->suffix(),
                 '_id' => $doc['id'],
             ];
 
@@ -269,11 +269,7 @@ class Grammar extends BaseGrammar
             $params['body'][] = $doc;
         }
 
-        if ($refresh = $builder->getOption('refresh')) {
-            $params['refresh'] = $refresh;
-        } else {
-            $params['refresh'] = true;
-        }
+      $params['refresh'] = $builder->getOption('refresh', true);
 
         return $params;
     }
@@ -301,11 +297,7 @@ class Grammar extends BaseGrammar
             ],
         ];
 
-        if ($refresh = $builder->getOption('refresh')) {
-            $clause['refresh'] = $refresh;
-        } else {
-            $clause['refresh'] = true;
-        }
+        $clause['refresh'] = $builder->getOption('refresh', true);
 
         return $clause;
     }
@@ -346,11 +338,7 @@ class Grammar extends BaseGrammar
             $clause['body']['script']['params'] = $params;
         }
 
-        if ($refresh = $builder->getOption('refresh')) {
-            $clause['refresh'] = $refresh;
-        } else {
-            $clause['refresh'] = true;
-        }
+        $clause['refresh'] = $builder->getOption('refresh', true);
 
         return $clause;
     }

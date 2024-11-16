@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
-use PDPhilip\Elasticsearch\Enums\WaitFor;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Meta\ModelMetaData;
-use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
+use PDPhilip\Elasticsearch\Traits\HasOptions;
 
 /**
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
@@ -23,14 +22,7 @@ use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
  */
 trait ElasticsearchModel
 {
-    use HasUuids, HybridRelations, Searchable;
-
-    /**
-     * The table suffix associated with the model.
-     *
-     * @var string|null
-     */
-    protected ?string $tableSuffix;
+    use HasOptions, HasUuids, HybridRelations, Searchable;
 
     protected ?string $recordIndex;
 
@@ -45,16 +37,30 @@ trait ElasticsearchModel
         return base64_encode((string) Str::orderedUuid());
     }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function newFromBuilder($attributes = [], $connection = null)
-  {
-    $model = parent::newFromBuilder($attributes, $connection);
-    $model->setTable($attributes['_index']);
+    /**
+     * {@inheritdoc}
+     */
+    protected function newBaseQueryBuilder()
+    {
+        $query = $this->getConnection()->query();
 
-    return $model;
-  }
+        // Since newBaseQueryBuilder is used whenever a new Query builder is needed
+        // we hook in to it to pass options we have set at the model level to the query builder.
+        $query->options()->set($this->options()->all());
+
+        return $query;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function newFromBuilder($attributes = [], $connection = null)
+    {
+        $model = parent::newFromBuilder($attributes, $connection);
+        $model->setTable($attributes['_index']);
+
+        return $model;
+    }
 
     /**
      * {@inheritdoc}
@@ -114,40 +120,35 @@ trait ElasticsearchModel
      */
     public function freshTimestamp(): string
     {
-        // return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
     }
 
-  /**
-   * Set the table suffix associated with the model.
-   *
-   * @param string|null $suffix
-   *
-   * @return self
-   */
-  public function setSuffix($suffix): self
-  {
-    $this->tableSuffix = $suffix;
+    /**
+     * Set the table suffix associated with the model.
+     *
+     * @param  string|null  $suffix
+     */
+    public function setSuffix($suffix): self
+    {
+        $this->options()->add('suffix', $suffix);
 
-    return $this;
-  }
+        return $this;
+    }
 
-  /**
-   * Get the table suffix associated with the model.
-   *
-   * @return string
-   */
-  public function getSuffix(): string
-  {
-    return $this->tableSuffix ?? '';
-  }
+    /**
+     * Get the table suffix associated with the model.
+     */
+    public function getSuffix(): string
+    {
+        return $this->options()->get('suffix', '');
+    }
 
     /**
      * {@inheritdoc}
      */
     public function getDateFormat(): string
     {
-        return $this->dateFormat ?: 'Y-m-d H:i:s';
+        return $this->dateFormat ?: DateTimeInterface::ATOM;
     }
 
     /**
@@ -245,76 +246,50 @@ trait ElasticsearchModel
         return Str::snake(class_basename($this)).'_'.ltrim($this->primaryKey, '_');
     }
 
-    public function saveWithoutRefresh(array $options = []): bool
+    /** {@inheritdoc} */
+    public function push()
     {
+        $parameters = func_get_args();
+        if ($parameters) {
+            $unique = false;
 
-        //TODO:
+            if (count($parameters) === 3) {
+                [$column, $values, $unique] = $parameters;
+            } else {
+                [$column, $values] = $parameters;
+            }
 
-        $this->mergeAttributesFromCachedCasts();
+            // Do batch push by default.
+            $values = Arr::wrap($values);
 
-        $query = $this->newModelQuery();
-        //@phpstan-ignore-next-line
-        $query->setRefresh(WaitFor::FALSE);
+            $query = $this->setKeysForSaveQuery($this->newQuery());
 
-        if ($this->exists) {
-            $saved = ! $this->isDirty() || $this->performUpdate($query);
-        } else {
-            $saved = $this->performInsert($query);
+            $this->pushAttributeValues($column, $values, $unique);
+
+            return $query->push($column, $values, $unique);
         }
 
-        if ($saved) {
-            $this->finishSave($options);
-        }
-
-        return $saved;
+        return parent::push();
     }
 
-  /** @inheritdoc */
-  public function push()
-  {
-    $parameters = func_get_args();
-    if ($parameters) {
-      $unique = false;
+    /**
+     * Remove one or more values from an array.
+     *
+     * @param  string  $column
+     * @param  mixed  $values
+     * @return mixed
+     */
+    public function pull($column, $values)
+    {
+        // Do batch pull by default.
+        $values = Arr::wrap($values);
 
-      if (count($parameters) === 3) {
-        [$column, $values, $unique] = $parameters;
-      } else {
-        [$column, $values] = $parameters;
-      }
+        $query = $this->setKeysForSaveQuery($this->newQuery());
 
-      // Do batch push by default.
-      $values = Arr::wrap($values);
+        $this->pullAttributeValues($column, $values);
 
-      $query = $this->setKeysForSaveQuery($this->newQuery());
-
-      $this->pushAttributeValues($column, $values, $unique);
-
-      return $query->push($column, $values, $unique);
+        return $query->pull($column, $values);
     }
-
-    return parent::push();
-  }
-
-
-  /**
-   * Remove one or more values from an array.
-   *
-   * @param  string $column
-   * @param  mixed  $values
-   *
-   * @return mixed
-   */
-  public function pull($column, $values)
-  {
-    // Do batch pull by default.
-    $values = Arr::wrap($values);
-
-    $query = $this->setKeysForSaveQuery($this->newQuery());
-
-    $this->pullAttributeValues($column, $values);
-
-    return $query->pull($column, $values);
-  }
 
     /**
      * Append one or more values to the underlying attribute value and sync with original.
@@ -406,14 +381,14 @@ trait ElasticsearchModel
      */
     protected function getRelationsWithoutParent(): array
     {
-      $relations = $this->getRelations();
+        $relations = $this->getRelations();
 
-      $parentRelation = $this->getParentRelation();
-      if ($parentRelation) {
-        unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
-      }
+        $parentRelation = $this->getParentRelation();
+        if ($parentRelation) {
+            unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
+        }
 
-      return $relations;
+        return $relations;
     }
 
     /**
@@ -431,10 +406,6 @@ trait ElasticsearchModel
     {
         $this->parentRelation = $relation;
     }
-
-    //----------------------------------------------------------------------
-    // Helpers
-    //----------------------------------------------------------------------
 
     protected function isGuardableColumn($key): bool
     {
