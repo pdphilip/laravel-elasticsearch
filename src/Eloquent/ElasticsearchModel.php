@@ -19,17 +19,18 @@ use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 
 /**
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ * @mixin \PDPhilip\Elasticsearch\Eloquent\Builder
  */
 trait ElasticsearchModel
 {
     use HasUuids, HybridRelations, Searchable;
 
     /**
-     * The table associated with the model.
+     * The table suffix associated with the model.
      *
      * @var string|null
      */
-    protected $index;
+    protected ?string $tableSuffix;
 
     protected ?string $recordIndex;
 
@@ -44,19 +45,16 @@ trait ElasticsearchModel
         return base64_encode((string) Str::orderedUuid());
     }
 
-    public function getRecordIndex(): ?string
-    {
-        return $this->recordIndex;
-    }
+  /**
+   * {@inheritdoc}
+   */
+  public function newFromBuilder($attributes = [], $connection = null)
+  {
+    $model = parent::newFromBuilder($attributes, $connection);
+    $model->setTable($attributes['_index']);
 
-    public function setRecordIndex($recordIndex = null)
-    {
-        if ($recordIndex) {
-            return $this->recordIndex = $recordIndex;
-        }
-
-        return $this->recordIndex = $this->index;
-    }
+    return $model;
+  }
 
     /**
      * {@inheritdoc}
@@ -119,6 +117,30 @@ trait ElasticsearchModel
         // return Carbon::now()->toIso8601String();
         return Carbon::now()->format($this->getDateFormat());
     }
+
+  /**
+   * Set the table suffix associated with the model.
+   *
+   * @param string|null $suffix
+   *
+   * @return self
+   */
+  public function setSuffix($suffix): self
+  {
+    $this->tableSuffix = $suffix;
+
+    return $this;
+  }
+
+  /**
+   * Get the table suffix associated with the model.
+   *
+   * @return string
+   */
+  public function getSuffix(): string
+  {
+    return $this->tableSuffix ?? '';
+  }
 
     /**
      * {@inheritdoc}

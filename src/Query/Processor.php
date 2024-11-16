@@ -81,6 +81,7 @@ class Processor extends BaseProcessor
   {
     $document = $result['_source'];
     $document['_id'] = $result['_id'];
+    $document['_index'] = $result['_index'];
 
     if ($query->includeInnerHits && isset($result['inner_hits'])) {
       $document = $this->addInnerHitsToDocument($document, $result['inner_hits']);
