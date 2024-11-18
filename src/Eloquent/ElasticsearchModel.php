@@ -12,7 +12,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Meta\ModelMetaData;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
@@ -27,8 +26,6 @@ trait ElasticsearchModel
     protected ?string $recordIndex;
 
     protected ?Relation $parentRelation;
-
-    protected ?ModelMetaData $_meta;
 
     public function newUniqueId()
     {
@@ -68,51 +65,6 @@ trait ElasticsearchModel
     public function getQualifiedKeyName(): string
     {
         return $this->getKeyName();
-    }
-
-    public function getMeta(): ModelMetaData
-    {
-        return $this->_meta;
-    }
-
-    public function getMetaAsArray(): array
-    {
-        return $this->_meta->asArray();
-    }
-
-    public function setMeta($meta): static
-    {
-        $this->_meta = new ModelMetaData($meta);
-
-        return $this;
-    }
-
-    public function getSearchHighlightsAttribute(): ?object
-    {
-        return $this->_meta->parseHighlights();
-    }
-
-    public function getSearchHighlightsAsArrayAttribute(): array
-    {
-        return $this->_meta->getHighlights();
-    }
-
-    public function getWithHighlightsAttribute(): object
-    {
-        $data = $this->attributes;
-        $mutators = array_values(array_diff($this->getMutatedAttributes(), [
-            'id',
-            'search_highlights',
-            'search_highlights_as_array',
-            'with_highlights',
-        ]));
-        if ($mutators) {
-            foreach ($mutators as $mutator) {
-                $data[$mutator] = $this->{$mutator};
-            }
-        }
-
-        return (object) $this->_meta->parseHighlights($data);
     }
 
     /**
