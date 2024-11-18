@@ -5,56 +5,43 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Schema;
 
 use Illuminate\Database\Schema\Blueprint as BlueprintBase;
-use Illuminate\Support\Str;
+use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Enums\Dynamic;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
+use PDPhilip\Elasticsearch\Traits\Schema\ManagesElasticMigrations;
 
 class Blueprint extends BlueprintBase
 {
     use ManagesDefaultMigrations;
+    use ManagesElasticMigrations;
 
-    /** @var string */
-    protected $alias;
+    protected string $alias;
 
-    /** @var string */
-    protected $document;
+    protected string $document;
 
-    /** @var array */
-    protected $meta = [];
+    protected array $indexSettings = [];
 
-    /** @var array */
-    protected $indexSettings = [];
+    protected array $meta = [];
 
     /**
-     * {@inheritDoc}
+     * Add a key-value pair to the index settings.
+     *
+     * @param  string  $key  The setting name.
+     * @param  mixed  $value  The setting value.
      */
-    public function addColumn($type, $name, array $parameters = [])
-    {
-        $attributes = ['name'];
-
-        if (isset($type)) {
-            $attributes[] = 'type';
-        }
-
-        $this->columns[] = $column = new PropertyDefinition(
-            array_merge(compact(...$attributes), $parameters)
-        );
-
-        return $column;
-    }
-
-    public function addIndexSettings(string $key, $value): void
+    public function addIndexSettings(string $key, mixed $value): void
     {
         $this->indexSettings[$key] = $value;
     }
 
-    public function addMetaField(string $key, $value): void
-    {
-        $this->meta[$key] = $value;
-    }
-
+    /**
+     * Set the alias for the Blueprint.
+     *
+     * @param  string  $alias  The alias to be set.
+     */
     public function alias(string $alias): void
     {
         $this->alias = $alias;
@@ -79,182 +66,9 @@ class Blueprint extends BlueprintBase
     }
 
     /**
-     * @param  string  $name
-     */
-    public function date($name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn('date', $name, $parameters);
-    }
-
-    public function dateRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('date_range', $name, $parameters);
-    }
-
-    public function document(string $name): void
-    {
-        $this->document = $name;
-    }
-
-    public function doubleRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('double_range', $name, $parameters);
-    }
-
-    /**
-     * @param  bool|string  $value
-     */
-    public function dynamic($value): void
-    {
-        $this->addMetaField('dynamic', $value);
-    }
-
-    public function enableAll(): void
-    {
-        $this->addMetaField('_all', ['enabled' => true]);
-    }
-
-    public function enableFieldNames(): void
-    {
-        $this->addMetaField('_field_names', ['enabled' => true]);
-    }
-
-    public function floatRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('float_range', $name, $parameters);
-    }
-
-    public function geoPoint(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn('geo_point', $name, $parameters);
-    }
-
-    public function geoShape(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn('geo_shape', $name, $parameters);
-    }
-
-    public function getAlias(): string
-    {
-        return $this->alias ?? $this->getTable();
-    }
-
-    public function getDocumentType(): string
-    {
-        return $this->document ?? Str::singular($this->getTable());
-    }
-
-    public function getIndex(): string
-    {
-        return $this->getTable();
-    }
-
-    public function getIndexSettings(): array
-    {
-        return $this->indexSettings;
-    }
-
-    public function getMeta(): array
-    {
-        return $this->meta;
-    }
-
-    public function integerRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('integer_range', $name, $parameters);
-    }
-
-    public function ip(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->ipAddress($name, $parameters);
-    }
-
-    public function ipRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('ip_range', $name, $parameters);
-    }
-
-    public function join(string $name, array $relations): PropertyDefinition
-    {
-        return $this->addColumn('join', $name, compact('relations'));
-    }
-
-    public function keyword(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn('keyword', $name, $parameters);
-    }
-
-    public function long(string $name): PropertyDefinition
-    {
-        return $this->addColumn('long', $name);
-    }
-
-    public function longRange(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->range('long_range', $name, $parameters);
-    }
-
-    public function meta(array $meta): void
-    {
-        $this->addMetaField('_meta', $meta);
-    }
-
-    /**
-     * @param  \Closure  $parameters
-     */
-    public function nested(string $name): PropertyDefinition
-    {
-        return $this->addColumn('nested', $name);
-    }
-
-    /**
-     * @param  \Closure  $parameters
-     * @return PropertyDefinition|\Illuminate\Database\Schema\ColumnDefinition
-     */
-    public function object(string $name)
-    {
-        return $this->addColumn(null, $name);
-    }
-
-    public function percolator(string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn('percolator', $name, $parameters);
-    }
-
-    public function range(string $type, string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn($type, $name, $parameters);
-    }
-
-    public function property(string $type, string $name, array $parameters = []): PropertyDefinition
-    {
-        return $this->addColumn($type, $name, $parameters);
-    }
-
-    public function routingRequired(): void
-    {
-        $this->addMetaField('_routing', ['required' => true]);
-    }
-
-    /**
-     * @param  string  $column
-     * @param  bool  $hasKeyword  adds a keyword subfield.
-     */
-    public function text($column, bool $hasKeyword = false, array $parameters = []): PropertyDefinition
-    {
-        if (! $hasKeyword) {
-            return $this->addColumn('text', $column, $parameters);
-        }
-
-        return $this->addColumn('text', $column, $parameters)->fields(function (Blueprint $field) {
-            $field->keyword('keyword', ['ignore_above' => 256]);
-        });
-    }
-
-    /**
      * @return \Closure[]
      */
-    public function toDSL(Connection $connection, Grammar $grammar)
+    public function toDSL(Connection $connection, Grammar $grammar): array
     {
         $this->addImpliedCommands($connection, $grammar);
 
@@ -278,13 +92,115 @@ class Blueprint extends BlueprintBase
         return $statements;
     }
 
-    public function tokenCount(string $name, array $parameters = []): PropertyDefinition
+    public function document(string $name): void
     {
-        return $this->addColumn('token_count', $name, $parameters);
+        $this->document = $name;
+    }
+
+    public function dynamic(Dynamic $value = Dynamic::TRUE): void
+    {
+        $this->addMetaField('dynamic', $value->value());
     }
 
     /**
-     * @return \Illuminate\Support\Fluent
+     * Add a key-value pair to the meta data.
+     *
+     * @param  string  $key  The meta key.
+     * @param  mixed  $value  The meta value.
+     */
+    public function addMetaField(string $key, mixed $value): void
+    {
+        $this->meta[$key] = $value;
+    }
+
+    /**
+     * Get the alias for the Blueprint. If no alias is set, return the table name.
+     *
+     * @return string The alias or table name.
+     */
+    public function getAlias(): string
+    {
+        return $this->alias ?? $this->getTable();
+    }
+
+    /**
+     * Get the index name for the blueprint.
+     *
+     * @return string The index name.
+     */
+    public function getIndex(): string
+    {
+        return $this->getTable();
+    }
+
+    /**
+     * Get the index settings for the Blueprint.
+     *
+     * @return array The array of index settings.
+     */
+    public function getIndexSettings(): array
+    {
+        return $this->indexSettings;
+    }
+
+    /**
+     * Get the metadata for the Blueprint.
+     *
+     * @return array The array of metadata.
+     */
+    public function getMeta(): array
+    {
+        return $this->meta;
+    }
+
+    /**
+     * Set metadata for the Blueprint.
+     *
+     * @param  array  $meta  An associative array representing metadata.
+     */
+    public function meta(array $meta): void
+    {
+        $this->addMetaField('_meta', $meta);
+    }
+
+    /**
+     * Adds a new property definition to the blueprint.
+     *
+     * @param  string  $type  The type of the property.
+     * @param  string  $name  The name of the property.
+     * @param  array  $parameters  Additional parameters for the property.
+     * @return PropertyDefinition The created property definition.
+     */
+    public function property(string $type, string $name, array $parameters = []): PropertyDefinition
+    {
+        return $this->addColumn($type, $name, $parameters);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addColumn($type, $name, array $parameters = [])
+    {
+        $attributes = ['name'];
+
+        if (isset($type)) {
+            $attributes[] = 'type';
+        }
+
+        $this->columns[] = $column = new PropertyDefinition(
+            array_merge(compact(...$attributes), $parameters)
+        );
+
+        return $column;
+    }
+
+    public function routingRequired(): void
+    {
+        $this->addMetaField('_routing', ['required' => true]);
+    }
+
+    /**
+     * @return Fluent
      */
     public function update()
     {

@@ -331,8 +331,13 @@ it('maps ES schemas', function () {
     Schema::create('newcollection', function (Blueprint $table) {
       $table->date('date');
       $table->alias('bar_foo');
+      $table->dynamic();
+      $table->routingRequired();
     });
 
+    $index = DB::indices()->getMapping(['index' => 'newcollection'])->asArray();
+    expect($index['newcollection']['mappings']['dynamic'])->toBe('true');
+    expect($index['newcollection']['mappings']['_routing']['required'])->toBeTrue();
 
     $alias = DB::indices()->getAlias(['index' => 'newcollection'])->asArray();
     expect($alias['newcollection']['aliases'])->toHaveKey('bar_foo');
