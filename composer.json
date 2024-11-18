@@ -42,10 +42,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "PDPhilip\\Elasticsearch\\Tests\\": "tests/",
-      "Workbench\\App\\": "workbench/app/",
-      "Workbench\\Database\\Factories\\": "workbench/database/factories/",
-      "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+      "PDPhilip\\Elasticsearch\\Tests\\": "tests/"
     }
   },
   "autoload": {
