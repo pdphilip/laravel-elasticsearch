@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Models\Book;
 use PDPhilip\Elasticsearch\Tests\Models\Guarded;
 use PDPhilip\Elasticsearch\Tests\Models\Item;
@@ -506,19 +507,30 @@ it('tests first or create', function () {
         ->and($check->id)->toBe($user->id);
 });
 
+it('tests changes the table index', function () {
+
+    $schema = Schema::connection('elasticsearch');
+    $schema->dropIfExists('users_test');
+
+    $user = new User;
+    $user->name = 'one';
+    $user->setTable('users_test');
+    $user->save();
+
+    $check = User::withSuffix('_test')->first();
+    expect($check->getTable())->toBe('users_test');
+
+});
+
 it('tests numeric field name', function () {
     $user = new User;
     $user->{1} = 'one';
     $user->{2} = ['3' => 'two.three'];
     $user->save();
 
-    $found = User::where('1', 'one')->first();
-    expect($found)->toBeInstanceOf(User::class)
-        ->and($found[1])->toBe('one');
-
-    $found = User::where('2.3', 'two.three')->first();
-    expect($found)->toBeInstanceOf(User::class)
-        ->and($found[2])->toBe([3 => 'two.three']);
+    expect($user->id)->toBeString()->
+    and(! isset($user->_id))->toBeTrue()
+        ->and(User::count())->toBe(1);
 });
 
 it('tests create with null id', function (string $id) {

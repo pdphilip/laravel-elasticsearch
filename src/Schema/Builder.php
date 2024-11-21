@@ -31,7 +31,7 @@ class Builder extends BaseBuilder
     public function getTables()
     {
         return $this->connection->getPostProcessor()->processTables(
-            collect($this->connection->cat()->indices(['format' => 'JSON'])->asArray())->all()
+              $this->connection->cat()->indices(['format' => 'JSON'])
         );
     }
 

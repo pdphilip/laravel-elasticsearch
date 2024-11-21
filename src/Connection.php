@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch;
 
-use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
@@ -12,12 +11,10 @@ use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
-use PDPhilip\Elasticsearch\Data\Result;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
-use PDPhilip\Elasticsearch\Traits\Bridge\Bridgeable;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
 
@@ -25,13 +22,13 @@ use function array_replace_recursive;
 use function in_array;
 use function is_array;
 use function strtolower;
+
 /**
  * @mixin Client
  */
 class Connection extends BaseConnection
 {
-
-    Use HasOptions;
+    use HasOptions;
 
     const VALID_AUTH_TYPES = ['http', 'cloud'];
 
@@ -39,13 +36,18 @@ class Connection extends BaseConnection
      * The Elasticsearch connection handler.
      */
     protected ?Client $connection;
+
     protected string $connectionName = '';
+
     protected string $indexPrefix = '';
+
     protected string $indexSuffix = '';
+
     /**
      * @var Query\Processor
      */
     protected $postProcessor;
+
     protected $requestTimeout;
 
     /** {@inheritdoc} */
@@ -134,46 +136,45 @@ class Connection extends BaseConnection
 
     }
 
-  public function setOptions(): void
-  {
-      $this->indexPrefix = $this->config['index_prefix'] ?? '';
+    public function setOptions(): void
+    {
+        $this->indexPrefix = $this->config['index_prefix'] ?? '';
 
-      if (isset($this->config['options']['allow_id_sort'])) {
-          $this->options()->add('allow_id_sort', $this->config['options']['allow_id_sort']);
-      }
-      if (isset($this->config['options']['ssl_verification'])) {
-        $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
-      }
-      if (! empty($this->config['options']['retires'])) {
-          $this->options()->add('retires', $this->config['options']['retires']);
-      }
-      if (isset($this->config['options']['meta_header'])) {
-        $this->options()->add('meta_header', $this->config['options']['meta_header']);
-      }
-  }
+        if (isset($this->config['options']['allow_id_sort'])) {
+            $this->options()->add('allow_id_sort', $this->config['options']['allow_id_sort']);
+        }
+        if (isset($this->config['options']['ssl_verification'])) {
+            $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
+        }
+        if (! empty($this->config['options']['retires'])) {
+            $this->options()->add('retires', $this->config['options']['retires']);
+        }
+        if (isset($this->config['options']['meta_header'])) {
+            $this->options()->add('meta_header', $this->config['options']['meta_header']);
+        }
+    }
 
-  /**
-   * Execute an SQL statement and return the boolean result.
-   *
-   * @param string $query
-   * @param array  $bindings
-   *
-   * @return bool
-   */
-  public function statement($query, $bindings = [], Blueprint $blueprint = null)
-  {
-    return $this->run($query, $bindings, function ($query, $bindings) use ($blueprint) {
-      if ($this->pretending()) {
-        return true;
-      }
+    /**
+     * Execute an SQL statement and return the boolean result.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @return bool
+     */
+    public function statement($query, $bindings = [], ?Blueprint $blueprint = null)
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) {
+            if ($this->pretending()) {
+                return true;
+            }
 
-      $this->bindValues($query, $this->prepareBindings($bindings));
+            $this->bindValues($query, $this->prepareBindings($bindings));
 
-      $this->recordsHaveBeenModified();
+            $this->recordsHaveBeenModified();
 
-      return $query();
-    });
-  }
+            return $query();
+        });
+    }
 
     /**
      * Builds and configures a connection to the ElasticSearch client based on
@@ -192,9 +193,9 @@ class Connection extends BaseConnection
 
         // Set the connection type
         if ($this->config['auth_type'] === 'http') {
-          $clientBuilder = $clientBuilder->setHosts($this->config['hosts']);
+            $clientBuilder = $clientBuilder->setHosts($this->config['hosts']);
         } else {
-          $clientBuilder = $clientBuilder->setElasticCloudId($this->config['cloud_id']);
+            $clientBuilder = $clientBuilder->setElasticCloudId($this->config['cloud_id']);
         }
 
         // Set Builder options
@@ -202,11 +203,11 @@ class Connection extends BaseConnection
 
         // Set Authentication
         if ($this->config['username'] && $this->config['password']) {
-          $clientBuilder->setBasicAuthentication($this->config['username'], $this->config['password']);
+            $clientBuilder->setBasicAuthentication($this->config['username'], $this->config['password']);
         }
 
         if ($this->config['api_key']) {
-          $clientBuilder->setApiKey($this->config['api_key'], $this->config['api_id']);
+            $clientBuilder->setApiKey($this->config['api_key'], $this->config['api_id']);
         }
 
         return $clientBuilder->build();
@@ -219,29 +220,29 @@ class Connection extends BaseConnection
      */
     protected function builderOptions(ClientBuilder $clientBuilder): ClientBuilder
     {
-      $clientBuilder = $clientBuilder->setSSLVerification($this->options()->get('ssl_verification'));
+        $clientBuilder = $clientBuilder->setSSLVerification($this->options()->get('ssl_verification'));
         if ($this->options()->get('meta_header')) {
-          $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
+            $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
         }
 
         if (isset($this->retires)) {
-          $clientBuilder = $clientBuilder->setRetries($this->retires);
+            $clientBuilder = $clientBuilder->setRetries($this->retires);
         }
 
         if ($this->config['options']['logging']) {
-          $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
+            $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
         }
 
         if ($this->config['ssl_cert']) {
-          $clientBuilder = $clientBuilder->setCABundle($this->config['ssl_cert']);
+            $clientBuilder = $clientBuilder->setCABundle($this->config['ssl_cert']);
         }
 
         if ($this->config['ssl']['cert']) {
-          $clientBuilder = $clientBuilder->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
+            $clientBuilder = $clientBuilder->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
         }
 
         if ($this->config['ssl']['key']) {
-          $clientBuilder = $clientBuilder->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
+            $clientBuilder = $clientBuilder->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
         }
 
         return $clientBuilder;
@@ -250,118 +251,105 @@ class Connection extends BaseConnection
     /**
      * Dynamically pass methods to the connection.
      *
-     * @param string $method
-     * @param array  $parameters
-     *
+     * @param  string  $method
+     * @param  array  $parameters
      * @return mixed
      */
     public function __call($method, $parameters)
     {
-      return call_user_func_array([$this->connection, $method], $parameters);
+        return call_user_func_array([$this->connection, $method], $parameters);
     }
 
-    /**
-     * @param string $index
-     * @param string $name
-     */
     public function createAlias(string $index, string $name): void
     {
-      $this->indices()->putAlias(compact('index', 'name'));
+        $this->indices()->putAlias(compact('index', 'name'));
     }
 
-    /**
-     * @param string $index
-     * @param array  $body
-     */
     public function createIndex(string $index, array $body): void
     {
-      try {
-        $this->indices()->create(compact('index', 'body'));
-      } catch (\Exception $e) {
-        throw new QueryException($e);
-      }
+        try {
+            $this->indices()->create(compact('index', 'body'));
+        } catch (\Exception $e) {
+            throw new QueryException($e);
+        }
     }
 
     /**
      * Run a select statement against the database and return a generator.
      *
-     * @param string $query
-     * @param array  $bindings
-     * @param bool   $useReadPdo
-     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
      * @return \Generator
      */
     public function cursor($query, $bindings = [], $useReadPdo = false)
     {
-      $scrollTimeout = '30s';
-      $limit = $query['size'] ?? 0;
+        $scrollTimeout = '30s';
+        $limit = $query['size'] ?? 0;
 
-      $scrollParams = [
-        'scroll' => $scrollTimeout,
-        'size' => 100, // Number of results per shard
-        'index' => $query['index'],
-        'body' => $query['body'],
-      ];
+        $scrollParams = [
+            'scroll' => $scrollTimeout,
+            'size' => 100, // Number of results per shard
+            'index' => $query['index'],
+            'body' => $query['body'],
+        ];
 
-      $results = $this->select($scrollParams);
+        $results = $this->select($scrollParams);
 
-      $scrollId = $results['_scroll_id'];
+        $scrollId = $results['_scroll_id'];
 
-      $numResults = count($results['hits']['hits']);
+        $numResults = count($results['hits']['hits']);
 
-      foreach ($results['hits']['hits'] as $result) {
-        yield $result;
-      }
-
-      if (!$limit || $limit > $numResults) {
-        $limit = $limit ? $limit - $numResults : $limit;
-
-        foreach ($this->scroll($scrollId, $scrollTimeout, $limit) as $result) {
-          yield $result;
-        }
-      }
-    }
-
-  /**
-   * Run a select statement against the database using an Elasticsearch scroll cursor.
-   *
-   * @param string $scrollId
-   * @param string $scrollTimeout
-   * @param int    $limit
-   *
-   * @return \Generator
-   */
-  public function scroll(string $scrollId, string $scrollTimeout = '30s', int $limit = 0)
-  {
-    $numResults = 0;
-
-    // Loop until the scroll 'cursors' are exhausted or we have enough results
-    while (!$limit || $numResults < $limit) {
-      // Execute a Scroll request
-      $results = $this->connection->scroll([
-                                             'scroll_id' => $scrollId,
-                                             'scroll' => $scrollTimeout,
-                                           ]);
-
-      // Get new scroll ID in case it's changed
-      $scrollId = $results['_scroll_id'];
-
-      // Break if no results
-      if (empty($results['hits']['hits'])) {
-        break;
-      }
-
-      foreach ($results['hits']['hits'] as $result) {
-        $numResults++;
-
-        if ($limit && $numResults > $limit) {
-          break;
+        foreach ($results['hits']['hits'] as $result) {
+            yield $result;
         }
 
-        yield $result;
-      }
+        if (! $limit || $limit > $numResults) {
+            $limit = $limit ? $limit - $numResults : $limit;
+
+            foreach ($this->scroll($scrollId, $scrollTimeout, $limit) as $result) {
+                yield $result;
+            }
+        }
     }
-  }
+
+    /**
+     * Run a select statement against the database using an Elasticsearch scroll cursor.
+     *
+     *
+     * @return \Generator
+     */
+    public function scroll(string $scrollId, string $scrollTimeout = '30s', int $limit = 0)
+    {
+        $numResults = 0;
+
+        // Loop until the scroll 'cursors' are exhausted or we have enough results
+        while (! $limit || $numResults < $limit) {
+            // Execute a Scroll request
+            $results = $this->connection->scroll([
+                'scroll_id' => $scrollId,
+                'scroll' => $scrollTimeout,
+            ]);
+
+            // Get new scroll ID in case it's changed
+            $scrollId = $results['_scroll_id'];
+
+            // Break if no results
+            if (empty($results['hits']['hits'])) {
+                break;
+            }
+
+            foreach ($results['hits']['hits'] as $result) {
+                $numResults++;
+
+                if ($limit && $numResults > $limit) {
+                    break;
+                }
+
+                yield $result;
+            }
+        }
+    }
 
     /** {@inheritdoc} */
     public function disconnect(): void
@@ -369,30 +357,26 @@ class Connection extends BaseConnection
         $this->connection = null;
     }
 
-  /**
-   * @param string $index
-   */
-  public function dropIndex(string $index): void
-  {
-    $this->indices()->delete(compact('index'));
-  }
+    public function dropIndex(string $index): void
+    {
+        $this->indices()->delete(compact('index'));
+    }
 
-  /**
-   * Run a delete statement against the database.
-   *
-   * @param string $query
-   * @param array  $bindings
-   *
-   * @return array
-   */
-  public function delete($query, $bindings = [])
-  {
-    return $this->run(
-      $query,
-      $bindings,
-      $this->connection->deleteByQuery(...)
-    );
-  }
+    /**
+     * Run a delete statement against the database.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @return array
+     */
+    public function delete($query, $bindings = [])
+    {
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->deleteByQuery(...)
+        );
+    }
 
     public function getClient(): ?Client
     {
@@ -405,102 +389,94 @@ class Connection extends BaseConnection
         return 'elasticsearch';
     }
 
-  /**
-   * @return Schema\Builder
-   */
-  public function getSchemaBuilder()
-  {
-    return new Schema\Builder($this);
-  }
-
-  /**
-   * @return Schema\Grammars\Grammar
-   */
-  public function getSchemaGrammar()
-  {
-    return new Schema\Grammars\Grammar();
-  }
-
-  /**
-   * Run an insert statement against the database.
-   *
-   * @param array $params
-   * @param array $bindings
-   * @return Elasticsearch
-   * @throws BulkInsertQueryException
-   */
-  public function insert($params, $bindings = []): Elasticsearch
-  {
-    $result = $this->run(
-      $this->addClientParams($params),
-      $bindings,
-      $this->connection->bulk(...)
-    );
-
-    if (!empty($result['errors'])) {
-      throw new BulkInsertQueryException($result);
+    /**
+     * @return Schema\Builder
+     */
+    public function getSchemaBuilder()
+    {
+        return new Schema\Builder($this);
     }
 
-    return $result;
-  }
-
-  /**
-   * Add client-specific parameters to the request params
-   *
-   * @param array $params
-   *
-   * @return array
-   */
-  protected function addClientParams(array $params): array
-  {
-    if ($this->requestTimeout) {
-      $params['client']['timeout'] = $this->requestTimeout;
+    /**
+     * @return Schema\Grammars\Grammar
+     */
+    public function getSchemaGrammar()
+    {
+        return new Schema\Grammars\Grammar;
     }
 
-    return $params;
-  }
+    /**
+     * Run an insert statement against the database.
+     *
+     * @param  array  $params
+     * @param  array  $bindings
+     *
+     * @throws BulkInsertQueryException
+     */
+    public function insert($params, $bindings = []): Elasticsearch
+    {
+        $result = $this->run(
+            $this->addClientParams($params),
+            $bindings,
+            $this->connection->bulk(...)
+        );
 
-  /**
-   * Log a query in the connection's query log.
-   *
-   * @param string     $query
-   * @param array      $bindings
-   * @param float|null $time
-   *
-   * @return void
-   */
-  public function logQuery($query, $bindings, $time = null)
-  {
-    $this->event(new QueryExecuted(json_encode($query), $bindings, $time, $this));
+        if (! empty($result['errors'])) {
+            throw new BulkInsertQueryException($result);
+        }
 
-    if ($this->loggingQueries) {
-      $this->queryLog[] = compact('query', 'bindings', 'time');
+        return $result;
     }
-  }
 
-  /**
-   * Prepare the query bindings for execution.
-   *
-   * @param array $bindings
-   *
-   * @return array
-   */
-  public function prepareBindings(array $bindings)
-  {
-    return $bindings;
-  }
+    /**
+     * Add client-specific parameters to the request params
+     */
+    protected function addClientParams(array $params): array
+    {
+        if ($this->requestTimeout) {
+            $params['client']['timeout'] = $this->requestTimeout;
+        }
 
-  /**
-   * Get a new query builder instance.
-   *
-   * @return
-   */
-  public function query()
-  {
-    return new Builder(
-      $this, $this->getQueryGrammar(), $this->getPostProcessor()
-    );
-  }
+        return $params;
+    }
+
+    /**
+     * Log a query in the connection's query log.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  float|null  $time
+     * @return void
+     */
+    public function logQuery($query, $bindings, $time = null)
+    {
+        $this->event(new QueryExecuted(json_encode($query), $bindings, $time, $this));
+
+        if ($this->loggingQueries) {
+            $this->queryLog[] = compact('query', 'bindings', 'time');
+        }
+    }
+
+    /**
+     * Prepare the query bindings for execution.
+     *
+     *
+     * @return array
+     */
+    public function prepareBindings(array $bindings)
+    {
+        return $bindings;
+    }
+
+    /**
+     * Get a new query builder instance.
+     */
+    public function query()
+    {
+        return new Builder(
+            $this, $this->getQueryGrammar(), $this->getPostProcessor()
+        );
+    }
 
     public function reconnectIfMissingConnection()
     {
@@ -509,76 +485,69 @@ class Connection extends BaseConnection
         }
     }
 
-  /**
-   * Run a select statement against the database.
-   *
-   * @param  array   $params
-   * @param  array   $bindings
-   * @return array
-   */
-  public function select($params, $bindings = [], $useReadPdo = true)
-  {
-    return $this->run(
-      $this->addClientParams($params),
-      $bindings,
-      $this->connection->search(...)
-    );
-  }
+    /**
+     * Run a select statement against the database.
+     *
+     * @param  array  $params
+     * @param  array  $bindings
+     * @return array
+     */
+    public function select($params, $bindings = [], $useReadPdo = true)
+    {
+        return $this->run(
+            $this->addClientParams($params),
+            $bindings,
+            $this->connection->search(...)
+        );
+    }
 
-  /**
-   * Set the table prefix in use by the connection.
-   *
-   * @param string $prefix
-   *
-   * @return void
-   */
-  public function setIndexSuffix($suffix)
-  {
-    $this->indexSuffix = $suffix;
+    /**
+     * Set the table prefix in use by the connection.
+     *
+     * @param  string  $prefix
+     * @return void
+     */
+    public function setIndexSuffix($suffix)
+    {
+        $this->indexSuffix = $suffix;
 
-    $this->getQueryGrammar()->setIndexSuffix($suffix);
-  }
+        $this->getQueryGrammar()->setIndexSuffix($suffix);
+    }
 
-  /**
-   * Get the timeout for the entire Elasticsearch request
-   *
-   * @param float $requestTimeout seconds
-   *
-   * @return self
-   */
-  public function setRequestTimeout(float $requestTimeout): self
-  {
-    $this->requestTimeout = $requestTimeout;
+    /**
+     * Get the timeout for the entire Elasticsearch request
+     *
+     * @param  float  $requestTimeout  seconds
+     */
+    public function setRequestTimeout(float $requestTimeout): self
+    {
+        $this->requestTimeout = $requestTimeout;
 
-    return $this;
-  }
+        return $this;
+    }
 
-  /**
-   * Run an update statement against the database.
-   *
-   * @param string $query
-   * @param array  $bindings
-   *
-   * @return array
-   */
-  public function update($query, $bindings = [])
-  {
-    $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
-    return $this->run(
-      $query,
-      $bindings,
-      $this->connection->$updateMethod(...)
-    );
-  }
+    /**
+     * Run an update statement against the database.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @return array
+     */
+    public function update($query, $bindings = [])
+    {
+        $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
 
-  /**
-   * @param string $index
-   * @param array  $body
-   */
-  public function updateIndex(string $index, array $body): void
-  {
-    $this->indices()->putMapping(compact('index', 'body'));
-  }
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->$updateMethod(...)
+        );
+    }
+
+    public function updateIndex(string $index, array $body): void
+    {
+        $this->indices()->putMapping(compact('index', 'body'));
+    }
 
     /** {@inheritdoc} */
     protected function getDefaultPostProcessor(): Query\Processor

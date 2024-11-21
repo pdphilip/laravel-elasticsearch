@@ -11,6 +11,7 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Data\Meta;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesParameters;
 
@@ -49,7 +50,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public $limit = 10000;
+    public $limit = 1000;
 
     /**
      * All of the supported clause operators.
@@ -61,7 +62,6 @@ class Builder extends BaseBuilder
     public $postFilters;
 
     public $scripts = [];
-
 
     public $type;
 
@@ -250,7 +250,6 @@ class Builder extends BaseBuilder
     /**
      * Adds a function score of any type
      *
-     * @param  string  $field
      * @param  array  $options  see elastic search docs for options
      * @param  string  $boolean
      */
@@ -397,20 +396,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Get the time it took Elasticsearch to perform the query
-     *
-     * @return int time in milliseconds
-     */
-    public function getSearchDuration()
-    {
-        if (! $this->hasProcessedSelect()) {
-            $this->getResultsOnce();
-        }
-
-        return $this->processor->getRawResponse()['took'];
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function incrementEach(array $columns, array $extra = [])
@@ -463,7 +448,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values): bool
+    public function insert(array $values): Meta|bool
     {
         // Since every insert gets treated like a batch insert, we will have to detect
         // if the user is inserting a single document or an array of documents.
@@ -482,7 +467,7 @@ class Builder extends BaseBuilder
             $values = [$values];
         }
 
-        return ! $this->connection->insert($this->grammar->compileInsert($this, $values))['errors'];
+        return $this->processor->processInsert($this, $this->connection->insert($this->grammar->compileInsert($this, $values)));
     }
 
     /**
@@ -633,9 +618,6 @@ class Builder extends BaseBuilder
         return $this->processor->processUpdate($this, parent::update($values));
     }
 
-    /**
-     * @return QueryBuilder
-     */
     public function routing(string $routing): self
     {
         $this->routing = $routing;
@@ -654,13 +636,14 @@ class Builder extends BaseBuilder
     public function truncate()
     {
         $this->applyBeforeQueryCallbacks();
-        $this->connection->delete($this->grammar->compileTruncate($this));
+
+        return $this->processor->processDelete($this, $this->connection->delete($this->grammar->compileTruncate($this)));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function delete($id = null): bool
+    public function delete($id = null)
     {
         // If an ID is passed to the method, we will set the where clause to check the
         // ID to let developers to simply and quickly remove a single row from this
@@ -669,9 +652,7 @@ class Builder extends BaseBuilder
             $this->where('id', '=', $id);
         }
 
-        $result = $this->connection->delete($this->grammar->compileDelete($this));
-
-        return ! empty($result['deleted']);
+        return $this->processor->processDelete($this, $this->connection->delete($this->grammar->compileDelete($this)));
     }
 
     /**

@@ -7,13 +7,14 @@ namespace PDPhilip\Elasticsearch\Query;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
+use PDPhilip\Elasticsearch\Data\Meta;
 
 class Processor extends BaseProcessor
 {
 
+  protected $rawResponse;
   protected $aggregations;
   protected $query;
-  protected $rawResponse;
 
   /**
    * Get the raw aggregation results
@@ -26,9 +27,9 @@ class Processor extends BaseProcessor
   }
 
   /**
-   * Get the raw Elasticsearch response
+   * Get the raw Elasticsearch response as an array
    *
-   * @param array
+   * @return array
    */
   public function getRawResponse(): array
   {
@@ -40,31 +41,27 @@ class Processor extends BaseProcessor
     $result = $query->getConnection()->insert($sql, $values);
     $this->rawResponse = $result;
 
-    $result = $result->asArray();
-    $last = collect($result['items'])->last();
+    $last = collect($this->getRawResponse()['items'])->last();
     return $last['index']['_id'] ?? null;
   }
 
   /**
    * Process the results of a "select" query.
    *
-   * @param Builder $query
-   * @param array           $results
-   *
    * @return array
    */
-  public function processSelect(Builder $query, $results)
+  public function processSelect(Builder $query, $result)
   {
-    $this->rawResponse = $results;
+
+    $this->rawResponse = $result;
+    $this->query = $query;
 
     $this->aggregations = $results['aggregations'] ?? [];
 
-    $this->query = $query;
-
     $documents = [];
 
-    foreach ($results['hits']['hits'] as $result) {
-      $documents[] = $this->documentFromResult($query, $result);
+    foreach ($this->getRawResponse()['hits']['hits'] as $result) {
+      $documents[] = $this->documentFromResult($this->query, $result);
     }
 
     return $documents;
@@ -81,13 +78,25 @@ class Processor extends BaseProcessor
   {
     $document = $result['_source'];
     $document['_id'] = $result['_id'];
-    $document['_index'] = $result['_index'];
+    $document['_meta'] = $this->metaFromResult(['_index' => $result['_index']]);
 
     if ($query->includeInnerHits && isset($result['inner_hits'])) {
       $document = $this->addInnerHitsToDocument($document, $result['inner_hits']);
     }
 
     return $document;
+  }
+
+  /**
+   * Create document meta from the given result
+   *
+   * @param array $extra
+   *
+   * @return Meta
+   */
+  public function metaFromResult(array $extra = []): Meta
+  {
+    return Meta::make($this->getRawResponse(), $extra);
   }
 
   /**
@@ -116,7 +125,7 @@ class Processor extends BaseProcessor
    */
   public function processTables($results)
   {
-    return array_map(function ($result) {
+    return collect((array) $results)->map(function ($result){
       return [
         'name' => $result['index'],
         'status' => $result['status'] ?? null,
@@ -125,21 +134,55 @@ class Processor extends BaseProcessor
         'docs_count' => $result['docs.count'] ?? 0,
         'docs_deleted' => $result['docs.deleted'] ?? 0,
       ];
-    }, $results);
+    })->all();
   }
 
   /**
-   * Process the results of a tables query.
+   *  Process the results of an update query.
    *
-   * @param  Elasticsearch  $results
-   * @return array
+   * @param Builder       $query
+   * @param Elasticsearch $result
+   *
+   * @return int
    */
-  public function processUpdate(Builder $query, Elasticsearch $results)
+  public function processUpdate(Builder $query, Elasticsearch $result): int
   {
-    $this->rawResponse = $results;
+    $this->rawResponse = $result;
     $this->query = $query;
 
-    return $results->asArray()['updated'];
+    return $this->getRawResponse()['updated'];
+  }
+
+  /**
+   * Process the results of a delete query.
+   *
+   * @param Builder       $query
+   * @param Elasticsearch $result
+   *
+   * @return bool
+   */
+  public function processDelete(Builder $query, Elasticsearch $result): bool
+  {
+    $this->rawResponse = $result;
+    $this->query = $query;
+
+    return ! empty($this->getRawResponse()['deleted']);
+  }
+
+  /**
+   *  Process the results of an insert query.
+   *
+   * @param Builder       $query
+   * @param Elasticsearch $result
+   *
+   * @return bool
+   */
+  public function processInsert(Builder $query, Elasticsearch $result): bool
+  {
+    $this->rawResponse = $result;
+    $this->query = $query;
+
+    return !$this->getRawResponse()['errors'];
   }
 
 }

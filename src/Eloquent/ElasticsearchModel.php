@@ -54,7 +54,7 @@ trait ElasticsearchModel
     public function newFromBuilder($attributes = [], $connection = null)
     {
         $model = parent::newFromBuilder($attributes, $connection);
-        $model->setTable($attributes['_index']);
+        $model->setTable($attributes['_meta']->getIndex());
 
         return $model;
     }

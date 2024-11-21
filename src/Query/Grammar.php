@@ -260,6 +260,9 @@ class Grammar extends BaseGrammar
                 unset($doc['_parent']);
             }
 
+            // We don't want to save the ID as part of the doc.
+            unset($doc['id']);
+
             $params['body'][] = ['index' => $index];
 
             foreach ($doc as &$property) {
@@ -269,7 +272,7 @@ class Grammar extends BaseGrammar
             $params['body'][] = $doc;
         }
 
-      $params['refresh'] = $builder->getOption('refresh', true);
+        $params['refresh'] = $builder->getOption('refresh', true);
 
         return $params;
     }
