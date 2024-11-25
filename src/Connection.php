@@ -450,7 +450,7 @@ class Connection extends BaseConnection
      */
     public function logQuery($query, $bindings, $time = null)
     {
-        $this->event(new QueryExecuted(json_encode($query), $bindings, $time, $this));
+        $this->event(new QueryExecuted($query, $bindings, $time, $this));
 
         if ($this->loggingQueries) {
             $this->queryLog[] = compact('query', 'bindings', 'time');

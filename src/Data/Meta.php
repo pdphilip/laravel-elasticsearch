@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Data;
 
-use Elastic\Elasticsearch\Response\Elasticsearch;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Traits\Makeable;
 
-class Meta
+class Meta implements Arrayable
 {
     use Makeable;
 
@@ -15,20 +16,27 @@ class Meta
 
     public function __construct(array $result, array $extra)
     {
+        unset($result['hits']['hits'], $result['aggregations']);
+
         $this->result = [
-          ...$result,
-          ...$extra
+            ...$result,
+            ...$extra,
         ];
     }
 
-    public function getTook(): mixed
+    public function getTook(): ?int
     {
-        return $this->result[''];
+        return Arr::get($this->result, 'took');
     }
 
-    public function getIndex(): string
+    public function getDocCount(): ?int
     {
-      return $this->result['_index'];
+        return Arr::get($this->result, 'doc_count');
+    }
+
+    public function getIndex(): ?string
+    {
+        return Arr::get($this->result, '_index');
     }
 
     public function getModifiedCount(): int
@@ -38,11 +46,16 @@ class Meta
 
     public function getTotalCount(): int
     {
-        return $this->_meta->getTotal();
+        return Arr::get($this->result, '_shards.total', 0);
     }
 
     public function getDeletedCount(): int
     {
         return $this->_meta->getDeleted();
+    }
+
+    public function toArray(): array
+    {
+        return $this->result;
     }
 }

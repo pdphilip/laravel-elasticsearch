@@ -507,6 +507,10 @@ it('tests first or create', function () {
         ->and($check->id)->toBe($user->id);
 });
 
+it('tests first or fail', function () {
+    User::firstOrFail(['name' => 'foo bar']);
+})->throws(ModelNotFoundException::class);
+
 it('tests changes the table index', function () {
 
     $schema = Schema::connection('elasticsearch');
@@ -522,6 +526,18 @@ it('tests changes the table index', function () {
 
 });
 
+it('gets the query meta', function () {
+
+    $user = new User;
+    $user->name = 'one';
+    $user->save();
+
+    $check = User::first();
+    expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\Meta::class)
+    ->and($check->getMeta()->toArray())->toHaveKeys(['took', 'timed_out', '_shards', 'hits']);
+
+});
+
 it('tests numeric field name', function () {
     $user = new User;
     $user->{1} = 'one';
@@ -529,7 +545,7 @@ it('tests numeric field name', function () {
     $user->save();
 
     expect($user->id)->toBeString()->
-    and(! isset($user->_id))->toBeTrue()
+    and(isset($user->_id))->toBeTrue()
         ->and(User::count())->toBe(1);
 });
 

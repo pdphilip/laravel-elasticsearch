@@ -25,15 +25,8 @@ class Grammar extends BaseGrammar
     {
         $clause = $this->compileSelect($builder);
 
-        if ($refresh = $builder->getOption('refresh')) {
-            $clause['refresh'] = $refresh;
-        } else {
-            $clause['refresh'] = true;
-        }
-
-        if ($conflict = $builder->getOption('delete_conflicts')) {
-            $clause['conflicts'] = $conflict;
-        }
+        $clause['refresh'] = $builder->getOption('refresh', true);
+        $clause['conflicts'] = $builder->getOption('conflicts', 'abort');
 
         // If we don't have a query then we must be deleting everything IE truncate.
         if (! isset($clause['body']['query'])) {
@@ -59,11 +52,14 @@ class Grammar extends BaseGrammar
         return $this->compileSelect($query);
     }
 
-    /**
-     * Compile a select statement
-     *
-     * @param  Builder|QueryBuilder  $builder
-     */
+  /**
+   * Compile a select statement
+   *
+   * @param Builder $builder
+   *
+   * @return array
+   * @throws BuilderException
+   */
     public function compileSelect(Builder $builder): array
     {
         $query = $this->compileWheres($builder);
@@ -81,10 +77,6 @@ class Grammar extends BaseGrammar
 
         if ($query['postFilter']) {
             $params['body']['post_filter'] = $query['postFilter'];
-        }
-
-        if ($builder->aggregations) {
-            $params = array_merge($params, $this->compileAggregations($builder));
         }
 
         // Apply order, offset and limit
@@ -108,6 +100,13 @@ class Grammar extends BaseGrammar
             unset($params['body']['query']);
         }
 
+      if ($builder->aggregations) {
+        $params['body']['aggs'] = $this->compileAggregations($builder);
+
+        //If we are aggregating we set the body size to 0 to save on processing time.
+        $params['body']['size'] = 0;
+      }
+
         if ($builder->distinct) {
             $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
         }
@@ -125,7 +124,7 @@ class Grammar extends BaseGrammar
         foreach ($builder->aggregations as $aggregation) {
             $result = $this->compileAggregation($builder, $aggregation);
 
-            $aggregations = array_merge($aggregations, $result);
+            $aggregations = array_merge_recursive($aggregations, $result);
         }
 
         return $aggregations;
@@ -141,15 +140,12 @@ class Grammar extends BaseGrammar
         $method = 'compile'.ucfirst(Str::camel($aggregation['type'])).'Aggregation';
 
         $compiled = [
-            $key => $this->$method($aggregation),
+            $key => $this->$method($builder, $aggregation),
         ];
 
-        $compiled = [
-            'index' => $builder->from.$builder->suffix(),
-            'body' => [
-                'aggs' => $compiled,
-            ],
-        ];
+        if (isset($aggregation['aggregations']) && $aggregation['aggregations']->aggregations) {
+          $compiled[$key]['aggs'] = $this->compileAggregations($aggregation['aggregations']);
+        }
 
         return $compiled;
     }
@@ -179,7 +175,7 @@ class Grammar extends BaseGrammar
                         $column => $order['options']['coordinates'],
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
                         'unit' => $order['options']['unit'] ?? 'km',
-                        'distance_type' => $order['options']['distanceType'] ?? 'plane',
+                        'distance_type' => $order['options']['distance_type'] ?? 'arc',
                     ];
 
                     $column = '_geo_distance';
@@ -280,9 +276,9 @@ class Grammar extends BaseGrammar
     /**
      * Compile sum aggregation
      */
-    public function compileSumAggregation(array $aggregation): array
+    public function compileSumAggregation(Builder $builder, array $aggregation): array
     {
-        return $this->compileMetricAggregation($aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -341,7 +337,7 @@ class Grammar extends BaseGrammar
             $clause['body']['script']['params'] = $params;
         }
 
-        $clause['refresh'] = $builder->getOption('refresh', true);
+        $clause['refresh'] = $builder->options()->get('refresh', true);
 
         return $clause;
     }
@@ -398,15 +394,15 @@ class Grammar extends BaseGrammar
     /**
      * Compile avg aggregation
      */
-    protected function compileAvgAggregation(array $aggregation): array
+    protected function compileAvgAggregation(Builder $builder,array $aggregation): array
     {
-        return $this->compileMetricAggregation($aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
      * Compile cardinality aggregation
      */
-    protected function compileCardinalityAggregation(array $aggregation): array
+    protected function compileCardinalityAggregation(Builder $builder,array $aggregation): array
     {
         $compiled = [
             'cardinality' => $aggregation['args'],
@@ -418,7 +414,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile children aggregation
      */
-    protected function compileChildrenAggregation(array $aggregation): array
+    protected function compileChildrenAggregation(Builder $builder, array $aggregation): array
     {
         $type = is_array($aggregation['args']) ? $aggregation['args']['type'] : $aggregation['args'];
 
@@ -432,10 +428,13 @@ class Grammar extends BaseGrammar
     /**
      * Compile composite aggregation
      */
-    protected function compileCompositeAggregation(array $aggregation): array
+    protected function compileCompositeAggregation(Builder $builder, array $aggregation): array
     {
+
         $compiled = [
-            'composite' => $aggregation['args'],
+            'composite' => [
+              'sources' => $aggregation['args']
+            ],
         ];
 
         return $compiled;
@@ -444,7 +443,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile count aggregation
      */
-    protected function compileCountAggregation(array $aggregation): array
+    protected function compileCountAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
         $aggregation = [];
@@ -452,13 +451,13 @@ class Grammar extends BaseGrammar
         $aggregation['args']['field'] = $field;
         $aggregation['args']['script'] = "doc.containsKey('{$field}') && !doc['{$field}'].empty ? 1 : 0";
 
-        return $this->compileMetricAggregation($aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
      * Compile metric aggregation
      */
-    protected function compileMetricAggregation(array $aggregation): array
+    protected function compileMetricAggregation(Builder $builder, array $aggregation): array
     {
         $metric = $aggregation['type'];
 
@@ -481,7 +480,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile date histogram aggregation
      */
-    protected function compileDateHistogramAggregation(array $aggregation): array
+    protected function compileDateHistogramAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
@@ -516,7 +515,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile date range aggregation
      */
-    protected function compileDateRangeAggregation(array $aggregation): array
+    protected function compileDateRangeAggregation(Builder $builder, array $aggregation): array
     {
         $compiled = [
             'date_range' => $aggregation['args'],
@@ -528,7 +527,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile exists aggregation
      */
-    protected function compileExistsAggregation(array $aggregation): array
+    protected function compileExistsAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
@@ -544,7 +543,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile filter aggregation
      */
-    protected function compileFilterAggregation(array $aggregation): array
+    protected function compileFilterAggregation(Builder $builder, array $aggregation): array
     {
         $filter = $this->compileWheres($aggregation['args']);
 
@@ -561,23 +560,23 @@ class Grammar extends BaseGrammar
     /**
      * Compile max aggregation
      */
-    protected function compileMaxAggregation(array $aggregation): array
+    protected function compileMaxAggregation(Builder $builder, array $aggregation): array
     {
-        return $this->compileMetricAggregation($aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
      * Compile min aggregation
      */
-    protected function compileMinAggregation(array $aggregation): array
+    protected function compileMinAggregation(Builder $builder, array $aggregation): array
     {
-        return $this->compileMetricAggregation($aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
      * Compile missing aggregation
      */
-    protected function compileMissingAggregation(array $aggregation): array
+    protected function compileMissingAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
@@ -593,7 +592,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile nested aggregation
      */
-    protected function compileNestedAggregation(array $aggregation): array
+    protected function compileNestedAggregation(Builder $builder, array $aggregation): array
     {
         $path = is_array($aggregation['args']) ? $aggregation['args']['path'] : $aggregation['args'];
 
@@ -607,7 +606,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile reverse nested aggregation
      */
-    protected function compileReverseNestedAggregation(array $aggregation): array
+    protected function compileReverseNestedAggregation(Builder $builder, array $aggregation): array
     {
         return [
             'reverse_nested' => (object) [],
@@ -617,13 +616,14 @@ class Grammar extends BaseGrammar
     /**
      * Compile terms aggregation
      */
-    protected function compileTermsAggregation(array $aggregation): array
+    protected function compileTermsAggregation(Builder $builder, array $aggregation): array
     {
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['key'];
 
         $compiled = [
             'terms' => [
-                'field' => $field,
+                'field' => $this->getIndexableField($field, $builder),
+                'size' => $builder->limit,
             ],
         ];
 

@@ -7,7 +7,9 @@ namespace PDPhilip\Elasticsearch\Query;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 
 class Processor extends BaseProcessor
 {
@@ -45,6 +47,15 @@ class Processor extends BaseProcessor
     return $last['index']['_id'] ?? null;
   }
 
+  public function processAggregation(Builder $query, $result)
+  {
+    $this->rawResponse = $result;
+    $this->query = $query;
+    $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
+
+    return $this->aggregations;
+  }
+
   /**
    * Process the results of a "select" query.
    *
@@ -56,15 +67,58 @@ class Processor extends BaseProcessor
     $this->rawResponse = $result;
     $this->query = $query;
 
-    $this->aggregations = $results['aggregations'] ?? [];
+    $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
 
     $documents = [];
+
+    if($this->aggregations){
+
+      foreach ($this->aggregations as $column => $result) {
+
+        $type = Str::afterLast($column, \PDPhilip\Elasticsearch\Query\Builder::AGGREGATION_DELIMITER);
+        $column = Str::beforeLast($column, \PDPhilip\Elasticsearch\Query\Builder::AGGREGATION_DELIMITER);
+
+        $documents = [
+          ...$documents,
+          ...$this->documentFromAggregation($column, $type, $result)
+        ];
+      }
+
+      return $documents;
+    }
 
     foreach ($this->getRawResponse()['hits']['hits'] as $result) {
       $documents[] = $this->documentFromResult($this->query, $result);
     }
 
     return $documents;
+  }
+
+  /**
+   * Create a document from the given aggregation result
+   *
+   * @param $column
+   * @param $type
+   * @param $values
+   *
+   * @return array
+   */
+  public function documentFromAggregation($column, $type, $values): array
+  {
+
+        return collect($values['buckets'])->map(function ($bucket) use ($type) {
+
+          switch ($type) {
+            case 'composite':
+              return [
+                ...$bucket['key'],
+                '_meta' =>  $this->metaFromResult(['doc_count' => $bucket['doc_count']])
+              ];
+            default:
+              throw new RuntimeException('Failed to process aggs');
+          }
+
+        })->toArray();
   }
 
   /**
@@ -125,7 +179,7 @@ class Processor extends BaseProcessor
    */
   public function processTables($results)
   {
-    return collect((array) $results)->map(function ($result){
+    return collect($results->asArray())->map(function ($result){
       return [
         'name' => $result['index'],
         'status' => $result['status'] ?? null,

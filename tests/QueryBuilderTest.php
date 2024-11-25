@@ -33,7 +33,7 @@ it('tests delete with id', function () {
 
     $product = DB::table('items')->first();
 
-    $pid = (string) ($product['id']);
+    $pid = (string) ($product['_id']);
 
     DB::table('items')->where('user_id', $userId)->delete($pid);
 
@@ -41,7 +41,7 @@ it('tests delete with id', function () {
 
     $product = DB::table('items')->first();
 
-    $pid = $product['id'];
+    $pid = $product['_id'];
 
     DB::table('items')->where('user_id', $userId)->delete($pid);
 
@@ -224,13 +224,13 @@ it('tests custom ID', function () {
     ]);
 
     $item = DB::table('items')->find('knife');
-    expect($item['id'])->toBe('knife')
-        ->and($item)->not->toHaveProperty('_id')
+    expect($item['_id'])->toBe('knife')
+        ->and($item)->not->toHaveProperty('id')
         ->and($item['tags'][0]['id'])->toBe('sharp')
         ->and($item['tags'][0])->not->toHaveKey('_id');
 
-    $item = DB::table('items')->where('id', 'fork')->first();
-    expect($item['id'])->toBe('fork');
+    $item = DB::table('items')->where('_id', 'fork')->first();
+    expect($item['_id'])->toBe('fork');
 
     $items = DB::table('items')->whereIn('tags.id', ['sharp'])->get();
     expect($items)->toHaveCount(2);
@@ -249,7 +249,7 @@ it('tests take', function () {
         ->and($items[0]['name'])->toBe('fork');
 });
 
-it('tests skip', function () {
+it('tests skip and take', function () {
     DB::table('items')->insert([
         ['name' => 'knife', 'type' => 'sharp', 'amount' => 34],
         ['name' => 'fork', 'type' => 'sharp', 'amount' => 20],
@@ -260,7 +260,11 @@ it('tests skip', function () {
     $items = DB::table('items')->orderBy('name')->skip(2)->get();
     expect($items)->toHaveCount(2)
         ->and($items[0]['name'])->toBe('spoon');
-})->todo();
+
+    $items = DB::table('items')->orderBy('name')->skip(1)->take(1)->get();
+    expect($items)->toHaveCount(1)
+        ->and($items[0]['name'])->toBe('knife');
+});
 
 it('tests pluck', function () {
     DB::table('users')->insert([

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query;
 
-use AllowDynamicProperties;
 use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Data\Aggregation;
 use PDPhilip\Elasticsearch\Data\Meta;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesParameters;
@@ -20,7 +20,6 @@ use PDPhilip\Elasticsearch\Traits\Query\ManagesParameters;
  * @property Processor $processor
  * @property Grammar $grammar
  */
-#[AllowDynamicProperties]
 class Builder extends BaseBuilder
 {
     use HasOptions;
@@ -39,6 +38,8 @@ class Builder extends BaseBuilder
         'WAIT_FOR' => 'wait_for',
     ];
 
+    public const AGGREGATION_DELIMITER = '_es_';
+
     public $aggregations;
 
     public $distinct;
@@ -53,7 +54,7 @@ class Builder extends BaseBuilder
     public $limit = 1000;
 
     /**
-     * All of the supported clause operators.
+     * All the supported clause operators.
      *
      * @var array
      */
@@ -149,10 +150,8 @@ class Builder extends BaseBuilder
             'type' => $function,
         ];
 
-        $result = $this->connection->search($this->grammar->compileAggregations($this), []);
-        $result = $result->asArray();
-
-        return $result['aggregations'][$column]['value'];
+        $result = $this->processor->processAggregation($this, $this->connection->search($this->grammar->compileSelect($this), []));
+        return $result[$column]['value'];
     }
 
     /**
@@ -223,6 +222,21 @@ class Builder extends BaseBuilder
 
         return $this;
     }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function groupBy(...$groups)
+  {
+    $this->aggregation('group_by' . self::AGGREGATION_DELIMITER . 'composite', 'composite', function (Builder $query) use ($groups) {
+      $query->from = $this->from;
+      return collect($groups)->map(function ($group) use ($query) {
+        return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
+      })->toArray();
+    });
+
+    return $this;
+  }
 
     /**
      * {@inheritdoc}
@@ -297,7 +311,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Get results without re-fetching for subsequent calls.
+     * Get mappings without re-fetching for subsequent calls.
      *
      * @return array
      */
@@ -509,12 +523,14 @@ class Builder extends BaseBuilder
         return $this->addDateBasedWhere('Weekday', $column, $operator, $value, 'or');
     }
 
-    /**
-     * @param  string  $column
-     * @param  int  $direction
-     * @param  array  $options
-     */
-    public function orderBy($column, $direction = 1, $options = null): self
+  /**
+   * @param string $column
+   * @param int    $direction
+   * @param array  $options
+   *
+   * @return Builder
+   */
+    public function orderBy($column, $direction = 1, array $options = []): self
     {
         if (is_string($direction)) {
             $direction = strtolower($direction) == 'asc' ? 1 : -1;
@@ -526,6 +542,54 @@ class Builder extends BaseBuilder
 
         return $this;
     }
+
+  /**
+   * @param string $column
+   * @param array  $coordinates
+   * @param int    $direction
+   * @param array  $options
+   *
+   * @return Builder
+   */
+    public function orderByGeo(string $column, array $coordinates, int $direction = 1, array $options = []): self
+    {
+
+      $options = [
+        ...$options,
+        'type' => 'geoDistance',
+        'coordinates' => $coordinates,
+      ];
+
+        return $this->orderBy($column, $direction, $options);
+    }
+
+  /**
+   * @param string $column
+   * @param array  $coordinates
+   * @param array  $options
+   *
+   * @return Builder
+   */
+    public function orderByGeoDesc(string $column, array $coordinates, array $options = []): self
+    {
+
+      $options = [
+        ...$options,
+        'type' => 'geoDistance',
+        'coordinates' => $coordinates,
+      ];
+
+        return $this->orderBy($column, -1, $options);
+    }
+
+  /**
+   * {@inheritdoc}
+   * @param array $options
+   */
+  public function orderByDesc($column, array $options = [])
+  {
+    return $this->orderBy($column, 'desc', $options);
+  }
 
     /**
      * Set the parent ID to be used when routing queries to Elasticsearch
@@ -835,6 +899,34 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+  /**
+   * @param string $key
+   * @param string $type
+   * @param null   $args
+   * @param null   $aggregations
+   * @return self
+   */
+  public function aggregation($key, $type = null, $args = null, $aggregations = null): self
+  {
+
+    if (!is_string($args) && is_callable($args)) {
+      $args = call_user_func($args, $this->newQuery());
+    }
+
+    if (!is_string($aggregations) && is_callable($aggregations)) {
+      $aggregations = call_user_func($aggregations, $this->newQuery());
+    }
+
+    $this->aggregations[] = compact(
+      'key',
+      'type',
+      'args',
+      'aggregations'
+    );
+
+    return $this;
+  }
+
     /**
      * @param  string  $parentType  Name of the parent relation from the join mapping
      * @param  mixed  $id
@@ -989,27 +1081,5 @@ class Builder extends BaseBuilder
         $this->includeInnerHits = true;
 
         return $this;
-    }
-
-    /**
-     * Set whether to refresh during delete by query
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html
-     *
-     * @param  string  $option
-     *
-     * @throws \Exception
-     */
-    public function withRefresh($option = self::REFRESH['FALSE']): self
-    {
-        if (in_array($option, self::REFRESH)) {
-            $this->options['refresh'] = $option;
-
-            return $this;
-        }
-
-        throw new \Exception(
-            "$option is an invalid refresh option, valid options are: ".implode(', ', self::REFRESH)
-        );
     }
 }

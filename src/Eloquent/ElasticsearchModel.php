@@ -12,16 +12,18 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
+use PDPhilip\Elasticsearch\Helpers\Helpers;
+use PDPhilip\Elasticsearch\Traits\Eloquent\ManagesQueryParameters;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
 /**
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
- * @mixin \PDPhilip\Elasticsearch\Eloquent\Builder
+ * @mixin Builder
  */
 trait ElasticsearchModel
 {
-    use HasOptions, HasUuids, HybridRelations, Searchable;
+    use ManagesQueryParameters, HasOptions, HasUuids, HybridRelations, Searchable;
 
     protected ?string $recordIndex;
 
@@ -32,6 +34,27 @@ trait ElasticsearchModel
         // this is the equivelent of how elasticsearch generates UUID
         // see: https://github.com/elastic/elasticsearch/blob/2f2ddad00492fcac8fbfc272607a8db91d279385/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java#L67
         return base64_encode((string) Str::orderedUuid());
+    }
+
+  /**
+   * Custom accessor for the model's id.
+   *
+   * @param  mixed $value
+   *
+   * @return mixed
+   */
+  public function getIdAttribute($value = null)
+  {
+    // If we don't have a value for 'id', we will use the MongoDB '_id' value.
+    // This allows us to work with models in a more sql-like way.
+    $value ??= $this->attributes['id'] ?? $this->attributes['_id'] ?? null;
+
+    return $value;
+  }
+
+    public function getMeta()
+    {
+          return !empty($this->attributes['_meta']) ? $this->attributes['_meta'] : [];
     }
 
     /**
@@ -51,10 +74,20 @@ trait ElasticsearchModel
     /**
      * {@inheritdoc}
      */
+    public function newInstance($attributes = [], $exists = false)
+    {
+        $model = parent::newInstance($attributes, $exists);
+        $model->options()->set($this->options()->all());
+        return $model;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function newFromBuilder($attributes = [], $connection = null)
     {
         $model = parent::newFromBuilder($attributes, $connection);
-        $model->setTable($attributes['_meta']->getIndex());
+        $model->setTable($attributes['_meta']->getIndex() ?? $model->getTable());
 
         return $model;
     }
@@ -363,4 +396,30 @@ trait ElasticsearchModel
     {
         return true;
     }
+
+  public static function __callStatic($method, $parameters)
+  {
+
+    $instance = new static();
+
+    $result = Helpers::callMethods($instance, $method, $parameters);
+    if($result !== null){
+      return $result;
+    }
+
+    // Fall back to the default behavior if the method doesn't exist
+    return parent::__callStatic($method, $parameters);
+  }
+
+  public function __call($method, $parameters)
+  {
+    $result = Helpers::callMethods($this, $method, $parameters);
+    if($result !== null){
+      return $result;
+    }
+
+    // Fall back to the default behavior if the method doesn't exist
+    return parent::__call($method, $parameters);
+  }
+
 }

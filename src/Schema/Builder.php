@@ -35,6 +35,7 @@ class Builder extends BaseBuilder
         );
     }
 
+
     public function hasColumn($table, $column): bool
     {
         $params = ['index' => $table, 'fields' => $column];

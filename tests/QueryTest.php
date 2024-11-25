@@ -3,13 +3,15 @@
 declare(strict_types=1);
 
 use PDPhilip\Elasticsearch\Tests\Models\Birthday;
-use PDPhilip\Elasticsearch\Tests\Models\Scoped;
+  use PDPhilip\Elasticsearch\Tests\Models\Product;
+  use PDPhilip\Elasticsearch\Tests\Models\Scoped;
 use PDPhilip\Elasticsearch\Tests\Models\User;
 
 beforeEach(function () {
     User::executeSchema();
     Birthday::executeSchema();
     Scoped::executeSchema();
+    Product::executeSchema();
 
     User::insert([
         ['name' => 'John Doe', 'age' => 35, 'title' => 'admin'],
@@ -32,6 +34,24 @@ beforeEach(function () {
         ['name' => 'Mark Moe', 'birthday' => new DateTime('2022-05-12 10:53:16')],
         ['name' => 'Boo'],
     ]);
+
+  Product::insert([
+                    ['product' => 'chocolate', 'price' => [20, 5]],
+                    ['product' => 'pumpkin', 'price' => 30],
+                    ['product' => 'apple', 'price' => 10],
+                    ['product' => 'orange juice', 'price' => [25, 7.5]],
+                    ['product' => 'coffee', 'price' => 15],
+                    ['product' => 'tea', 'price' => 12],
+                    ['product' => 'cookies', 'price' => [18, 4.5]],
+                    ['product' => 'ice cream', 'price' => 22],
+                    ['product' => 'bagel', 'price' => 8],
+                    ['product' => 'salad', 'price' => 14],
+                    ['product' => 'sandwich', 'price' => [30, 18.5]],
+                    ['product' => 'pizza', 'price' => 45],
+                    ['product' => 'water', 'price' => 5],
+                    ['product' => 'soda', 'price' => [8, 3]],
+                    ['product' => 'error', 'price' => null],
+                  ]);
 
 });
 
@@ -158,7 +178,16 @@ it('filters users within range with whereBetween', function () {
                 0,
                 25,
             ], 'and', true)->get()
-        )->toHaveCount(6);
+        )->toHaveCount(6)
+        ->and(
+            User::whereBetween('age', [
+                13,
+                23,
+            ])->orWhereBetween('age', [
+                33,
+                36,
+            ])->get()
+        )->toHaveCount(7);
 });
 
 it('filters users with whereIn and whereNotIn', function () {
@@ -244,6 +273,9 @@ it('orders users by age', function () {
     expect($user->age)->toBe(13);
 
     $user = User::whereNotNull('age')->orderBy('age', 'desc')->first();
+    expect($user->age)->toBe(37);
+
+    $user = User::whereNotNull('age')->orderByDesc('age')->first();
     expect($user->age)->toBe(37);
 });
 
@@ -341,11 +373,39 @@ it('orders users by age', function () {
 
   it('aggregates results by age', function () {
 
-    expect(User::max('age'))->toBe(37.0);
-    expect(User::min('age'))->toBe(13.0);
-    expect(User::avg('age'))->toBe(30.5);
-    expect(User::sum('age'))->toBe(244.0);
+    expect(User::max('age'))->toBe(37.0)
+                            ->and(User::min('age'))->toBe(13.0)
+                            ->and(User::avg('age'))->toBe(30.5)
+                            ->and(User::sum('age'))->toBe(244.0);
 
+  });
+
+  it('tests groupby', function () {
+
+    $users = User::groupBy('title')->where('age', 23 )->get();
+    expect($users)->toHaveCount(1);
+
+  $users = User::groupBy('title')->get();
+  expect($users)->toHaveCount(2)
+                ->and($users[0]['title'])->toBe('admin')
+                ->and($users[0]['_meta']->getDocCount())->toBe(3)
+                ->and($users[1]['title'])->toBe('user')
+                ->and($users[1]['_meta']->getDocCount())->toBe(5);
+
+  $users = User::groupBy('age')->get();
+  expect($users)->toHaveCount(5);
+
+  $users = User::groupBy('age')->take(2)->get();
+  expect($users)->toHaveCount(5);
+
+    $users = User::groupBy('title', 'age')->get();
+    expect($users)->toHaveCount(7)
+      ->and($users[0]->age)->toBe(33)
+      ->and($users[0]->title)->toBe('admin')
+      ->and($users[1]->age)->toBe(35)
+      ->and($users[1]->title)->toBe('admin')
+      ->and($users[2]->age)->toBe(13)
+      ->and($users[2]->title)->toBe('user');
   });
 
   it('updates records', function () {
@@ -378,6 +438,23 @@ it('orders users by age', function () {
     expect($subset[0]->name)->toBe('Yvonne Yoe')
                             ->and($subset[1]->name)->toBe('John Doe')
                             ->and($subset[2]->name)->toBe('Brett Boe');
+  });
+
+  it('can apply ES specific sorts', function () {
+    $results = Product::orderBy('price', 'desc', ['mode' => 'sum'] )->first();
+    expect($results->product)->toBe('sandwich');
+
+    $results = Product::orderBy('price', 'desc', ['mode' => 'avg'] )->first();
+    expect($results->product)->toBe('pizza');
+
+    $results = Product::orderBy('price', 'desc', ['mode' => 'median'] )->first();
+    expect($results->product)->toBe('pizza');
+
+    $results = Product::orderBy('price', 'desc', ['mode' => 'sum', 'missing' => '_first'] )->first();
+    expect($results->product)->toBe('error');
+
+    $results = Product::orderByDesc('price', ['mode' => 'sum', 'missing' => '_first'] )->first();
+    expect($results->product)->toBe('error');
   });
 
   it('deletes users with specific conditions', function () {
