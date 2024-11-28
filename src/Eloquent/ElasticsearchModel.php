@@ -13,7 +13,6 @@ use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
-use PDPhilip\Elasticsearch\Traits\Eloquent\ManagesQueryParameters;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
@@ -23,13 +22,13 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  */
 trait ElasticsearchModel
 {
-    use ManagesQueryParameters, HasOptions, HasUuids, HybridRelations, Searchable;
+    use HasOptions, HasUuids, HybridRelations, Searchable;
 
     protected ?string $recordIndex;
 
     protected ?Relation $parentRelation;
 
-    public function newUniqueId()
+    public function newUniqueId(): string
     {
         // this is the equivelent of how elasticsearch generates UUID
         // see: https://github.com/elastic/elasticsearch/blob/2f2ddad00492fcac8fbfc272607a8db91d279385/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java#L67
@@ -396,30 +395,5 @@ trait ElasticsearchModel
     {
         return true;
     }
-
-  public static function __callStatic($method, $parameters)
-  {
-
-    $instance = new static();
-
-    $result = Helpers::callMethods($instance, $method, $parameters);
-    if($result !== null){
-      return $result;
-    }
-
-    // Fall back to the default behavior if the method doesn't exist
-    return parent::__callStatic($method, $parameters);
-  }
-
-  public function __call($method, $parameters)
-  {
-    $result = Helpers::callMethods($this, $method, $parameters);
-    if($result !== null){
-      return $result;
-    }
-
-    // Fall back to the default behavior if the method doesn't exist
-    return parent::__call($method, $parameters);
-  }
 
 }

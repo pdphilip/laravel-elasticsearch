@@ -25,48 +25,51 @@ class Builder extends BaseEloquentBuilder
 
     protected $type;
 
-  protected $passthru = [
-    'aggregate',
-    'average',
-    'avg',
-    'count',
-    'dd',
-    'ddrawsql',
-    'doesntexist',
-    'doesntexistor',
-    'dump',
-    'dumprawsql',
-    'exists',
-    'existsor',
-    'explain',
-    'getbindings',
-    'getconnection',
-    'getgrammar',
-    'getrawbindings',
-    'implode',
-    'insert',
-    'insertgetid',
-    'insertorignore',
-    'insertusing',
-    'insertorignoreusing',
-    'max',
-    'min',
-    'raw',
-    'rawvalue',
-    'sum',
-    'tosql',
-    'torawsql',
+    protected $passthru = [
+        'aggregate',
+        'average',
+        'avg',
+        'count',
+        'dd',
+        'ddrawsql',
+        'doesntexist',
+        'doesntexistor',
+        'dump',
+        'dumprawsql',
+        'exists',
+        'existsor',
+        'explain',
+        'getbindings',
+        'getconnection',
+        'getgrammar',
+        'getrawbindings',
+        'implode',
+        'insert',
+        'insertgetid',
+        'insertorignore',
+        'insertusing',
+        'insertorignoreusing',
+        'max',
+        'min',
+        'raw',
+        'rawvalue',
+        'sum',
+        'tosql',
+        'torawsql',
 
-    //ES Specific
-    'stats',
-    'extendedstats',
-    'medianabsolutedeviation',
-    'percentiles',
-    'stringstats',
-    'cardinality',
-    'matrix',
-    'boxplot',
-  ];
+        //ES Metric Aggregations
+        'stats',
+        'extendedstats',
+        'medianabsolutedeviation',
+        'percentiles',
+        'stringstats',
+        'cardinality',
+        'matrix',
+        'boxplot',
+
+        //ES
+        'onconflicts',
+    ];
 
     /**
      * Set a model instance for the model being queried.
@@ -87,9 +90,27 @@ class Builder extends BaseEloquentBuilder
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function newModelInstance($attributes = [])
+    {
+        $model = $this->model->newInstance($attributes)->setConnection(
+            $this->query->getConnection()->getName()
+        );
+
+        // Merge in our options.
+        $model->options()->merge(
+            $this->model?->options()->all() ?? [],
+            $this->query?->options()->all() ?? []
+        );
+
+        return $model;
+    }
+
     public function withSuffix($suffix): self
     {
-        $this->query->options()->add('suffix', $suffix);
+        $this->model->options()->add('suffix', $suffix);
 
         return $this;
     }

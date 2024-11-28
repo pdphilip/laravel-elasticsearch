@@ -32,15 +32,15 @@ class Builder extends BaseBuilder
         'PROCEED' => 'proceed',
     ];
 
-    public $bucketAggregations;
+    public array $bucketAggregations = [];
 
-    public $metricsAggregations;
+    public array $metricsAggregations = [];
 
     public $distinct;
 
     public $filters;
 
-    public $includeInnerHits;
+    public bool $includeInnerHits;
 
     /**
      * {@inheritdoc}
@@ -54,7 +54,7 @@ class Builder extends BaseBuilder
      */
     public $operators = ['=', '<', '>', '<=', '>=', '<>', '!=', 'exists', 'like', 'not like'];
 
-    public $postFilters;
+    public array $postFilters = [];
 
     public $scripts = [];
 
@@ -63,8 +63,6 @@ class Builder extends BaseBuilder
     protected array $mapping = [];
 
     protected $parentId;
-
-    protected $rawResponse;
 
     protected $results;
 
@@ -84,7 +82,7 @@ class Builder extends BaseBuilder
 
     /**
      * Add a filter query by calling the required 'where' method
-     * and capturing the added where as a filter
+     * and capturing the added whereas a filter
      */
     public function dynamicFilter(string $method, array $args): self
     {
@@ -106,8 +104,8 @@ class Builder extends BaseBuilder
     /**
      * Add another query builder as a nested where to the query builder.
      *
-     * @param  \Illuminate\Database\Query\Builder|static  $query
-     * @param  string  $boolean
+     * @param BaseBuilder|static $query
+     * @param  string            $boolean
      */
     public function addNestedWhereQuery($query, $boolean = 'and'): self
     {
@@ -449,6 +447,22 @@ class Builder extends BaseBuilder
         return $this->processor->processInsert($this, $this->connection->insert($this->grammar->compileInsert($this, $values)));
     }
 
+    public function withoutRefresh(): self
+    {
+      // Add the `refresh` option to the model or query
+      $this->options()->add('refresh', false);
+
+      return $this;
+    }
+
+    public function proceedOnConflicts(string $option = self::CONFLICT['PROCEED']): self
+    {
+      // Add the `conflicts` option to the model or query
+      $this->options()->add('conflicts', 'proceed');
+
+      return $this;
+    }
+
     /**
      * Set how to handle conflicts during a delete request
      *
@@ -456,7 +470,7 @@ class Builder extends BaseBuilder
      *
      * @throws \Exception
      */
-    public function onConflicts(string $option = self::CONFLICT['ABORT']): self
+    public function onConflicts(string $option = self::CONFLICT['PROCEED']): self
     {
         if (in_array($option, self::CONFLICT)) {
             $this->options['delete_conflicts'] = $option;
@@ -475,7 +489,8 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $operator
      * @param  \DateTimeInterface|string  $value
-     * @return \Illuminate\Database\Query\Builder|static
+     *
+     * @return BaseBuilder|static
      */
     public function orWhereWeekday($column, $operator, $value = null)
     {
@@ -697,7 +712,7 @@ class Builder extends BaseBuilder
     /**
      * Add a where child statement to the query.
      *
-     * @return \Illuminate\Database\Query\Builder|static
+     * @return BaseBuilder|static
      */
     public function whereChild(
         string $documentType,
@@ -715,7 +730,8 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  mixed  $value
      * @param  string  $boolean
-     * @return \Illuminate\Database\Query\Builder|static
+     *
+     * @return BaseBuilder|static
      */
     public function whereDate($column, $operator, $value = null, $boolean = 'and', $not = false): self
     {
@@ -771,9 +787,9 @@ class Builder extends BaseBuilder
     /**
      * Add a 'nested document' statement to the query.
      *
-     * @param  string  $column
-     * @param  callable|\Illuminate\Database\Query\Builder|static  $query
-     * @param  string  $boolean
+     * @param  string                     $column
+     * @param callable|BaseBuilder|static $query
+     * @param  string                     $boolean
      */
     public function whereNestedDoc($column, $query, $boolean = 'and'): self
     {
@@ -791,8 +807,8 @@ class Builder extends BaseBuilder
     /**
      * Add a 'must not' statement to the query.
      *
-     * @param  \Illuminate\Database\Query\Builder|static  $query
-     * @param  string  $boolean
+     * @param  BaseBuilder|static $query
+     * @param  string             $boolean
      */
     public function whereNot($query, $operator = null, $value = null, $boolean = 'and'): self
     {
@@ -808,7 +824,7 @@ class Builder extends BaseBuilder
     /**
      * Add a where parent statement to the query.
      *
-     * @return \Illuminate\Database\Query\Builder|static
+     * @return BaseBuilder|static
      */
     public function whereParent(
         string $documentType,
@@ -823,7 +839,7 @@ class Builder extends BaseBuilder
      * Add a where relationship statement to the query.
      *
      *
-     * @return \Illuminate\Database\Query\Builder|static
+     * @return BaseBuilder|static
      */
     protected function whereRelationship(
         string $relationshipType,
@@ -941,7 +957,8 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  \DateTimeInterface|string  $value
      * @param  string  $boolean
-     * @return \Illuminate\Database\Query\Builder|static
+     *
+     * @return BaseBuilder|static
      */
     public function whereWeekday($column, $operator, $value = null, $boolean = 'and')
     {
