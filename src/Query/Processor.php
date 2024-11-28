@@ -26,6 +26,16 @@ class Processor extends BaseProcessor
    */
   public function getAggregationResults(): array
   {
+    return $this->aggregations;
+  }
+
+  /**
+   * Get the raw aggregation results
+   *
+   * @param array
+   */
+  public function getRawAggregationResults(): array
+  {
     return $this->rawAggregations;
   }
 
@@ -66,16 +76,28 @@ class Processor extends BaseProcessor
       $result = $this->processMetricAggregations($this->rawAggregations);
     }
 
-    return $result;
+    $this->aggregations = $result;
+
+    return $this->aggregations;
   }
 
   public function processBucketAggregation($bucketAggregation)
   {
 
     $key = $bucketAggregation['key'];
-    return collect($this->rawAggregations[$key]['buckets'])->map(function ($bucket) {
+
+    if(!isset($this->rawAggregations[$key]['buckets'])){
+      return $this->rawAggregations[$key];
+    }
+
+    return collect($this->rawAggregations[$key]['buckets'])->map(function ($bucket) use ($key) {
 
       $metricAggs = $this->processMetricAggregations($bucket);
+
+      // ES is super annoying with how it does keys. For composite it returns keys as array but in other cases it does not.
+      if(!is_array($bucket['key'])){
+        $bucket['key'] = [$key => $bucket['key']];
+      }
 
       return [
         ...$bucket['key'],

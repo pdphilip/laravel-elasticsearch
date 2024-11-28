@@ -40,7 +40,8 @@ class Builder extends BaseBuilder
 
     public $filters;
 
-    public bool $includeInnerHits;
+    /** @var bool */
+    public $includeInnerHits;
 
     /**
      * {@inheritdoc}
@@ -104,8 +105,8 @@ class Builder extends BaseBuilder
     /**
      * Add another query builder as a nested where to the query builder.
      *
-     * @param BaseBuilder|static $query
-     * @param  string            $boolean
+     * @param  BaseBuilder|static  $query
+     * @param  string  $boolean
      */
     public function addNestedWhereQuery($query, $boolean = 'and'): self
     {
@@ -296,6 +297,26 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Get the aggregations returned from query
+     */
+    public function getAggregationResults(): array
+    {
+        $this->getResultsOnce();
+
+        return $this->processor->getAggregationResults();
+    }
+
+    /**
+     * Get the raw aggregations returned from query
+     */
+    public function getRawAggregationResults(): array
+    {
+        $this->getResultsOnce();
+
+        return $this->processor->getRawAggregationResults();
+    }
+
+    /**
      * Execute the query as a "select" statement.
      *
      * @param  array  $columns
@@ -449,18 +470,15 @@ class Builder extends BaseBuilder
 
     public function withoutRefresh(): self
     {
-      // Add the `refresh` option to the model or query
-      $this->options()->add('refresh', false);
+        // Add the `refresh` option to the model or query
+        $this->options()->add('refresh', false);
 
-      return $this;
+        return $this;
     }
 
-    public function proceedOnConflicts(string $option = self::CONFLICT['PROCEED']): self
+    public function proceedOnConflicts(): self
     {
-      // Add the `conflicts` option to the model or query
-      $this->options()->add('conflicts', 'proceed');
-
-      return $this;
+        return $this->onConflicts(self::CONFLICT['PROCEED']);
     }
 
     /**
@@ -473,7 +491,7 @@ class Builder extends BaseBuilder
     public function onConflicts(string $option = self::CONFLICT['PROCEED']): self
     {
         if (in_array($option, self::CONFLICT)) {
-            $this->options['delete_conflicts'] = $option;
+            $this->options()->add('conflicts', 'proceed');
 
             return $this;
         }
@@ -489,7 +507,6 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $operator
      * @param  \DateTimeInterface|string  $value
-     *
      * @return BaseBuilder|static
      */
     public function orWhereWeekday($column, $operator, $value = null)
@@ -730,7 +747,6 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  mixed  $value
      * @param  string  $boolean
-     *
      * @return BaseBuilder|static
      */
     public function whereDate($column, $operator, $value = null, $boolean = 'and', $not = false): self
@@ -787,9 +803,9 @@ class Builder extends BaseBuilder
     /**
      * Add a 'nested document' statement to the query.
      *
-     * @param  string                     $column
-     * @param callable|BaseBuilder|static $query
-     * @param  string                     $boolean
+     * @param  string  $column
+     * @param  callable|BaseBuilder|static  $query
+     * @param  string  $boolean
      */
     public function whereNestedDoc($column, $query, $boolean = 'and'): self
     {
@@ -807,8 +823,8 @@ class Builder extends BaseBuilder
     /**
      * Add a 'must not' statement to the query.
      *
-     * @param  BaseBuilder|static $query
-     * @param  string             $boolean
+     * @param  BaseBuilder|static  $query
+     * @param  string  $boolean
      */
     public function whereNot($query, $operator = null, $value = null, $boolean = 'and'): self
     {
@@ -862,10 +878,31 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $type
-     * @param  null  $args
-     * @param  null  $aggregations
+     * Adds a bucket aggregation to the current query.
+     *
+     * @param  string  $key  The key for the bucket.
+     * @param  string|null  $type  The type of aggregation.
+     * @param  mixed|null  $args  The arguments for the aggregation.
+     *                            Can be a callable to generate the arguments using a new query.
+     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
+     *                                    Can be a callable to generate them using a new query.
+     * @return self The current query builder instance.
+     */
+    public function bucket($key, $type = null, $args = null, $aggregations = null): self
+    {
+        return $this->bucketAggregation($key, $type, $args, $aggregations);
+    }
+
+    /**
+     * Adds a bucket aggregation to the current query.
+     *
+     * @param  string  $key  The key for the bucket.
+     * @param  string|null  $type  The type of aggregation.
+     * @param  mixed|null  $args  The arguments for the aggregation.
+     *                            Can be a callable to generate the arguments using a new query.
+     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
+     *                                    Can be a callable to generate them using a new query.
+     * @return self The current query builder instance.
      */
     public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
     {
@@ -891,7 +928,6 @@ class Builder extends BaseBuilder
     /**
      * @param  string  $parentType  Name of the parent relation from the join mapping
      * @param  mixed  $id
-     * @return QueryBuilder
      */
     public function whereParentId(string $parentType, $id, string $boolean = 'and'): self
     {
@@ -957,7 +993,6 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  \DateTimeInterface|string  $value
      * @param  string  $boolean
-     *
      * @return BaseBuilder|static
      */
     public function whereWeekday($column, $operator, $value = null, $boolean = 'and')

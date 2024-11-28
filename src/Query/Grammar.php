@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Query;
 
 use DateTime;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
@@ -16,17 +16,20 @@ use PDPhilip\Elasticsearch\Helpers\Helpers;
 
 class Grammar extends BaseGrammar
 {
-    /**
-     * Compile a delete query
-     *
-     * @param  Builder|QueryBuilder  $builder
-     */
-    public function compileDelete(Builder $builder): array
+  /**
+   * Compile a delete query
+   *
+   * @param Builder|BaseBuilder $builder
+   *
+   * @return array
+   * @throws BuilderException
+   */
+    public function compileDelete(Builder|BaseBuilder $builder): array
     {
         $clause = $this->compileSelect($builder);
 
-        $clause['refresh'] = $builder->getOption('refresh', true);
-        $clause['conflicts'] = $builder->getOption('conflicts', 'abort');
+        $clause['refresh'] = $builder->options()->get('refresh', true);
+        $clause['conflicts'] = $builder->options()->get('conflicts', 'abort');
 
         // If we don't have a query then we must be deleting everything IE truncate.
         if (! isset($clause['body']['query'])) {
@@ -47,7 +50,7 @@ class Grammar extends BaseGrammar
     /**
      * {@inheritdoc}
      */
-    public function compileExists(Builder $query)
+    public function compileExists(Builder|BaseBuilder $query)
     {
         return $this->compileSelect($query);
     }
@@ -60,7 +63,7 @@ class Grammar extends BaseGrammar
    * @return array
    * @throws BuilderException
    */
-    public function compileSelect(Builder $builder): array
+    public function compileSelect(Builder|BaseBuilder $builder): array
     {
         $query = $this->compileWheres($builder);
 
@@ -189,7 +192,7 @@ class Grammar extends BaseGrammar
      *
      * @param  array  $orders
      */
-    protected function compileOrders(Builder $builder, $orders = []): array
+    protected function compileOrders(Builder|BaseBuilder $builder, $orders = []): array
     {
         $compiledOrders = [];
 
@@ -240,12 +243,15 @@ class Grammar extends BaseGrammar
         return ['index' => $builder->from];
     }
 
-    /**
-     * Compile the given values to an Elasticsearch insert statement
-     *
-     * @param  Builder|QueryBuilder  $builder
-     */
-    public function compileInsert(Builder $builder, array $values): array
+  /**
+   * Compile the given values to an Elasticsearch insert statement
+   *
+   * @param Builder|BaseBuilder $builder
+   * @param array               $values
+   *
+   * @return array
+   */
+    public function compileInsert(Builder|BaseBuilder $builder, array $values): array
     {
         $params = [];
 
@@ -318,12 +324,12 @@ class Grammar extends BaseGrammar
   /**
    * Compile a delete query
    *
-   * @param Builder $builder
+   * @param Builder|BaseBuilder $builder
    *
    * @return array
    * @throws BuilderException
    */
-    public function compileTruncate(Builder $builder): array
+    public function compileTruncate(Builder|BaseBuilder $builder): array
     {
         $clause = $this->compileSelect($builder);
 
@@ -338,7 +344,16 @@ class Grammar extends BaseGrammar
         return $clause;
     }
 
-    public function compileUpdate(Builder $builder, $values)
+  /**
+   * Compile a update query
+   *
+   * @param Builder|BaseBuilder $builder
+   * @param                     $values
+   *
+   * @return array
+   * @throws BuilderException
+   */
+    public function compileUpdate(Builder|BaseBuilder $builder, $values)
     {
         $clause = $this->compileSelect($builder);
         $clause['body']['conflicts'] = 'proceed';
@@ -456,6 +471,22 @@ class Grammar extends BaseGrammar
                 'type' => $type,
             ],
         ];
+    }
+
+    /**
+     * Compile categorize_text aggregation
+     */
+    protected function compileCategorizeTextAggregation(Builder $builder, array $aggregation): array
+    {
+
+      $options = $aggregation['options'] ?? [];
+
+      return [
+        'categorize_text' => [
+          ...$aggregation['args'],
+          ...$options
+        ],
+      ];
     }
 
     /**
@@ -602,8 +633,8 @@ class Grammar extends BaseGrammar
         ];
 
         if (is_array($aggregation['args'])) {
-            if (isset($aggregation['args']['interval'])) {
-                $compiled['date_histogram']['interval'] = $aggregation['args']['interval'];
+            if (isset($aggregation['args']['fixed_interval'])) {
+                $compiled['date_histogram']['fixed_interval'] = $aggregation['args']['fixed_interval'];
             }
             if (isset($aggregation['args']['calendar_interval'])) {
                 $compiled['date_histogram']['calendar_interval'] = $aggregation['args']['calendar_interval'];
@@ -1101,7 +1132,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile where clauses for a query
      */
-    public function compileWheres(Builder $builder): array
+    public function compileWheres(Builder|BaseBuilder $builder): array
     {
         $queryParts = [
             'query' => 'wheres',

@@ -67,8 +67,9 @@ class Builder extends BaseEloquentBuilder
         'matrix',
         'boxplot',
 
-        //ES
-        'onconflicts',
+        //ES Bucket Aggregations
+        'bucket',
+        'bucketAggregation',
     ];
 
     /**
@@ -108,13 +109,6 @@ class Builder extends BaseEloquentBuilder
         return $model;
     }
 
-    public function withSuffix($suffix): self
-    {
-        $this->model->options()->add('suffix', $suffix);
-
-        return $this;
-    }
-
     /**
      * Execute the query as a "select" statement.
      *
@@ -145,10 +139,14 @@ class Builder extends BaseEloquentBuilder
         return $this->toBase()->getCountForPagination($columns);
     }
 
-    public function getAggregations(string $collectionClass = ''): Collection
+  /**
+   * @param string $collectionClass
+   * @return Collection
+   */
+    public function getAggregations(string $collectionClass = '', bool $raw = false): Collection
     {
         $collectionClass = $collectionClass ?: Collection::class;
-        $aggregations = $this->query->getAggregationResults();
+        $aggregations = !$raw ? $this->query->getAggregationResults() : $this->query->getRawAggregationResults();
 
         return new $collectionClass($aggregations);
     }
@@ -216,4 +214,17 @@ class Builder extends BaseEloquentBuilder
             'pageName' => $pageName,
         ]);
     }
+
+  public function withoutRefresh()
+  {
+    $this->model->options()->add('refresh', false);
+    return $this->model;
+  }
+
+  public function withSuffix($suffix)
+  {
+    $this->model->options()->add('suffix', $suffix);
+    return $this->model;
+  }
+
 }
