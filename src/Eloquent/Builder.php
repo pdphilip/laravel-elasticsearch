@@ -25,6 +25,49 @@ class Builder extends BaseEloquentBuilder
 
     protected $type;
 
+  protected $passthru = [
+    'aggregate',
+    'average',
+    'avg',
+    'count',
+    'dd',
+    'ddrawsql',
+    'doesntexist',
+    'doesntexistor',
+    'dump',
+    'dumprawsql',
+    'exists',
+    'existsor',
+    'explain',
+    'getbindings',
+    'getconnection',
+    'getgrammar',
+    'getrawbindings',
+    'implode',
+    'insert',
+    'insertgetid',
+    'insertorignore',
+    'insertusing',
+    'insertorignoreusing',
+    'max',
+    'min',
+    'raw',
+    'rawvalue',
+    'sum',
+    'tosql',
+    'torawsql',
+
+    //ES Specific
+    'stats',
+    'extendedstats',
+    'medianabsolutedeviation',
+    'percentiles',
+    'stringstats',
+    'cardinality',
+    'matrix',
+    'boxplot',
+  ];
+
     /**
      * Set a model instance for the model being queried.
      *

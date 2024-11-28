@@ -96,20 +96,25 @@ class Grammar extends BaseGrammar
             $params['_source'] = $builder->columns;
         }
 
-        if (isset($params['body']['query']) && ! $params['body']['query']) {
-            unset($params['body']['query']);
-        }
+      if ($builder->bucketAggregations) {
+        $params['body']['aggs'] = $this->compileBucketAggregations($builder);
 
-      if ($builder->aggregations) {
-        $params['body']['aggs'] = $this->compileAggregations($builder);
+        //If we are aggregating we set the body size to 0 to save on processing time.
+        $params['body']['size'] = 0;
+      } else if ($builder->metricsAggregations) {
+        $params['body']['aggs'] = $this->compileMetricAggregations($builder);
 
         //If we are aggregating we set the body size to 0 to save on processing time.
         $params['body']['size'] = 0;
       }
 
-        if ($builder->distinct) {
-            $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
-        }
+      if ($builder->distinct) {
+          $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
+      }
+
+      if (isset($params['body']['query']) && ! $params['body']['query']) {
+        unset($params['body']['query']);
+      }
 
         return $params;
     }
@@ -117,11 +122,40 @@ class Grammar extends BaseGrammar
     /**
      * Compile all aggregations
      */
-    public function compileAggregations(Builder $builder): array
+    public function compileBucketAggregations(Builder $builder): array
     {
         $aggregations = [];
 
-        foreach ($builder->aggregations as $aggregation) {
+
+        $metricsAggregations = [];
+        if ($builder->metricsAggregations) {
+          $metricsAggregations = $this->compileMetricAggregations($builder);
+        }
+
+        foreach ($builder->bucketAggregations as $aggregation) {
+            //This lets us dynamically set the metric aggregation inside the bucket
+            if(!empty($metricsAggregations)) {
+
+              $aggregation['aggregations'] = $builder->newQuery();
+              $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
+            }
+
+            $result = $this->compileAggregation($builder, $aggregation);
+
+            $aggregations = array_merge_recursive($aggregations, $result);
+        }
+
+        return $aggregations;
+    }
+
+    /**
+     * Compile all aggregations
+     */
+    public function compileMetricAggregations(Builder $builder): array
+    {
+        $aggregations = [];
+
+        foreach ($builder->metricsAggregations as $aggregation) {
             $result = $this->compileAggregation($builder, $aggregation);
 
             $aggregations = array_merge_recursive($aggregations, $result);
@@ -143,8 +177,8 @@ class Grammar extends BaseGrammar
             $key => $this->$method($builder, $aggregation),
         ];
 
-        if (isset($aggregation['aggregations']) && $aggregation['aggregations']->aggregations) {
-          $compiled[$key]['aggs'] = $this->compileAggregations($aggregation['aggregations']);
+        if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {
+          $compiled[$key]['aggs'] = $this->compileMetricAggregations($aggregation['aggregations']);
         }
 
         return $compiled;
@@ -281,11 +315,14 @@ class Grammar extends BaseGrammar
         return $this->compileMetricAggregation($builder, $aggregation);
     }
 
-    /**
-     * Compile a delete query
-     *
-     * @param  Builder|QueryBuilder  $builder
-     */
+  /**
+   * Compile a delete query
+   *
+   * @param Builder $builder
+   *
+   * @return array
+   * @throws BuilderException
+   */
     public function compileTruncate(Builder $builder): array
     {
         $clause = $this->compileSelect($builder);
@@ -404,11 +441,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileCardinalityAggregation(Builder $builder,array $aggregation): array
     {
-        $compiled = [
-            'cardinality' => $aggregation['args'],
-        ];
-
-        return $compiled;
+      return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -455,11 +488,88 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile count aggregation
+     */
+    protected function compileValueCountAggregation(Builder $builder, array $aggregation): array
+    {
+        return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile stats aggregation
+     */
+    protected function compileStatsAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile Extended stats aggregation
+     */
+    protected function compileExtendedStatsAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile percentiles aggregation
+     */
+    protected function compilePercentilesAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile string stats aggregation
+     */
+    protected function compileStringStatsAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile string stats aggregation
+     */
+    protected function compileMedianAbsoluteDeviationAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile boxplot aggregation
+     */
+    protected function compileBoxplotAggregation(Builder $builder, array $aggregation): array
+    {
+      return $this->compileMetricAggregation($builder, $aggregation);
+    }
+
+    /**
+     * Compile matrix_stats aggregation
+     */
+    protected function compileMatrixStatsAggregation(Builder $builder, array $aggregation): array
+    {
+
+      $metric = $aggregation['type'];
+      $options = $aggregation['options'] ?? [];
+
+
+      $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+
+      return [
+        $metric => [
+          'fields' => $field,
+          ...$options
+        ],
+      ];
+    }
+
+    /**
      * Compile metric aggregation
      */
     protected function compileMetricAggregation(Builder $builder, array $aggregation): array
     {
         $metric = $aggregation['type'];
+        $options = $aggregation['options'] ?? [];
 
         if (is_array($aggregation['args']) && isset($aggregation['args']['script'])) {
             return [
@@ -473,6 +583,7 @@ class Grammar extends BaseGrammar
         return [
             $metric => [
                 'field' => $field,
+                ...$options
             ],
         ];
     }

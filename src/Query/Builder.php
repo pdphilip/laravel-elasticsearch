@@ -7,10 +7,11 @@ namespace PDPhilip\Elasticsearch\Query;
 use Closure;
 use DateTimeInterface;
 use Illuminate\Database\Query\Builder as BaseBuilder;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Data\Aggregation;
 use PDPhilip\Elasticsearch\Data\Meta;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesParameters;
@@ -31,16 +32,9 @@ class Builder extends BaseBuilder
         'PROCEED' => 'proceed',
     ];
 
-    /** @var string[] */
-    public const REFRESH = [
-        'FALSE' => false,
-        'TRUE' => true,
-        'WAIT_FOR' => 'wait_for',
-    ];
+    public $bucketAggregations;
 
-    public const AGGREGATION_DELIMITER = '_es_';
-
-    public $aggregations;
+    public $metricsAggregations;
 
     public $distinct;
 
@@ -132,28 +126,6 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function aggregate($function, $columns = ['*'])
-    {
-        return match ($function) {
-            //      'count' => $this->aggregateCount($columns),
-            'count', 'avg', 'max', 'min', 'sum' => $this->aggregateMetric($function, $columns),
-        };
-    }
-
-    public function aggregateMetric($function, $columns = ['*'])
-    {
-
-        $column = reset($columns);
-        $this->aggregations[] = [
-            'key' => $column,
-            'args' => $column,
-            'type' => $function,
-        ];
-
-        $result = $this->processor->processAggregation($this, $this->connection->search($this->grammar->compileSelect($this), []));
-        return $result[$column]['value'];
-    }
-
     /**
      * Add a text search clause to the query.
      *
@@ -171,14 +143,6 @@ class Builder extends BaseBuilder
         ];
 
         return $this;
-    }
-
-    public function aggregateCount($columns): int
-    {
-        $params = $this->toSql();
-        $result = $this->connection->count(['index' => $params['index']]);
-
-        return $result->asArray()['count'];
     }
 
     /**
@@ -223,20 +187,21 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function groupBy(...$groups)
-  {
-    $this->aggregation('group_by' . self::AGGREGATION_DELIMITER . 'composite', 'composite', function (Builder $query) use ($groups) {
-      $query->from = $this->from;
-      return collect($groups)->map(function ($group) use ($query) {
-        return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
-      })->toArray();
-    });
+    /**
+     * {@inheritdoc}
+     */
+    public function groupBy(...$groups)
+    {
+        $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
+            $query->from = $this->from;
 
-    return $this;
-  }
+            return collect($groups)->map(function ($group) use ($query) {
+                return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
+            })->toArray();
+        });
+
+        return $this;
+    }
 
     /**
      * {@inheritdoc}
@@ -523,13 +488,10 @@ class Builder extends BaseBuilder
         return $this->addDateBasedWhere('Weekday', $column, $operator, $value, 'or');
     }
 
-  /**
-   * @param string $column
-   * @param int    $direction
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * @param  string  $column
+     * @param  int  $direction
+     */
     public function orderBy($column, $direction = 1, array $options = []): self
     {
         if (is_string($direction)) {
@@ -543,53 +505,37 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * @param string $column
-   * @param array  $coordinates
-   * @param int    $direction
-   * @param array  $options
-   *
-   * @return Builder
-   */
     public function orderByGeo(string $column, array $coordinates, int $direction = 1, array $options = []): self
     {
 
-      $options = [
-        ...$options,
-        'type' => 'geoDistance',
-        'coordinates' => $coordinates,
-      ];
+        $options = [
+            ...$options,
+            'type' => 'geoDistance',
+            'coordinates' => $coordinates,
+        ];
 
         return $this->orderBy($column, $direction, $options);
     }
 
-  /**
-   * @param string $column
-   * @param array  $coordinates
-   * @param array  $options
-   *
-   * @return Builder
-   */
     public function orderByGeoDesc(string $column, array $coordinates, array $options = []): self
     {
 
-      $options = [
-        ...$options,
-        'type' => 'geoDistance',
-        'coordinates' => $coordinates,
-      ];
+        $options = [
+            ...$options,
+            'type' => 'geoDistance',
+            'coordinates' => $coordinates,
+        ];
 
         return $this->orderBy($column, -1, $options);
     }
 
-  /**
-   * {@inheritdoc}
-   * @param array $options
-   */
-  public function orderByDesc($column, array $options = [])
-  {
-    return $this->orderBy($column, 'desc', $options);
-  }
+    /**
+     * {@inheritdoc}
+     */
+    public function orderByDesc($column, array $options = [])
+    {
+        return $this->orderBy($column, 'desc', $options);
+    }
 
     /**
      * Set the parent ID to be used when routing queries to Elasticsearch
@@ -899,33 +845,32 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * @param string $key
-   * @param string $type
-   * @param null   $args
-   * @param null   $aggregations
-   * @return self
-   */
-  public function aggregation($key, $type = null, $args = null, $aggregations = null): self
-  {
+    /**
+     * @param  string  $key
+     * @param  string  $type
+     * @param  null  $args
+     * @param  null  $aggregations
+     */
+    public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
+    {
 
-    if (!is_string($args) && is_callable($args)) {
-      $args = call_user_func($args, $this->newQuery());
+        if (! is_string($args) && is_callable($args)) {
+            $args = call_user_func($args, $this->newQuery());
+        }
+
+        if (! is_string($aggregations) && is_callable($aggregations)) {
+            $aggregations = call_user_func($aggregations, $this->newQuery());
+        }
+
+        $this->bucketAggregations[] = compact(
+            'key',
+            'type',
+            'args',
+            'aggregations'
+        );
+
+        return $this;
     }
-
-    if (!is_string($aggregations) && is_callable($aggregations)) {
-      $aggregations = call_user_func($aggregations, $this->newQuery());
-    }
-
-    $this->aggregations[] = compact(
-      'key',
-      'type',
-      'args',
-      'aggregations'
-    );
-
-    return $this;
-  }
 
     /**
      * @param  string  $parentType  Name of the parent relation from the join mapping
@@ -1081,5 +1026,191 @@ class Builder extends BaseBuilder
         $this->includeInnerHits = true;
 
         return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function avg($column, array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function count($columns = '*', array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @param  Expression|string|array  $columns
+     */
+    public function min($column, array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function max($column, array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function sum($column, array $options = [])
+    {
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+
+        return $result ?: 0;
+    }
+
+    /**
+     * Retrieve the stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function stats($columns, $options = [])
+    {
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the extended stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function extendedStats($columns, $options = [])
+    {
+        $result = $this->aggregate('extended_stats', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the median absolute deviation stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-median-absolute-deviation-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function medianAbsoluteDeviation($columns, $options = [])
+    {
+        $result = $this->aggregate('median_absolute_deviation', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the percentiles of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function percentiles($columns, $options = [])
+    {
+        $result = $this->aggregate('percentiles', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the String Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function stringStats($columns, $options = [])
+    {
+        $result = $this->aggregate('string_stats', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the String Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function matrix($columns, $options = [])
+    {
+        $result = $this->aggregate('matrix_stats', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * A boxplot metrics aggregation that computes boxplot of numeric values extracted from the aggregated documents.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-boxplot-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function boxplot($columns, $options = [])
+    {
+        $result = $this->aggregate('boxplot', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the Cardinality Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function cardinality($columns, $options = [])
+    {
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    public function aggregate($function, $columns = ['*'], $options = [])
+    {
+        return $this->aggregateMetric($function, $columns, $options);
+    }
+
+    public function aggregateMetric($function, $columns = ['*'], $options = [])
+    {
+
+        //Each column we want aggregated
+        $columns = Arr::wrap($columns);
+        foreach ($columns as $column) {
+            $this->metricsAggregations[] = [
+                'key' => $column,
+                'args' => $column,
+                'type' => $function,
+                'options' => $options,
+            ];
+        }
+
+        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
     }
 }

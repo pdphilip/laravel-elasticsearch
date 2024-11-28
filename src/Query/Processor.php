@@ -15,6 +15,7 @@ class Processor extends BaseProcessor
 {
 
   protected $rawResponse;
+  protected $rawAggregations;
   protected $aggregations;
   protected $query;
 
@@ -25,7 +26,7 @@ class Processor extends BaseProcessor
    */
   public function getAggregationResults(): array
   {
-    return $this->aggregations;
+    return $this->rawAggregations;
   }
 
   /**
@@ -47,13 +48,82 @@ class Processor extends BaseProcessor
     return $last['index']['_id'] ?? null;
   }
 
-  public function processAggregation(Builder $query, $result)
+  public function processAggregations(Builder $query, $result)
   {
     $this->rawResponse = $result;
     $this->query = $query;
-    $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
+    $this->rawAggregations = $this->getRawResponse()['aggregations'] ?? [];
 
-    return $this->aggregations;
+    $result = [];
+
+    if(!empty($this->query->bucketAggregations)){
+      foreach ($this->query->bucketAggregations as $bucketAggregation){
+        // I love me the spread operator...
+        $result = [...$result, ...$this->processBucketAggregation($bucketAggregation)];
+      }
+    } else {
+      // No buckets so it's likely all metrics
+      $result = $this->processMetricAggregations($this->rawAggregations);
+    }
+
+    return $result;
+  }
+
+  public function processBucketAggregation($bucketAggregation)
+  {
+
+    $key = $bucketAggregation['key'];
+    return collect($this->rawAggregations[$key]['buckets'])->map(function ($bucket) {
+
+      $metricAggs = $this->processMetricAggregations($bucket);
+
+      return [
+        ...$bucket['key'],
+        ...$metricAggs,
+        '_meta' =>  $this->metaFromResult(['doc_count' => $bucket['doc_count']])
+      ];
+
+    })->toArray();
+  }
+
+  public function processMetricAggregations($bucket)
+  {
+
+    if(!$this->query->metricsAggregations){
+      return [];
+    }
+
+    $result = [];
+    foreach ($this->query->metricsAggregations as $metricsAggregation){
+      $result = [
+        ...$result,
+        ...$this->processMetricAggregation($metricsAggregation, $bucket)
+      ];
+    }
+
+    // Single metric agg
+    if(count($this->query->metricsAggregations) == 1){
+      $key = array_key_first($result);
+      return $result[$key];
+    }
+
+    return $result;
+  }
+
+  public function processMetricAggregation($metricsAggregation, $bucket)
+  {
+
+    $key = $metricsAggregation['key'];
+    $type = $metricsAggregation['type'];
+
+    $result =  match ($type) {
+      'count', 'avg', 'max', 'min', 'sum', 'median_absolute_deviation', 'value_count', 'cardinality' => $bucket[$key]['value'],
+      'percentiles' => $bucket[$key]['values'],
+      'matrix_stats' => $bucket[$key]['fields'][0],
+      'extended_stats', 'stats', 'string_stats', 'boxplot' => $bucket[$key],
+    };
+
+    return ["{$type}_{$key}" => $result];
   }
 
   /**
@@ -69,56 +139,16 @@ class Processor extends BaseProcessor
 
     $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
 
-    $documents = [];
-
     if($this->aggregations){
-
-      foreach ($this->aggregations as $column => $result) {
-
-        $type = Str::afterLast($column, \PDPhilip\Elasticsearch\Query\Builder::AGGREGATION_DELIMITER);
-        $column = Str::beforeLast($column, \PDPhilip\Elasticsearch\Query\Builder::AGGREGATION_DELIMITER);
-
-        $documents = [
-          ...$documents,
-          ...$this->documentFromAggregation($column, $type, $result)
-        ];
-      }
-
-      return $documents;
+      return $this->processAggregations($query, $result);
     }
 
+    $documents = [];
     foreach ($this->getRawResponse()['hits']['hits'] as $result) {
       $documents[] = $this->documentFromResult($this->query, $result);
     }
 
     return $documents;
-  }
-
-  /**
-   * Create a document from the given aggregation result
-   *
-   * @param $column
-   * @param $type
-   * @param $values
-   *
-   * @return array
-   */
-  public function documentFromAggregation($column, $type, $values): array
-  {
-
-        return collect($values['buckets'])->map(function ($bucket) use ($type) {
-
-          switch ($type) {
-            case 'composite':
-              return [
-                ...$bucket['key'],
-                '_meta' =>  $this->metaFromResult(['doc_count' => $bucket['doc_count']])
-              ];
-            default:
-              throw new RuntimeException('Failed to process aggs');
-          }
-
-        })->toArray();
   }
 
   /**
