@@ -771,8 +771,6 @@ class Builder extends BaseBuilder
      */
     public function whereGeoBoundsIn($column, array $bounds): self
     {
-        $type = 'GeoBoundsIn';
-
         $this->wheres[] = [
             'column' => $column,
             'bounds' => $bounds,
@@ -941,15 +939,80 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    /**
-     * Add a 'regexp' statement to the query.
-     *
-     * @param  string  $column
-     * @param  string  $boolean
-     */
+  /**
+   * Add a 'regexp' statement to the query.
+   *
+   * @param string $column
+   * @param string $value
+   * @param string $boolean
+   * @param bool   $not
+   * @param array  $parameters
+   *
+   * @return Builder
+   */
     public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $parameters = []): self
     {
         $type = 'Regex';
+
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'parameters');
+
+        return $this;
+    }
+
+  /**
+   * Add a 'match_phrase' statement to the query.
+   *
+   * @param string $column
+   * @param string $value
+   * @param string $boolean
+   * @param bool   $not
+   * @param array  $parameters
+   *
+   * @return Builder
+   */
+    public function whereMatchPhrase($column, string $value, $boolean = 'and', bool $not = false, array $parameters = []): self
+    {
+        $type = 'MatchPhrase';
+
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'parameters');
+
+        return $this;
+    }
+
+  /**
+   * Add a 'match_phrase_prefix' statement to the query.
+   *
+   * @param string $column
+   * @param string $value
+   * @param string $boolean
+   * @param bool   $not
+   * @param array  $parameters
+   *
+   * @return Builder
+   */
+    public function whereMatchPhrasePrefix($column, string $value, $boolean = 'and', bool $not = false, array $parameters = []): self
+    {
+        $type = 'MatchPhrasePrefix';
+
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'parameters');
+
+        return $this;
+    }
+
+  /**
+   * Add a 'match' statement to the query.
+   *
+   * @param string $column
+   * @param string $value
+   * @param string $boolean
+   * @param bool   $not
+   * @param array  $parameters
+   *
+   * @return Builder
+   */
+    public function whereMatch($column, string $value, $boolean = 'and', bool $not = false, array $parameters = []): self
+    {
+        $type = 'Match';
 
         $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'parameters');
 
@@ -977,11 +1040,11 @@ class Builder extends BaseBuilder
      * @param  string  $boolean
      * @param  bool  $not
      */
-    public function whereStartsWith($column, string $value, $boolean = 'and', $not = false): self
+    public function whereStartsWith($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
         $type = 'Prefix';
 
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not');
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
 
         return $this;
     }
@@ -1265,4 +1328,48 @@ class Builder extends BaseBuilder
 
         return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
     }
+
+  /**
+   * Returns documents that contain an indexed value for a field.
+   *
+   * @param string $column
+   * @param string $boolean
+   * @param null   $not
+   * @param array  $options
+   *
+   * @return Builder
+   */
+  public function whereTermExists($column, $boolean = 'and', $not = ' ' ,array $options = []): self
+  {
+    $this->wheres[] = [
+      'type' => 'Basic',
+      'operator' => 'exists',
+      'column' => $column,
+      'value' => is_null($not) ? null : ' ',
+      'boolean' => $boolean,
+      'options' => $options,
+    ];
+
+    return $this;
+  }
+
+  /**
+   * Add a fuzzy term query
+   *
+   * @param string $column
+   * @param        $value
+   * @param array  $options
+   * @param string $boolean
+   *
+   * @return Builder
+   */
+  public function whereTermFuzzy(string $column, $value, array $options = [], $boolean = 'and'): self
+  {
+    $type = 'TermFuzzy';
+
+    $this->wheres[] = compact('type','value', 'column','options', 'boolean');
+
+    return $this;
+  }
+
 }

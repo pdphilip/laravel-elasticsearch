@@ -16,14 +16,12 @@ use PDPhilip\Elasticsearch\Helpers\Helpers;
 
 class Grammar extends BaseGrammar
 {
-  /**
-   * Compile a delete query
-   *
-   * @param Builder|BaseBuilder $builder
-   *
-   * @return array
-   * @throws BuilderException
-   */
+    /**
+     * Compile a delete query
+     *
+     *
+     * @throws BuilderException
+     */
     public function compileDelete(Builder|BaseBuilder $builder): array
     {
         $clause = $this->compileSelect($builder);
@@ -55,14 +53,13 @@ class Grammar extends BaseGrammar
         return $this->compileSelect($query);
     }
 
-  /**
-   * Compile a select statement
-   *
-   * @param Builder $builder
-   *
-   * @return array
-   * @throws BuilderException
-   */
+    /**
+     * Compile a select statement
+     *
+     * @param  Builder  $builder
+     *
+     * @throws BuilderException
+     */
     public function compileSelect(Builder|BaseBuilder $builder): array
     {
         $query = $this->compileWheres($builder);
@@ -99,25 +96,25 @@ class Grammar extends BaseGrammar
             $params['_source'] = $builder->columns;
         }
 
-      if ($builder->bucketAggregations) {
-        $params['body']['aggs'] = $this->compileBucketAggregations($builder);
+        if ($builder->bucketAggregations) {
+            $params['body']['aggs'] = $this->compileBucketAggregations($builder);
 
-        //If we are aggregating we set the body size to 0 to save on processing time.
-        $params['body']['size'] = 0;
-      } else if ($builder->metricsAggregations) {
-        $params['body']['aggs'] = $this->compileMetricAggregations($builder);
+            //If we are aggregating we set the body size to 0 to save on processing time.
+            $params['body']['size'] = 0;
+        } elseif ($builder->metricsAggregations) {
+            $params['body']['aggs'] = $this->compileMetricAggregations($builder);
 
-        //If we are aggregating we set the body size to 0 to save on processing time.
-        $params['body']['size'] = 0;
-      }
+            //If we are aggregating we set the body size to 0 to save on processing time.
+            $params['body']['size'] = 0;
+        }
 
-      if ($builder->distinct) {
-          $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
-      }
+        if ($builder->distinct) {
+            $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
+        }
 
-      if (isset($params['body']['query']) && ! $params['body']['query']) {
-        unset($params['body']['query']);
-      }
+        if (isset($params['body']['query']) && ! $params['body']['query']) {
+            unset($params['body']['query']);
+        }
 
         return $params;
     }
@@ -129,18 +126,17 @@ class Grammar extends BaseGrammar
     {
         $aggregations = [];
 
-
         $metricsAggregations = [];
         if ($builder->metricsAggregations) {
-          $metricsAggregations = $this->compileMetricAggregations($builder);
+            $metricsAggregations = $this->compileMetricAggregations($builder);
         }
 
         foreach ($builder->bucketAggregations as $aggregation) {
             //This lets us dynamically set the metric aggregation inside the bucket
-            if(!empty($metricsAggregations)) {
+            if (! empty($metricsAggregations)) {
 
-              $aggregation['aggregations'] = $builder->newQuery();
-              $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
+                $aggregation['aggregations'] = $builder->newQuery();
+                $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
             }
 
             $result = $this->compileAggregation($builder, $aggregation);
@@ -181,7 +177,7 @@ class Grammar extends BaseGrammar
         ];
 
         if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {
-          $compiled[$key]['aggs'] = $this->compileMetricAggregations($aggregation['aggregations']);
+            $compiled[$key]['aggs'] = $this->compileMetricAggregations($aggregation['aggregations']);
         }
 
         return $compiled;
@@ -243,14 +239,9 @@ class Grammar extends BaseGrammar
         return ['index' => $builder->from];
     }
 
-  /**
-   * Compile the given values to an Elasticsearch insert statement
-   *
-   * @param Builder|BaseBuilder $builder
-   * @param array               $values
-   *
-   * @return array
-   */
+    /**
+     * Compile the given values to an Elasticsearch insert statement
+     */
     public function compileInsert(Builder|BaseBuilder $builder, array $values): array
     {
         $params = [];
@@ -321,14 +312,12 @@ class Grammar extends BaseGrammar
         return $this->compileMetricAggregation($builder, $aggregation);
     }
 
-  /**
-   * Compile a delete query
-   *
-   * @param Builder|BaseBuilder $builder
-   *
-   * @return array
-   * @throws BuilderException
-   */
+    /**
+     * Compile a delete query
+     *
+     *
+     * @throws BuilderException
+     */
     public function compileTruncate(Builder|BaseBuilder $builder): array
     {
         $clause = $this->compileSelect($builder);
@@ -344,15 +333,14 @@ class Grammar extends BaseGrammar
         return $clause;
     }
 
-  /**
-   * Compile a update query
-   *
-   * @param Builder|BaseBuilder $builder
-   * @param                     $values
-   *
-   * @return array
-   * @throws BuilderException
-   */
+    /**
+     * Compile a update query
+     *
+     *
+     * @return array
+     *
+     * @throws BuilderException
+     */
     public function compileUpdate(Builder|BaseBuilder $builder, $values)
     {
         $clause = $this->compileSelect($builder);
@@ -446,7 +434,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile avg aggregation
      */
-    protected function compileAvgAggregation(Builder $builder,array $aggregation): array
+    protected function compileAvgAggregation(Builder $builder, array $aggregation): array
     {
         return $this->compileMetricAggregation($builder, $aggregation);
     }
@@ -454,9 +442,9 @@ class Grammar extends BaseGrammar
     /**
      * Compile cardinality aggregation
      */
-    protected function compileCardinalityAggregation(Builder $builder,array $aggregation): array
+    protected function compileCardinalityAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -479,14 +467,14 @@ class Grammar extends BaseGrammar
     protected function compileCategorizeTextAggregation(Builder $builder, array $aggregation): array
     {
 
-      $options = $aggregation['options'] ?? [];
+        $options = $aggregation['options'] ?? [];
 
-      return [
-        'categorize_text' => [
-          ...$aggregation['args'],
-          ...$options
-        ],
-      ];
+        return [
+            'categorize_text' => [
+                ...$aggregation['args'],
+                ...$options,
+            ],
+        ];
     }
 
     /**
@@ -497,7 +485,7 @@ class Grammar extends BaseGrammar
 
         $compiled = [
             'composite' => [
-              'sources' => $aggregation['args']
+                'sources' => $aggregation['args'],
             ],
         ];
 
@@ -531,7 +519,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileStatsAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -539,7 +527,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileExtendedStatsAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -547,7 +535,7 @@ class Grammar extends BaseGrammar
      */
     protected function compilePercentilesAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -555,7 +543,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileStringStatsAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -563,7 +551,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileMedianAbsoluteDeviationAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -571,7 +559,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileBoxplotAggregation(Builder $builder, array $aggregation): array
     {
-      return $this->compileMetricAggregation($builder, $aggregation);
+        return $this->compileMetricAggregation($builder, $aggregation);
     }
 
     /**
@@ -580,18 +568,17 @@ class Grammar extends BaseGrammar
     protected function compileMatrixStatsAggregation(Builder $builder, array $aggregation): array
     {
 
-      $metric = $aggregation['type'];
-      $options = $aggregation['options'] ?? [];
+        $metric = $aggregation['type'];
+        $options = $aggregation['options'] ?? [];
 
+        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
-      $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
-
-      return [
-        $metric => [
-          'fields' => $field,
-          ...$options
-        ],
-      ];
+        return [
+            $metric => [
+                'fields' => $field,
+                ...$options,
+            ],
+        ];
     }
 
     /**
@@ -614,7 +601,7 @@ class Grammar extends BaseGrammar
         return [
             $metric => [
                 'field' => $field,
-                ...$options
+                ...$options,
             ],
         ];
     }
@@ -940,7 +927,6 @@ class Grammar extends BaseGrammar
             $query = [
                 'exists' => [
                     'field' => $where['column'],
-
                 ],
             ];
         } elseif (in_array($where['operator'], ['like', 'not like'])) {
@@ -1391,15 +1377,135 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereRegex(Builder $builder, array $where): array
     {
+
+        $allowedArgs = [
+            'flags',
+            'case_insensitive',
+            'max_determinized_states',
+            'rewrite',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
         return [
             'regexp' => [
+                $this->getIndexableField($where['column'], $builder) => [
+                    ...$where['options'],
+                    'value' => Helpers::escape($where['value']),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    protected function compileWhereMatchPhrase(Builder $builder, array $where): array
+    {
+
+        $allowedArgs = [
+            'analyzer',
+            'zero_terms_query',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
+        return [
+            'match_phrase' => [
                 $where['column'] => [
-                    ...$where['parameters'],
+                    ...$where['options'],
+                    'query' => $where['value'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    protected function compileWhereMatch(Builder $builder, array $where): array
+    {
+
+        $allowedArgs = [
+            'analyzer',
+            'auto_generate_synonyms_phrase_query',
+            'boost',
+            'fuzziness',
+            'max_expansions',
+            'prefix_length',
+            'fuzzy_transpositions',
+            'fuzzy_rewrite',
+            'lenient',
+            'operator',
+            'minimum_should_match',
+            'zero_terms_query',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
+        return [
+            'match' => [
+                $where['column'] => [
+                    ...$where['options'],
+                    'query' => $where['value'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    protected function compileWhereMatchPhrasePrefix(Builder $builder, array $where): array
+    {
+
+        $allowedArgs = [
+            'analyzer',
+            'max_expansions',
+            'slop',
+            'zero_terms_query',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
+        return [
+            'match_phrase_prefix' => [
+                $where['column'] => [
+                    ...$where['options'],
+                    'query' => $where['value'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a term fuzzy clause
+     */
+    protected function compileWhereTermFuzzy(Builder $builder, array $where): array
+    {
+        $allowedArgs = [
+            'fuzziness',
+            'max_expansions',
+            'prefix_length',
+            'transpositions',
+            'rewrite',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
+        return [
+            'fuzzy' => [
+                $this->getIndexableField($where['column'], $builder) => [
+                    ...$where['options'],
                     'value' => (string) $where['value'],
                 ],
             ],
         ];
+    }
 
+    private function getAllowedParameters(array $parameters, array $allowed): array
+    {
+        return array_intersect_key($parameters, array_flip($allowed));
     }
 
     /**
