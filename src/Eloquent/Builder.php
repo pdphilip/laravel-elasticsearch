@@ -109,6 +109,22 @@ class Builder extends BaseEloquentBuilder
         return $model;
     }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
+  {
+    if ($column instanceof Closure && is_null($operator)) {
+      $column($query = $this->model->newQueryWithoutRelationships());
+
+      $this->query->addNestedWhereQuery($query->getQuery(), $boolean);
+    } else {
+      $this->query->where(...func_get_args());
+    }
+
+    return $this;
+  }
+
     /**
      * Execute the query as a "select" statement.
      *

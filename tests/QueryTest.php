@@ -98,25 +98,25 @@ it('tests regexp clause', function () {
 });
 
 it('tests like clause', function () {
-    $users = User::where('name', 'like', '%doe')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'like', '%doe', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(2);
 
-    $users = User::where('name', 'like', '%y%')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'like', '%y%', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(3);
 
-    $users = User::where('name', 'like', 't%')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'like', 't%', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(1);
 
 });
 
 it('tests not like clause', function () {
-    $users = User::where('name', 'not like', '%doe')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', '%doe',options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(7);
 
-    $users = User::where('name', 'not like', '%y%')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', '%y%',options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(6);
 
-    $users = User::where('name', 'not like', 't%')->withParameters(['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', 't%',options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(8);
 });
 

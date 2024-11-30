@@ -56,6 +56,16 @@ trait ElasticsearchModel
         return ! empty($this->attributes['_meta']) ? $this->attributes['_meta'] : [];
     }
 
+    public function getHighlights()
+    {
+        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta']->getHighlights() : [];
+    }
+
+    public function getHighlight($column, $deliminator = '')
+    {
+        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta']->getHighlight($column, $deliminator) : '';
+    }
+
     /**
      * {@inheritdoc}
      */

@@ -157,3 +157,38 @@ it('Nested Queries', function () {
                   ->and($users[0]['name'])->toBe('John Doe')
                   ->and($users[1]['name'])->toBe('John John Yoe');
   });
+
+
+  it('can search and highlight', function () {
+//
+//    $users = User::whereSearch('John')->highlight()->get();
+//    expect($users)->toHaveCount(2)
+//                  ->and($users[0]->getHighlights())->toHaveKeys(['name', 'description'])
+//                  ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe')
+//                  ->and($users[0]->getHighlight('description'))->toBe('<em>John</em> manages the admin team effectively.');
+//
+
+//
+//    $users = User::whereSearch('John')->highlight(['name'])->get();
+//    expect($users)->toHaveCount(2)
+//                  ->and($users[0]->getHighlights())->toHaveKey('name')
+//                  ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe');
+
+//    $users = User::whereSearch('John')->highlight(['name'], '<strong>', '</strong>')->get();
+//    expect($users)->toHaveCount(2)
+//                  ->and($users[0]->getHighlights())->toHaveKey('name')
+//                  ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe');
+//
+
+    $users = User::whereSearch('John')->highlight(['name' =>  ['pre_tags' => '<strong>', 'post_tags' => '</strong>'], 'description'])->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]->getHighlights())->toHaveKey('name')
+                  ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe')
+                  ->and($users[0]->getHighlight('description'))->toBe('<em>John</em> manages the admin team effectively.');
+
+
+
+
+
+
+  });

@@ -84,6 +84,11 @@ class Grammar extends BaseGrammar
             $params['body']['sort'] = $this->compileOrders($builder, $builder->orders);
         }
 
+        // Apply order, offset and limit
+        if ($builder->highlight) {
+            $params['body']['highlight'] = $this->compileHighlight($builder, $builder->highlight);
+        }
+
         if ($builder->offset) {
             $params['body']['from'] = $builder->offset;
         }
@@ -181,6 +186,50 @@ class Grammar extends BaseGrammar
         }
 
         return $compiled;
+    }
+
+  /**
+   * Compile the highlight section of a query
+   *
+   * @param Builder $builder
+   * @param array   $highlight
+   *
+   * @return array
+   */
+    protected function compileHighlight(Builder $builder, $highlight = []): array
+    {
+      $allowedArgs = [
+        'boundary_chars',
+        'boundary_max_scan',
+        'boundary_scanner',
+        'boundary_scanner_locale',
+        'encoder',
+        'fragmenter',
+        'force_source',
+        'fragment_offset',
+        'fragment_size',
+        'highlight_query',
+        'matched_fields',
+        'number_of_fragments',
+      ];
+
+
+        $compiledHighlights = $this->getAllowedOptions($highlight['options'], $allowedArgs);
+
+          foreach ($highlight['column'] as $column => $value) {
+
+            if(is_array($value)) {
+              $compiledHighlights['fields'][] = [$column => $value];
+            } else if($value != '*'){
+              $compiledHighlights['fields'][] = [$value => (object)[]];
+            }
+
+          }
+
+        $compiledHighlights['pre_tags'] = $highlight['preTag'];
+        $compiledHighlights['post_tags'] = $highlight['postTag'];
+
+        return $compiledHighlights;
     }
 
     /**
@@ -933,7 +982,7 @@ class Grammar extends BaseGrammar
                 'wildcard' => [
                     $this->getIndexableField($where['column'], $builder) => [
                         'value' => str_replace('%', '*', $value),
-                        ...($where['parameters'] ?? []),
+                        ...($where['options'] ?? []),
                     ],
                 ],
             ];
@@ -943,7 +992,7 @@ class Grammar extends BaseGrammar
                 'range' => [
                     $this->getIndexableField($where['column'], $builder) => [
                         $operator => $value,
-                        ...($where['parameters'] ?? []),
+                        ...($where['options'] ?? []),
 
                     ],
                 ],
@@ -954,7 +1003,7 @@ class Grammar extends BaseGrammar
                     $where['column'] => [
                         'query' => $value,
                         'operator' => 'and',
-                        ...($where['parameters'] ?? []),
+                        ...($where['options'] ?? []),
                     ],
                 ],
             ];
@@ -1391,7 +1440,7 @@ class Grammar extends BaseGrammar
             'rewrite',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'regexp' => [
@@ -1414,7 +1463,7 @@ class Grammar extends BaseGrammar
             'zero_terms_query',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'match_phrase' => [
@@ -1447,7 +1496,7 @@ class Grammar extends BaseGrammar
             'zero_terms_query',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'match' => [
@@ -1472,7 +1521,7 @@ class Grammar extends BaseGrammar
             'zero_terms_query',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'match_phrase_prefix' => [
@@ -1497,7 +1546,7 @@ class Grammar extends BaseGrammar
             'rewrite',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'fuzzy' => [
@@ -1519,7 +1568,7 @@ class Grammar extends BaseGrammar
             'case_insensitive',
         ];
 
-        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'term' => [
@@ -1531,9 +1580,9 @@ class Grammar extends BaseGrammar
         ];
     }
 
-    private function getAllowedParameters(array $parameters, array $allowed): array
+    private function getAllowedOptions(array $options, array $allowed): array
     {
-        return array_intersect_key($parameters, array_flip($allowed));
+        return array_intersect_key($options, array_flip($allowed));
     }
 
     /**

@@ -184,7 +184,13 @@ class Processor extends BaseProcessor
   {
     $document = $result['_source'];
     $document['_id'] = $result['_id'];
-    $document['_meta'] = $this->metaFromResult(['_index' => $result['_index']]);
+
+    $meta = ['_index' => $result['_index'], '_score' => $result['_score'] ?? null];
+    if(!empty($result['highlight'])){
+      $meta['highlight'] = $result['highlight'];
+    }
+
+    $document['_meta'] = $this->metaFromResult($meta);
 
     if (isset($result['inner_hits'])) {
       $document = $this->addInnerHitsToDocument($document, $result['inner_hits']);

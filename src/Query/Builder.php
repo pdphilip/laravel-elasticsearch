@@ -57,6 +57,8 @@ class Builder extends BaseBuilder
 
     public array $postFilters = [];
 
+    public $highlight;
+
     public $scripts = [];
 
     public $type;
@@ -1425,6 +1427,20 @@ class Builder extends BaseBuilder
         $type = 'Term';
 
         $this->wheres[] = compact('type', 'value', 'column', 'options', 'boolean');
+
+        return $this;
+    }
+
+    /**
+     * Add highlights to query.
+     *
+     * @param  string|string[]  $column
+     */
+    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>',  array $options = []): self
+    {
+        $column = Arr::wrap($column);
+
+        $this->highlight = compact('column', 'preTag', 'postTag', 'options');
 
         return $this;
     }

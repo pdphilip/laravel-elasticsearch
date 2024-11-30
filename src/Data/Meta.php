@@ -16,6 +16,7 @@ class Meta implements Arrayable
 
     public function __construct(array $result, array $extra)
     {
+
         unset($result['hits']['hits'], $result['aggregations']);
 
         $this->result = [
@@ -32,6 +33,16 @@ class Meta implements Arrayable
     public function getDocCount(): ?int
     {
         return Arr::get($this->result, 'doc_count');
+    }
+
+    public function getHighlight($column, $deliminator = ''): ?string
+    {
+        return implode($deliminator, Arr::get($this->result, "highlight.{$column}", []));
+    }
+
+    public function getHighlights(): ?array
+    {
+        return Arr::get($this->result, 'highlight', []);
     }
 
     public function getIndex(): ?string
