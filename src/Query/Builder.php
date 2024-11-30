@@ -81,16 +81,17 @@ class Builder extends BaseBuilder
         return parent::__call($method, $parameters);
     }
 
-  /**
-   * {@inheritdoc}
-   */
+    /**
+     * {@inheritdoc}
+     */
     public function newQuery()
     {
-      $query = new static($this->connection, $this->grammar, $this->processor);
+        $query = new static($this->connection, $this->grammar, $this->processor);
 
-      // Transfer items
-      $query->options()->set($this->options()->all());
-      return $query;
+        // Transfer items
+        $query->options()->set($this->options()->all());
+
+        return $query;
     }
 
     /**
@@ -142,10 +143,17 @@ class Builder extends BaseBuilder
      *
      * @param  string  $query
      * @param  array  $options
+     * @param  string[]|string  $columns
      * @param  string  $boolean
      */
-    public function search($query, $options = [], $boolean = 'and'): self
+    public function whereSearch($query, $columns = ['*'], $options = [], $boolean = 'and'): self
     {
+
+        $options = [
+            ...$options,
+            'fields' => Arr::wrap($columns),
+        ];
+
         $this->wheres[] = [
             'type' => 'Search',
             'value' => $query,
@@ -552,12 +560,12 @@ class Builder extends BaseBuilder
     public function orderByNested(string $column, $direction = 1, array $options = []): self
     {
 
-      $options = [
-        ...$options,
-        'nested' => ['path' => Str::beforeLast($column, '.')]
-      ];
+        $options = [
+            ...$options,
+            'nested' => ['path' => Str::beforeLast($column, '.')],
+        ];
 
-      return $this->orderBy($column, $direction, $options);
+        return $this->orderBy($column, $direction, $options);
     }
 
     public function orderByGeo(string $column, array $coordinates, $direction = 1, array $options = []): self
@@ -710,11 +718,11 @@ class Builder extends BaseBuilder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
     {
-      parent::where($column, $operator, $value, $boolean);
-      //Append options to clause
-      $this->withOptions($options);
+        parent::where($column, $operator, $value, $boolean);
+        //Append options to clause
+        $this->withOptions($options);
 
-      return $this;
+        return $this;
     }
 
     /**
@@ -722,11 +730,11 @@ class Builder extends BaseBuilder
      */
     public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = [])
     {
-      parent::whereRaw($sql, $bindings, $boolean);
-      //Append options to clause
-      $this->withOptions($options);
+        parent::whereRaw($sql, $bindings, $boolean);
+        //Append options to clause
+        $this->withOptions($options);
 
-      return $this;
+        return $this;
     }
 
     /**
@@ -756,17 +764,14 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a where between statement to the query.
-   *
-   * @param string $column
-   * @param array  $values
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a where between statement to the query.
+     *
+     * @param  string  $column
+     * @param  array  $values
+     * @param  string  $boolean
+     * @param  bool  $not
+     */
     public function whereBetween($column, iterable $values, $boolean = 'and', $not = false, array $options = []): self
     {
         $type = 'Between';
@@ -790,18 +795,15 @@ class Builder extends BaseBuilder
         return $this->whereRelationship('child', $documentType, $callback, $options, $boolean);
     }
 
-  /**
-   * Add a "where date" statement to the query.
-   *
-   * @param string $column
-   * @param string $operator
-   * @param mixed  $value
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a "where date" statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $operator
+     * @param  mixed  $value
+     * @param  string  $boolean
+     * @param  bool  $not
+     */
     public function whereDate($column, $operator, $value = null, $boolean = 'and', $not = false, array $options = []): self
     {
         [$value, $operator] = $this->prepareValueAndOperator(
@@ -836,18 +838,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'distance from point' statement to the query.
-   *
-   * @param string $column
-   * @param array  $location
-   * @param string $distance
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'distance from point' statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     */
     public function whereGeoDistance($column, array $location, string $distance, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'GeoDistance';
@@ -857,16 +853,13 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'nested' statement to the query.
-   *
-   * @param string                      $column
-   * @param callable|BaseBuilder|static $query
-   * @param string                      $boolean
-   * @param array                       $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'nested' statement to the query.
+     *
+     * @param  string  $column
+     * @param  callable|BaseBuilder|static  $query
+     * @param  string  $boolean
+     */
     public function whereNestedObject($column, $query, $boolean = 'and', array $options = []): self
     {
         $type = 'NestedObject';
@@ -880,32 +873,27 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'nested' statement to the query.
-   *
-   * @param string                      $column
-   * @param callable|BaseBuilder|static $query
-   * @param array                       $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'nested' statement to the query.
+     *
+     * @param  string  $column
+     * @param  callable|BaseBuilder|static  $query
+     */
     public function whereNotNestedObject($column, $query, array $options = []): self
     {
         $boolean = 'not';
+
         return $this->whereNestedObject($column, $query, $boolean, $options);
     }
 
-  /**
-   * Add a 'must not' statement to the query.
-   *
-   * @param BaseBuilder|static $query
-   * @param null               $operator
-   * @param null               $value
-   * @param string             $boolean
-   * @param array              $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'must not' statement to the query.
+     *
+     * @param  BaseBuilder|static  $query
+     * @param  null  $operator
+     * @param  null  $value
+     * @param  string  $boolean
+     */
     public function whereNot($query, $operator = null, $value = null, $boolean = 'and', array $options = []): self
     {
         $type = 'Not';
@@ -1021,17 +1009,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'regexp' statement to the query.
-   *
-   * @param string $column
-   * @param string $value
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'regexp' statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     */
     public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'Regex';
@@ -1041,17 +1024,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'match_phrase' statement to the query.
-   *
-   * @param string $column
-   * @param string $value
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'match_phrase' statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     */
     public function whereMatchPhrase($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'MatchPhrase';
@@ -1061,17 +1039,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'match_phrase_prefix' statement to the query.
-   *
-   * @param string $column
-   * @param string $value
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'match_phrase_prefix' statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     */
     public function whereMatchPhrasePrefix($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'MatchPhrasePrefix';
@@ -1081,17 +1054,12 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a 'match' statement to the query.
-   *
-   * @param string $column
-   * @param string $value
-   * @param string $boolean
-   * @param bool   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a 'match' statement to the query.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     */
     public function whereMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'Match';
@@ -1101,15 +1069,11 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Add a script query
-   *
-   * @param string $script
-   * @param string $boolean
-   * @param array  $options
-   *
-   * @return Builder
-   */
+    /**
+     * Add a script query
+     *
+     * @param  string  $boolean
+     */
     public function whereScript(string $script, $boolean = 'and', array $options = []): self
     {
         $type = 'Script';
@@ -1125,7 +1089,7 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $boolean
      * @param  bool  $not
-     * @param array $options
+     * @param  array  $options
      */
     public function whereStartsWith($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
@@ -1416,66 +1380,52 @@ class Builder extends BaseBuilder
         return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
     }
 
-  /**
-   * Returns documents that contain an indexed value for a field.
-   *
-   * @param string $column
-   * @param string $boolean
-   * @param null   $not
-   * @param array  $options
-   *
-   * @return Builder
-   */
-  public function whereTermExists($column, $boolean = 'and', $not = ' ' ,array $options = []): self
-  {
-    $this->wheres[] = [
-      'type' => 'Basic',
-      'operator' => 'exists',
-      'column' => $column,
-      'value' => is_null($not) ? null : ' ',
-      'boolean' => $boolean,
-      'options' => $options,
-    ];
+    /**
+     * Returns documents that contain an indexed value for a field.
+     *
+     * @param  string  $column
+     * @param  string  $boolean
+     * @param  null  $not
+     */
+    public function whereTermExists($column, $boolean = 'and', $not = ' ', array $options = []): self
+    {
+        $this->wheres[] = [
+            'type' => 'Basic',
+            'operator' => 'exists',
+            'column' => $column,
+            'value' => is_null($not) ? null : ' ',
+            'boolean' => $boolean,
+            'options' => $options,
+        ];
 
-    return $this;
-  }
+        return $this;
+    }
 
-  /**
-   * Add a fuzzy term query
-   *
-   * @param string $column
-   * @param        $value
-   * @param array  $options
-   * @param string $boolean
-   *
-   * @return Builder
-   */
-  public function whereTermFuzzy(string $column, $value, array $options = [], $boolean = 'and'): self
-  {
-    $type = 'TermFuzzy';
+    /**
+     * Add a fuzzy term query
+     *
+     * @param  string  $boolean
+     */
+    public function whereTermFuzzy(string $column, $value, array $options = [], $boolean = 'and'): self
+    {
+        $type = 'TermFuzzy';
 
-    $this->wheres[] = compact('type','value', 'column','options', 'boolean');
+        $this->wheres[] = compact('type', 'value', 'column', 'options', 'boolean');
 
-    return $this;
-  }
+        return $this;
+    }
 
-  /**
-   * Add a term query
-   *
-   * @param string $column
-   * @param        $value
-   * @param string $boolean
-   * @param array  $options
-   *
-   * @return Builder
-   */
-  public function whereTerm(string $column, $value, $boolean = 'and', array $options = []): self
-  {
-    $type = 'Term';
+    /**
+     * Add a term query
+     *
+     * @param  string  $boolean
+     */
+    public function whereTerm(string $column, $value, $boolean = 'and', array $options = []): self
+    {
+        $type = 'Term';
 
-    $this->wheres[] = compact('type','value', 'column','options', 'boolean');
+        $this->wheres[] = compact('type', 'value', 'column', 'options', 'boolean');
 
-    return $this;
-  }
-
+        return $this;
+    }
 }

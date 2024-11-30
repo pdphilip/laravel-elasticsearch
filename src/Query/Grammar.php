@@ -1547,70 +1547,64 @@ class Grammar extends BaseGrammar
             ],
         ];
     }
+  /**
+   * Compile a search clause for Elasticsearch.
+   */
+  protected function compileWhereSearch(Builder $builder, array $where): array
+  {
+    // Determine the fields to search
+    $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
 
-    /**
-     * Compile a search clause
-     */
-    protected function compileWhereSearch(Builder $builder, array $where): array
-    {
-        $fields = '_all';
-
-        if (! empty($where['options']['fields'])) {
-            $fields = $where['options']['fields'];
-        }
-
-        if (is_array($fields) && ! is_numeric(array_keys($fields)[0])) {
-            $fieldsWithBoosts = [];
-
-            foreach ($fields as $field => $boost) {
-                $fieldsWithBoosts[] = "{$field}^{$boost}";
-            }
-
-            $fields = $fieldsWithBoosts;
-        }
-
-        if (is_array($fields) && count($fields) > 1) {
-            $type = isset($where['options']['matchType']) ? $where['options']['matchType'] : 'most_fields';
-
-            $query = [
-                'multi_match' => [
-                    'query' => $where['value'],
-                    'type' => $type,
-                    'fields' => $fields,
-                ],
-            ];
-        } else {
-            $field = is_array($fields) ? reset($fields) : $fields;
-
-            $query = [
-                'match' => [
-                    $field => [
-                        'query' => $where['value'],
-                    ],
-                ],
-            ];
-        }
-
-        if (! empty($where['options']['fuzziness'])) {
-            $matchType = array_keys($query)[0];
-
-            if ($matchType === 'multi_match') {
-                $query[$matchType]['fuzziness'] = $where['options']['fuzziness'];
-            } else {
-                $query[$matchType][$field]['fuzziness'] = $where['options']['fuzziness'];
-            }
-        }
-
-        if (! empty($where['options']['constant_score'])) {
-            $query = [
-                'constant_score' => [
-                    'query' => $query,
-                ],
-            ];
-        }
-
-        return $query;
+    // Handle field boosts if fields is an associative array
+    if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+      $fields = array_map(fn($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
     }
+
+    // Use multi_match if searching across multiple fields or all fields
+    if (is_array($fields) || $fields === '*') {
+      $queryType = $where['options']['matchType'] ?? 'best_fields';
+
+      $query = [
+        'multi_match' => [
+          'query' => $where['value'],
+          'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
+          'type' => $queryType,
+        ],
+      ];
+    } else {
+      $query = [
+        'match' => [
+          $fields => [
+            'query' => $where['value'],
+          ],
+        ],
+      ];
+    }
+
+    // Add fuzziness if specified
+    if (!empty($where['options']['fuzziness'])) {
+      $fuzziness = $where['options']['fuzziness'];
+      $mainQueryType = key($query);
+
+      if ($mainQueryType === 'multi_match') {
+        $query['multi_match']['fuzziness'] = $fuzziness;
+      } else {
+        $query['match'][$fields]['fuzziness'] = $fuzziness;
+      }
+    }
+
+    // Wrap in constant_score if specified
+    if (!empty($where['options']['constant_score'])) {
+      $query = [
+        'constant_score' => [
+          'filter' => $query,
+        ],
+      ];
+    }
+
+    return $query;
+  }
+
 
     /**
      * Convert a key to an Elasticsearch-friendly format

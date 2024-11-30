@@ -3,18 +3,11 @@
 declare(strict_types=1);
 
   use PDPhilip\Elasticsearch\Query\Builder;
-  use PDPhilip\Elasticsearch\Tests\Models\Birthday;
-  use PDPhilip\Elasticsearch\Tests\Models\Location;
   use PDPhilip\Elasticsearch\Tests\Models\Post;
-  use PDPhilip\Elasticsearch\Tests\Models\Product;
-  use PDPhilip\Elasticsearch\Tests\Models\Scoped;
   use PDPhilip\Elasticsearch\Tests\Models\User;
 
-  beforeEach(function () {
+beforeEach(function () {
   User::executeSchema();
-  Birthday::executeSchema();
-  Scoped::executeSchema();
-  Product::executeSchema();
   Post::executeSchema();
 
     User::insert([
@@ -25,37 +18,9 @@ declare(strict_types=1);
                    ['name' => 'Mark Moe', 'age' => 23, 'title' => 'user', 'description' => 'Mark contributes valuable feedback to the user community.'],
                    ['name' => 'Brett Boe', 'age' => 35, 'title' => 'user', 'description' => 'Brett frequently posts detailed reviews.'],
                    ['name' => 'Tommy Toe', 'age' => 33, 'title' => 'user', 'description' => 'Tommy enjoys creating content for user forums.'],
-                   ['name' => 'Yvonne Yoe', 'age' => 35, 'title' => 'admin', 'description' => 'Yvonne coordinates tasks across multiple admin teams.'],
+                   ['name' => 'John John Yoe', 'age' => 35, 'title' => 'admin', 'description' => 'Yoe coordinates tasks across multiple admin teams.'],
                    ['name' => 'Error', 'age' => null, 'title' => null, 'description' => null],
                  ]);
-
-  Birthday::insert([
-                     ['name' => 'Mark Moe', 'birthday' => new DateTime('2020-04-10 10:53:11')],
-                     ['name' => 'Jane Doe', 'birthday' => new DateTime('2021-05-12 10:53:12')],
-                     ['name' => 'Harry Hoe', 'birthday' => new DateTime('2021-05-11 10:53:13')],
-                     ['name' => 'Robert Doe', 'birthday' => new DateTime('2021-05-12 10:53:14')],
-                     ['name' => 'Mark Moe', 'birthday' => new DateTime('2021-05-12 10:53:15')],
-                     ['name' => 'Mark Moe', 'birthday' => new DateTime('2022-05-12 10:53:16')],
-                     ['name' => 'Boo'],
-                   ]);
-
-  Product::insert([
-                    ['product' => 'chocolate', 'price' => [20, 5]],
-                    ['product' => 'pumpkin', 'price' => 30],
-                    ['product' => 'apple', 'price' => 10],
-                    ['product' => 'orange juice', 'price' => [25, 7.5]],
-                    ['product' => 'coffee', 'price' => 15],
-                    ['product' => 'tea', 'price' => 12],
-                    ['product' => 'cookies', 'price' => [18, 4.5]],
-                    ['product' => 'ice cream', 'price' => 22],
-                    ['product' => 'bagel', 'price' => 8],
-                    ['product' => 'salad', 'price' => 14],
-                    ['product' => 'sandwich', 'price' => [30, 18.5]],
-                    ['product' => 'pizza', 'price' => 45],
-                    ['product' => 'water', 'price' => 5],
-                    ['product' => 'soda', 'price' => [8, 3]],
-                    ['product' => 'error', 'price' => null],
-                  ]);
 
     Post::insert([
                    [
@@ -151,3 +116,44 @@ it('Nested Queries', function () {
                 ->and($users[1]['comments'])->toHaveCount(1);
 
 });
+
+  it('can search with field boosting', function () {
+    $users = User::whereSearch('John', ['name' => 5, 'description' => 1])->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]['name'])->toBe('John John Yoe')
+                  ->and($users[1]['name'])->toBe('John Doe');
+  });
+
+  it('can search across all fields', function () {
+    $users = User::whereSearch('admin', '*')->get();
+    expect($users)->toHaveCount(3);
+  });
+
+  it('can search with fuzziness', function () {
+    $users = User::whereSearch('Jon', ['name' => 5, 'description' => 1], [
+      'fuzziness' => 'AUTO',
+    ])->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]['name'])->toBe('John John Yoe')
+                  ->and($users[1]['name'])->toBe('John Doe');
+  });
+
+  it('can search with specific fields only', function () {
+    $users = User::whereSearch('young', ['description' => 1])->get();
+    expect($users)->toHaveCount(1)
+                  ->and($users[0]['name'])->toBe('Harry Hoe');
+  });
+
+  it('returns empty result for unmatched query', function () {
+    $users = User::whereSearch('nonexistent', ['name' => 1, 'description' => 1])->get();
+    expect($users)->toBeEmpty();
+  });
+
+  it('can use constant score query', function () {
+    $users = User::whereSearch('John', ['name' => 5, 'description' => 1], [
+      'constant_score' => true,
+    ])->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]['name'])->toBe('John Doe')
+                  ->and($users[1]['name'])->toBe('John John Yoe');
+  });
