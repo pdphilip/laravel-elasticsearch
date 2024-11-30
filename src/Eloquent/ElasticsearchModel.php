@@ -12,7 +12,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
@@ -28,6 +27,8 @@ trait ElasticsearchModel
 
     protected ?Relation $parentRelation;
 
+    protected array $mappingMap = [];
+
     public function newUniqueId(): string
     {
         // this is the equivelent of how elasticsearch generates UUID
@@ -35,25 +36,24 @@ trait ElasticsearchModel
         return base64_encode((string) Str::orderedUuid());
     }
 
-  /**
-   * Custom accessor for the model's id.
-   *
-   * @param  mixed $value
-   *
-   * @return mixed
-   */
-  public function getIdAttribute($value = null)
-  {
-    // If we don't have a value for 'id', we will use the MongoDB '_id' value.
-    // This allows us to work with models in a more sql-like way.
-    $value ??= $this->attributes['id'] ?? $this->attributes['_id'] ?? null;
+    /**
+     * Custom accessor for the model's id.
+     *
+     * @param  mixed  $value
+     * @return mixed
+     */
+    public function getIdAttribute($value = null)
+    {
+        // If we don't have a value for 'id', we will use the MongoDB '_id' value.
+        // This allows us to work with models in a more sql-like way.
+        $value ??= $this->attributes['id'] ?? $this->attributes['_id'] ?? null;
 
-    return $value;
-  }
+        return $value;
+    }
 
     public function getMeta()
     {
-          return !empty($this->attributes['_meta']) ? $this->attributes['_meta'] : [];
+        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta'] : [];
     }
 
     /**
@@ -65,7 +65,7 @@ trait ElasticsearchModel
 
         // Since newBaseQueryBuilder is used whenever a new Query builder is needed
         // we hook in to it to pass options we have set at the model level to the query builder.
-        $query->options()->set($this->options()->all());
+        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->mappingMap]);
 
         return $query;
     }
@@ -76,7 +76,8 @@ trait ElasticsearchModel
     public function newInstance($attributes = [], $exists = false)
     {
         $model = parent::newInstance($attributes, $exists);
-        $model->options()->set($this->options()->all());
+        $model->options()->merge($this->options()->all(), ['mappings' => $this->mappingMap]);
+
         return $model;
     }
 
@@ -395,5 +396,4 @@ trait ElasticsearchModel
     {
         return true;
     }
-
 }

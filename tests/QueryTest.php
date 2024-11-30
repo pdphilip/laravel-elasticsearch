@@ -90,7 +90,7 @@ it('tests regexp clause', function () {
     $users = User::whereRegex('company', 'acme')->get();
     expect($users)->toHaveCount(1);
 
-    $users = User::whereRegex('company', 'ACME', parameters: ['case_insensitive' => true])->get();
+    $users = User::whereRegex('company', 'ACME', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(1);
 
     $users = User::whereRegex('company', 'oth...*')->get();

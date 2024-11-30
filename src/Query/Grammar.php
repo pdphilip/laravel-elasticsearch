@@ -187,6 +187,8 @@ class Grammar extends BaseGrammar
      * Compile the orders section of a query
      *
      * @param  array  $orders
+     *
+     * @throws BuilderException
      */
     protected function compileOrders(Builder|BaseBuilder $builder, $orders = []): array
     {
@@ -219,7 +221,7 @@ class Grammar extends BaseGrammar
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
                     ];
 
-                    $allowedOptions = ['missing', 'mode'];
+                    $allowedOptions = ['missing', 'mode', 'nested'];
 
                     $options = isset($order['options']) ? array_intersect_key($order['options'], array_flip($allowedOptions)) : [];
 
@@ -418,15 +420,12 @@ class Grammar extends BaseGrammar
 
     /**
      * Apply inner hits options to the clause
-     *
-     * @param  mixed  $value
-     * @param  array  $where
      */
-    protected function applyInnerHitsOption(array $clause, $value, $where): array
+    protected function applyInnerHitsOption(array $clause, $options): array
     {
         $firstKey = key($clause);
 
-        $clause[$firstKey]['inner_hits'] = empty($value) || $value === true ? (object) [] : (array) $value;
+        $clause[$firstKey]['inner_hits'] = empty($options) || $options === true ? (object) [] : (array) $options;
 
         return $clause;
     }
@@ -942,7 +941,7 @@ class Grammar extends BaseGrammar
             $operator = $operatorsMap[$where['operator']];
             $query = [
                 'range' => [
-                    $where['column'] => [
+                    $this->getIndexableField($where['column'], $builder) => [
                         $operator => $value,
                         ...($where['parameters'] ?? []),
 
@@ -996,6 +995,11 @@ class Grammar extends BaseGrammar
             return '_id';
         }
 
+        // Checks if there is a mapping_map set for this field and return ir ahead of a mapping check.
+        if (! empty($mappingMap = $builder->options()->get('mapping_map')) && $mappingMap[$textField]) {
+            return $mappingMap[$textField];
+        }
+
         $mapping = collect(Arr::dot($builder->getMapping()))
             ->mapWithKeys(function ($value, $key) {
                 return [str($key)->after('.')->beforeLast('.')->toString() => $value];
@@ -1029,7 +1033,7 @@ class Grammar extends BaseGrammar
         $options = array_intersect_key($where['options'], array_flip($optionsToApply));
 
         foreach ($options as $option => $value) {
-            $method = 'apply'.studly_case($option).'Option';
+            $method = 'apply'.Str::studly($option).'Option';
 
             if (method_exists($this, $method)) {
                 $clause = $this->$method($clause, $value, $where);
@@ -1203,11 +1207,11 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile a where nested doc clause
+     * Compile a where nested clause
      *
      * @param  array  $where
      */
-    protected function compileWhereNestedDoc(Builder $builder, $where): array
+    protected function compileWhereNestedObject(Builder $builder, $where): array
     {
         $wheres = $this->compileWheres($where['query']);
 
@@ -1218,6 +1222,8 @@ class Grammar extends BaseGrammar
         ];
 
         $query['nested'] = array_merge($query['nested'], array_filter($wheres));
+
+        $query = $this->applyOptionsToClause($query, $where);
 
         if (isset($where['operator']) && $where['operator'] === '!=') {
             $query = [
@@ -1495,6 +1501,28 @@ class Grammar extends BaseGrammar
 
         return [
             'fuzzy' => [
+                $this->getIndexableField($where['column'], $builder) => [
+                    ...$where['options'],
+                    'value' => (string) $where['value'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a term clause
+     */
+    protected function compileWhereTerm(Builder $builder, array $where): array
+    {
+        $allowedArgs = [
+            'boost',
+            'case_insensitive',
+        ];
+
+        $where['options'] = $this->getAllowedParameters($where['options'], $allowedArgs);
+
+        return [
+            'term' => [
                 $this->getIndexableField($where['column'], $builder) => [
                     ...$where['options'],
                     'value' => (string) $where['value'],

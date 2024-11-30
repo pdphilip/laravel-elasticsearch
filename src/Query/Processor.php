@@ -186,7 +186,7 @@ class Processor extends BaseProcessor
     $document['_id'] = $result['_id'];
     $document['_meta'] = $this->metaFromResult(['_index' => $result['_index']]);
 
-    if ($query->includeInnerHits && isset($result['inner_hits'])) {
+    if (isset($result['inner_hits'])) {
       $document = $this->addInnerHitsToDocument($document, $result['inner_hits']);
     }
 
@@ -215,8 +215,9 @@ class Processor extends BaseProcessor
   protected function addInnerHitsToDocument($document, $innerHits): array
   {
     foreach ($innerHits as $documentType => $hitResults) {
+      unset($document[$documentType]);
       foreach ($hitResults['hits']['hits'] as $result) {
-        $document['inner_hits'][$documentType][] = array_merge(['_id' => $result['_id']], $result['_source']);
+        $document[$documentType][] = $result['_source'];
       }
     }
 
