@@ -18,6 +18,7 @@ use PDPhilip\Elasticsearch\Tests\Models\User;
 beforeEach(function () {
     User::executeSchema();
     Item::executeSchema();
+    Soft::executeSchema();
 });
 
 it('tests new model', function () {
@@ -459,6 +460,53 @@ it('tests chunk by id', function () {
 
     expect($names)->toBe(['fork', 'spork', 'spoon']);
 })->todo();
+
+it('tests chunk across many items', function () {
+    $users = [];
+    for ($i = 0; $i < 15000; $i++) {
+      $users[] = [
+        'name'  => "User {$i}",
+        'age'   => rand(1, 100),
+        'title' => rand(0, 1) ? 'admin' : 'user',
+      ];
+    }
+    User::insert($users);
+
+    $names = [];
+    User::chunk(1000, function (EloquentCollection $items) use (&$names){
+      $names = [
+        ...$names,
+        ...$items
+      ];
+    });
+
+    expect($names)->toHaveCount(15000);
+});
+
+it('tests cursor across many items', function () {
+    $users = [];
+    for ($i = 0; $i < 15000; $i++) {
+      $users[] = [
+        'name'  => "User {$i}",
+        'age'   => rand(1, 100),
+        'title' => rand(0, 1) ? 'admin' : 'user',
+      ];
+    }
+    User::insert($users);
+
+    $names = [];
+    foreach (User::limit(50)->cursor() as $cursor){
+      $names[] = $cursor;
+    }
+    expect($names)->toHaveCount(50);
+
+    $names = [];
+    foreach (User::limit(20000)->cursor() as $cursor){
+      $names[] = $cursor;
+    }
+    expect($names)->toHaveCount(15000);
+
+});
 
 it('tests truncate model', function () {
     User::create(['name' => 'John Doe']);

@@ -46,7 +46,7 @@ class Processor extends BaseProcessor
    */
   public function getRawResponse(): array
   {
-    return $this->rawResponse->asArray();
+    return is_array($this->rawResponse) ? $this->rawResponse : $this->rawResponse->asArray();
   }
 
   public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)

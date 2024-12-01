@@ -167,11 +167,33 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function chunk($count, callable $callback, $scrollTimeout = '30s')
+    {
+        $this->enforceOrderBy();
+
+        foreach ($this->connection->searchResponseIterator($this->toCompiledQuery(), $scrollTimeout, $count) as $results) {
+            $page = $results['_scroll_id'];
+            $results = collect($this->processor->processSelect($this, $results));
+
+            // On each chunk result set, we will pass them to the callback and then let the
+            // developer take care of everything within the callback, which allows us to
+            // keep the memory low for spinning through large result sets for working.
+            if ($callback($results, $page) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Get a generator for the given query.
      *
      * @return \Generator
      */
-    public function cursor()
+    public function cursor($scrollTimeout = '30s')
     {
         if (is_null($this->columns)) {
             $this->columns = ['*'];
@@ -900,7 +922,9 @@ class Builder extends BaseBuilder
     {
         $type = 'Not';
 
-        call_user_func($query, $query = $this->newQuery());
+        if (! is_string($query) && is_callable($query)) {
+            call_user_func($query, $query = $this->newQuery());
+        }
 
         $this->wheres[] = compact('query', 'type', 'boolean', 'options');
 
@@ -1080,7 +1104,7 @@ class Builder extends BaseBuilder
     {
         $type = 'Script';
 
-        $this->wheres[] = compact('script', 'options', 'type', 'boolean');
+        $this->wheres[] = compact('script', 'boolean', 'type', 'options');
 
         return $this;
     }
@@ -1436,7 +1460,7 @@ class Builder extends BaseBuilder
      *
      * @param  string|string[]  $column
      */
-    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>',  array $options = []): self
+    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>', array $options = []): self
     {
         $column = Arr::wrap($column);
 

@@ -7,6 +7,8 @@ namespace PDPhilip\Elasticsearch;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
+use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
+use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
@@ -277,77 +279,59 @@ class Connection extends BaseConnection
     /**
      * Run a select statement against the database and return a generator.
      *
+     * @param  array  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
+     * @return \Generator
+     */
+    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100)
+    {
+
+        $scrollParams = [
+            'scroll' => $scrollTimeout,
+            'size' => $size, // Number of results per shard
+            'index' => $query['index'],
+            'body' => $query['body'],
+        ];
+
+        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        foreach ($pages as $page) {
+            yield $page;
+        }
+
+    }
+
+    /**
+     * Run a select statement against the database and return a generator.
+     *
      * @param  string  $query
      * @param  array  $bindings
      * @param  bool  $useReadPdo
      * @return \Generator
      */
-    public function cursor($query, $bindings = [], $useReadPdo = false)
+    public function cursor($query, $bindings = [], $useReadPdo = false, $scrollTimeout = '30s')
     {
-        $scrollTimeout = '30s';
-        $limit = $query['size'] ?? 0;
+
+        $limit = $query['body']['size'] ?? null;
+
+        //We want to scroll by 1000 row chunks
+        $query['body']['size'] = 1000;
 
         $scrollParams = [
             'scroll' => $scrollTimeout,
-            'size' => 100, // Number of results per shard
             'index' => $query['index'],
             'body' => $query['body'],
         ];
 
-        $results = $this->select($scrollParams);
-
-        $scrollId = $results['_scroll_id'];
-
-        $numResults = count($results['hits']['hits']);
-
-        foreach ($results['hits']['hits'] as $result) {
-            yield $result;
-        }
-
-        if (! $limit || $limit > $numResults) {
-            $limit = $limit ? $limit - $numResults : $limit;
-
-            foreach ($this->scroll($scrollId, $scrollTimeout, $limit) as $result) {
-                yield $result;
+        $count = 0;
+        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $hits = new SearchHitIterator($pages);
+        foreach ($hits as $hit) {
+            $count++;
+            if ($count > $limit) {
+                return;
             }
-        }
-    }
-
-    /**
-     * Run a select statement against the database using an Elasticsearch scroll cursor.
-     *
-     *
-     * @return \Generator
-     */
-    public function scroll(string $scrollId, string $scrollTimeout = '30s', int $limit = 0)
-    {
-        $numResults = 0;
-
-        // Loop until the scroll 'cursors' are exhausted or we have enough results
-        while (! $limit || $numResults < $limit) {
-            // Execute a Scroll request
-            $results = $this->connection->scroll([
-                'scroll_id' => $scrollId,
-                'scroll' => $scrollTimeout,
-            ]);
-
-            // Get new scroll ID in case it's changed
-            $scrollId = $results['_scroll_id'];
-
-            // Break if no results
-            if (empty($results['hits']['hits'])) {
-                break;
-            }
-
-            foreach ($results['hits']['hits'] as $result) {
-                $numResults++;
-
-                if ($limit && $numResults > $limit) {
-                    break;
-                }
-
-                yield $result;
-            }
+            yield $hit;
         }
     }
 

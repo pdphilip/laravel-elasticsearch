@@ -149,7 +149,7 @@ it('filters users with whereNot', function () {
     expect(User::whereNot('title', 'admin')->get())->toHaveCount(6)
                                                    ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin'))->get())->toHaveCount(6)
                                                    ->and(User::whereNot('title', '!=', 'admin')->get())->toHaveCount(3)
-                                                   ->and(User::whereNot(fn($builder) => $builder->whereNot('title', 'admin'))->get())->toHaveCount(3)
+                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', '!=', 'admin'))->get())->toHaveCount(3)
                                                    ->and(User::whereNot('title', '=', 'admin')->get())->toHaveCount(6)
                                                    ->and(User::whereNot('title', NULL)->get())->toHaveCount(8)
                                                    ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin')->orWhere('age', 35))->get())->toHaveCount(5);
@@ -369,7 +369,7 @@ it('orders users by age', function () {
     expect($results->count())->toBe(2)
                              ->and($results->first()->age)->toBe(37)
                              ->and($results->first()->title)->toBeNull();
-  })->todo();
+  });
 
   it('aggregates results by age', function () {
 

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Pagination\Cursor;
+use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
@@ -155,6 +157,7 @@ class Builder extends BaseEloquentBuilder
         return $this->toBase()->getCountForPagination($columns);
     }
 
+
   /**
    * @param string $collectionClass
    * @return Collection
@@ -193,42 +196,38 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function chunk($count, callable $callback, $scrollTimeout = '30s')
+    {
+      $this->enforceOrderBy();
+
+      foreach ($this->query->connection->searchResponseIterator($this->query->toCompiledQuery(), $scrollTimeout, $count) as $results) {
+        $page = $results['_scroll_id'];
+        $results = $this->model->hydrate(
+          $this->query->processor->processSelect($this->query, $results)
+        );
+
+        // On each chunk result set, we will pass them to the callback and then let the
+        // developer take care of everything within the callback, which allows us to
+        // keep the memory low for spinning through large result sets for working.
+        if ($callback($results, $page) === FALSE) {
+          return FALSE;
+        }
+      }
+      return TRUE;
+    }
+
+    /**
      * Get a generator for the given query.
      *
      * @return Generator
      */
-    public function cursor()
+    public function cursor($scrollTimeout = '30s')
     {
-        foreach ($this->applyScopes()->query->cursor() as $record) {
+        foreach ($this->applyScopes()->query->cursor($scrollTimeout) as $record) {
             yield $this->model->newFromBuilder($record);
         }
-    }
-
-    /**
-     * Paginate the given query.
-     *
-     * @param  int  $perPage
-     * @param  array  $columns
-     * @param  string  $pageName
-     * @param  int|null  $page
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     *
-     * @throws \InvalidArgumentException
-     */
-    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
-    {
-        $page = $page ?: Paginator::resolveCurrentPage($pageName);
-
-        $perPage = $perPage ?: $this->model->getPerPage();
-
-        $results = $this->forPage($page, $perPage)->get($columns);
-
-        $total = $this->toBase()->getCountForPagination($columns);
-
-        return new LengthAwarePaginator($results, $total, $perPage, $page, [
-            'path' => Paginator::resolveCurrentPath(),
-            'pageName' => $pageName,
-        ]);
     }
 
   public function withoutRefresh()
@@ -242,5 +241,4 @@ class Builder extends BaseEloquentBuilder
     $this->model->options()->add('suffix', $suffix);
     return $this->model;
   }
-
 }

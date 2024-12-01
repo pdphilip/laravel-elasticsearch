@@ -1040,7 +1040,7 @@ class Grammar extends BaseGrammar
     {
 
         // _id doesn't need to be found.
-        if ($textField == '_id') {
+        if ($textField == '_id' || $textField == 'id') {
             return '_id';
         }
 

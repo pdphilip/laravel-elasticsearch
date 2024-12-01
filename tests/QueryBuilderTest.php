@@ -413,7 +413,7 @@ it('uses various query operators', function () {
     $script = "doc['age'].size() > 0 && doc['age'].value >= params.value";
     $options['params'] = ['value' => 29];
 
-    $results = DB::table('users')->whereScript($script, $options)->get();
+    $results = DB::table('users')->whereScript($script, options: $options)->get();
     expect($results)->toHaveCount(2)
         ->and($results->pluck('name'))->toContain('John Doe', 'Robert Roe');
 
