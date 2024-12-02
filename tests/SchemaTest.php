@@ -12,19 +12,19 @@
     Schema::dropIfExists('newcollection_two');
   });
 
-  it('creates a new collection', function () {
+  it('creates a new index', function () {
     Schema::create('newcollection');
     expect(Schema::hasTable('newcollection'))->toBeTrue();
   });
 
-  it('creates a new collection with callback', function () {
+  it('creates a new index with callback', function () {
     Schema::create('newcollection', function ($table) {
       expect($table)->toBeInstanceOf(Blueprint::class);
     });
     expect(Schema::hasTable('newcollection'))->toBeTrue();
   });
 
-  it('drops an existing collection', function () {
+  it('drops an existing index', function () {
     Schema::create('newcollection');
     Schema::drop('newcollection');
     expect(Schema::hasTable('newcollection'))->toBeFalse();
@@ -38,7 +38,7 @@
   });
 
 
-  it('sets a primary key on a collection', function () {
+  it('sets a primary key on a index', function () {
     Schema::create('newcollection', function (Blueprint $table) {
       $table->string('mykey');
     });
@@ -106,9 +106,6 @@
       $table->mediumText('medium_text');
       $table->morphs('morphs');
       $table->nullableTimestamps(precision: 0);
-//      $table->nullableMorphs('nullableMorphs');
-//      $table->nullableUlidMorphs('nullableUlidMorphs');
-//      $table->nullableUuidMorphs('nullableUuidMorphs');
       $table->rememberToken();
       $table->smallInteger('small_integer');
       $table->softDeletesTz('soft_deletes_tz', precision: 0);
@@ -120,8 +117,6 @@
       $table->time('time');
       $table->timestampTz('timestamp_tz');
       $table->timestamp('timestamp');
-//      $table->timestampsTz('timestampsTz');
-//      $table->timestamps(precision: 0);
       $table->tinyInteger('tiny_integer');
       $table->tinyText('tiny_text');
       $table->unsignedBigInteger('unsigned_big_integer');

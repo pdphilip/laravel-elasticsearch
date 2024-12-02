@@ -6,8 +6,6 @@ namespace PDPhilip\Elasticsearch\Helpers;
 
 use Closure;
 use Illuminate\Support\Str;
-use PDPhilip\Elasticsearch\Eloquent\Model;
-use ReflectionClass;
 
 /**
  * @internal
@@ -25,53 +23,6 @@ final class Helpers
         }
 
         return $value;
-    }
-
-  /**
-   * Calls
-   *
-   * @param mixed $resource
-   * @param string $method
-   * @param array  $parameters
-   *
-   * @return null
-   */
-  public static function callMethods(mixed $resource, string $method, array $parameters = [])
-  {
-
-    // this is a cool trick that gets all traits used by this trait and allows us to call methods using their name.
-    $traits = Helpers::traitUsesRecursive('PDPhilip\Elasticsearch\Eloquent\ElasticsearchModel');
-
-    foreach ($traits as $trait) {
-      $traitReflection = new ReflectionClass($trait);
-      $methodName = $method . $traitReflection->getShortName();
-      if (method_exists($resource, $methodName)) {
-        return $resource->$methodName(...$parameters);
-      }
-    }
-
-    return null;
-  }
-
-    /**
-     * Returns all traits used by a trait and its traits.
-     *
-     * Credits To Saloon 3
-     * @link: https://github.com/saloonphp/saloon/blob/v3/src/Helpers/Helpers.php
-     *
-     * @param class-string $trait
-     * @return array<class-string, class-string>
-     */
-    public static function traitUsesRecursive(string $trait): array
-    {
-      /** @var array<class-string, class-string> $traits */
-      $traits = class_uses($trait) ?: [];
-
-      foreach ($traits as $trait) {
-        $traits += static::traitUsesRecursive($trait);
-      }
-
-      return $traits;
     }
 
       public static function uuid()

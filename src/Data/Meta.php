@@ -50,21 +50,6 @@ class Meta implements Arrayable
         return Arr::get($this->result, '_index');
     }
 
-    public function getModifiedCount(): int
-    {
-        return $this->_meta->getModified();
-    }
-
-    public function getTotalCount(): int
-    {
-        return Arr::get($this->result, '_shards.total', 0);
-    }
-
-    public function getDeletedCount(): int
-    {
-        return $this->_meta->getDeleted();
-    }
-
     public function toArray(): array
     {
         return $this->result;
