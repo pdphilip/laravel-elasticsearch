@@ -17,6 +17,16 @@
     expect(Schema::hasTable('newcollection'))->toBeTrue();
   });
 
+  it('creates a new index if one dosen\'t exsist ', function () {
+    expect(Schema::hasTable('newcollection'))->toBeFalse();
+
+    Schema::createIfNotExists('newcollection', function (Blueprint $index) {
+      // Define fields, settings, and mappings
+    });
+
+    expect(Schema::hasTable('newcollection'))->toBeTrue();
+  });
+
   it('creates a new index with callback', function () {
     Schema::create('newcollection', function ($table) {
       expect($table)->toBeInstanceOf(Blueprint::class);
@@ -409,6 +419,51 @@ it('maps ES schemas', function () {
     expect($tables)->toBeArray()
                    ->and(count($tables))->toBeGreaterThanOrEqual(2)
                    ->and($tables)->toContain('newcollection', 'newcollection_two');
+  });
+
+  it('lists table mappings', function () {
+    DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
+    DB::connection('elasticsearch')->table('newcollection_two')->insert(['test' => 'value']);
+
+    $tables = Schema::getMappings('newcollection');
+
+    expect($tables)->toBeArray()
+                   ->and(count($tables))->toBe(1)
+                   ->and($tables)->toHaveKeys(['newcollection']);
+
+    $tables = Schema::getMappings(['newcollection', 'newcollection_two']);
+
+    expect($tables)->toBeArray()
+                   ->and(count($tables))->toBe(2)
+                   ->and($tables)->toHaveKeys(['newcollection', 'newcollection_two']);
+  });
+
+  it('lists table settings', function () {
+    DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
+    DB::connection('elasticsearch')->table('newcollection_two')->insert(['test' => 'value']);
+
+    $tables = Schema::getSettings('newcollection');
+
+    expect($tables)->toBeArray()
+                   ->and(count($tables))->toBe(1)
+                   ->and($tables)->toHaveKeys(['newcollection']);
+
+    $tables = Schema::getSettings(['newcollection', 'newcollection_two']);
+
+    expect($tables)->toBeArray()
+                   ->and(count($tables))->toBe(2)
+                   ->and($tables)->toHaveKeys(['newcollection', 'newcollection_two']);
+  });
+
+  it('gets field maping', function () {
+    DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
+
+    $field = Schema::getFieldMapping('newcollection', 'test');
+
+    expect($field)->toBeArray()
+                   ->and(count($field))->toBe(1)
+                   ->and($field['newcollection']['mappings'])->toHaveKeys(['test']);
+
   });
 
   function getIndexMapping(string $table)

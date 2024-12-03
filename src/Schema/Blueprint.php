@@ -7,7 +7,6 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Illuminate\Database\Schema\Blueprint as BlueprintBase;
 use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Enums\Dynamic;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
@@ -17,6 +16,12 @@ class Blueprint extends BlueprintBase
 {
     use ManagesDefaultMigrations;
     use ManagesElasticMigrations;
+
+    /** @var string|bool[] */
+    public const DYNAMIC = [
+      'TRUE' => true,
+      'RUNTIME' => 'runtime',
+    ];
 
     protected string $alias;
 
@@ -97,9 +102,18 @@ class Blueprint extends BlueprintBase
         $this->document = $name;
     }
 
-    public function dynamic(Dynamic $value = Dynamic::TRUE): void
+    public function dynamic(string $option = self::DYNAMIC['TRUE']): void
     {
-        $this->addMetaField('dynamic', $value->value());
+
+      if (in_array($option, self::DYNAMIC)) {
+        $this->addMetaField('dynamic', $option);
+        return;
+      }
+
+      throw new \Exception(
+        "$option is an invalid dynamic option, valid options are: ".implode(', ', self::DYNAMIC)
+      );
+
     }
 
     /**
@@ -174,6 +188,17 @@ class Blueprint extends BlueprintBase
     public function property(string $type, string $name, array $parameters = []): PropertyDefinition
     {
         return $this->addColumn($type, $name, $parameters);
+    }
+
+
+  /**
+   * Indicate that the table should be created if it doesn't exist.
+   *
+   * @return \Illuminate\Support\Fluent
+   */
+    public function createIfNotExists()
+    {
+      return $this->addCommand('createIfNotExists');
     }
 
     /**

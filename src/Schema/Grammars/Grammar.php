@@ -62,6 +62,19 @@ class Grammar extends BaseGrammar
         };
     }
 
+    public function compileCreateIfNotExists(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
+    {
+        return function () use ($connection, $blueprint, $command): void {
+
+            $index = $connection->indices()->exists(['index' => $blueprint->getTable()]);
+            if (!$index->asBool()) {
+              $connection->createIndex(
+                $blueprint->getIndex(), []
+              );
+            }
+        };
+    }
+
     public function compileUpdate(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
     {
         return function (Blueprint $blueprint, Connection $connection): void {
