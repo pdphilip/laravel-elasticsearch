@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Illuminate\Database\Schema\Blueprint as BlueprintBase;
 use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Schema\Definitions\AnalyzerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
@@ -28,6 +29,8 @@ class Blueprint extends BlueprintBase
     protected string $document;
 
     protected array $indexSettings = [];
+
+    protected array $analyzers = [];
 
     protected array $meta = [];
 
@@ -157,6 +160,18 @@ class Blueprint extends BlueprintBase
         return $this->indexSettings;
     }
 
+  /**
+   * Get the columns on the blueprint that should be added.
+   *
+   * @return AnalyzerPropertyDefinition[]
+   */
+  public function getAddedAnalyzers()
+  {
+    return array_filter($this->analyzers, function ($column) {
+      return ! $column->change;
+    });
+  }
+
     /**
      * Get the metadata for the Blueprint.
      *
@@ -217,6 +232,20 @@ class Blueprint extends BlueprintBase
         );
 
         return $column;
+    }
+
+  /**
+   * Add a new analyzer to the blueprint.
+   *
+   * @param string $name
+   *
+   * @return AnalyzerPropertyDefinition
+   */
+    public function addAnalyzer($name)
+    {
+        $this->analyzers[] = $analyzer = new AnalyzerPropertyDefinition(compact('name'));
+
+        return $analyzer;
     }
 
     public function routingRequired(): void

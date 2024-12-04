@@ -10,7 +10,7 @@ use Illuminate\Support\Fluent;
  * @method $this type(string|array $value)
  * @method $this tokenizer(string|array $value)
  * @method $this filter(array $value)
- * @method $this charFilter(array $value)
+ * @method $this char_filter(array $value)
  * @method $this pattern(string|array $value)
  * @method $this mappings(string|array $value)
  * @method $this stopwords(string|array $value)

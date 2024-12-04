@@ -28,6 +28,10 @@ class Grammar extends BaseGrammar
                 $body['settings'] = $settings;
             }
 
+            if ($analyzers = $this->getAnalyzers($blueprint)) {
+                $body['settings']['analysis'] = $analyzers;
+            }
+
             $connection->createIndex(
                 $index = $blueprint->getIndex(), $body
             );
@@ -82,7 +86,7 @@ class Grammar extends BaseGrammar
                 $blueprint->getAlias(),
                 array_merge(
                     ['properties' => $this->getColumns($blueprint)],
-                    $blueprint->getMeta()
+                    $blueprint->getMeta(),
                 )
             );
         };
@@ -124,6 +128,24 @@ class Grammar extends BaseGrammar
         foreach ($blueprint->getAddedColumns() as $property) {
             // Pass empty string as we only need to modify the property and return it.
             $column = $this->addModifiers('', $blueprint, $property);
+            $key = Str::snake($column->name);
+            unset($column->name);
+
+            $columns[$key] = $column->toArray();
+        }
+
+        return $columns;
+    }
+
+    /**
+     * @return array
+     */
+    protected function getAnalyzers(BaseBlueprint $blueprint)
+    {
+        $columns = [];
+
+        foreach ($blueprint->getAddedAnalyzers() as $property) {
+            $column = $property;
             $key = Str::snake($column->name);
             unset($column->name);
 

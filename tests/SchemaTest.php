@@ -73,15 +73,35 @@
   });
 
 
-  it('can add index settings and Meta Data', function () {
+  it('can add index settings, Meta Data, and an Analyser', function () {
     Schema::create('newcollection', function (Blueprint $table) {
       $table->addIndexSettings('number_of_shards', 3);
       $table->meta(['class' => 'MyApp2::User3']);
+
+      $table->addAnalyzer('contacts')
+            ->type('custom')
+            ->tokenizer('punctuation')
+            ->filter([
+                       'lowercase',
+                       'english_stop'
+                     ])
+            ->char_filter(['emoticons']);
+
+      $table->addAnalyzer('autocomplete')
+            ->type('custom')
+            ->tokenizer('standard')
+            ->filter([
+                       'lowercase',
+                       'autocomplete_filter'
+                     ]);
+
     });
 
     $mapping = DB::indices()->get(['index' => 'newcollection'])->asArray();
     expect($mapping['newcollection']['mappings']['_meta']['class'])->toBe('MyApp2::User3')
-                                   ->and($mapping['newcollection']['settings']['index']['number_of_shards'])->toBe('3');
+                                   ->and($mapping['newcollection']['settings']['index']['number_of_shards'])->toBe('3')
+                                   ->and($mapping['newcollection']['settings']['index']['analysis'])->toHaveKeys(['autocomplete', 'contacts'])
+    ;
   });
 
   it('maps default laravel schemas to ES', function () {
