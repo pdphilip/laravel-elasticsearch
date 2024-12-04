@@ -528,6 +528,22 @@ class Connection extends BaseConnection
         );
     }
 
+    /**
+     * Run a reindex statement against the database.
+     *
+     * @param  string|array  $query
+     * @param  array  $bindings
+     * @return array
+     */
+    public function reindex($query, $bindings = [])
+    {
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->reindex(...)
+        );
+    }
+
     public function updateIndex(string $index, array $body): void
     {
         $this->indices()->putMapping(compact('index', 'body'));

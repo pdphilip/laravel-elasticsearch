@@ -30,6 +30,23 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Run a reindex statement against the database.
+     *
+     */
+    public function reindex($from, $to, $options = [])
+    {
+      $params = ['body' => [
+        'source' => ['index' => $from]
+        , 'dest' => ['index' => $to]
+      ]
+      ]
+      ;
+      $params = [...$params, ...$options];
+
+      return $this->connection->reindex($params)->asArray();
+    }
+
+    /**
      * Create a new table if it doesn't already exist on the schema.
      *
      * @param  string  $table

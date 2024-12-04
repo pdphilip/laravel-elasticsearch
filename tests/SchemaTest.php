@@ -475,6 +475,16 @@ it('maps ES schemas', function () {
                    ->and($tables)->toHaveKeys(['newcollection', 'newcollection_two']);
   });
 
+  it('can reindex data', function () {
+    DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
+
+    $tables = Schema::reindex('newcollection', 'newcollection_two');
+
+    expect($tables)->toBeArray()
+                   ->and($tables)->toHaveKeys(['took', 'total', 'created'])
+                   ->and($tables['created'])->toBe(1);
+  });
+
   it('gets field maping', function () {
     DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
 
