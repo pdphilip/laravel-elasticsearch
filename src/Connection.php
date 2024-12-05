@@ -41,8 +41,6 @@ class Connection extends BaseConnection
 
     protected string $connectionName = '';
 
-    protected string $indexPrefix = '';
-
     protected string $indexSuffix = '';
 
     /**
@@ -92,15 +90,6 @@ class Connection extends BaseConnection
                 'api_key' => null,
                 'api_id' => null,
                 'index_prefix' => '',
-                'options' => [
-                    'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
-                    'insert_chunk_size' => 1000, // This is the maximum insert chunk size to use when bulk inserting
-                    'logging' => false,
-                    'allow_id_sort' => false,
-                    'ssl_verification' => true,
-                    'retires' => null,
-                    'meta_header' => null,
-                ],
                 'ssl_cert' => null,
                 'ssl' => [
                     'key' => null,
@@ -108,7 +97,13 @@ class Connection extends BaseConnection
                     'cert' => null,
                     'cert_password' => null,
                 ],
-                'error_log_index' => false,
+                'options' => [
+                  'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
+                  'logging' => false,
+                  'ssl_verification' => true,
+                  'retires' => null,
+                  'meta_header' => null,
+                ],
             ],
             $this->config
         );
@@ -140,14 +135,12 @@ class Connection extends BaseConnection
 
     public function setOptions(): void
     {
-        $this->indexPrefix = $this->config['index_prefix'] ?? '';
-
-        if (isset($this->config['options']['allow_id_sort'])) {
-            $this->options()->add('allow_id_sort', $this->config['options']['allow_id_sort']);
-        }
         if (isset($this->config['options']['ssl_verification'])) {
             $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
+
+         $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
+
         if (! empty($this->config['options']['retires'])) {
             $this->options()->add('retires', $this->config['options']['retires']);
         }
@@ -227,9 +220,7 @@ class Connection extends BaseConnection
             $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
         }
 
-        if (isset($this->retires)) {
-            $clientBuilder = $clientBuilder->setRetries($this->retires);
-        }
+        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retires', 3));
 
         if ($this->config['options']['logging']) {
             $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
@@ -262,8 +253,7 @@ class Connection extends BaseConnection
         return call_user_func_array([$this->connection, $method], $parameters);
     }
 
-    public function createAlias(string $index, string $name): void
-    {
+    public function createAlias(string $index, string $name): void {
         $this->indices()->putAlias(compact('index', 'name'));
     }
 
@@ -284,8 +274,7 @@ class Connection extends BaseConnection
      * @param  bool  $useReadPdo
      * @return \Generator
      */
-    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100)
-    {
+    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100) {
 
         $scrollParams = [
             'scroll' => $scrollTimeout,
@@ -547,6 +536,11 @@ class Connection extends BaseConnection
     public function updateIndex(string $index, array $body): void
     {
         $this->indices()->putMapping(compact('index', 'body'));
+    }
+
+    public function getIndexPrefix(): string
+    {
+        return $this->config['index_prefix'];
     }
 
     /** {@inheritdoc} */

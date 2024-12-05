@@ -416,7 +416,7 @@ it('tests id attribute', function () {
 
     $user = User::create(['id' => 'custom_id', 'name' => 'John Doe']);
     expect($user->id)->toBe($user->_id);
-})->todo();
+});
 
 it('tests attribute mutator', function () {
     $username = 'JaneDoe';
@@ -464,20 +464,20 @@ it('tests chunk by id', function () {
 it('tests chunk across many items', function () {
     $users = [];
     for ($i = 0; $i < 15000; $i++) {
-      $users[] = [
-        'name'  => "User {$i}",
-        'age'   => rand(1, 100),
-        'title' => rand(0, 1) ? 'admin' : 'user',
-      ];
+        $users[] = [
+            'name' => "User {$i}",
+            'age' => rand(1, 100),
+            'title' => rand(0, 1) ? 'admin' : 'user',
+        ];
     }
     User::insert($users);
 
     $names = [];
-    User::chunk(1000, function (EloquentCollection $items) use (&$names){
-      $names = [
-        ...$names,
-        ...$items
-      ];
+    User::chunk(1000, function (EloquentCollection $items) use (&$names) {
+        $names = [
+            ...$names,
+            ...$items,
+        ];
     });
 
     expect($names)->toHaveCount(15000);
@@ -486,23 +486,23 @@ it('tests chunk across many items', function () {
 it('tests cursor across many items', function () {
     $users = [];
     for ($i = 0; $i < 15000; $i++) {
-      $users[] = [
-        'name'  => "User {$i}",
-        'age'   => rand(1, 100),
-        'title' => rand(0, 1) ? 'admin' : 'user',
-      ];
+        $users[] = [
+            'name' => "User {$i}",
+            'age' => rand(1, 100),
+            'title' => rand(0, 1) ? 'admin' : 'user',
+        ];
     }
     User::insert($users);
 
     $names = [];
-    foreach (User::limit(50)->cursor() as $cursor){
-      $names[] = $cursor;
+    foreach (User::limit(50)->cursor() as $cursor) {
+        $names[] = $cursor;
     }
     expect($names)->toHaveCount(50);
 
     $names = [];
-    foreach (User::limit(20000)->cursor() as $cursor){
-      $names[] = $cursor;
+    foreach (User::limit(20000)->cursor() as $cursor) {
+        $names[] = $cursor;
     }
     expect($names)->toHaveCount(15000);
 
@@ -582,7 +582,7 @@ it('gets the query meta', function () {
 
     $check = User::first();
     expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\Meta::class)
-    ->and($check->getMeta()->toArray())->toHaveKeys(['took', 'timed_out', '_shards', 'hits']);
+        ->and($check->getMeta()->toArray())->toHaveKeys(['took', 'timed_out', '_shards', 'hits']);
 
 });
 
@@ -600,9 +600,10 @@ it('tests numeric field name', function () {
 it('tests create with null id', function (string $id) {
     $user = User::create([$id => null, 'email' => 'foo@bar']);
     expect($user->id)->toBeString()->
-    and(! isset($user->_id))->toBeTrue()
-        ->and(User::count())->toBe(1);
+    and($user->_id)->toBeString()->
+    and($user->_id)->toBe($user->id)->
+        and(User::count())->toBe(1);
 })->with([
     'id',
     '_id',
-])->todo();
+]);

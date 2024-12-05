@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Traits\Eloquent\Searchable;
+use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
 /**
@@ -21,19 +21,19 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  */
 trait ElasticsearchModel
 {
-    use HasOptions, HasUuids, HybridRelations, Searchable;
+    use HasOptions, HasUuids, HybridRelations;
 
     protected ?string $recordIndex;
 
     protected ?Relation $parentRelation;
 
+    protected int $defaultLimit = 1000;
+
     protected array $mappingMap = [];
 
     public function newUniqueId(): string
     {
-        // this is the equivelent of how elasticsearch generates UUID
-        // see: https://github.com/elastic/elasticsearch/blob/2f2ddad00492fcac8fbfc272607a8db91d279385/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java#L67
-        return base64_encode((string) Str::orderedUuid());
+           return Helpers::uuid();
     }
 
     /**
@@ -75,7 +75,7 @@ trait ElasticsearchModel
 
         // Since newBaseQueryBuilder is used whenever a new Query builder is needed
         // we hook in to it to pass options we have set at the model level to the query builder.
-        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->mappingMap]);
+        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->mappingMap, 'default_limit' => $this->defaultLimit]);
 
         return $query;
     }
@@ -86,7 +86,7 @@ trait ElasticsearchModel
     public function newInstance($attributes = [], $exists = false)
     {
         $model = parent::newInstance($attributes, $exists);
-        $model->options()->merge($this->options()->all(), ['mappings' => $this->mappingMap]);
+        $model->options()->merge($this->options()->all(), ['mappings' => $this->mappingMap, 'default_limit' => $this->defaultLimit]);
 
         return $model;
     }

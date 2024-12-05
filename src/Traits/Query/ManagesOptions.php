@@ -6,6 +6,21 @@ namespace PDPhilip\Elasticsearch\Traits\Query;
 
 trait ManagesOptions
 {
+    protected function modifyOptions(array $options = [], $type = 'wheres'): static
+    {
+        // Get the last added "where" condition
+        $lastWhere = array_pop($this->$type);
+
+        // Append the new options to it
+        $lastWhere = array_merge($lastWhere, [
+            'options' => $options ?? [],
+        ]);
+
+        $this->$type[] = $lastWhere;
+
+        return $this;
+    }
+
     /**
      * Adds additional options to the last added "where" condition.
      *
@@ -14,17 +29,7 @@ trait ManagesOptions
      */
     public function withOptions(array $options = []): static
     {
-        // Get the last added "where" condition
-        $lastWhere = array_pop($this->wheres);
-
-        // Append the new options to it
-        $lastWhere = array_merge($lastWhere, [
-            'options' => $options ?? [],
-        ]);
-
-        $this->wheres[] = $lastWhere;
-
-        return $this;
+        return $this->modifyOptions($options);
     }
 
     /**
@@ -33,18 +38,8 @@ trait ManagesOptions
      * @param  array  $options  An associative array of options to add.
      * @return static Returns the instance with updated options.
      */
-    public function withFilterParameters(array $options = []): static
+    public function withFilterOptions(array $options = []): static
     {
-        // Get the last added "where" condition
-        $lastWhere = array_pop($this->filters);
-
-        // Append the new options to it
-        $lastWhere = array_merge($lastWhere, [
-            'options' => $options ?? [],
-        ]);
-
-        $this->filters[] = $lastWhere;
-
-        return $this;
+        return $this->modifyOptions($options, 'filters');
     }
 }

@@ -20,8 +20,8 @@ class Blueprint extends BlueprintBase
 
     /** @var string|bool[] */
     public const DYNAMIC = [
-      'TRUE' => true,
-      'RUNTIME' => 'runtime',
+        'TRUE' => true,
+        'RUNTIME' => 'runtime',
     ];
 
     protected string $alias;
@@ -105,17 +105,18 @@ class Blueprint extends BlueprintBase
         $this->document = $name;
     }
 
-    public function dynamic(string $option = self::DYNAMIC['TRUE']): void
+    public function dynamic(string|bool $option = self::DYNAMIC['TRUE']): void
     {
 
-      if (in_array($option, self::DYNAMIC)) {
-        $this->addMetaField('dynamic', $option);
-        return;
-      }
+        if (in_array($option, self::DYNAMIC)) {
+            $this->addMetaField('dynamic', $option);
 
-      throw new \Exception(
-        "$option is an invalid dynamic option, valid options are: ".implode(', ', self::DYNAMIC)
-      );
+            return;
+        }
+
+        throw new \Exception(
+            "$option is an invalid dynamic option, valid options are: ".implode(', ', self::DYNAMIC)
+        );
 
     }
 
@@ -160,17 +161,17 @@ class Blueprint extends BlueprintBase
         return $this->indexSettings;
     }
 
-  /**
-   * Get the columns on the blueprint that should be added.
-   *
-   * @return AnalyzerPropertyDefinition[]
-   */
-  public function getAddedAnalyzers()
-  {
-    return array_filter($this->analyzers, function ($column) {
-      return ! $column->change;
-    });
-  }
+    /**
+     * Get the columns on the blueprint that should be added.
+     *
+     * @return AnalyzerPropertyDefinition[]
+     */
+    public function getAddedAnalyzers()
+    {
+        return array_filter($this->analyzers, function ($column) {
+            return ! $column->change;
+        });
+    }
 
     /**
      * Get the metadata for the Blueprint.
@@ -205,15 +206,14 @@ class Blueprint extends BlueprintBase
         return $this->addColumn($type, $name, $parameters);
     }
 
-
-  /**
-   * Indicate that the table should be created if it doesn't exist.
-   *
-   * @return \Illuminate\Support\Fluent
-   */
+    /**
+     * Indicate that the table should be created if it doesn't exist.
+     *
+     * @return \Illuminate\Support\Fluent
+     */
     public function createIfNotExists()
     {
-      return $this->addCommand('createIfNotExists');
+        return $this->addCommand('createIfNotExists');
     }
 
     /**
@@ -234,13 +234,12 @@ class Blueprint extends BlueprintBase
         return $column;
     }
 
-  /**
-   * Add a new analyzer to the blueprint.
-   *
-   * @param string $name
-   *
-   * @return AnalyzerPropertyDefinition
-   */
+    /**
+     * Add a new analyzer to the blueprint.
+     *
+     * @param  string  $name
+     * @return AnalyzerPropertyDefinition
+     */
     public function addAnalyzer($name)
     {
         $this->analyzers[] = $analyzer = new AnalyzerPropertyDefinition(compact('name'));

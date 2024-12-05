@@ -62,6 +62,25 @@ beforeEach(function () {
 
 });
 
+it('parent child relationships', function () {
+
+  $users = User::whereTermExists('title')->get();
+  expect($users)->toHaveCount(8);
+
+  $users = User::whereTermFuzzy('title', 'admik')->get();
+  expect($users)->toHaveCount(3);
+
+  $users = User::whereMatch('description', 'exploring')->get();
+  expect($users)->toHaveCount(1);
+
+  $users = User::whereMatchPhrase('description', 'exploring the')->get();
+  expect($users)->toHaveCount(1);
+
+  $users = User::whereMatchPhrasePrefix('description', 'Robert actively')->get();
+  expect($users)->toHaveCount(1);
+
+});
+
 it('ES Specific Queries', function () {
 
   $users = User::whereTermExists('title')->get();
@@ -80,6 +99,16 @@ it('ES Specific Queries', function () {
   expect($users)->toHaveCount(1);
 
 });
+
+  it('can use function score', function () {
+    $users = User::functionScore('random_score',function (Builder $query) {
+      $query->whereTermFuzzy('title.keyword', 'admik');
+    })->get();
+
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]['name'])->toBe('John John Yoe')
+                  ->and($users[1]['name'])->toBe('John Doe');
+  })->todo();
 
 it('Nested Queries', function () {
 
@@ -158,37 +187,22 @@ it('Nested Queries', function () {
                   ->and($users[1]['name'])->toBe('John John Yoe');
   });
 
-
   it('can search and highlight', function () {
-//
-//    $users = User::whereSearch('John')->highlight()->get();
-//    expect($users)->toHaveCount(2)
-//                  ->and($users[0]->getHighlights())->toHaveKeys(['name', 'description'])
-//                  ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe')
-//                  ->and($users[0]->getHighlight('description'))->toBe('<em>John</em> manages the admin team effectively.');
-//
 
-//
-//    $users = User::whereSearch('John')->highlight(['name'])->get();
-//    expect($users)->toHaveCount(2)
-//                  ->and($users[0]->getHighlights())->toHaveKey('name')
-//                  ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe');
+    $users = User::whereSearch('John')->highlight(['name'])->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]->getHighlights())->toHaveKey('name')
+                  ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe');
 
-//    $users = User::whereSearch('John')->highlight(['name'], '<strong>', '</strong>')->get();
-//    expect($users)->toHaveCount(2)
-//                  ->and($users[0]->getHighlights())->toHaveKey('name')
-//                  ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe');
-//
+    $users = User::whereSearch('John')->highlight(['name'], '<strong>', '</strong>')->get();
+    expect($users)->toHaveCount(2)
+                  ->and($users[0]->getHighlights())->toHaveKey('name')
+                  ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe');
+
 
     $users = User::whereSearch('John')->highlight(['name' =>  ['pre_tags' => '<strong>', 'post_tags' => '</strong>'], 'description'])->get();
     expect($users)->toHaveCount(2)
                   ->and($users[0]->getHighlights())->toHaveKey('name')
                   ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe')
                   ->and($users[0]->getHighlight('description'))->toBe('<em>John</em> manages the admin team effectively.');
-
-
-
-
-
-
   });

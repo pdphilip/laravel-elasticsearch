@@ -65,7 +65,7 @@ class Grammar extends BaseGrammar
         $query = $this->compileWheres($builder);
 
         $params = [
-            'index' => $builder->from.$builder->suffix(),
+            'index' => $builder->getFrom(),
             'body' => [
                 'query' => $query['query'],
             ],
@@ -93,9 +93,7 @@ class Grammar extends BaseGrammar
             $params['body']['from'] = $builder->offset;
         }
 
-        if (isset($builder->limit)) {
-            $params['body']['size'] = $builder->limit;
-        }
+        $params['body']['size'] = $builder->getLimit();
 
         if (isset($builder->columns)) {
             $params['_source'] = $builder->columns;
@@ -287,7 +285,7 @@ class Grammar extends BaseGrammar
 
     public function compileIndexMappings(Builder $builder)
     {
-        return ['index' => $builder->from];
+        return ['index' => $builder->getFrom() == '' ? '*' : $builder->getFrom()];
     }
 
     /**
@@ -302,12 +300,12 @@ class Grammar extends BaseGrammar
         }
 
         foreach ($values as $doc) {
-            $doc['id'] = $doc['id'] ?? ((string) Helpers::uuid());
+            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) Helpers::uuid());
             if (isset($doc['child_documents'])) {
                 foreach ($doc['child_documents'] as $childDoc) {
                     $params['body'][] = [
                         'index' => [
-                            '_index' => $builder->from.$builder->suffix(),
+                            '_index' => $builder->getFrom(),
                             '_id' => $childDoc['id'],
                             'parent' => $doc['id'],
                         ],
@@ -320,7 +318,7 @@ class Grammar extends BaseGrammar
             }
 
             $index = [
-                '_index' => $builder->from.$builder->suffix(),
+                '_index' => $builder->getFrom(),
                 '_id' => $doc['id'],
             ];
 
@@ -339,7 +337,7 @@ class Grammar extends BaseGrammar
             }
 
             // We don't want to save the ID as part of the doc.
-            unset($doc['id']);
+            unset($doc['id'], $doc['_id']);
 
             $params['body'][] = ['index' => $index];
 
@@ -800,7 +798,7 @@ class Grammar extends BaseGrammar
         $compiled = [
             'terms' => [
                 'field' => $this->getIndexableField($field, $builder),
-                'size' => $builder->limit,
+                'size' => $builder->getLimit(),
             ],
         ];
 
@@ -1049,6 +1047,10 @@ class Grammar extends BaseGrammar
             return $mappingMap[$textField];
         }
 
+        if($builder->connection->options()->get('bypass_map_validation')) {
+          return $textField;
+        }
+
         $mapping = collect(Arr::dot($builder->getMapping()))
             ->mapWithKeys(function ($value, $key) {
                 return [str($key)->after('.')->beforeLast('.')->toString() => $value];
@@ -1099,15 +1101,24 @@ class Grammar extends BaseGrammar
     {
         $cleanWhere = $where;
 
-        unset(
-            $cleanWhere['function_type'],
-            $cleanWhere['type'],
-            $cleanWhere['boolean']
-        );
+      $compiled = $this->compileWheres($where['query']);
+
+      foreach ($compiled as $queryPart => $clauses) {
+        $compiled[$queryPart] = array_map(function ($clause) use ($where) {
+          if ($clause) {
+            $this->applyOptionsToClause($clause, $where);
+          }
+
+          return $clause;
+        }, $clauses);
+      }
+
+      $compiled = array_filter($compiled);
+
 
         $query = [
             'function_score' => [
-                $where['function_type'] => $cleanWhere,
+                $where['functionType'] => ['query' => $compiled['query']],
             ],
         ];
 
@@ -1653,15 +1664,4 @@ class Grammar extends BaseGrammar
 
     return $query;
   }
-
-
-    /**
-     * Convert a key to an Elasticsearch-friendly format
-     *
-     * @param  mixed  $value
-     */
-    protected function convertKey($value): string
-    {
-        return (string) $value;
-    }
 }

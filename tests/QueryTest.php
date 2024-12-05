@@ -463,6 +463,6 @@ it('orders users by age', function () {
     expect(User::where('title', 'admin')->count())->toBe(0)
                                                   ->and(User::count())->toBe(6);
 
-    User::limit(null)->delete();
+    User::limit(1000)->delete();
     expect(User::count())->toBe(0);
   });

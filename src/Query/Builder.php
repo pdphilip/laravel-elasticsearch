@@ -83,6 +83,11 @@ class Builder extends BaseBuilder
         return parent::__call($method, $parameters);
     }
 
+    public function getLimit()
+    {
+        return $this->options()->get('limit', $this->limit);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -267,25 +272,6 @@ class Builder extends BaseBuilder
         }
 
         return false;
-    }
-
-    /**
-     * Adds a function score of any type
-     *
-     * @param  array  $options  see elastic search docs for options
-     * @param  string  $boolean
-     */
-    public function functionScore($functionType, $options = [], $boolean = 'and'): self
-    {
-        $where = [
-            'type' => 'FunctionScore',
-            'function_type' => $functionType,
-            'boolean' => $boolean,
-        ];
-
-        $this->wheres[] = array_merge($where, $options);
-
-        return $this;
     }
 
     /**
@@ -876,6 +862,28 @@ class Builder extends BaseBuilder
 
         return $this;
     }
+
+  /**
+   * Adds a function score of any type
+   *
+   * @param        $functionType
+   * @param callable $query
+   * @param string $boolean
+   * @param array  $options see elastic search docs for options
+   *
+   * @return Builder
+   */
+  public function functionScore($functionType, callable $query, $boolean = 'and', $options = []): self
+  {
+
+    $type = 'FunctionScore';
+
+    call_user_func($query, $query = $this->newQuery());
+
+    $this->wheres[] = compact( 'functionType', 'query', 'type', 'boolean', 'options');
+
+    return $this;
+  }
 
     /**
      * Add a 'nested' statement to the query.
@@ -1468,4 +1476,16 @@ class Builder extends BaseBuilder
 
         return $this;
     }
+
+  /**
+   * returns the fully qualified index
+   *
+   * @return string
+   */
+    public function getFrom(): string
+    {
+        return  $this->connection->getIndexPrefix().$this->from.$this->suffix();
+    }
+
+
 }

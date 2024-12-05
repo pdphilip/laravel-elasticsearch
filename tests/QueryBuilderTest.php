@@ -611,12 +611,12 @@ it('increments and decrements user age', function () {
 it('verifies cursor returns lazy collection and checks names', function () {
     $data = [
         ['name' => 'fork', 'tags' => ['sharp', 'pointy']],
-        ['name' => 'spork', 'tags' => ['sharp', 'pointy', 'round', 'bowl']],
         ['name' => 'spoon', 'tags' => ['round', 'bowl']],
+        ['name' => 'spork', 'tags' => ['sharp', 'pointy', 'round', 'bowl']],
     ];
     DB::table('items')->insert($data);
 
-    $results = DB::table('items')->orderBy('id', 'asc')->cursor();
+    $results = DB::table('items')->orderBy('name.keyword', 'asc')->cursor();
 
     expect($results)->toBeInstanceOf(Generator::class);
     foreach ($results as $i => $result) {

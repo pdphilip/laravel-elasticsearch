@@ -5,12 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
-use Illuminate\Pagination\Cursor;
-use Illuminate\Pagination\CursorPaginator;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
-use PDPhilip\Elasticsearch\Collection\ElasticCollection;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 
@@ -19,7 +14,6 @@ use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
  * @property Model $model
  *
  * @template TModel of Model
- * @template TCollection of ElasticCollection
  */
 class Builder extends BaseEloquentBuilder
 {
@@ -84,11 +78,8 @@ class Builder extends BaseEloquentBuilder
     {
         $this->model = $model;
 
-        $this->query->from($model->getSearchIndex());
-
-        $this->query->options()->add('suffix', $model->getSuffix());
-
-        $this->query->type($model->getSearchType());
+        $this->query->from($model->getTable());
+        $this->query->options()->set($this->model?->options()->all() ?? []);
 
         return $this;
     }
@@ -155,19 +146,6 @@ class Builder extends BaseEloquentBuilder
     public function count($columns = '*'): int
     {
         return $this->toBase()->getCountForPagination($columns);
-    }
-
-
-  /**
-   * @param string $collectionClass
-   * @return Collection
-   */
-    public function getAggregations(string $collectionClass = '', bool $raw = false): Collection
-    {
-        $collectionClass = $collectionClass ?: Collection::class;
-        $aggregations = !$raw ? $this->query->getAggregationResults() : $this->query->getRawAggregationResults();
-
-        return new $collectionClass($aggregations);
     }
 
     /**

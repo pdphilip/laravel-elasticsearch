@@ -25,11 +25,6 @@ class Meta implements Arrayable
         ];
     }
 
-    public function getTook(): ?int
-    {
-        return Arr::get($this->result, 'took');
-    }
-
     public function getDocCount(): ?int
     {
         return Arr::get($this->result, 'doc_count');
