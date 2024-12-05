@@ -34,11 +34,11 @@ class Builder extends BaseBuilder
 
     public array $bucketAggregations = [];
 
-    public array $metricsAggregations = [];
-
     public $distinct;
 
     public $filters;
+
+    public $highlight;
 
     /** @var bool */
     public $includeInnerHits;
@@ -48,6 +48,8 @@ class Builder extends BaseBuilder
      */
     public $limit = 1000;
 
+    public array $metricsAggregations = [];
+
     /**
      * All the supported clause operators.
      *
@@ -56,8 +58,6 @@ class Builder extends BaseBuilder
     public $operators = ['=', '<', '>', '<=', '>=', '<>', '!=', 'exists', 'like', 'not like'];
 
     public array $postFilters = [];
-
-    public $highlight;
 
     public $scripts = [];
 
@@ -81,24 +81,6 @@ class Builder extends BaseBuilder
         }
 
         return parent::__call($method, $parameters);
-    }
-
-    public function getLimit()
-    {
-        return $this->options()->get('limit', $this->limit);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function newQuery()
-    {
-        $query = new static($this->connection, $this->grammar, $this->processor);
-
-        // Transfer items
-        $query->options()->set($this->options()->all());
-
-        return $query;
     }
 
     /**
@@ -146,29 +128,79 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add a text search clause to the query.
-     *
-     * @param  string  $query
-     * @param  array  $options
-     * @param  string[]|string  $columns
-     * @param  string  $boolean
+     * {@inheritdoc}
      */
-    public function whereSearch($query, $columns = ['*'], $options = [], $boolean = 'and'): self
+    public function avg($column, array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+    }
+
+    public function aggregate($function, $columns = ['*'], $options = [])
+    {
+        return $this->aggregateMetric($function, $columns, $options);
+    }
+
+    public function aggregateMetric($function, $columns = ['*'], $options = [])
     {
 
-        $options = [
-            ...$options,
-            'fields' => Arr::wrap($columns),
-        ];
+        //Each column we want aggregated
+        $columns = Arr::wrap($columns);
+        foreach ($columns as $column) {
+            $this->metricsAggregations[] = [
+                'key' => $column,
+                'args' => $column,
+                'type' => $function,
+                'options' => $options,
+            ];
+        }
 
-        $this->wheres[] = [
-            'type' => 'Search',
-            'value' => $query,
-            'boolean' => $boolean,
-            'options' => $options,
-        ];
+        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
+    }
 
-        return $this;
+    /**
+     * A boxplot metrics aggregation that computes boxplot of numeric values extracted from the aggregated documents.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-boxplot-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function boxplot($columns, $options = [])
+    {
+        $result = $this->aggregate('boxplot', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Adds a bucket aggregation to the current query.
+     *
+     * @param  string  $key  The key for the bucket.
+     * @param  string|null  $type  The type of aggregation.
+     * @param  mixed|null  $args  The arguments for the aggregation.
+     *                            Can be a callable to generate the arguments using a new query.
+     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
+     *                                    Can be a callable to generate them using a new query.
+     * @return self The current query builder instance.
+     */
+    public function bucket($key, $type = null, $args = null, $aggregations = null): self
+    {
+        return $this->bucketAggregation($key, $type, $args, $aggregations);
+    }
+
+    /**
+     * Retrieve the Cardinality Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function cardinality($columns, $options = [])
+    {
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+
+        return $result ?: [];
     }
 
     /**
@@ -191,6 +223,14 @@ class Builder extends BaseBuilder
         }
 
         return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function count($columns = '*', array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
     }
 
     /**
@@ -218,6 +258,56 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Build and add increment or decrement scripts for the given columns.
+     *
+     * @param  array  $columns  Associative array of columns and their corresponding increment/decrement amounts.
+     * @param  string  $type  Type of operation, either 'increment' or 'decrement'.
+     * @param  array  $extra  Additional options for the update.
+     * @return mixed The result of the update operation.
+     *
+     * @throws InvalidArgumentException If a non-numeric value is passed as an increment amount
+     *                                  or a non-associative array is passed to the method.
+     */
+    private function buildCrementEach(array $columns, string $type, array $extra = [])
+    {
+        foreach ($columns as $column => $amount) {
+            if (! is_numeric($amount)) {
+                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
+            } elseif (! is_string($column)) {
+                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
+            }
+
+            $operator = $type == 'increment' ? '+' : '-';
+
+            $script = implode('', [
+                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
+                "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
+            ]);
+
+            $options['params'] = ["{$type}_{$column}_value" => (int) $amount];
+
+            $this->scripts[] = compact('script', 'options');
+        }
+
+        if (empty($this->wheres)) {
+            $this->wheres[] = [
+                'type' => 'MatchAll',
+                'boolean' => 'and',
+            ];
+        }
+
+        return $this->update($extra);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function update(array $values)
+    {
+        return $this->processor->processUpdate($this, parent::update($values));
+    }
+
+    /**
      * Force the query to only return distinct results.
      *
      * @return $this
@@ -231,22 +321,6 @@ class Builder extends BaseBuilder
         } else {
             $this->distinct = [];
         }
-
-        return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function groupBy(...$groups)
-    {
-        $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
-            $query->from = $this->from;
-
-            return collect($groups)->map(function ($group) use ($query) {
-                return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
-            })->toArray();
-        });
 
         return $this;
     }
@@ -272,6 +346,49 @@ class Builder extends BaseBuilder
         }
 
         return false;
+    }
+
+    /**
+     * Retrieve the extended stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function extendedStats($columns, $options = [])
+    {
+        $result = $this->aggregate('extended_stats', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Adds a function score of any type
+     *
+     * @param  string  $boolean
+     * @param  array  $options  see elastic search docs for options
+     */
+    public function functionScore($functionType, callable $query, $boolean = 'and', $options = []): self
+    {
+
+        $type = 'FunctionScore';
+
+        call_user_func($query, $query = $this->newQuery());
+
+        $this->wheres[] = compact('functionType', 'query', 'type', 'boolean', 'options');
+
+        return $this;
+    }
+
+    /**
+     * Get the aggregations returned from query
+     */
+    public function getAggregationResults(): array
+    {
+        $this->getResultsOnce();
+
+        return $this->processor->getAggregationResults();
     }
 
     /**
@@ -305,45 +422,24 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Get mappings without re-fetching for subsequent calls.
-     *
-     * @return array
+     * returns the fully qualified index
      */
-    public function getMapping()
+    public function getFrom(): string
     {
-        if (empty($this->mapping)) {
-            $this->mapping = $this->connection->indices()->getMapping($this->grammar->compileIndexMappings($this))->asArray();
-        }
-
-        return $this->mapping;
+        return $this->connection->getIndexPrefix().$this->from.$this->suffix();
     }
 
     /**
-     * @return mixed|null
+     * Set the suffix that is appended to from.
      */
-    public function getOption(string $option, mixed $default = null)
+    public function suffix(): string
     {
-        return $this->options()->get($option, $default);
+        return $this->options()->get('suffix', '');
     }
 
-    /**
-     * Get the aggregations returned from query
-     */
-    public function getAggregationResults(): array
+    public function getLimit()
     {
-        $this->getResultsOnce();
-
-        return $this->processor->getAggregationResults();
-    }
-
-    /**
-     * Get the raw aggregations returned from query
-     */
-    public function getRawAggregationResults(): array
-    {
-        $this->getResultsOnce();
-
-        return $this->processor->getRawAggregationResults();
+        return $this->options()->get('limit', $this->limit);
     }
 
     /**
@@ -411,11 +507,43 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Get mappings without re-fetching for subsequent calls.
+     *
+     * @return array
+     */
+    public function getMapping()
+    {
+        if (empty($this->mapping)) {
+            $this->mapping = $this->connection->indices()->getMapping($this->grammar->compileIndexMappings($this))->asArray();
+        }
+
+        return $this->mapping;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function getOption(string $option, mixed $default = null)
+    {
+        return $this->options()->get($option, $default);
+    }
+
+    /**
      * Get the parent ID to be used when routing queries to Elasticsearch
      */
     public function getParentId(): ?string
     {
         return $this->parentId;
+    }
+
+    /**
+     * Get the raw aggregations returned from query
+     */
+    public function getRawAggregationResults(): array
+    {
+        $this->getResultsOnce();
+
+        return $this->processor->getRawAggregationResults();
     }
 
     public function getRouting(): ?string
@@ -426,51 +554,84 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function incrementEach(array $columns, array $extra = [])
+    public function groupBy(...$groups)
     {
-        return $this->buildCrementEach($columns, 'increment', $extra);
+        $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
+            $query->from = $this->from;
+
+            return collect($groups)->map(function ($group) use ($query) {
+                return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
+            })->toArray();
+        });
+
+        return $this;
     }
 
     /**
-     * Build and add increment or decrement scripts for the given columns.
+     * Adds a bucket aggregation to the current query.
      *
-     * @param  array  $columns  Associative array of columns and their corresponding increment/decrement amounts.
-     * @param  string  $type  Type of operation, either 'increment' or 'decrement'.
-     * @param  array  $extra  Additional options for the update.
-     * @return mixed The result of the update operation.
-     *
-     * @throws InvalidArgumentException If a non-numeric value is passed as an increment amount
-     *                                  or a non-associative array is passed to the method.
+     * @param  string  $key  The key for the bucket.
+     * @param  string|null  $type  The type of aggregation.
+     * @param  mixed|null  $args  The arguments for the aggregation.
+     *                            Can be a callable to generate the arguments using a new query.
+     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
+     *                                    Can be a callable to generate them using a new query.
+     * @return self The current query builder instance.
      */
-    private function buildCrementEach(array $columns, string $type, array $extra = [])
+    public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
     {
-        foreach ($columns as $column => $amount) {
-            if (! is_numeric($amount)) {
-                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
-            } elseif (! is_string($column)) {
-                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
-            }
 
-            $operator = $type == 'increment' ? '+' : '-';
-
-            $script = implode('', [
-                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
-                "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
-            ]);
-
-            $options['params'] = ["{$type}_{$column}_value" => (int) $amount];
-
-            $this->scripts[] = compact('script', 'options');
+        if (! is_string($args) && is_callable($args)) {
+            $args = call_user_func($args, $this->newQuery());
         }
 
-        if (empty($this->wheres)) {
-            $this->wheres[] = [
-                'type' => 'MatchAll',
-                'boolean' => 'and',
-            ];
+        if (! is_string($aggregations) && is_callable($aggregations)) {
+            $aggregations = call_user_func($aggregations, $this->newQuery());
         }
 
-        return $this->update($extra);
+        $this->bucketAggregations[] = compact(
+            'key',
+            'type',
+            'args',
+            'aggregations'
+        );
+
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function newQuery()
+    {
+        $query = new static($this->connection, $this->grammar, $this->processor);
+
+        // Transfer items
+        $query->options()->set($this->options()->all());
+
+        return $query;
+    }
+
+    /**
+     * Add highlights to query.
+     *
+     * @param  string|string[]  $column
+     */
+    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>', array $options = []): self
+    {
+        $column = Arr::wrap($column);
+
+        $this->highlight = compact('column', 'preTag', 'postTag', 'options');
+
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function incrementEach(array $columns, array $extra = [])
+    {
+        return $this->buildCrementEach($columns, 'increment', $extra);
     }
 
     /**
@@ -498,37 +659,52 @@ class Builder extends BaseBuilder
         return $this->processor->processInsert($this, $this->connection->insert($this->grammar->compileInsert($this, $values)));
     }
 
-    public function withoutRefresh(): self
+    /**
+     * Retrieve the String Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function matrix($columns, $options = [])
     {
-        // Add the `refresh` option to the model or query
-        $this->options()->add('refresh', false);
+        $result = $this->aggregate('matrix_stats', Arr::wrap($columns), $options);
 
-        return $this;
-    }
-
-    public function proceedOnConflicts(): self
-    {
-        return $this->onConflicts(self::CONFLICT['PROCEED']);
+        return $result ?: [];
     }
 
     /**
-     * Set how to handle conflicts during a delete request
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html#docs-delete-by-query-api-query-params
-     *
-     * @throws \Exception
+     * {@inheritdoc}
      */
-    public function onConflicts(string $option = self::CONFLICT['PROCEED']): self
+    public function max($column, array $options = [])
     {
-        if (in_array($option, self::CONFLICT)) {
-            $this->options()->add('conflicts', 'proceed');
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+    }
 
-            return $this;
-        }
+    /**
+     * Retrieve the median absolute deviation stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-median-absolute-deviation-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function medianAbsoluteDeviation($columns, $options = [])
+    {
+        $result = $this->aggregate('median_absolute_deviation', Arr::wrap($columns), $options);
 
-        throw new \Exception(
-            "$option is an invalid conflict option, valid options are: ".implode(', ', self::CONFLICT)
-        );
+        return $result ?: [];
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @param  Expression|string|array  $columns
+     */
+    public function min($column, array $options = [])
+    {
+        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
     }
 
     /**
@@ -551,31 +727,55 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Add a date based (year, month, day, time) statement to the query.
+     *
+     * @param  string  $type
      * @param  string  $column
-     * @param  int  $direction
+     * @param  string  $operator
+     * @param  mixed  $value
+     * @param  string  $boolean
+     * @return $this
      */
-    public function orderBy($column, $direction = 1, array $options = []): self
+    protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and', array $options = [])
     {
-        if (is_string($direction)) {
-            $direction = strtolower($direction) == 'asc' ? 1 : -1;
+        switch ($type) {
+            case 'Year':
+                $dateType = 'year';
+                break;
+
+            case 'Month':
+                $dateType = 'month.value';
+                break;
+
+            case 'Day':
+                $dateType = 'dayOfMonth';
+                break;
+
+            case 'Weekday':
+                $dateType = 'dayOfWeekEnum.value';
+                break;
         }
 
-        $type = isset($options['type']) ? $options['type'] : 'basic';
+        $type = 'Script';
 
-        $this->orders[] = compact('column', 'direction', 'type', 'options');
+        $operator = $operator == '=' ? '==' : $operator;
+        $operator = $operator == '<>' ? '!=' : $operator;
+
+        $script = "doc.{$column}.size() > 0 && doc.{$column}.value != null && doc.{$column}.value.{$dateType} {$operator} params.value";
+
+        $options['params'] = ['value' => (int) $value];
+
+        $this->wheres[] = compact('script', 'options', 'type', 'boolean');
 
         return $this;
     }
 
-    public function orderByNested(string $column, $direction = 1, array $options = []): self
+    /**
+     * {@inheritdoc}
+     */
+    public function orderByDesc($column, array $options = [])
     {
-
-        $options = [
-            ...$options,
-            'nested' => ['path' => Str::beforeLast($column, '.')],
-        ];
-
-        return $this->orderBy($column, $direction, $options);
+        return $this->orderBy($column, 'desc', $options);
     }
 
     public function orderByGeo(string $column, array $coordinates, $direction = 1, array $options = []): self
@@ -602,12 +802,32 @@ class Builder extends BaseBuilder
         return $this->orderBy($column, -1, $options);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function orderByDesc($column, array $options = [])
+    public function orderByNested(string $column, $direction = 1, array $options = []): self
     {
-        return $this->orderBy($column, 'desc', $options);
+
+        $options = [
+            ...$options,
+            'nested' => ['path' => Str::beforeLast($column, '.')],
+        ];
+
+        return $this->orderBy($column, $direction, $options);
+    }
+
+    /**
+     * @param  string  $column
+     * @param  int  $direction
+     */
+    public function orderBy($column, $direction = 1, array $options = []): self
+    {
+        if (is_string($direction)) {
+            $direction = strtolower($direction) == 'asc' ? 1 : -1;
+        }
+
+        $type = isset($options['type']) ? $options['type'] : 'basic';
+
+        $this->orders[] = compact('column', 'direction', 'type', 'options');
+
+        return $this;
     }
 
     /**
@@ -618,6 +838,46 @@ class Builder extends BaseBuilder
         $this->parentId = $id;
 
         return $this;
+    }
+
+    /**
+     * Retrieve the percentiles of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function percentiles($columns, $options = [])
+    {
+        $result = $this->aggregate('percentiles', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    public function proceedOnConflicts(): self
+    {
+        return $this->onConflicts(self::CONFLICT['PROCEED']);
+    }
+
+    /**
+     * Set how to handle conflicts during a delete request
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html#docs-delete-by-query-api-query-params
+     *
+     * @throws \Exception
+     */
+    public function onConflicts(string $option = self::CONFLICT['PROCEED']): self
+    {
+        if (in_array($option, self::CONFLICT)) {
+            $this->options()->add('conflicts', 'proceed');
+
+            return $this;
+        }
+
+        throw new \Exception(
+            "$option is an invalid conflict option, valid options are: ".implode(', ', self::CONFLICT)
+        );
     }
 
     /**
@@ -693,14 +953,6 @@ class Builder extends BaseBuilder
         return $this->update([]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function update(array $values)
-    {
-        return $this->processor->processUpdate($this, parent::update($values));
-    }
-
     public function routing(string $routing): self
     {
         $this->routing = $routing;
@@ -709,11 +961,43 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Set the suffix that is appended to from.
+     * Retrieve the stats of the values of a given column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
      */
-    public function suffix(): string
+    public function stats($columns, $options = [])
     {
-        return $this->options()->get('suffix', '');
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * Retrieve the String Stats of the values of a given keyword column.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
+     *
+     * @param  Expression|string|array  $columns
+     * @param  array  $options
+     */
+    public function stringStats($columns, $options = [])
+    {
+        $result = $this->aggregate('string_stats', Arr::wrap($columns), $options);
+
+        return $result ?: [];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function sum($column, array $options = [])
+    {
+        $result = $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
+
+        return $result ?: 0;
     }
 
     public function truncate()
@@ -721,30 +1005,6 @@ class Builder extends BaseBuilder
         $this->applyBeforeQueryCallbacks();
 
         return $this->processor->processDelete($this, $this->connection->delete($this->grammar->compileTruncate($this)));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
-    {
-        parent::where($column, $operator, $value, $boolean);
-        //Append options to clause
-        $this->withOptions($options);
-
-        return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = [])
-    {
-        parent::whereRaw($sql, $bindings, $boolean);
-        //Append options to clause
-        $this->withOptions($options);
-
-        return $this;
     }
 
     /**
@@ -760,6 +1020,18 @@ class Builder extends BaseBuilder
         }
 
         return $this->processor->processDelete($this, $this->connection->delete($this->grammar->compileDelete($this)));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
+    {
+        parent::where($column, $operator, $value, $boolean);
+        //Append options to clause
+        $this->withOptions($options);
+
+        return $this;
     }
 
     /**
@@ -803,6 +1075,32 @@ class Builder extends BaseBuilder
         string $boolean = 'and'
     ): self {
         return $this->whereRelationship('child', $documentType, $callback, $options, $boolean);
+    }
+
+    /**
+     * Add a where relationship statement to the query.
+     *
+     *
+     * @return BaseBuilder|static
+     */
+    protected function whereRelationship(
+        string $relationshipType,
+        string $documentType,
+        Closure $callback,
+        array $options = [],
+        string $boolean = 'and'
+    ): self {
+        call_user_func($callback, $query = $this->newQuery());
+
+        $this->wheres[] = [
+            'type' => ucfirst($relationshipType),
+            'documentType' => $documentType,
+            'value' => $query,
+            'options' => $options,
+            'boolean' => $boolean,
+        ];
+
+        return $this;
     }
 
     /**
@@ -863,195 +1161,15 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-  /**
-   * Adds a function score of any type
-   *
-   * @param        $functionType
-   * @param callable $query
-   * @param string $boolean
-   * @param array  $options see elastic search docs for options
-   *
-   * @return Builder
-   */
-  public function functionScore($functionType, callable $query, $boolean = 'and', $options = []): self
-  {
-
-    $type = 'FunctionScore';
-
-    call_user_func($query, $query = $this->newQuery());
-
-    $this->wheres[] = compact( 'functionType', 'query', 'type', 'boolean', 'options');
-
-    return $this;
-  }
-
     /**
-     * Add a 'nested' statement to the query.
-     *
-     * @param  string  $column
-     * @param  callable|BaseBuilder|static  $query
-     * @param  string  $boolean
-     */
-    public function whereNestedObject($column, $query, $boolean = 'and', array $options = []): self
-    {
-        $type = 'NestedObject';
-
-        if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery());
-        }
-
-        $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'options');
-
-        return $this;
-    }
-
-    /**
-     * Add a 'nested' statement to the query.
-     *
-     * @param  string  $column
-     * @param  callable|BaseBuilder|static  $query
-     */
-    public function whereNotNestedObject($column, $query, array $options = []): self
-    {
-        $boolean = 'not';
-
-        return $this->whereNestedObject($column, $query, $boolean, $options);
-    }
-
-    /**
-     * Add a 'must not' statement to the query.
-     *
-     * @param  BaseBuilder|static  $query
-     * @param  null  $operator
-     * @param  null  $value
-     * @param  string  $boolean
-     */
-    public function whereNot($query, $operator = null, $value = null, $boolean = 'and', array $options = []): self
-    {
-        $type = 'Not';
-
-        if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery());
-        }
-
-        $this->wheres[] = compact('query', 'type', 'boolean', 'options');
-
-        return $this;
-    }
-
-    /**
-     * Add a where parent statement to the query.
-     *
-     * @return BaseBuilder|static
-     */
-    public function whereParent(
-        string $documentType,
-        Closure $callback,
-        array $options = [],
-        string $boolean = 'and'
-    ): self {
-        return $this->whereRelationship('parent', $documentType, $callback, $options, $boolean);
-    }
-
-    /**
-     * Add a where relationship statement to the query.
-     *
-     *
-     * @return BaseBuilder|static
-     */
-    protected function whereRelationship(
-        string $relationshipType,
-        string $documentType,
-        Closure $callback,
-        array $options = [],
-        string $boolean = 'and'
-    ): self {
-        call_user_func($callback, $query = $this->newQuery());
-
-        $this->wheres[] = [
-            'type' => ucfirst($relationshipType),
-            'documentType' => $documentType,
-            'value' => $query,
-            'options' => $options,
-            'boolean' => $boolean,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * Adds a bucket aggregation to the current query.
-     *
-     * @param  string  $key  The key for the bucket.
-     * @param  string|null  $type  The type of aggregation.
-     * @param  mixed|null  $args  The arguments for the aggregation.
-     *                            Can be a callable to generate the arguments using a new query.
-     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
-     *                                    Can be a callable to generate them using a new query.
-     * @return self The current query builder instance.
-     */
-    public function bucket($key, $type = null, $args = null, $aggregations = null): self
-    {
-        return $this->bucketAggregation($key, $type, $args, $aggregations);
-    }
-
-    /**
-     * Adds a bucket aggregation to the current query.
-     *
-     * @param  string  $key  The key for the bucket.
-     * @param  string|null  $type  The type of aggregation.
-     * @param  mixed|null  $args  The arguments for the aggregation.
-     *                            Can be a callable to generate the arguments using a new query.
-     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
-     *                                    Can be a callable to generate them using a new query.
-     * @return self The current query builder instance.
-     */
-    public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
-    {
-
-        if (! is_string($args) && is_callable($args)) {
-            $args = call_user_func($args, $this->newQuery());
-        }
-
-        if (! is_string($aggregations) && is_callable($aggregations)) {
-            $aggregations = call_user_func($aggregations, $this->newQuery());
-        }
-
-        $this->bucketAggregations[] = compact(
-            'key',
-            'type',
-            'args',
-            'aggregations'
-        );
-
-        return $this;
-    }
-
-    /**
-     * @param  string  $parentType  Name of the parent relation from the join mapping
-     * @param  mixed  $id
-     */
-    public function whereParentId(string $parentType, $id, string $boolean = 'and'): self
-    {
-        $this->wheres[] = [
-            'type' => 'ParentId',
-            'parentType' => $parentType,
-            'id' => $id,
-            'boolean' => $boolean,
-        ];
-
-        return $this;
-    }
-
-    /**
-     * Add a 'regexp' statement to the query.
+     * Add a 'match' statement to the query.
      *
      * @param  string  $column
      * @param  string  $boolean
      */
-    public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
+    public function whereMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
-        $type = 'Regex';
+        $type = 'Match';
 
         $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
 
@@ -1089,14 +1207,110 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add a 'match' statement to the query.
+     * Add a 'must not' statement to the query.
+     *
+     * @param  BaseBuilder|static  $query
+     * @param  null  $operator
+     * @param  null  $value
+     * @param  string  $boolean
+     */
+    public function whereNot($query, $operator = null, $value = null, $boolean = 'and', array $options = []): self
+    {
+        $type = 'Not';
+
+        if (! is_string($query) && is_callable($query)) {
+            call_user_func($query, $query = $this->newQuery());
+        }
+
+        $this->wheres[] = compact('query', 'type', 'boolean', 'options');
+
+        return $this;
+    }
+
+    /**
+     * Add a 'nested' statement to the query.
+     *
+     * @param  string  $column
+     * @param  callable|BaseBuilder|static  $query
+     */
+    public function whereNotNestedObject($column, $query, array $options = []): self
+    {
+        $boolean = 'not';
+
+        return $this->whereNestedObject($column, $query, $boolean, $options);
+    }
+
+    /**
+     * Add a 'nested' statement to the query.
+     *
+     * @param  string  $column
+     * @param  callable|BaseBuilder|static  $query
+     * @param  string  $boolean
+     */
+    public function whereNestedObject($column, $query, $boolean = 'and', array $options = []): self
+    {
+        $type = 'NestedObject';
+
+        if (! is_string($query) && is_callable($query)) {
+            call_user_func($query, $query = $this->newQuery());
+        }
+
+        $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'options');
+
+        return $this;
+    }
+
+    /**
+     * Add a where parent statement to the query.
+     *
+     * @return BaseBuilder|static
+     */
+    public function whereParent(
+        string $documentType,
+        Closure $callback,
+        array $options = [],
+        string $boolean = 'and'
+    ): self {
+        return $this->whereRelationship('parent', $documentType, $callback, $options, $boolean);
+    }
+
+    /**
+     * @param  string  $parentType  Name of the parent relation from the join mapping
+     * @param  mixed  $id
+     */
+    public function whereParentId(string $parentType, $id, string $boolean = 'and'): self
+    {
+        $this->wheres[] = [
+            'type' => 'ParentId',
+            'parentType' => $parentType,
+            'id' => $id,
+            'boolean' => $boolean,
+        ];
+
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = [])
+    {
+        parent::whereRaw($sql, $bindings, $boolean);
+        //Append options to clause
+        $this->withOptions($options);
+
+        return $this;
+    }
+
+    /**
+     * Add a 'regexp' statement to the query.
      *
      * @param  string  $column
      * @param  string  $boolean
      */
-    public function whereMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
+    public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
-        $type = 'Match';
+        $type = 'Regex';
 
         $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
 
@@ -1113,6 +1327,32 @@ class Builder extends BaseBuilder
         $type = 'Script';
 
         $this->wheres[] = compact('script', 'boolean', 'type', 'options');
+
+        return $this;
+    }
+
+    /**
+     * Add a text search clause to the query.
+     *
+     * @param  string  $query
+     * @param  array  $options
+     * @param  string[]|string  $columns
+     * @param  string  $boolean
+     */
+    public function whereSearch($query, $columns = ['*'], $options = [], $boolean = 'and'): self
+    {
+
+        $options = [
+            ...$options,
+            'fields' => Arr::wrap($columns),
+        ];
+
+        $this->wheres[] = [
+            'type' => 'Search',
+            'value' => $query,
+            'boolean' => $boolean,
+            'options' => $options,
+        ];
 
         return $this;
     }
@@ -1135,283 +1375,17 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add a "where weekday" statement to the query.
+     * Add a term query
      *
-     * @param  string  $column
-     * @param  string  $operator
-     * @param  \DateTimeInterface|string  $value
      * @param  string  $boolean
-     * @return BaseBuilder|static
      */
-    public function whereWeekday($column, $operator, $value = null, $boolean = 'and', array $options = [])
+    public function whereTerm(string $column, $value, $boolean = 'and', array $options = []): self
     {
-        [$value, $operator] = $this->prepareValueAndOperator(
-            $value,
-            $operator,
-            func_num_args() === 2
-        );
+        $type = 'Term';
 
-        if ($value instanceof DateTimeInterface) {
-            $value = $value->format('N');
-        }
-
-        return $this->addDateBasedWhere('Weekday', $column, $operator, $value, $boolean, $options);
-    }
-
-    /**
-     * Add a date based (year, month, day, time) statement to the query.
-     *
-     * @param  string  $type
-     * @param  string  $column
-     * @param  string  $operator
-     * @param  mixed  $value
-     * @param  string  $boolean
-     * @return $this
-     */
-    protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and', array $options = [])
-    {
-        switch ($type) {
-            case 'Year':
-                $dateType = 'year';
-                break;
-
-            case 'Month':
-                $dateType = 'month.value';
-                break;
-
-            case 'Day':
-                $dateType = 'dayOfMonth';
-                break;
-
-            case 'Weekday':
-                $dateType = 'dayOfWeekEnum.value';
-                break;
-        }
-
-        $type = 'Script';
-
-        $operator = $operator == '=' ? '==' : $operator;
-        $operator = $operator == '<>' ? '!=' : $operator;
-
-        $script = "doc.{$column}.size() > 0 && doc.{$column}.value != null && doc.{$column}.value.{$dateType} {$operator} params.value";
-
-        $options['params'] = ['value' => (int) $value];
-
-        $this->wheres[] = compact('script', 'options', 'type', 'boolean');
+        $this->wheres[] = compact('type', 'value', 'column', 'options', 'boolean');
 
         return $this;
-    }
-
-    /**
-     * Add any where clause with given options.
-     */
-    public function whereWithOptions(...$args): self
-    {
-        $options = array_pop($args);
-        $type = array_shift($args);
-        $method = $type == 'Basic' ? 'where' : 'where'.$type;
-
-        $this->$method(...$args);
-
-        $this->wheres[count($this->wheres) - 1]['options'] = $options;
-
-        return $this;
-    }
-
-    /**
-     * Whether to include inner hits in the response
-     */
-    public function withInnerHits(): self
-    {
-        $this->includeInnerHits = true;
-
-        return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function avg($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function count($columns = '*', array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param  Expression|string|array  $columns
-     */
-    public function min($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function max($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function sum($column, array $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-
-        return $result ?: 0;
-    }
-
-    /**
-     * Retrieve the stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function stats($columns, $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the extended stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function extendedStats($columns, $options = [])
-    {
-        $result = $this->aggregate('extended_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the median absolute deviation stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-median-absolute-deviation-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function medianAbsoluteDeviation($columns, $options = [])
-    {
-        $result = $this->aggregate('median_absolute_deviation', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the percentiles of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function percentiles($columns, $options = [])
-    {
-        $result = $this->aggregate('percentiles', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the String Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function stringStats($columns, $options = [])
-    {
-        $result = $this->aggregate('string_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the String Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function matrix($columns, $options = [])
-    {
-        $result = $this->aggregate('matrix_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * A boxplot metrics aggregation that computes boxplot of numeric values extracted from the aggregated documents.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-boxplot-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function boxplot($columns, $options = [])
-    {
-        $result = $this->aggregate('boxplot', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the Cardinality Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function cardinality($columns, $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    public function aggregate($function, $columns = ['*'], $options = [])
-    {
-        return $this->aggregateMetric($function, $columns, $options);
-    }
-
-    public function aggregateMetric($function, $columns = ['*'], $options = [])
-    {
-
-        //Each column we want aggregated
-        $columns = Arr::wrap($columns);
-        foreach ($columns as $column) {
-            $this->metricsAggregations[] = [
-                'key' => $column,
-                'args' => $column,
-                'type' => $function,
-                'options' => $options,
-            ];
-        }
-
-        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
     }
 
     /**
@@ -1450,42 +1424,60 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add a term query
+     * Add a "where weekday" statement to the query.
      *
+     * @param  string  $column
+     * @param  string  $operator
+     * @param  \DateTimeInterface|string  $value
      * @param  string  $boolean
+     * @return BaseBuilder|static
      */
-    public function whereTerm(string $column, $value, $boolean = 'and', array $options = []): self
+    public function whereWeekday($column, $operator, $value = null, $boolean = 'and', array $options = [])
     {
-        $type = 'Term';
+        [$value, $operator] = $this->prepareValueAndOperator(
+            $value,
+            $operator,
+            func_num_args() === 2
+        );
 
-        $this->wheres[] = compact('type', 'value', 'column', 'options', 'boolean');
+        if ($value instanceof DateTimeInterface) {
+            $value = $value->format('N');
+        }
+
+        return $this->addDateBasedWhere('Weekday', $column, $operator, $value, $boolean, $options);
+    }
+
+    /**
+     * Add any where clause with given options.
+     */
+    public function whereWithOptions(...$args): self
+    {
+        $options = array_pop($args);
+        $type = array_shift($args);
+        $method = $type == 'Basic' ? 'where' : 'where'.$type;
+
+        $this->$method(...$args);
+
+        $this->wheres[count($this->wheres) - 1]['options'] = $options;
 
         return $this;
     }
 
     /**
-     * Add highlights to query.
-     *
-     * @param  string|string[]  $column
+     * Whether to include inner hits in the response
      */
-    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>', array $options = []): self
+    public function withInnerHits(): self
     {
-        $column = Arr::wrap($column);
-
-        $this->highlight = compact('column', 'preTag', 'postTag', 'options');
+        $this->includeInnerHits = true;
 
         return $this;
     }
 
-  /**
-   * returns the fully qualified index
-   *
-   * @return string
-   */
-    public function getFrom(): string
+    public function withoutRefresh(): self
     {
-        return  $this->connection->getIndexPrefix().$this->from.$this->suffix();
+        // Add the `refresh` option to the model or query
+        $this->options()->add('refresh', false);
+
+        return $this;
     }
-
-
 }
