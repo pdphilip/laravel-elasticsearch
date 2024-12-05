@@ -8,7 +8,7 @@ use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Exception;
 
-class QueryException extends Exception
+final class QueryException extends Exception
 {
     public function __construct(Exception $previous)
     {
@@ -17,8 +17,6 @@ class QueryException extends Exception
 
     /**
      * Format the error message.
-     *
-     * Takes the first {$this->errorLimit} bulk issues and concatenates them to a single string message
      */
     private function formatMessage(Exception $result): string
     {
@@ -70,7 +68,25 @@ class QueryException extends Exception
     private function formatParseException($error): string
     {
         $message = collect();
-        $message->push("{$error['error']['type']}: {$error['error']['reason']}");
+        $message->push("🚨 Error Type: {$error['error']['type']}");
+        $message->push("🔍 Reason: {$error['error']['reason']}");
+
+        // Loop through root causes for detailed insights
+        foreach ($error['error']['root_cause'] as $rootCause) {
+            $message->push("   📌 Root Cause Type: {$rootCause['type']}");
+            $message->push("   📝 Root Cause Reason: {$rootCause['reason']}");
+        }
+
+        // Add caused_by details if present
+        if (isset($error['error']['caused_by'])) {
+            $causedBy = $error['error']['caused_by'];
+            $message->push("⚠️ Caused By: {$causedBy['type']}");
+            $message->push("   📝 Reason: {$causedBy['reason']}");
+        }
+
+        if (! empty($phase['index'])) {
+            $message->push("🔢 Index: {$phase['index']}");
+        }
 
         return $message->implode(PHP_EOL);
     }
