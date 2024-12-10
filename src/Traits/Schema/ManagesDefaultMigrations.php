@@ -43,7 +43,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function decimal($column, $total = 8, $places = 2, array $parameters = [])
+    public function decimal($column, $total = 8, $places = 2, $unsigned = false, array $parameters = [])
     {
         return $this->addColumn('scaled_float', $column, [
             'scaling_factor' => pow(10, $places),
@@ -54,7 +54,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function double($column, array $parameters = [])
+    public function double($column, $total = null, $places = null, $unsigned = false, array $parameters = [])
     {
         return $this->addColumn('double', $column, $parameters);
     }
@@ -83,7 +83,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function float($column, $precision = 53, array $parameters = []): PropertyDefinition
+    public function float($column, $total = null, $precision = null, $unsigned = false, array $parameters = []): PropertyDefinition
     {
 
         if ($precision <= 24) {

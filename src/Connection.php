@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
+use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
 use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
@@ -416,13 +417,18 @@ class Connection extends BaseConnection
     /**
      * Log a query in the connection's query log.
      *
-     * @param  string  $query
+     * @param  string|array  $query
      * @param  array  $bindings
      * @param  float|null  $time
      * @return void
      */
     public function logQuery($query, $bindings, $time = null)
     {
+
+        if(is_array($query)){
+          $query = json_encode($query);
+        }
+
         $this->event(new QueryExecuted($query, $bindings, $time, $this));
 
         if ($this->loggingQueries) {

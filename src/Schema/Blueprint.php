@@ -21,6 +21,7 @@ class Blueprint extends BlueprintBase
     /** @var string|bool[] */
     public const DYNAMIC = [
         'TRUE' => true,
+        'FALSE' => false,
         'RUNTIME' => 'runtime',
     ];
 

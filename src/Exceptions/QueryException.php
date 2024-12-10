@@ -10,6 +10,8 @@ use Exception;
 
 final class QueryException extends Exception
 {
+    private int $errorLimit = 10;
+
     public function __construct(Exception $previous)
     {
         parent::__construct($this->formatMessage($previous), $previous->code);
@@ -37,6 +39,10 @@ final class QueryException extends Exception
 
         $error = json_decode((string) $result->getResponse()->getBody(), true);
 
+        if(!empty($error['failures'])){
+          return $this->formatAsConflictException($error);
+        }
+
         return match ($error['error']['type']) {
             'search_phase_execution_exception' => $this->formatSearchPhaseExecutionException($error),
             'script_exception' => $this->formatScriptException($error),
@@ -44,10 +50,44 @@ final class QueryException extends Exception
         };
     }
 
+    private function formatAsConflictException($error): string
+    {
+
+        $message = collect();
+
+        // Clean that ish up.
+        $items = collect($error['failures'] ?? [])
+          ->filter(function (array $item) {
+            return $item['index'] && ! empty($item['cause']);
+          })
+          // reduce to max limit
+          ->slice(0, $this->errorLimit)
+          ->values();
+
+        $totalErrors = collect($error['failures'] ?? []);
+
+        $message->push('Conflict Errors ('.'Showing '.$items->count().' of '.$totalErrors->count() .'):');
+
+        $items = $items->map(function (array $item) {
+          return implode("\n", [
+                            "Index: {$item['index']}",
+                            "ID: {$item['id']}",
+                            "Error Type: {$item['cause']['type']}",
+                            "Error Reason: {$item['cause']['reason']}",
+                            "\n",
+                          ]);
+        })->values()->toArray();
+
+        $message->push(...$items);
+
+        return $message->implode(PHP_EOL);
+    }
+
     private function formatSearchPhaseExecutionException($error): string
     {
         $message = collect();
-        $message->push("{$error['error']['type']}: {$error['error']['reason']}");
+      $message->push("Error Type: {$error['error']['type']}");
+      $message->push("Reason: {$error['error']['reason']}\n\n");
 
         foreach ($error['error']['root_cause'] as $phase) {
             if ($phase['type'] == 'script_exception') {
@@ -68,24 +108,24 @@ final class QueryException extends Exception
     private function formatParseException($error): string
     {
         $message = collect();
-        $message->push("🚨 Error Type: {$error['error']['type']}");
-        $message->push("🔍 Reason: {$error['error']['reason']}");
+        $message->push("Error Type: {$error['error']['type']}");
+        $message->push("Reason: {$error['error']['reason']}\n\n");
 
         // Loop through root causes for detailed insights
         foreach ($error['error']['root_cause'] as $rootCause) {
-            $message->push("   📌 Root Cause Type: {$rootCause['type']}");
-            $message->push("   📝 Root Cause Reason: {$rootCause['reason']}");
+            $message->push("Root Cause Type: {$rootCause['type']}");
+            $message->push("Root Cause Reason: {$rootCause['reason']}");
         }
 
         // Add caused_by details if present
         if (isset($error['error']['caused_by'])) {
             $causedBy = $error['error']['caused_by'];
-            $message->push("⚠️ Caused By: {$causedBy['type']}");
-            $message->push("   📝 Reason: {$causedBy['reason']}");
+            $message->push("Caused By: {$causedBy['type']}");
+            $message->push("Reason: {$causedBy['reason']}");
         }
 
         if (! empty($phase['index'])) {
-            $message->push("🔢 Index: {$phase['index']}");
+            $message->push("Index: {$phase['index']}");
         }
 
         return $message->implode(PHP_EOL);
@@ -94,6 +134,7 @@ final class QueryException extends Exception
     private function formatScriptException($error): string
     {
         $message = collect();
+
         $message->push("{$error['error']['type']}: {$error['error']['reason']}");
         $message->push("Caused By: {$error['error']['caused_by']['type']}");
         $message->push(...$error['error']['script_stack']);

@@ -208,15 +208,27 @@ class Builder extends BaseEloquentBuilder
         }
     }
 
-  public function withoutRefresh()
-  {
-    $this->model->options()->add('refresh', false);
-    return $this->model;
-  }
+    /**
+     * {@inheritdoc}
+     */
+    public function findOrNew($id, $columns = ['*']): Model
+    {
+      $model = parent::findOrNew($id, $columns);
+      $model->id = $id; //set the id to the model
 
-  public function withSuffix($suffix)
-  {
-    $this->model->options()->add('suffix', $suffix);
-    return $this->model;
-  }
+      return $model;
+    }
+
+
+  public function withoutRefresh()
+    {
+      $this->model->options()->add('refresh', false);
+      return $this->model;
+    }
+
+    public function withSuffix($suffix)
+    {
+      $this->model->options()->add('suffix', $suffix);
+      return $this->model;
+    }
 }
