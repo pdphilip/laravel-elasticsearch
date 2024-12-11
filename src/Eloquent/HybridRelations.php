@@ -173,7 +173,7 @@ trait HybridRelations
      * @see HasRelationships::belongsToMany()
      *
      * @param  class-string  $related
-     * @param  string|null  $collection
+     * @param  string|null  $table
      * @param  string|null  $foreignPivotKey
      * @param  string|null  $relatedPivotKey
      * @param  string|null  $parentKey

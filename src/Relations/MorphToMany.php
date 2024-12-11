@@ -455,7 +455,7 @@ class MorphToMany extends EloquentMorphToMany
      * Add the given id to the relation's data of the current parent instance.
      * It helps to keep up-to-date the sql model instances in hybrid relationships.
      *
-     * @param  ObjectId|string|int  $id
+     * @param  string|int  $id
      * @return void
      */
     private function addIdToParentRelationData($id)

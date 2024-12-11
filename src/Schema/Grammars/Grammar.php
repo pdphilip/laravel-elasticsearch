@@ -47,7 +47,7 @@ class Grammar extends BaseGrammar
     {
         return function (Blueprint $blueprint, Connection $connection): void {
             $connection->dropIndex(
-              $blueprint->getTable()
+                $blueprint->getTable()
             );
         };
     }
@@ -68,13 +68,13 @@ class Grammar extends BaseGrammar
 
     public function compileCreateIfNotExists(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
     {
-        return function () use ($connection, $blueprint, $command): void {
+        return function () use ($connection, $blueprint): void {
 
             $index = $connection->indices()->exists(['index' => $blueprint->getTable()]);
-            if (!$index->asBool()) {
-              $connection->createIndex(
-                $blueprint->getIndex(), []
-              );
+            if (! $index->asBool()) {
+                $connection->createIndex(
+                    $blueprint->getIndex(), []
+                );
             }
         };
     }
@@ -111,7 +111,7 @@ class Grammar extends BaseGrammar
      */
     protected function format(Blueprint $blueprint, Fluent $property)
     {
-        if (! is_string($property->format)) {
+        if (isset($property->format) && ! is_string($property->format)) {
             throw new \InvalidArgumentException('Format modifier must be a string', 400);
         }
 
@@ -128,9 +128,11 @@ class Grammar extends BaseGrammar
         foreach ($blueprint->getAddedColumns() as $property) {
             // Pass empty string as we only need to modify the property and return it.
             $column = $this->addModifiers('', $blueprint, $property);
+            // @phpstan-ignore-next-line
             $key = Str::snake($column->name);
+            // @phpstan-ignore-next-line
             unset($column->name);
-
+            // @phpstan-ignore-next-line
             $columns[$key] = $column->toArray();
         }
 
@@ -185,17 +187,17 @@ class Grammar extends BaseGrammar
     protected function modifyNullValue(Blueprint $blueprint, Fluent $property)
     {
 
-      if (! empty($property->nullValue) || $property->nullValue === false || $property->nullValue === 0) {
+        if (! empty($property->nullValue) || $property->nullValue === false || $property->nullValue === 0) {
 
-        if($property->type == "text"){
-          throw new \InvalidArgumentException('text feilds can\'t have a nullValue', 400);
+            if ($property->type == 'text') {
+                throw new \InvalidArgumentException('text feilds can\'t have a nullValue', 400);
+            }
+
+            $property->null_value = $property->nullValue;
+            unset($property->nullValue);
         }
 
-        $property->null_value = $property->nullValue;
-        unset($property->nullValue);
-      }
-
-      return $property;
+        return $property;
     }
 
     /**

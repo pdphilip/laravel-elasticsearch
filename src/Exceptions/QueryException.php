@@ -124,10 +124,6 @@ final class QueryException extends Exception
             $message->push("Reason: {$causedBy['reason']}");
         }
 
-        if (! empty($phase['index'])) {
-            $message->push("Index: {$phase['index']}");
-        }
-
         return $message->implode(PHP_EOL);
     }
 

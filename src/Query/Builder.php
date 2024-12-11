@@ -700,7 +700,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      *
-     * @param  Expression|string|array  $columns
+     * @param  Expression|string|array  $column
      */
     public function min($column, array $options = [])
     {
@@ -751,7 +751,7 @@ class Builder extends BaseBuilder
                 $dateType = 'dayOfMonth';
                 break;
 
-            case 'Weekday':
+            default:
                 $dateType = 'dayOfWeekEnum.value';
                 break;
         }
@@ -1066,7 +1066,6 @@ class Builder extends BaseBuilder
     /**
      * Add a where child statement to the query.
      *
-     * @return BaseBuilder|static
      */
     public function whereChild(
         string $documentType,
@@ -1080,8 +1079,6 @@ class Builder extends BaseBuilder
     /**
      * Add a where relationship statement to the query.
      *
-     *
-     * @return BaseBuilder|static
      */
     protected function whereRelationship(
         string $relationshipType,
@@ -1263,7 +1260,6 @@ class Builder extends BaseBuilder
     /**
      * Add a where parent statement to the query.
      *
-     * @return BaseBuilder|static
      */
     public function whereParent(
         string $documentType,
@@ -1293,7 +1289,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = [])
+    public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = []): self
     {
         parent::whereRaw($sql, $bindings, $boolean);
         //Append options to clause
@@ -1393,7 +1389,7 @@ class Builder extends BaseBuilder
      *
      * @param  string  $column
      * @param  string  $boolean
-     * @param  null  $not
+     * @param  null|string  $not
      */
     public function whereTermExists($column, $boolean = 'and', $not = ' ', array $options = []): self
     {

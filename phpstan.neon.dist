@@ -2,9 +2,26 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
-    level: 5
+    level: 2
+
     paths:
         - src
+
     tmpDir: build/phpstan
+
+    editorUrl: 'phpstorm://open?file=%%file%%&line=%%line%%'
+
     ignoreErrors:
-            - '#Return type .* of method .* should be compatible with return type .* of method#'
+            - '#Unsafe usage of new static#'
+            - '#Call to an undefined method [a-zA-Z0-9\\_\<\>\(\)]+::[a-zA-Z]+\(\)#'
+
+    universalObjectCratesClasses:
+      - Illuminate\Support\Fluent
+
+services:
+    errorFormatter.sarif:
+        class: PDPhilip\Elasticsearch\Tests\PHPStan\SarifErrorFormatter
+        arguments:
+            relativePathHelper: @simpleRelativePathHelper
+            currentWorkingDirectory: %currentWorkingDirectory%
+            pretty: true

@@ -13,7 +13,7 @@ trait ManagesOptions
 
         // Append the new options to it
         $lastWhere = array_merge($lastWhere, [
-            'options' => $options ?? [],
+            'options' => $options,
         ]);
 
         $this->$type[] = $lastWhere;

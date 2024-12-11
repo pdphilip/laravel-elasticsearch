@@ -7,13 +7,14 @@ namespace PDPhilip\Elasticsearch;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
-use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
 use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
+use Exception;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
+use Iterator;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
@@ -267,15 +268,17 @@ class Connection extends BaseConnection
         }
     }
 
-    /**
-     * Run a select statement against the database and return a generator.
-     *
-     * @param  array  $query
-     * @param  array  $bindings
-     * @param  bool  $useReadPdo
-     * @return \Generator
-     */
-    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100) {
+  /**
+   * Run a select statement against the database and return a generator.
+   *
+   * @param array  $query
+   * @param string $scrollTimeout
+   * @param int    $size
+   *
+   * @return \Generator
+   */
+    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100): \Generator
+    {
 
         $scrollParams = [
             'scroll' => $scrollTimeout,
@@ -291,18 +294,19 @@ class Connection extends BaseConnection
 
     }
 
-    /**
-     * Run a select statement against the database and return a generator.
-     *
-     * @param  string  $query
-     * @param  array  $bindings
-     * @param  bool  $useReadPdo
-     * @return \Generator
-     */
+  /**
+   * Run a select statement against the database and return a generator.
+   *
+   * @param string $query
+   * @param array  $bindings
+   * @param bool   $useReadPdo
+   * @param string $scrollTimeout
+   *
+   */
     public function cursor($query, $bindings = [], $useReadPdo = false, $scrollTimeout = '30s')
     {
 
-        $limit = $query['body']['size'] ?? null;
+      $limit = is_array($query) && isset($query['body']['size']) ? $query['body']['size'] : NULL;
 
         //We want to scroll by 1000 row chunks
         $query['body']['size'] = 1000;
@@ -316,6 +320,7 @@ class Connection extends BaseConnection
         $count = 0;
         $pages = new SearchResponseIterator($this->connection, $scrollParams);
         $hits = new SearchHitIterator($pages);
+
         foreach ($hits as $hit) {
             $count++;
             if ($count > $limit) {
@@ -483,7 +488,7 @@ class Connection extends BaseConnection
     /**
      * Set the table prefix in use by the connection.
      *
-     * @param  string  $prefix
+     * @param  string  $suffix
      * @return void
      */
     public function setIndexSuffix($suffix)
@@ -514,6 +519,7 @@ class Connection extends BaseConnection
      */
     public function update($query, $bindings = [])
     {
+        // @phpstan-ignore-next-line
         $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
 
         return $this->run(
@@ -572,7 +578,7 @@ class Connection extends BaseConnection
     {
         try {
             $result = $callback($query, $bindings);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new QueryException($e);
         }
 

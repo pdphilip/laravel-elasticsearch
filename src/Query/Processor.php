@@ -22,7 +22,6 @@ class Processor extends BaseProcessor
   /**
    * Get the raw aggregation results
    *
-   * @param array
    */
   public function getAggregationResults(): array
   {
@@ -32,7 +31,6 @@ class Processor extends BaseProcessor
   /**
    * Get the raw aggregation results
    *
-   * @param array
    */
   public function getRawAggregationResults(): array
   {
@@ -238,7 +236,7 @@ class Processor extends BaseProcessor
    */
   public function processTables($results)
   {
-    return collect($results->asArray())->map(function ($result){
+    return collect(is_array($results) ? $results : $results->asArray())->map(function ($result){
       return [
         'name' => $result['index'],
         'status' => $result['status'] ?? null,

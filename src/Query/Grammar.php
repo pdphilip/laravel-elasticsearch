@@ -139,6 +139,8 @@ class Grammar extends BaseGrammar
             if (! empty($metricsAggregations)) {
 
                 $aggregation['aggregations'] = $builder->newQuery();
+
+                // @phpstan-ignore-next-line
                 $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
             }
 
@@ -409,14 +411,16 @@ class Grammar extends BaseGrammar
             $scripts[] = 'ctx._source.'.$column.' = params.'.$param.';';
         }
 
-        foreach ($builder->scripts as $script) {
+        if(isset($builder->scripts)){
+            foreach ($builder->scripts as $script) {
 
-            $params = [
-                ...$params,
-                ...$script['options']['params'],
-            ];
-            $scripts[] = $script['script'];
-        }
+                $params = [
+                    ...$params,
+                    ...$script['options']['params'],
+                ];
+                $scripts[] = $script['script'];
+            }
+          }
 
         if (! empty($scripts)) {
             $clause['body']['script']['source'] = implode(' ', $scripts);
@@ -896,11 +900,13 @@ class Grammar extends BaseGrammar
         return $value;
     }
 
-    /**
-     * Compile a delete query
-     *
-     * @param  Builder  $builder
-     */
+  /**
+   * Compile a delete query
+   *
+   * @param $value
+   *
+   * @return string
+   */
     protected function convertDateTime($value): string
     {
         if (is_string($value)) {
@@ -910,11 +916,14 @@ class Grammar extends BaseGrammar
         return $value->format('c');
     }
 
-    /**
-     * Compile a where between clause
-     *
-     * @param  bool  $not
-     */
+  /**
+   * Compile a where between clause
+   *
+   * @param Builder $builder
+   * @param array   $where
+   *
+   * @return array
+   */
     protected function compileWhereBetween(Builder $builder, array $where): array
     {
         $column = $where['column'];
@@ -1029,11 +1038,15 @@ class Grammar extends BaseGrammar
         return $query;
     }
 
-    /**
-     * Given a `$field` points to the subfield that is of type keyword.
-     *
-     * @return array
-     */
+  /**
+   * Given a `$field` points to the subfield that is of type keyword.
+   *
+   * @param string  $textField
+   * @param Builder $builder
+   *
+   * @return string
+   * @throws BuilderException
+   */
     public function getIndexableField(string $textField, Builder $builder): string
     {
 

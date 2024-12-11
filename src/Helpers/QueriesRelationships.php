@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Relations\MorphToMany;
 
@@ -142,7 +143,6 @@ trait QueriesRelationships
             return $relation->getHasCompareKey();
         }
 
-        //@phpstan-ignore-next-line
         return $relation instanceof HasOneOrMany ? $relation->getForeignKeyName() : $relation->getOwnerKeyName();
     }
 

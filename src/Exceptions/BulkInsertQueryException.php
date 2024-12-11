@@ -41,7 +41,7 @@ class BulkInsertQueryException extends LaravelElasticsearchException
 
         $totalErrors = collect($result['items'] ?? []);
 
-        $message->push('Bulk Insert Errors ('.'Showing '.$items->count().' of '.$totalErrors->count() - 1 .'):');
+        $message->push('Bulk Insert Errors ('.'Showing '.$items->count().' of '.$totalErrors->count().'):');
 
         $items = $items->map(function (array $item) {
             return "{$item['_id']}: {$item['error']['reason']}";

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
+use Closure;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Support\Collection;
+use Iterator;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 
@@ -118,12 +120,9 @@ class Builder extends BaseEloquentBuilder
     return $this;
   }
 
-    /**
-     * Execute the query as a "select" statement.
-     *
-     * @param  array  $columns
-     * @return \Illuminate\Database\Eloquent\Collection|static[]
-     */
+  /**
+   * {@inheritdoc}
+   */
     public function get($columns = ['*'])
     {
         $builder = $this->applyScopes();
@@ -199,7 +198,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * Get a generator for the given query.
      *
-     * @return Generator
+     * @return Iterator
      */
     public function cursor($scrollTimeout = '30s')
     {
@@ -214,7 +213,7 @@ class Builder extends BaseEloquentBuilder
     public function findOrNew($id, $columns = ['*']): Model
     {
       $model = parent::findOrNew($id, $columns);
-      $model->id = $id; //set the id to the model
+      $model['id'] = $id; //set the id to the model
 
       return $model;
     }

@@ -18,7 +18,6 @@ class Blueprint extends BlueprintBase
     use ManagesDefaultMigrations;
     use ManagesElasticMigrations;
 
-    /** @var string|bool[] */
     public const DYNAMIC = [
         'TRUE' => true,
         'FALSE' => false,
@@ -89,13 +88,15 @@ class Blueprint extends BlueprintBase
         $this->ensureCommandsAreValid($connection);
 
         foreach ($this->commands as $command) {
-            $method = 'compile'.ucfirst($command->name);
+          if(!empty($command->name)){
+            $method = 'compile'.ucfirst((string) $command->name);
 
             if (method_exists($grammar, $method)) {
                 if (! is_null($statement = $grammar->$method($this, $command, $connection))) {
                     $statements[] = $statement;
                 }
             }
+          }
         }
 
         return $statements;
@@ -224,7 +225,7 @@ class Blueprint extends BlueprintBase
     {
         $attributes = ['name'];
 
-        if (isset($type)) {
+        if (!empty($type)) {
             $attributes[] = 'type';
         }
 
