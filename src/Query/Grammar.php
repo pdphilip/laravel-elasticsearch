@@ -188,43 +188,39 @@ class Grammar extends BaseGrammar
         return $compiled;
     }
 
-  /**
-   * Compile the highlight section of a query
-   *
-   * @param Builder $builder
-   * @param array   $highlight
-   *
-   * @return array
-   */
+    /**
+     * Compile the highlight section of a query
+     *
+     * @param  array  $highlight
+     */
     protected function compileHighlight(Builder $builder, $highlight = []): array
     {
-      $allowedArgs = [
-        'boundary_chars',
-        'boundary_max_scan',
-        'boundary_scanner',
-        'boundary_scanner_locale',
-        'encoder',
-        'fragmenter',
-        'force_source',
-        'fragment_offset',
-        'fragment_size',
-        'highlight_query',
-        'matched_fields',
-        'number_of_fragments',
-      ];
-
+        $allowedArgs = [
+            'boundary_chars',
+            'boundary_max_scan',
+            'boundary_scanner',
+            'boundary_scanner_locale',
+            'encoder',
+            'fragmenter',
+            'force_source',
+            'fragment_offset',
+            'fragment_size',
+            'highlight_query',
+            'matched_fields',
+            'number_of_fragments',
+        ];
 
         $compiledHighlights = $this->getAllowedOptions($highlight['options'], $allowedArgs);
 
-          foreach ($highlight['column'] as $column => $value) {
+        foreach ($highlight['column'] as $column => $value) {
 
-            if(is_array($value)) {
-              $compiledHighlights['fields'][] = [$column => $value];
-            } else if($value != '*'){
-              $compiledHighlights['fields'][] = [$value => (object)[]];
+            if (is_array($value)) {
+                $compiledHighlights['fields'][] = [$column => $value];
+            } elseif ($value != '*') {
+                $compiledHighlights['fields'][] = [$value => (object) []];
             }
 
-          }
+        }
 
         $compiledHighlights['pre_tags'] = $highlight['preTag'];
         $compiledHighlights['post_tags'] = $highlight['postTag'];
@@ -411,16 +407,13 @@ class Grammar extends BaseGrammar
             $scripts[] = 'ctx._source.'.$column.' = params.'.$param.';';
         }
 
-        if(isset($builder->scripts)){
-            foreach ($builder->scripts as $script) {
-
-                $params = [
-                    ...$params,
-                    ...$script['options']['params'],
-                ];
-                $scripts[] = $script['script'];
-            }
-          }
+        foreach ($builder->scripts ?? [] as $script) {
+            $params = [
+                ...$params,
+                ...$script['options']['params'],
+            ];
+            $scripts[] = $script['script'];
+        }
 
         if (! empty($scripts)) {
             $clause['body']['script']['source'] = implode(' ', $scripts);
@@ -900,13 +893,9 @@ class Grammar extends BaseGrammar
         return $value;
     }
 
-  /**
-   * Compile a delete query
-   *
-   * @param $value
-   *
-   * @return string
-   */
+    /**
+     * Compile a delete query
+     */
     protected function convertDateTime($value): string
     {
         if (is_string($value)) {
@@ -916,14 +905,9 @@ class Grammar extends BaseGrammar
         return $value->format('c');
     }
 
-  /**
-   * Compile a where between clause
-   *
-   * @param Builder $builder
-   * @param array   $where
-   *
-   * @return array
-   */
+    /**
+     * Compile a where between clause
+     */
     protected function compileWhereBetween(Builder $builder, array $where): array
     {
         $column = $where['column'];
@@ -1038,15 +1022,12 @@ class Grammar extends BaseGrammar
         return $query;
     }
 
-  /**
-   * Given a `$field` points to the subfield that is of type keyword.
-   *
-   * @param string  $textField
-   * @param Builder $builder
-   *
-   * @return string
-   * @throws BuilderException
-   */
+    /**
+     * Given a `$field` points to the subfield that is of type keyword.
+     *
+     *
+     * @throws BuilderException
+     */
     public function getIndexableField(string $textField, Builder $builder): string
     {
 
@@ -1060,8 +1041,8 @@ class Grammar extends BaseGrammar
             return $mappingMap[$textField];
         }
 
-        if($builder->connection->options()->get('bypass_map_validation')) {
-          return $textField;
+        if ($builder->connection->options()->get('bypass_map_validation')) {
+            return $textField;
         }
 
         $mapping = collect(Arr::dot($builder->getMapping()))
@@ -1114,20 +1095,19 @@ class Grammar extends BaseGrammar
     {
         $cleanWhere = $where;
 
-      $compiled = $this->compileWheres($where['query']);
+        $compiled = $this->compileWheres($where['query']);
 
-      foreach ($compiled as $queryPart => $clauses) {
-        $compiled[$queryPart] = array_map(function ($clause) use ($where) {
-          if ($clause) {
-            $this->applyOptionsToClause($clause, $where);
-          }
+        foreach ($compiled as $queryPart => $clauses) {
+            $compiled[$queryPart] = array_map(function ($clause) use ($where) {
+                if ($clause) {
+                    $this->applyOptionsToClause($clause, $where);
+                }
 
-          return $clause;
-        }, $clauses);
-      }
+                return $clause;
+            }, $clauses);
+        }
 
-      $compiled = array_filter($compiled);
-
+        $compiled = array_filter($compiled);
 
         $query = [
             'function_score' => [
@@ -1620,61 +1600,62 @@ class Grammar extends BaseGrammar
             ],
         ];
     }
-  /**
-   * Compile a search clause for Elasticsearch.
-   */
-  protected function compileWhereSearch(Builder $builder, array $where): array
-  {
-    // Determine the fields to search
-    $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
 
-    // Handle field boosts if fields is an associative array
-    if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
-      $fields = array_map(fn($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+    /**
+     * Compile a search clause for Elasticsearch.
+     */
+    protected function compileWhereSearch(Builder $builder, array $where): array
+    {
+        // Determine the fields to search
+        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
+
+        // Handle field boosts if fields is an associative array
+        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+        }
+
+        // Use multi_match if searching across multiple fields or all fields
+        if (is_array($fields) || $fields === '*') {
+            $queryType = $where['options']['matchType'] ?? 'best_fields';
+
+            $query = [
+                'multi_match' => [
+                    'query' => $where['value'],
+                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
+                    'type' => $queryType,
+                ],
+            ];
+        } else {
+            $query = [
+                'match' => [
+                    $fields => [
+                        'query' => $where['value'],
+                    ],
+                ],
+            ];
+        }
+
+        // Add fuzziness if specified
+        if (! empty($where['options']['fuzziness'])) {
+            $fuzziness = $where['options']['fuzziness'];
+            $mainQueryType = key($query);
+
+            if ($mainQueryType === 'multi_match') {
+                $query['multi_match']['fuzziness'] = $fuzziness;
+            } else {
+                $query['match'][$fields]['fuzziness'] = $fuzziness;
+            }
+        }
+
+        // Wrap in constant_score if specified
+        if (! empty($where['options']['constant_score'])) {
+            $query = [
+                'constant_score' => [
+                    'filter' => $query,
+                ],
+            ];
+        }
+
+        return $query;
     }
-
-    // Use multi_match if searching across multiple fields or all fields
-    if (is_array($fields) || $fields === '*') {
-      $queryType = $where['options']['matchType'] ?? 'best_fields';
-
-      $query = [
-        'multi_match' => [
-          'query' => $where['value'],
-          'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
-          'type' => $queryType,
-        ],
-      ];
-    } else {
-      $query = [
-        'match' => [
-          $fields => [
-            'query' => $where['value'],
-          ],
-        ],
-      ];
-    }
-
-    // Add fuzziness if specified
-    if (!empty($where['options']['fuzziness'])) {
-      $fuzziness = $where['options']['fuzziness'];
-      $mainQueryType = key($query);
-
-      if ($mainQueryType === 'multi_match') {
-        $query['multi_match']['fuzziness'] = $fuzziness;
-      } else {
-        $query['match'][$fields]['fuzziness'] = $fuzziness;
-      }
-    }
-
-    // Wrap in constant_score if specified
-    if (!empty($where['options']['constant_score'])) {
-      $query = [
-        'constant_score' => [
-          'filter' => $query,
-        ],
-      ];
-    }
-
-    return $query;
-  }
 }
