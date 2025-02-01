@@ -1065,7 +1065,6 @@ class Builder extends BaseBuilder
 
     /**
      * Add a where child statement to the query.
-     *
      */
     public function whereChild(
         string $documentType,
@@ -1078,7 +1077,6 @@ class Builder extends BaseBuilder
 
     /**
      * Add a where relationship statement to the query.
-     *
      */
     protected function whereRelationship(
         string $relationshipType,
@@ -1164,7 +1162,7 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $boolean
      */
-    public function whereMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
+    public function searchMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'Match';
 
@@ -1179,7 +1177,7 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $boolean
      */
-    public function whereMatchPhrase($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
+    public function searchMatchPhrase($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'MatchPhrase';
 
@@ -1194,7 +1192,7 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  string  $boolean
      */
-    public function whereMatchPhrasePrefix($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
+    public function searchMatchPhrasePrefix($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
         $type = 'MatchPhrasePrefix';
 
@@ -1259,7 +1257,6 @@ class Builder extends BaseBuilder
 
     /**
      * Add a where parent statement to the query.
-     *
      */
     public function whereParent(
         string $documentType,
@@ -1335,7 +1332,7 @@ class Builder extends BaseBuilder
      * @param  string[]|string  $columns
      * @param  string  $boolean
      */
-    public function whereSearch($query, $columns = ['*'], $options = [], $boolean = 'and'): self
+    public function search($query, $columns = ['*'], $options = [], $boolean = 'and'): self
     {
 
         $options = [
@@ -1361,7 +1358,7 @@ class Builder extends BaseBuilder
      * @param  bool  $not
      * @param  array  $options
      */
-    public function whereStartsWith($column, string $value, $boolean = 'and', $not = false, $options = []): self
+    public function searchStartsWith($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
         $type = 'Prefix';
 

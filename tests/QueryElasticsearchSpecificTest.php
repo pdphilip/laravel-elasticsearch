@@ -62,25 +62,6 @@ beforeEach(function () {
 
 });
 
-it('parent child relationships', function () {
-
-  $users = User::whereTermExists('title')->get();
-  expect($users)->toHaveCount(8);
-
-  $users = User::whereTermFuzzy('title', 'admik')->get();
-  expect($users)->toHaveCount(3);
-
-  $users = User::whereMatch('description', 'exploring')->get();
-  expect($users)->toHaveCount(1);
-
-  $users = User::whereMatchPhrase('description', 'exploring the')->get();
-  expect($users)->toHaveCount(1);
-
-  $users = User::whereMatchPhrasePrefix('description', 'Robert actively')->get();
-  expect($users)->toHaveCount(1);
-
-});
-
 it('ES Specific Queries', function () {
 
   $users = User::whereTermExists('title')->get();
@@ -89,13 +70,13 @@ it('ES Specific Queries', function () {
   $users = User::whereTermFuzzy('title', 'admik')->get();
   expect($users)->toHaveCount(3);
 
-  $users = User::whereMatch('description', 'exploring')->get();
+  $users = User::searchMatch('description', 'exploring')->get();
   expect($users)->toHaveCount(1);
 
-  $users = User::whereMatchPhrase('description', 'exploring the')->get();
+  $users = User::searchMatchPhrase('description', 'exploring the')->get();
   expect($users)->toHaveCount(1);
 
-  $users = User::whereMatchPhrasePrefix('description', 'Robert actively')->get();
+  $users = User::searchMatchPhrasePrefix('description', 'Robert actively')->get();
   expect($users)->toHaveCount(1);
 
 });
@@ -147,19 +128,19 @@ it('Nested Queries', function () {
 });
 
   it('can search with field boosting', function () {
-    $users = User::whereSearch('John', ['name' => 5, 'description' => 1])->get();
+    $users = User::search('John', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)
                   ->and($users[0]['name'])->toBe('John John Yoe')
                   ->and($users[1]['name'])->toBe('John Doe');
   });
 
   it('can search across all fields', function () {
-    $users = User::whereSearch('admin', '*')->get();
+    $users = User::search('admin', '*')->get();
     expect($users)->toHaveCount(3);
   });
 
   it('can search with fuzziness', function () {
-    $users = User::whereSearch('Jon', ['name' => 5, 'description' => 1], [
+    $users = User::search('Jon', ['name' => 5, 'description' => 1], [
       'fuzziness' => 'AUTO',
     ])->get();
     expect($users)->toHaveCount(2)
@@ -168,18 +149,18 @@ it('Nested Queries', function () {
   });
 
   it('can search with specific fields only', function () {
-    $users = User::whereSearch('young', ['description' => 1])->get();
+    $users = User::search('young', ['description' => 1])->get();
     expect($users)->toHaveCount(1)
                   ->and($users[0]['name'])->toBe('Harry Hoe');
   });
 
   it('returns empty result for unmatched query', function () {
-    $users = User::whereSearch('nonexistent', ['name' => 1, 'description' => 1])->get();
+    $users = User::search('nonexistent', ['name' => 1, 'description' => 1])->get();
     expect($users)->toBeEmpty();
   });
 
   it('can use constant score query', function () {
-    $users = User::whereSearch('John', ['name' => 5, 'description' => 1], [
+    $users = User::search('John', ['name' => 5, 'description' => 1], [
       'constant_score' => true,
     ])->get();
     expect($users)->toHaveCount(2)
@@ -189,18 +170,18 @@ it('Nested Queries', function () {
 
   it('can search and highlight', function () {
 
-    $users = User::whereSearch('John')->highlight(['name'])->get();
+    $users = User::search('John')->highlight(['name'])->get();
     expect($users)->toHaveCount(2)
                   ->and($users[0]->getHighlights())->toHaveKey('name')
                   ->and($users[0]->getHighlight('name'))->toBe('<em>John</em> Doe');
 
-    $users = User::whereSearch('John')->highlight(['name'], '<strong>', '</strong>')->get();
+    $users = User::search('John')->highlight(['name'], '<strong>', '</strong>')->get();
     expect($users)->toHaveCount(2)
                   ->and($users[0]->getHighlights())->toHaveKey('name')
                   ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe');
 
 
-    $users = User::whereSearch('John')->highlight(['name' =>  ['pre_tags' => '<strong>', 'post_tags' => '</strong>'], 'description'])->get();
+    $users = User::search('John')->highlight(['name' =>  ['pre_tags' => '<strong>', 'post_tags' => '</strong>'], 'description'])->get();
     expect($users)->toHaveCount(2)
                   ->and($users[0]->getHighlights())->toHaveKey('name')
                   ->and($users[0]->getHighlight('name'))->toBe('<strong>John</strong> Doe')
