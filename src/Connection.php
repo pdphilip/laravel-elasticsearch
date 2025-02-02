@@ -14,7 +14,6 @@ use Exception;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
-use Iterator;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
@@ -100,11 +99,11 @@ class Connection extends BaseConnection
                     'cert_password' => null,
                 ],
                 'options' => [
-                  'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
-                  'logging' => false,
-                  'ssl_verification' => true,
-                  'retires' => null,
-                  'meta_header' => null,
+                    'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
+                    'logging' => false,
+                    'ssl_verification' => true,
+                    'retires' => null,
+                    'meta_header' => null,
                 ],
             ],
             $this->config
@@ -141,7 +140,7 @@ class Connection extends BaseConnection
             $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
 
-         $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
+        $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
 
         if (! empty($this->config['options']['retires'])) {
             $this->options()->add('retires', $this->config['options']['retires']);
@@ -255,7 +254,8 @@ class Connection extends BaseConnection
         return call_user_func_array([$this->connection, $method], $parameters);
     }
 
-    public function createAlias(string $index, string $name): void {
+    public function createAlias(string $index, string $name): void
+    {
         $this->indices()->putAlias(compact('index', 'name'));
     }
 
@@ -268,15 +268,13 @@ class Connection extends BaseConnection
         }
     }
 
-  /**
-   * Run a select statement against the database and return a generator.
-   *
-   * @param array  $query
-   * @param string $scrollTimeout
-   * @param int    $size
-   *
-   * @return \Generator
-   */
+    /**
+     * Run a select statement against the database and return a generator.
+     *
+     * @param  array  $query
+     * @param  string  $scrollTimeout
+     * @param  int  $size
+     */
     public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100): \Generator
     {
 
@@ -294,19 +292,18 @@ class Connection extends BaseConnection
 
     }
 
-  /**
-   * Run a select statement against the database and return a generator.
-   *
-   * @param string $query
-   * @param array  $bindings
-   * @param bool   $useReadPdo
-   * @param string $scrollTimeout
-   *
-   */
+    /**
+     * Run a select statement against the database and return a generator.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
+     * @param  string  $scrollTimeout
+     */
     public function cursor($query, $bindings = [], $useReadPdo = false, $scrollTimeout = '30s')
     {
 
-      $limit = is_array($query) && isset($query['body']['size']) ? $query['body']['size'] : NULL;
+        $limit = is_array($query) && isset($query['body']['size']) ? $query['body']['size'] : null;
 
         //We want to scroll by 1000 row chunks
         $query['body']['size'] = 1000;
@@ -360,6 +357,16 @@ class Connection extends BaseConnection
     public function getClient(): ?Client
     {
         return $this->connection;
+    }
+
+    /**
+     * Retrieves information about the client.
+     *
+     * @return array An associative array containing the client's information.
+     */
+    public function getClientInfo(): array
+    {
+        return $this->getClient()->info()->asArray();
     }
 
     /** {@inheritdoc} */
@@ -430,8 +437,8 @@ class Connection extends BaseConnection
     public function logQuery($query, $bindings, $time = null)
     {
 
-        if(is_array($query)){
-          $query = json_encode($query);
+        if (is_array($query)) {
+            $query = json_encode($query);
         }
 
         $this->event(new QueryExecuted($query, $bindings, $time, $this));
