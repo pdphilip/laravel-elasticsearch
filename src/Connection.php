@@ -42,6 +42,8 @@ class Connection extends BaseConnection
 
     protected string $connectionName = '';
 
+    protected string $indexPrefix = '';
+
     protected string $indexSuffix = '';
 
     /**
@@ -51,7 +53,9 @@ class Connection extends BaseConnection
 
     protected $requestTimeout;
 
-    /** {@inheritdoc} */
+    /** {@inheritdoc}
+     * @throws AuthenticationException
+     */
     public function __construct(array $config)
     {
         $this->connectionName = $config['name'];
@@ -72,6 +76,10 @@ class Connection extends BaseConnection
 
         $this->useDefaultQueryGrammar();
     }
+
+    //----------------------------------------------------------------------
+    // Connection Setup
+    //----------------------------------------------------------------------
 
     /**
      * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
@@ -148,28 +156,9 @@ class Connection extends BaseConnection
         if (isset($this->config['options']['meta_header'])) {
             $this->options()->add('meta_header', $this->config['options']['meta_header']);
         }
-    }
-
-    /**
-     * Execute an SQL statement and return the boolean result.
-     *
-     * @param  string  $query
-     * @param  array  $bindings
-     * @return bool
-     */
-    public function statement($query, $bindings = [], ?Blueprint $blueprint = null)
-    {
-        return $this->run($query, $bindings, function ($query, $bindings) {
-            if ($this->pretending()) {
-                return true;
-            }
-
-            $this->bindValues($query, $this->prepareBindings($bindings));
-
-            $this->recordsHaveBeenModified();
-
-            return $query();
-        });
+        if (! empty($this->config['index_prefix'])) {
+            $this->setIndexPrefix($this->config['index_prefix']);
+        }
     }
 
     /**
@@ -242,23 +231,105 @@ class Connection extends BaseConnection
         return $clientBuilder;
     }
 
-    /**
-     * Dynamically pass methods to the connection.
-     *
-     * @param  string  $method
-     * @param  array  $parameters
-     * @return mixed
-     */
-    public function __call($method, $parameters)
+    /** {@inheritdoc} */
+    public function disconnect(): void
     {
-        return call_user_func_array([$this->connection, $method], $parameters);
+        $this->connection = null;
     }
+
+    //----------------------------------------------------------------------
+    // Connection getters
+    //----------------------------------------------------------------------
+    public function getClient(): ?Client
+    {
+        return $this->connection;
+    }
+
+    /**
+     * Retrieves information about the client.
+     */
+    public function getClientInfo(): array
+    {
+        return $this->getClient()->info()->asArray();
+    }
+
+    /** {@inheritdoc} */
+    public function getDriverName(): string
+    {
+        return 'elasticsearch';
+    }
+
+    /**
+     * @return Schema\Builder
+     */
+    public function getSchemaBuilder()
+    {
+        return new Schema\Builder($this);
+    }
+
+    /**
+     * @return Schema\Grammars\Grammar
+     */
+    public function getSchemaGrammar()
+    {
+        return new Schema\Grammars\Grammar;
+    }
+
+    /** {@inheritdoc} */
+    protected function getDefaultPostProcessor(): Query\Processor
+    {
+        return new Query\Processor;
+    }
+
+    /** {@inheritdoc} */
+    protected function getDefaultQueryGrammar(): Query\Grammar
+    {
+        return new Query\Grammar;
+    }
+
+    /** {@inheritdoc} */
+    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
+    {
+        return new Schema\Grammars\Grammar;
+    }
+
+    public function getIndexPrefix(): string
+    {
+        return $this->getTablePrefix();
+    }
+    //----------------------------------------------------------------------
+    // Connection Setters
+    //----------------------------------------------------------------------
+
+    public function setIndexPrefix($prefix): self
+    {
+        return $this->setTablePrefix($prefix);
+    }
+
+    /**
+     * Set the timeout for the entire Elasticsearch request
+     *
+     * @param  float  $requestTimeout  seconds
+     */
+    public function setRequestTimeout(float $requestTimeout): self
+    {
+        $this->requestTimeout = $requestTimeout;
+
+        return $this;
+    }
+
+    //----------------------------------------------------------------------
+    // Schema Management
+    //----------------------------------------------------------------------
 
     public function createAlias(string $index, string $name): void
     {
         $this->indices()->putAlias(compact('index', 'name'));
     }
 
+    /**
+     * @throws QueryException
+     */
     public function createIndex(string $index, array $body): void
     {
         try {
@@ -266,6 +337,75 @@ class Connection extends BaseConnection
         } catch (\Exception $e) {
             throw new QueryException($e);
         }
+    }
+
+    public function dropIndex(string $index): void
+    {
+        $this->indices()->delete(compact('index'));
+    }
+
+    /**
+     * Run a reindex statement against the database.
+     *
+     * @param  string|array  $query
+     * @param  array  $bindings
+     * @return array
+     */
+    public function reindex($query, $bindings = [])
+    {
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->reindex(...)
+        );
+    }
+
+    public function updateIndex(string $index, array $body): void
+    {
+        $this->indices()->putMapping(compact('index', 'body'));
+    }
+
+    //----------------------------------------------------------------------
+    // Query Grammar
+    //----------------------------------------------------------------------
+
+    /**
+     * Set the table prefix in use by the connection.
+     *
+     * @param  string  $suffix
+     * @return void
+     */
+    public function setIndexSuffix($suffix)
+    {
+        $this->indexSuffix = $suffix;
+
+        $this->getQueryGrammar()->setIndexSuffix($suffix);
+    }
+
+    //----------------------------------------------------------------------
+    // Query Execution
+    //----------------------------------------------------------------------
+
+    /**
+     * Execute an SQL statement and return the boolean result.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @return bool
+     */
+    public function statement($query, $bindings = [], ?Blueprint $blueprint = null)
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) {
+            if ($this->pretending()) {
+                return true;
+            }
+
+            $this->bindValues($query, $this->prepareBindings($bindings));
+
+            $this->recordsHaveBeenModified();
+
+            return $query();
+        });
     }
 
     /**
@@ -327,17 +467,6 @@ class Connection extends BaseConnection
         }
     }
 
-    /** {@inheritdoc} */
-    public function disconnect(): void
-    {
-        $this->connection = null;
-    }
-
-    public function dropIndex(string $index): void
-    {
-        $this->indices()->delete(compact('index'));
-    }
-
     /**
      * Run a delete statement against the database.
      *
@@ -352,43 +481,6 @@ class Connection extends BaseConnection
             $bindings,
             $this->connection->deleteByQuery(...)
         );
-    }
-
-    public function getClient(): ?Client
-    {
-        return $this->connection;
-    }
-
-    /**
-     * Retrieves information about the client.
-     *
-     * @return array An associative array containing the client's information.
-     */
-    public function getClientInfo(): array
-    {
-        return $this->getClient()->info()->asArray();
-    }
-
-    /** {@inheritdoc} */
-    public function getDriverName(): string
-    {
-        return 'elasticsearch';
-    }
-
-    /**
-     * @return Schema\Builder
-     */
-    public function getSchemaBuilder()
-    {
-        return new Schema\Builder($this);
-    }
-
-    /**
-     * @return Schema\Grammars\Grammar
-     */
-    public function getSchemaGrammar()
-    {
-        return new Schema\Grammars\Grammar;
     }
 
     /**
@@ -493,31 +585,6 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Set the table prefix in use by the connection.
-     *
-     * @param  string  $suffix
-     * @return void
-     */
-    public function setIndexSuffix($suffix)
-    {
-        $this->indexSuffix = $suffix;
-
-        $this->getQueryGrammar()->setIndexSuffix($suffix);
-    }
-
-    /**
-     * Get the timeout for the entire Elasticsearch request
-     *
-     * @param  float  $requestTimeout  seconds
-     */
-    public function setRequestTimeout(float $requestTimeout): self
-    {
-        $this->requestTimeout = $requestTimeout;
-
-        return $this;
-    }
-
-    /**
      * Run an update statement against the database.
      *
      * @param  string  $query
@@ -536,50 +603,6 @@ class Connection extends BaseConnection
         );
     }
 
-    /**
-     * Run a reindex statement against the database.
-     *
-     * @param  string|array  $query
-     * @param  array  $bindings
-     * @return array
-     */
-    public function reindex($query, $bindings = [])
-    {
-        return $this->run(
-            $query,
-            $bindings,
-            $this->connection->reindex(...)
-        );
-    }
-
-    public function updateIndex(string $index, array $body): void
-    {
-        $this->indices()->putMapping(compact('index', 'body'));
-    }
-
-    public function getIndexPrefix(): string
-    {
-        return $this->config['index_prefix'];
-    }
-
-    /** {@inheritdoc} */
-    protected function getDefaultPostProcessor(): Query\Processor
-    {
-        return new Query\Processor;
-    }
-
-    /** {@inheritdoc} */
-    protected function getDefaultQueryGrammar(): Query\Grammar
-    {
-        return new Query\Grammar;
-    }
-
-    /** {@inheritdoc} */
-    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
-    {
-        return new Schema\Grammars\Grammar;
-    }
-
     /** {@inheritdoc} */
     protected function runQueryCallback($query, $bindings, \Closure $callback)
     {
@@ -590,5 +613,21 @@ class Connection extends BaseConnection
         }
 
         return $result;
+    }
+
+    //----------------------------------------------------------------------
+    // Call Catch
+    //----------------------------------------------------------------------
+
+    /**
+     * Dynamically pass methods to the connection.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        return call_user_func_array([$this->connection, $method], $parameters);
     }
 }

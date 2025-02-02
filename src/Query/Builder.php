@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesOptions;
 
@@ -1472,5 +1473,64 @@ class Builder extends BaseBuilder
         $this->options()->add('refresh', false);
 
         return $this;
+    }
+
+    //----------------------------------------------------------------------
+    // Schema operations
+    //----------------------------------------------------------------------
+
+    /**
+     * {@inheritdoc}
+     */
+    //    public function truncate(): int
+    //    {
+    //        $result = $this->connection->deleteAll([]);
+    //
+    //        if ($result->isSuccessful()) {
+    //            return $result->getDeletedCount();
+    //        }
+    //
+    //        return 0;
+    //    }
+
+    public function deleteIndex(): bool
+    {
+        return Schema::connection($this->connection->getName())->delete($this->index);
+    }
+
+    public function deleteIndexIfExists(): bool
+    {
+        return Schema::connection($this->connection->getName())->deleteIfExists($this->index);
+    }
+
+    public function getIndexMappings(): array
+    {
+        return Schema::connection($this->connection->getName())->getMappings($this->index);
+    }
+
+    public function getFieldMapping(string|array $field = '*', bool $raw = false): array
+    {
+        return Schema::connection($this->connection->getName())->getFieldMapping($this->index, $field, $raw);
+    }
+
+    public function getIndexSettings(): array
+    {
+        return Schema::connection($this->connection->getName())->getSettings($this->index);
+    }
+
+    public function createIndex(array $settings = []): bool
+    {
+        if (! $this->indexExists()) {
+            $this->connection->indexCreate($settings);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function indexExists(): bool
+    {
+        return Schema::connection($this->connection->getName())->hasIndex($this->index);
     }
 }

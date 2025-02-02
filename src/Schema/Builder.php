@@ -10,10 +10,25 @@ use Illuminate\Support\Arr;
 
 class Builder extends BaseBuilder
 {
+    //----------------------------------------------------------------------
+    // Index Config & Reads
+    //----------------------------------------------------------------------
+
     public function index($table, Closure $callback)
     {
         $this->table($table, $callback);
     }
+
+    public function overridePrefix($value): Builder
+    {
+        $this->connection->setIndexPrefix($value);
+
+        return $this;
+    }
+
+    //----------------------------------------------------------------------
+    // Index Writes
+    //----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}
@@ -31,19 +46,16 @@ class Builder extends BaseBuilder
 
     /**
      * Run a reindex statement against the database.
-     *
      */
     public function reindex($from, $to, $options = [])
     {
-      $params = ['body' => [
-        'source' => ['index' => $from]
-        , 'dest' => ['index' => $to]
-      ]
-      ]
-      ;
-      $params = [...$params, ...$options];
+        $params = ['body' => [
+            'source' => ['index' => $from], 'dest' => ['index' => $to],
+        ],
+        ];
+        $params = [...$params, ...$options];
 
-      return $this->connection->reindex($params)->asArray();
+        return $this->connection->reindex($params)->asArray();
     }
 
     /**
