@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
+use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
@@ -28,6 +29,8 @@ use function strtolower;
 
 /**
  * @mixin Client
+ *
+ * @method Processor getPostProcessor()
  */
 class Connection extends BaseConnection
 {
@@ -41,8 +44,6 @@ class Connection extends BaseConnection
     protected ?Client $connection;
 
     protected string $connectionName = '';
-
-    protected string $indexPrefix = '';
 
     protected string $indexSuffix = '';
 
@@ -75,6 +76,10 @@ class Connection extends BaseConnection
         $this->useDefaultSchemaGrammar();
 
         $this->useDefaultQueryGrammar();
+
+        if (! empty($this->config['index_prefix'])) {
+            $this->setIndexPrefix($this->config['index_prefix']);
+        }
     }
 
     //----------------------------------------------------------------------
@@ -156,9 +161,7 @@ class Connection extends BaseConnection
         if (isset($this->config['options']['meta_header'])) {
             $this->options()->add('meta_header', $this->config['options']['meta_header']);
         }
-        if (! empty($this->config['index_prefix'])) {
-            $this->setIndexPrefix($this->config['index_prefix']);
-        }
+
     }
 
     /**

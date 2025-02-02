@@ -7,7 +7,11 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Closure;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
+use PDPhilip\Elasticsearch\Connection;
 
+/**
+ * @property Connection $connection
+ */
 class Builder extends BaseBuilder
 {
     //----------------------------------------------------------------------
@@ -27,7 +31,73 @@ class Builder extends BaseBuilder
     }
 
     //----------------------------------------------------------------------
-    // Index Writes
+    // Index getters
+    //----------------------------------------------------------------------
+    public function getTables()
+    {
+        return $this->connection->getPostProcessor()->processTables(
+            $this->connection->cat()->indices(
+                [
+                    'index' => $this->connection->getTablePrefix().'*',
+                    'format' => 'json',
+                ]
+            )
+        );
+    }
+
+    /**
+     * Alias for getTables with an optional parameter to get all indices within connection.
+     *
+     * @return array
+     */
+    public function getIndices(bool $allInCluster = false)
+    {
+        if ($allInCluster) {
+            $this->connection->setIndexPrefix(null);
+        }
+
+        return $this->getTables();
+    }
+
+    /**
+     * Returns the mapping details about your indices.
+     *
+     * @param  string  $table
+     * @param  string  $column
+     */
+    public function getFieldMapping($table, $column): array
+    {
+        $params = ['index' => $table, 'fields' => $column];
+
+        return $this->connection->indices()->getFieldMapping($params)->asArray();
+    }
+
+    /**
+     * Returns the mapping details about your indices.
+     *
+     * @param  string|array  $table
+     */
+    public function getMappings($table): array
+    {
+        $params = ['index' => Arr::wrap($table)];
+
+        return $this->connection->indices()->getMapping($params)->asArray();
+    }
+
+    /**
+     * Shows you the currently configured settings for one or more indices
+     *
+     * @param  string|array  $table
+     */
+    public function getSettings($table): array
+    {
+        $params = ['index' => Arr::wrap($table)];
+
+        return $this->connection->indices()->getSettings($params)->asArray();
+    }
+
+    //----------------------------------------------------------------------
+    // Index Modifiers
     //----------------------------------------------------------------------
 
     /**
@@ -73,50 +143,6 @@ class Builder extends BaseBuilder
                 $callback($blueprint);
             }
         }));
-    }
-
-    public function getTables()
-    {
-        return $this->connection->getPostProcessor()->processTables(
-            $this->connection->cat()->indices(['format' => 'JSON'])
-        );
-    }
-
-    /**
-     * Returns the mapping details about your indices.
-     *
-     * @param  string  $table
-     * @param  string  $column
-     */
-    public function getFieldMapping($table, $column): array
-    {
-        $params = ['index' => $table, 'fields' => $column];
-
-        return $this->connection->indices()->getFieldMapping($params)->asArray();
-    }
-
-    /**
-     * Returns the mapping details about your indices.
-     *
-     * @param  string|array  $table
-     */
-    public function getMappings($table): array
-    {
-        $params = ['index' => Arr::wrap($table)];
-
-        return $this->connection->indices()->getMapping($params)->asArray();
-    }
-
-    /**
-     * Shows you the currently configured settings for one or more indices
-     *
-     * @param  string|array  $table
-     */
-    public function getSettings($table): array
-    {
-        $params = ['index' => Arr::wrap($table)];
-
-        return $this->connection->indices()->getSettings($params)->asArray();
     }
 
     public function hasColumn($table, $column): bool
