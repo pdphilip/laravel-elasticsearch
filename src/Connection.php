@@ -337,7 +337,7 @@ class Connection extends BaseConnection
     {
         try {
             $this->indices()->create(compact('index', 'body'));
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new QueryException($e);
         }
     }
@@ -365,7 +365,15 @@ class Connection extends BaseConnection
 
     public function updateIndex(string $index, array $body): void
     {
-        $this->indices()->putMapping(compact('index', 'body'));
+        if ($mappings = $body['mappings'] ?? null) {
+            $this->indices()->putMapping(['index' => $index, 'body' => ['properties' => $mappings['properties']]]);
+        }
+        if ($settings = $body['settings'] ?? null) {
+            $this->indices()->close(['index' => $index]);
+            $this->indices()->putSettings(['index' => $index, 'body' => ['settings' => $settings]]);
+            $this->indices()->open(['index' => $index]);
+        }
+
     }
 
     //----------------------------------------------------------------------

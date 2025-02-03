@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Traits\Schema;
 
+use Exception;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 
 trait ManagesDefaultMigrations
@@ -431,65 +432,84 @@ trait ManagesDefaultMigrations
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function bigIncrements($column)
     {
-        throw new \Exception('Increments are not supported by ElasticSearch.');
+        throw new Exception('Increments are not supported by ElasticSearch.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * ---------------------------------------------------------------------
+     *      Internal Laravel init migration catchers
+     *      *Case for when ES is the only datasource and migration tables are trying to be created
+     * ---------------------------------------------------------------------
      */
     public function increments($column)
     {
-        throw new \Exception('Increments are not supported by ElasticSearch.');
+        return $this->keyword($column);
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function mediumIncrements($column)
     {
-        throw new \Exception('Increments are not supported by ElasticSearch.');
+        throw new Exception('Increments are not supported by ElasticSearch.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function tinyIncrements($column)
     {
-        throw new \Exception('Increments are not supported by ElasticSearch.');
+        throw new Exception('Increments are not supported by ElasticSearch.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function smallIncrements($column)
     {
-        throw new \Exception('Increments are not supported by ElasticSearch.');
+        throw new Exception('Increments are not supported by ElasticSearch.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function set($column, array $allowed)
     {
-        throw new \Exception('set(s) are not supported by ElasticSearch use keyword instead.');
+        throw new Exception('set(s) are not supported by ElasticSearch use keyword instead.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function json($column)
     {
-        throw new \Exception('ElasticSearch is all json. No need to specify a type.');
+        throw new Exception('ElasticSearch is all json. No need to specify a type.');
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws Exception
      */
     public function jsonb($column)
     {
-        throw new \Exception('ElasticSearch is all json. No need to specify a type.');
+        throw new Exception('ElasticSearch is all json. No need to specify a type.');
     }
 }

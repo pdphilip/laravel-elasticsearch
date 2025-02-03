@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Schema;
 
+use Closure;
+use Exception;
 use Illuminate\Database\Schema\Blueprint as BlueprintBase;
 use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Schema\Definitions\AnalyzerPropertyDefinition;
+use PDPhilip\Elasticsearch\Schema\Definitions\CharFilterPropertyDefinition;
+use PDPhilip\Elasticsearch\Schema\Definitions\FilterPropertyDefinition;
+use PDPhilip\Elasticsearch\Schema\Definitions\NormalizerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
+use PDPhilip\Elasticsearch\Schema\Definitions\TokenizerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
 use PDPhilip\Elasticsearch\Traits\Schema\ManagesElasticMigrations;
@@ -32,6 +38,14 @@ class Blueprint extends BlueprintBase
 
     protected array $analyzers = [];
 
+    protected array $tokenizers = [];
+
+    protected array $filters = [];
+
+    protected array $charFilters = [];
+
+    protected array $normalizers = [];
+
     protected array $meta = [];
 
     /**
@@ -40,9 +54,14 @@ class Blueprint extends BlueprintBase
      * @param  string  $key  The setting name.
      * @param  mixed  $value  The setting value.
      */
-    public function addIndexSettings(string $key, mixed $value): void
+    public function withSetting(string $key, mixed $value): void
     {
         $this->indexSettings[$key] = $value;
+    }
+
+    public function withMapping(string $key, mixed $value): void
+    {
+        $this->addMetaField($key, $value);
     }
 
     /**
@@ -58,11 +77,9 @@ class Blueprint extends BlueprintBase
     /**
      * Execute the blueprint against the database.
      *
-     * @param  \Illuminate\Database\Connection  $connection
-     * @param  \Illuminate\Database\Schema\Grammars\Grammar  $grammar
-     * @return void
+     * @override
      */
-    public function build($connection, $grammar)
+    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar): void
     {
         foreach ($this->toDSL($connection, $grammar) as $statement) {
             if ($connection->pretending()) {
@@ -74,7 +91,7 @@ class Blueprint extends BlueprintBase
     }
 
     /**
-     * @return \Closure[]
+     * @return Closure[]
      */
     public function toDSL(Connection $connection, Grammar $grammar): array
     {
@@ -88,15 +105,15 @@ class Blueprint extends BlueprintBase
         $this->ensureCommandsAreValid($connection);
 
         foreach ($this->commands as $command) {
-          if(!empty($command->name)){
-            $method = 'compile'.ucfirst((string) $command->name);
+            if (! empty($command->name)) {
+                $method = 'compile'.ucfirst((string) $command->name);
 
-            if (method_exists($grammar, $method)) {
-                if (! is_null($statement = $grammar->$method($this, $command, $connection))) {
-                    $statements[] = $statement;
+                if (method_exists($grammar, $method)) {
+                    if (! is_null($statement = $grammar->$method($this, $command, $connection))) {
+                        $statements[] = $statement;
+                    }
                 }
             }
-          }
         }
 
         return $statements;
@@ -107,6 +124,9 @@ class Blueprint extends BlueprintBase
         $this->document = $name;
     }
 
+    /**
+     * @throws Exception
+     */
     public function dynamic(string|bool $option = self::DYNAMIC['TRUE']): void
     {
 
@@ -116,7 +136,7 @@ class Blueprint extends BlueprintBase
             return;
         }
 
-        throw new \Exception(
+        throw new Exception(
             "$option is an invalid dynamic option, valid options are: ".implode(', ', self::DYNAMIC)
         );
 
@@ -176,6 +196,46 @@ class Blueprint extends BlueprintBase
     }
 
     /**
+     * @return TokenizerPropertyDefinition[]
+     */
+    public function getAddedTokenizers()
+    {
+        return array_filter($this->tokenizers, function ($column) {
+            return ! $column->change;
+        });
+    }
+
+    /**
+     * @return CharFilterPropertyDefinition[]
+     */
+    public function getAddedCharFilters()
+    {
+        return array_filter($this->charFilters, function ($column) {
+            return ! $column->change;
+        });
+    }
+
+    /**
+     * @return FilterPropertyDefinition[]
+     */
+    public function getAddedFilters()
+    {
+        return array_filter($this->filters, function ($column) {
+            return ! $column->change;
+        });
+    }
+
+    /**
+     * @return NormalizerPropertyDefinition[]
+     */
+    public function getAddedNormalizers()
+    {
+        return array_filter($this->normalizers, function ($column) {
+            return ! $column->change;
+        });
+    }
+
+    /**
      * Get the metadata for the Blueprint.
      *
      * @return array The array of metadata.
@@ -210,10 +270,8 @@ class Blueprint extends BlueprintBase
 
     /**
      * Indicate that the table should be created if it doesn't exist.
-     *
-     * @return \Illuminate\Support\Fluent
      */
-    public function createIfNotExists()
+    public function createIfNotExists(): Fluent
     {
         return $this->addCommand('createIfNotExists');
     }
@@ -225,7 +283,7 @@ class Blueprint extends BlueprintBase
     {
         $attributes = ['name'];
 
-        if (!empty($type)) {
+        if (! empty($type)) {
             $attributes[] = 'type';
         }
 
@@ -238,15 +296,57 @@ class Blueprint extends BlueprintBase
 
     /**
      * Add a new analyzer to the blueprint.
-     *
-     * @param  string  $name
-     * @return AnalyzerPropertyDefinition
      */
-    public function addAnalyzer($name)
+    public function addAnalyzer(string $name): AnalyzerPropertyDefinition
     {
-        $this->analyzers[] = $analyzer = new AnalyzerPropertyDefinition(compact('name'));
+        $analyzer = new AnalyzerPropertyDefinition(compact('name'));
+        $this->analyzers[] = $analyzer;
 
         return $analyzer;
+    }
+
+    /**
+     * Add a new tokenizer to the blueprint.
+     */
+    public function addTokenizer(string $name): TokenizerPropertyDefinition
+    {
+        $tokenizer = new TokenizerPropertyDefinition(compact('name'));
+        $this->tokenizers[] = $tokenizer;
+
+        return $tokenizer;
+    }
+
+    /**
+     * Add a new filter to the blueprint.
+     */
+    public function addFilter(string $name): FilterPropertyDefinition
+    {
+        $filter = new FilterPropertyDefinition(compact('name'));
+        $this->filters[] = $filter;
+
+        return $filter;
+    }
+
+    /**
+     * Add a new char filter to the blueprint.
+     */
+    public function addCharFilter(string $name): CharFilterPropertyDefinition
+    {
+        $charFilter = new CharFilterPropertyDefinition(compact('name'));
+        $this->charFilters[] = $charFilter;
+
+        return $charFilter;
+    }
+
+    /**
+     * Add a new normalizer to the blueprint.
+     */
+    public function addNormalizer(string $name): NormalizerPropertyDefinition
+    {
+        $normalizer = new NormalizerPropertyDefinition(compact('name'));
+        $this->normalizers[] = $normalizer;
+
+        return $normalizer;
     }
 
     public function routingRequired(): void
@@ -254,10 +354,7 @@ class Blueprint extends BlueprintBase
         $this->addMetaField('_routing', ['required' => true]);
     }
 
-    /**
-     * @return Fluent
-     */
-    public function update()
+    public function update(): Fluent
     {
         return $this->addCommand('update');
     }

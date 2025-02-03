@@ -9,59 +9,39 @@ use Illuminate\Database\Schema\Blueprint as BaseBlueprint;
 use Illuminate\Database\Schema\Grammars\Grammar as BaseGrammar;
 use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 
 class Grammar extends BaseGrammar
 {
     /** @var array */
-    protected $modifiers = ['Boost', 'Dynamic', 'Fields', 'Format', 'Index', 'Properties', 'NullValue'];
+    protected $modifiers = [
+        'Boost',
+        'Dynamic',
+        'Fields',
+        'Format',
+        'IndexField',
+        'Properties',
+        'NullValue',
+        'CopyTo',
+        'Analyzer',
+        'SearchAnalyzer',
+        'SearchQuoteAnalyzer',
+        'Coerce',
+        'DocValues',
+        'Norms',
+    ];
 
     public function compileCreate(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
     {
         return function () use ($blueprint, $connection): void {
-            $body = [
-                'mappings' => array_merge(['properties' => $this->getColumns($blueprint)], $blueprint->getMeta()),
-            ];
-
-            if ($settings = $blueprint->getIndexSettings()) {
-                $body['settings'] = $settings;
-            }
-
-            if ($analyzers = $this->getAnalyzers($blueprint)) {
-                $body['settings']['analysis'] = $analyzers;
-            }
-
-            $connection->createIndex(
-                $index = $blueprint->getIndex(), $body
-            );
+            $body = $this->buildBody($blueprint);
+            $connection->createIndex($index = $blueprint->getIndex(), $body);
 
             $alias = $blueprint->getAlias();
             if ($alias !== $index && ! $connection->indices()->existsAlias(['name' => $alias])->asBool()) {
                 $connection->createAlias($index, $alias);
-            }
-        };
-    }
-
-    public function compileDrop(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
-    {
-        return function (Blueprint $blueprint, Connection $connection): void {
-            $connection->dropIndex(
-                $blueprint->getTable()
-            );
-        };
-    }
-
-    public function compileDropIfExists(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
-    {
-        return function () use ($connection, $blueprint): void {
-            $index = collect($connection->cat()->indices(['format' => 'JSON'])->asArray())
-                ->firstWhere(function ($index) use ($blueprint) {
-                    return Str::contains($index['index'], $blueprint->getTable());
-                });
-
-            if ($index) {
-                $connection->dropIndex($index['index']);
             }
         };
     }
@@ -72,9 +52,8 @@ class Grammar extends BaseGrammar
 
             $index = $connection->indices()->exists(['index' => $blueprint->getTable()]);
             if (! $index->asBool()) {
-                $connection->createIndex(
-                    $blueprint->getIndex(), []
-                );
+                $body = $this->buildBody($blueprint);
+                $connection->createIndex($blueprint->getIndex(), $body);
             }
         };
     }
@@ -82,14 +61,25 @@ class Grammar extends BaseGrammar
     public function compileUpdate(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
     {
         return function (Blueprint $blueprint, Connection $connection): void {
-            $connection->updateIndex(
-                $blueprint->getAlias(),
-                array_merge(
-                    ['properties' => $this->getColumns($blueprint)],
-                    $blueprint->getMeta(),
-                )
-            );
+            $body = $this->buildBody($blueprint);
+            $connection->updateIndex($blueprint->getAlias(), $body);
         };
+    }
+
+    protected function buildBody(Blueprint $blueprint): array
+    {
+        $body = [
+            'mappings' => array_merge(['properties' => $this->getColumns($blueprint)], $blueprint->getMeta()),
+        ];
+        if ($settings = $blueprint->getIndexSettings()) {
+            $body['settings'] = $settings;
+        }
+
+        if ($analysis = $this->getAnalysis($blueprint)) {
+            $body['settings']['analysis'] = $analysis;
+        }
+
+        return $body;
     }
 
     /**
@@ -106,22 +96,16 @@ class Grammar extends BaseGrammar
         return $property;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function format(Blueprint $blueprint, Fluent $property)
+    protected function format(Blueprint $blueprint, Fluent $property): Fluent
     {
         if (isset($property->format) && ! is_string($property->format)) {
-            throw new \InvalidArgumentException('Format modifier must be a string', 400);
+            throw new InvalidArgumentException('Format modifier must be a string', 400);
         }
 
         return $property;
     }
 
-    /**
-     * @return array
-     */
-    protected function getColumns(BaseBlueprint $blueprint)
+    protected function getColumns(BaseBlueprint $blueprint): array
     {
         $columns = [];
 
@@ -139,10 +123,19 @@ class Grammar extends BaseGrammar
         return $columns;
     }
 
-    /**
-     * @return array
-     */
-    protected function getAnalyzers(BaseBlueprint $blueprint)
+    protected function getAnalysis(Blueprint $blueprint): array
+    {
+        return array_merge(
+            $this->getAnalyzers($blueprint),
+            $this->getTokenizers($blueprint),
+            $this->getFilters($blueprint),
+            $this->getCharFilters($blueprint),
+            $this->getNormalizers($blueprint),
+        );
+
+    }
+
+    protected function getAnalyzers(Blueprint $blueprint): array
     {
         $columns = [];
 
@@ -151,46 +144,100 @@ class Grammar extends BaseGrammar
             $key = Str::snake($column->name);
             unset($column->name);
 
-            $columns[$key] = $column->toArray();
+            $columns['analyzer'][$key] = $column->toArray();
         }
 
         return $columns;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function modifyBoost(Blueprint $blueprint, Fluent $property)
+    protected function getTokenizers(Blueprint $blueprint): array
+    {
+        $columns = [];
+
+        foreach ($blueprint->getAddedTokenizers() as $property) {
+            $column = $property;
+            $key = Str::snake($column->name);
+            unset($column->name);
+
+            $columns['tokenizer'][$key] = $column->toArray();
+        }
+
+        return $columns;
+    }
+
+    protected function getCharFilters(Blueprint $blueprint): array
+    {
+        $columns = [];
+
+        foreach ($blueprint->getAddedCharFilters() as $property) {
+            $column = $property;
+            $key = Str::snake($column->name);
+            unset($column->name);
+
+            $columns['char_filter'][$key] = $column->toArray();
+        }
+
+        return $columns;
+    }
+
+    protected function getFilters(Blueprint $blueprint): array
+    {
+        $columns = [];
+
+        foreach ($blueprint->getAddedFilters() as $property) {
+            $column = $property;
+            $key = Str::snake($column->name);
+            unset($column->name);
+
+            $columns['filter'][$key] = $column->toArray();
+        }
+
+        return $columns;
+    }
+
+    protected function getNormalizers(Blueprint $blueprint): array
+    {
+        $columns = [];
+
+        foreach ($blueprint->getAddedNormalizers() as $property) {
+            $column = $property;
+            $key = Str::snake($column->name);
+            unset($column->name);
+
+            $columns['normalizer'][$key] = $column->toArray();
+        }
+
+        return $columns;
+    }
+
+    //----------------------------------------------------------------------
+    // Modifiers
+    //----------------------------------------------------------------------
+
+    protected function modifyBoost(Blueprint $blueprint, Fluent $property): Fluent
     {
         if (! is_null($property->boost) && ! is_numeric($property->boost)) {
-            throw new \InvalidArgumentException('Boost modifier must be numeric', 400);
+            throw new InvalidArgumentException('Boost modifier must be numeric', 400);
         }
 
         return $property;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function modifyDynamic(Blueprint $blueprint, Fluent $property)
+    protected function modifyDynamic(Blueprint $blueprint, Fluent $property): Fluent
     {
         if (! is_null($property->dynamic) && ! is_bool($property->dynamic)) {
-            throw new \InvalidArgumentException('Dynamic modifier must be a boolean', 400);
+            throw new InvalidArgumentException('Dynamic modifier must be a boolean', 400);
         }
 
         return $property;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function modifyNullValue(Blueprint $blueprint, Fluent $property)
+    protected function modifyNullValue(Blueprint $blueprint, Fluent $property): Fluent
     {
-
         if (! empty($property->nullValue) || $property->nullValue === false || $property->nullValue === 0) {
 
             if ($property->type == 'text') {
-                throw new \InvalidArgumentException('text feilds can\'t have a nullValue', 400);
+                throw new InvalidArgumentException('text fields can\'t have a nullValue', 400);
             }
 
             $property->null_value = $property->nullValue;
@@ -200,10 +247,7 @@ class Grammar extends BaseGrammar
         return $property;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function modifyFields(Blueprint $blueprint, Fluent $property)
+    protected function modifyFields(Blueprint $blueprint, Fluent $property): Fluent
     {
         if (! is_null($property->fields)) {
             $fields = $property->fields;
@@ -215,10 +259,7 @@ class Grammar extends BaseGrammar
         return $property;
     }
 
-    /**
-     * @return Fluent
-     */
-    protected function modifyProperties(Blueprint $blueprint, Fluent $property)
+    protected function modifyProperties(Blueprint $blueprint, Fluent $property): Fluent
     {
         if (! is_null($property->properties)) {
             $properties = $property->properties;
@@ -227,6 +268,75 @@ class Grammar extends BaseGrammar
             $property->properties = $this->getColumns($blueprint);
         }
 
+        return $property;
+    }
+
+    protected function modifyCopyTo(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        if (! empty($property->copyTo)) {
+            $property->copy_to = $property->copyTo;
+            unset($property->copyTo);
+        }
+
+        return $property;
+    }
+
+    protected function modifyIndexField(Blueprint $blueprint, Fluent $property): Fluent
+    {
+
+        if (isset($property->indexField)) {
+            $property->index = $property->indexField;
+            unset($property->indexField);
+        }
+
+        return $property;
+    }
+
+    protected function modifyAnalyzer(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        //Nothing to do here, including for consistency or possible future use
+        return $property;
+    }
+
+    protected function modifySearchAnalyzer(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        if (isset($property->searchAnalyzer)) {
+            $property->search_analyzer = $property->searchAnalyzer;
+            unset($property->searchAnalyzer);
+        }
+
+        return $property;
+    }
+
+    protected function modifySearchQuoteAnalyzer(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        if (isset($property->searchQuoteAnalyzer)) {
+            $property->search_quote_analyzer = $property->searchQuoteAnalyzer;
+            unset($property->searchQuoteAnalyzer);
+        }
+
+        return $property;
+    }
+
+    protected function modifyCoerce(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        //Nothing to do here, including for consistency or possible future use
+        return $property;
+    }
+
+    protected function modifyDocValues(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        if (isset($property->docValues)) {
+            $property->doc_values = $property->docValues;
+            unset($property->docValues);
+        }
+
+        return $property;
+    }
+
+    protected function modifyNorms(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        //Nothing to do here, including for consistency or possible future use
         return $property;
     }
 
