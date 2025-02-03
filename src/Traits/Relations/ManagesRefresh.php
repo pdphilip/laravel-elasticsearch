@@ -9,11 +9,11 @@ trait ManagesRefresh
     public function withoutRefresh(): self
     {
 
-      //TODO: Need to check if this is an inverse relationship etc. Need to attach the option in proper places.
+        //TODO: Need to check if this is an inverse relationship etc. Need to attach the option in proper places.
 
-      // Add the `refresh` option to the related model
-      $this->related->options()->add('refresh', false);
+        // Add the `refresh` option to the related model
+        $this->related->options()->add('refresh', false);
 
-      return $this;
+        return $this;
     }
 }

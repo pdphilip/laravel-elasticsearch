@@ -33,7 +33,7 @@ trait ElasticsearchModel
 
     public function newUniqueId(): string
     {
-           return Helpers::uuid();
+        return Helpers::uuid();
     }
 
     /**

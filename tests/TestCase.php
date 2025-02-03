@@ -9,7 +9,6 @@ use PDPhilip\Elasticsearch\ElasticServiceProvider;
 
 class TestCase extends Orchestra
 {
-
     protected function getPackageProviders($app): array
     {
         return [

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use PDPhilip\Elasticsearch\Tests\Models\Birthday;
-  use PDPhilip\Elasticsearch\Tests\Models\Product;
-  use PDPhilip\Elasticsearch\Tests\Models\Scoped;
+use PDPhilip\Elasticsearch\Tests\Models\Product;
+use PDPhilip\Elasticsearch\Tests\Models\Scoped;
 use PDPhilip\Elasticsearch\Tests\Models\User;
 
 beforeEach(function () {
@@ -35,23 +35,23 @@ beforeEach(function () {
         ['name' => 'Boo'],
     ]);
 
-  Product::insert([
-                    ['product' => 'chocolate', 'price' => [20, 5]],
-                    ['product' => 'pumpkin', 'price' => 30],
-                    ['product' => 'apple', 'price' => 10],
-                    ['product' => 'orange juice', 'price' => [25, 7.5]],
-                    ['product' => 'coffee', 'price' => 15],
-                    ['product' => 'tea', 'price' => 12],
-                    ['product' => 'cookies', 'price' => [18, 4.5]],
-                    ['product' => 'ice cream', 'price' => 22],
-                    ['product' => 'bagel', 'price' => 8],
-                    ['product' => 'salad', 'price' => 14],
-                    ['product' => 'sandwich', 'price' => [30, 18.5]],
-                    ['product' => 'pizza', 'price' => 45],
-                    ['product' => 'water', 'price' => 5],
-                    ['product' => 'soda', 'price' => [8, 3]],
-                    ['product' => 'error', 'price' => null],
-                  ]);
+    Product::insert([
+        ['product' => 'chocolate', 'price' => [20, 5]],
+        ['product' => 'pumpkin', 'price' => 30],
+        ['product' => 'apple', 'price' => 10],
+        ['product' => 'orange juice', 'price' => [25, 7.5]],
+        ['product' => 'coffee', 'price' => 15],
+        ['product' => 'tea', 'price' => 12],
+        ['product' => 'cookies', 'price' => [18, 4.5]],
+        ['product' => 'ice cream', 'price' => 22],
+        ['product' => 'bagel', 'price' => 8],
+        ['product' => 'salad', 'price' => 14],
+        ['product' => 'sandwich', 'price' => [30, 18.5]],
+        ['product' => 'pizza', 'price' => 45],
+        ['product' => 'water', 'price' => 5],
+        ['product' => 'soda', 'price' => [8, 3]],
+        ['product' => 'error', 'price' => null],
+    ]);
 
 });
 
@@ -110,13 +110,13 @@ it('tests like clause', function () {
 });
 
 it('tests not like clause', function () {
-    $users = User::where('name', 'not like', '%doe',options: ['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', '%doe', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(7);
 
-    $users = User::where('name', 'not like', '%y%',options: ['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', '%y%', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(6);
 
-    $users = User::where('name', 'not like', 't%',options: ['case_insensitive' => true])->get();
+    $users = User::where('name', 'not like', 't%', options: ['case_insensitive' => true])->get();
     expect($users)->toHaveCount(8);
 });
 
@@ -147,12 +147,12 @@ it('selects specific columns for users', function () {
 
 it('filters users with whereNot', function () {
     expect(User::whereNot('title', 'admin')->get())->toHaveCount(6)
-                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin'))->get())->toHaveCount(6)
-                                                   ->and(User::whereNot('title', '!=', 'admin')->get())->toHaveCount(3)
-                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', '!=', 'admin'))->get())->toHaveCount(3)
-                                                   ->and(User::whereNot('title', '=', 'admin')->get())->toHaveCount(6)
-                                                   ->and(User::whereNot('title', NULL)->get())->toHaveCount(8)
-                                                   ->and(User::whereNot(fn($builder) => $builder->where('title', 'admin')->orWhere('age', 35))->get())->toHaveCount(5);
+        ->and(User::whereNot(fn ($builder) => $builder->where('title', 'admin'))->get())->toHaveCount(6)
+        ->and(User::whereNot('title', '!=', 'admin')->get())->toHaveCount(3)
+        ->and(User::whereNot(fn ($builder) => $builder->where('title', '!=', 'admin'))->get())->toHaveCount(3)
+        ->and(User::whereNot('title', '=', 'admin')->get())->toHaveCount(6)
+        ->and(User::whereNot('title', null)->get())->toHaveCount(8)
+        ->and(User::whereNot(fn ($builder) => $builder->where('title', 'admin')->orWhere('age', 35))->get())->toHaveCount(5);
 });
 
 it('filters users with orWhere', function () {
@@ -192,30 +192,30 @@ it('filters users within range with whereBetween', function () {
 
 it('filters users with whereIn and whereNotIn', function () {
     expect(
-      User::whereIn('age', [
-        13,
-        23
-      ])->get()
+        User::whereIn('age', [
+            13,
+            23,
+        ])->get()
     )->toHaveCount(2)
-     ->and(
-       User::whereIn('age', [
-         33,
-         35,
-         13
-       ])->get()
-     )->toHaveCount(6)
-     ->and(
-       User::whereNotIn('age', [
-         33,
-         35
-       ])->get()
-     )->toHaveCount(4)
-     ->and(
-       User::whereNotNull('age')->whereNotIn('age', [
-         33,
-         35
-       ])->get()
-     )->toHaveCount(3);
+        ->and(
+            User::whereIn('age', [
+                33,
+                35,
+                13,
+            ])->get()
+        )->toHaveCount(6)
+        ->and(
+            User::whereNotIn('age', [
+                33,
+                35,
+            ])->get()
+        )->toHaveCount(4)
+        ->and(
+            User::whereNotNull('age')->whereNotIn('age', [
+                33,
+                35,
+            ])->get()
+        )->toHaveCount(3);
 });
 
 it('filters users by null values with whereNull', function () {
@@ -279,190 +279,190 @@ it('orders users by age', function () {
     expect($user->age)->toBe(37);
 });
 
-  it('counts users with specific age criteria', function () {
+it('counts users with specific age criteria', function () {
     expect(User::where('age', '<>', 35)->count())->toBe(6)
-                                                 ->and(User::select('id', 'age', 'title')->where('age', '<>', 35)->count())->toBe(6);
-  });
+        ->and(User::select('id', 'age', 'title')->where('age', '<>', 35)->count())->toBe(6);
+});
 
-  it('checks existence of users based on age conditions', function () {
+it('checks existence of users based on age conditions', function () {
     expect(User::where('age', '>', 37)->exists())->toBeFalse()
-                                                 ->and(User::where('age', '<', 37)->exists())->toBeTrue();
-  });
+        ->and(User::where('age', '<', 37)->exists())->toBeTrue();
+});
 
-  it('filters users using subquery conditions', function () {
-    expect(User::where('title', 'admin')->orWhere(fn($query) => $query->where('name', 'Tommy Toe')->orWhere('name', 'Error'))->get())->toHaveCount(5)
-   ->and(User::where('title', 'user')->where(fn($query) => $query->where('age', 35)->orWhere('name', 'like', '%Harry%'))->get())->toHaveCount(2)
-   ->and(User::where('age', 35)->orWhere(fn($query) => $query->where('title', 'admin')->orWhere('name', 'Error'))->get())->toHaveCount(5)
-   ->and(User::whereNull('deleted_at')->where('title', 'admin')->where(fn($query) => $query->where('age', '>', 15)->orWhere('name', 'Harry Hoe'))->get())->toHaveCount(3)
-   ->and(User::whereNull('deleted_at')->where(fn($query) => $query->where('name', 'Harry Hoe')->orWhere(fn($query) => $query->where('age', '>', 15)->where('title', '<>', 'admin')))->get())->toHaveCount(5);
-  });
+it('filters users using subquery conditions', function () {
+    expect(User::where('title', 'admin')->orWhere(fn ($query) => $query->where('name', 'Tommy Toe')->orWhere('name', 'Error'))->get())->toHaveCount(5)
+        ->and(User::where('title', 'user')->where(fn ($query) => $query->where('age', 35)->orWhere('name', 'like', '%Harry%'))->get())->toHaveCount(2)
+        ->and(User::where('age', 35)->orWhere(fn ($query) => $query->where('title', 'admin')->orWhere('name', 'Error'))->get())->toHaveCount(5)
+        ->and(User::whereNull('deleted_at')->where('title', 'admin')->where(fn ($query) => $query->where('age', '>', 15)->orWhere('name', 'Harry Hoe'))->get())->toHaveCount(3)
+        ->and(User::whereNull('deleted_at')->where(fn ($query) => $query->where('name', 'Harry Hoe')->orWhere(fn ($query) => $query->where('age', '>', 15)->where('title', '<>', 'admin')))->get())->toHaveCount(5);
+});
 
-  it('filters users using raw conditions', function () {
+it('filters users using raw conditions', function () {
     $where = [
-      'range' => [
-        'age' => [
-          'gt' => 30,
-          'lt' => 40
-        ]
-      ]
+        'range' => [
+            'age' => [
+                'gt' => 30,
+                'lt' => 40,
+            ],
+        ],
     ];
     expect(User::whereRaw($where)->get())->toHaveCount(6);
 
     $where1 = [
-      'range' => [
-        'age' => [
-          'gte' => 30,
-          'lte' => 35
-        ]
-      ]
+        'range' => [
+            'age' => [
+                'gte' => 30,
+                'lte' => 35,
+            ],
+        ],
     ];
 
     $where2 = [
-      'range' => [
-        'age' => [
-          'gte' => 35,
-          'lte' => 40
-        ]
-      ]
+        'range' => [
+            'age' => [
+                'gte' => 35,
+                'lte' => 40,
+            ],
+        ],
     ];
 
     expect(User::whereRaw($where1)->orWhereRaw($where2)->get())->toHaveCount(6);
-  });
+});
 
-  it('filters users with multiple OR conditions', function () {
-    $users = User::where(fn($query) => $query->where('age', 35)->orWhere('age', 33))
-                 ->where(fn($query) => $query->where('name', 'John Doe')->orWhere('name', 'Jane Doe'))
-                 ->get();
+it('filters users with multiple OR conditions', function () {
+    $users = User::where(fn ($query) => $query->where('age', 35)->orWhere('age', 33))
+        ->where(fn ($query) => $query->where('name', 'John Doe')->orWhere('name', 'Jane Doe'))
+        ->get();
     expect($users)->toHaveCount(2);
 
-    $users = User::where(fn($query) => $query->orWhere('age', 35)->orWhere('age', 33))
-                 ->where(fn($query) => $query->orWhere('name', 'John Doe')->orWhere('name', 'Jane Doe'))
-                 ->get();
+    $users = User::where(fn ($query) => $query->orWhere('age', 35)->orWhere('age', 33))
+        ->where(fn ($query) => $query->orWhere('name', 'John Doe')->orWhere('name', 'Jane Doe'))
+        ->get();
     expect($users)->toHaveCount(2);
-  });
+});
 
-  it('paginates results', function () {
+it('paginates results', function () {
     $results = User::paginate(2);
     expect($results->count())->toBe(2)
-                             ->and($results->first()->title)->not()->toBeNull()
-                             ->and($results->total())->toBe(9);
+        ->and($results->first()->title)->not()->toBeNull()
+        ->and($results->total())->toBe(9);
 
     $results = User::paginate(2, ['name', 'age']);
     expect($results->count())->toBe(2)
-                             ->and($results->first()->title)->toBeNull()
-                             ->and($results->total())->toBe(9)
-                             ->and($results->currentPage())->toBe(1);
-  });
+        ->and($results->first()->title)->toBeNull()
+        ->and($results->total())->toBe(9)
+        ->and($results->currentPage())->toBe(1);
+});
 
-  it('uses cursor pagination', function () {
+it('uses cursor pagination', function () {
     $results = User::cursorPaginate(2);
     expect($results->count())->toBe(2)
-                             ->and($results->first()->title)->not()->toBeNull()
-                             ->and($results->nextCursor())->not()->toBeNull()
-                             ->and($results->onFirstPage())->toBeTrue();
+        ->and($results->first()->title)->not()->toBeNull()
+        ->and($results->nextCursor())->not()->toBeNull()
+        ->and($results->onFirstPage())->toBeTrue();
 
     $results = User::cursorPaginate(2, ['name', 'age']);
     expect($results->count())->toBe(2)
-                             ->and($results->first()->title)->toBeNull();
+        ->and($results->first()->title)->toBeNull();
 
     $results = User::orderBy('age', 'desc')->cursorPaginate(2, ['name', 'age']);
     expect($results->count())->toBe(2)
-                             ->and($results->first()->age)->toBe(37)
-                             ->and($results->first()->title)->toBeNull();
-  });
+        ->and($results->first()->age)->toBe(37)
+        ->and($results->first()->title)->toBeNull();
+});
 
-  it('aggregates results by age', function () {
+it('aggregates results by age', function () {
 
     expect(User::max('age'))->toBe(37.0)
-                            ->and(User::min('age'))->toBe(13.0)
-                            ->and(User::avg('age'))->toBe(30.5)
-                            ->and(User::sum('age'))->toBe(244.0);
+        ->and(User::min('age'))->toBe(13.0)
+        ->and(User::avg('age'))->toBe(30.5)
+        ->and(User::sum('age'))->toBe(244.0);
 
-  });
+});
 
-  it('tests groupby', function () {
+it('tests groupby', function () {
 
-    $users = User::groupBy('title')->where('age', 23 )->get();
+    $users = User::groupBy('title')->where('age', 23)->get();
     expect($users)->toHaveCount(1);
 
-  $users = User::groupBy('title')->get();
-  expect($users)->toHaveCount(2)
-                ->and($users[0]['title'])->toBe('admin')
-                ->and($users[0]['_meta']->getDocCount())->toBe(3)
-                ->and($users[1]['title'])->toBe('user')
-                ->and($users[1]['_meta']->getDocCount())->toBe(5);
+    $users = User::groupBy('title')->get();
+    expect($users)->toHaveCount(2)
+        ->and($users[0]['title'])->toBe('admin')
+        ->and($users[0]['_meta']->getDocCount())->toBe(3)
+        ->and($users[1]['title'])->toBe('user')
+        ->and($users[1]['_meta']->getDocCount())->toBe(5);
 
-  $users = User::groupBy('age')->get();
-  expect($users)->toHaveCount(5);
+    $users = User::groupBy('age')->get();
+    expect($users)->toHaveCount(5);
 
-  $users = User::groupBy('age')->take(2)->get();
-  expect($users)->toHaveCount(5);
+    $users = User::groupBy('age')->take(2)->get();
+    expect($users)->toHaveCount(5);
 
     $users = User::groupBy('title', 'age')->get();
     expect($users)->toHaveCount(7)
-      ->and($users[0]->age)->toBe(33)
-      ->and($users[0]->title)->toBe('admin')
-      ->and($users[1]->age)->toBe(35)
-      ->and($users[1]->title)->toBe('admin')
-      ->and($users[2]->age)->toBe(13)
-      ->and($users[2]->title)->toBe('user');
-  });
+        ->and($users[0]->age)->toBe(33)
+        ->and($users[0]->title)->toBe('admin')
+        ->and($users[1]->age)->toBe(35)
+        ->and($users[1]->title)->toBe('admin')
+        ->and($users[2]->age)->toBe(13)
+        ->and($users[2]->title)->toBe('user');
+});
 
-  it('updates records', function () {
+it('updates records', function () {
     expect(User::where(['name' => 'John Doe'])->update(['name' => 'Jim Morrison']))->toBe(1)
-                                                                                   ->and(User::where(['name' => 'Jim Morrison'])->count())->toBe(1);
-  });
+        ->and(User::where(['name' => 'Jim Morrison'])->count())->toBe(1);
+});
 
-  it('fetches unsorted results', function () {
+it('fetches unsorted results', function () {
     $unsortedResults = User::get();
     $unsortedSubset = $unsortedResults->where('age', 35)->values();
 
     expect($unsortedSubset[0]->name)->toBe('John Doe')
-                                    ->and($unsortedSubset[1]->name)->toBe('Brett Boe')
-                                    ->and($unsortedSubset[2]->name)->toBe('Yvonne Yoe');
-  });
+        ->and($unsortedSubset[1]->name)->toBe('Brett Boe')
+        ->and($unsortedSubset[2]->name)->toBe('Yvonne Yoe');
+});
 
-  it('applies multiple sort orders', function () {
+it('applies multiple sort orders', function () {
     $results = User::orderBy('age')->orderBy('name')->get();
     $subset = $results->where('age', 35)->values();
 
     expect($subset[0]->name)->toBe('Brett Boe')
-                            ->and($subset[1]->name)->toBe('John Doe')
-                            ->and($subset[2]->name)->toBe('Yvonne Yoe');
-  });
+        ->and($subset[1]->name)->toBe('John Doe')
+        ->and($subset[2]->name)->toBe('Yvonne Yoe');
+});
 
-  it('sorts by age and name in descending order', function () {
+it('sorts by age and name in descending order', function () {
     $results = User::orderBy('age')->orderBy('name', 'desc')->get();
     $subset = $results->where('age', 35)->values();
 
     expect($subset[0]->name)->toBe('Yvonne Yoe')
-                            ->and($subset[1]->name)->toBe('John Doe')
-                            ->and($subset[2]->name)->toBe('Brett Boe');
-  });
+        ->and($subset[1]->name)->toBe('John Doe')
+        ->and($subset[2]->name)->toBe('Brett Boe');
+});
 
-  it('can apply ES specific sorts', function () {
-    $results = Product::orderBy('price', 'desc', ['mode' => 'sum'] )->first();
+it('can apply ES specific sorts', function () {
+    $results = Product::orderBy('price', 'desc', ['mode' => 'sum'])->first();
     expect($results->product)->toBe('sandwich');
 
-    $results = Product::orderBy('price', 'desc', ['mode' => 'avg'] )->first();
+    $results = Product::orderBy('price', 'desc', ['mode' => 'avg'])->first();
     expect($results->product)->toBe('pizza');
 
-    $results = Product::orderBy('price', 'desc', ['mode' => 'median'] )->first();
+    $results = Product::orderBy('price', 'desc', ['mode' => 'median'])->first();
     expect($results->product)->toBe('pizza');
 
-    $results = Product::orderBy('price', 'desc', ['mode' => 'sum', 'missing' => '_first'] )->first();
+    $results = Product::orderBy('price', 'desc', ['mode' => 'sum', 'missing' => '_first'])->first();
     expect($results->product)->toBe('error');
 
-    $results = Product::orderByDesc('price', ['mode' => 'sum', 'missing' => '_first'] )->first();
+    $results = Product::orderByDesc('price', ['mode' => 'sum', 'missing' => '_first'])->first();
     expect($results->product)->toBe('error');
-  });
+});
 
-  it('deletes users with specific conditions', function () {
+it('deletes users with specific conditions', function () {
     expect(User::where('title', 'admin')->count())->toBe(3);
     User::where('title', 'admin')->delete();
     expect(User::where('title', 'admin')->count())->toBe(0)
-                                                  ->and(User::count())->toBe(6);
+        ->and(User::count())->toBe(6);
 
     User::limit(1000)->delete();
     expect(User::count())->toBe(0);
-  });
+});

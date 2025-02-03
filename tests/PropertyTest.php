@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-  use PDPhilip\Elasticsearch\Tests\Models\HiddenAnimal;
+use PDPhilip\Elasticsearch\Tests\Models\HiddenAnimal;
 
-  beforeEach(function () {
+beforeEach(function () {
     HiddenAnimal::executeSchema();
 });
 

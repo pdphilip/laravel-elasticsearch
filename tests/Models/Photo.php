@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Tests\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use PDPhilip\Elasticsearch\Eloquent\Model;
@@ -11,9 +11,10 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 
 class Photo extends Model
 {
-
     protected $connection = 'elasticsearch';
+
     protected $table = 'photos';
+
     protected static $unguarded = true;
 
     public function hasImage(): MorphTo

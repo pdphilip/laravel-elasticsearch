@@ -53,9 +53,9 @@ it('tests has many with trashed', function () {
     expect($first->deleted_at)->toBeNull()
         ->and($first->user->id)->toBe($user->id)
         ->and($user->softs->pluck('id')->toArray())->toBe([
-                                  $first->id,
-                                  $second->id,
-                              ]);
+            $first->id,
+            $second->id,
+        ]);
 
     $first->delete();
     $user->refresh();

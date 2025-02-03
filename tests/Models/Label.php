@@ -17,8 +17,11 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Label extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $index = 'labels';
+
     protected static $unguarded = true;
+
     protected $fillable = [
         'name',
         'author',
@@ -65,9 +68,9 @@ class Label extends Model
             $table->string('name');
             $table->string('author');
             $table->keyword('labeleds.labeled_id');
-//            $table->string('labeleds')->fields(function (Blueprint $table) {
-//              $table->keyword('labeled_id');
-//            });
+            //            $table->string('labeleds')->fields(function (Blueprint $table) {
+            //              $table->keyword('labeled_id');
+            //            });
             $table->date('created_at');
             $table->date('updated_at');
         });

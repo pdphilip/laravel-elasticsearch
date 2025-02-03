@@ -1,6 +1,6 @@
 <?php
 
-  namespace PDPhilip\Elasticsearch\Tests\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
@@ -14,12 +14,15 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 final class HiddenAnimal extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $keyType = 'string';
+
     protected $fillable = [
         'name',
         'country',
         'can_be_eaten',
     ];
+
     protected $hidden = ['country'];
 
     public static function executeSchema()

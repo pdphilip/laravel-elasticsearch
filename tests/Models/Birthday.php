@@ -11,8 +11,11 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Birthday extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $table = 'birthday';
+
     protected $fillable = ['name', 'birthday'];
+
     protected $casts = ['birthday' => 'datetime'];
 
     /**

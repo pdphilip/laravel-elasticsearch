@@ -1,11 +1,11 @@
 <?php
 
-  declare(strict_types=1);
+declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Contracts;
+namespace PDPhilip\Elasticsearch\Contracts;
 
-  interface ArrayStore
-  {
+interface ArrayStore
+{
     /**
      * Add an item to the repository.
      *
@@ -38,7 +38,7 @@
     /**
      * Merge in other arrays.
      *
-     * @param array<string, mixed> ...$arrays
+     * @param  array<string, mixed>  ...$arrays
      * @return $this
      */
     public function merge(array ...$arrays): static;
@@ -53,8 +53,8 @@
     /**
      * Overwrite the entire repository's contents.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return $this
      */
     public function set(array $data): static;
-  }
+}

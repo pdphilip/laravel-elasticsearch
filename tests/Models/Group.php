@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Tests\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,7 +12,9 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
 class Group extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $table = 'groups';
+
     protected static $unguarded = true;
 
     public function users(): BelongsToMany

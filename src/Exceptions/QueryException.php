@@ -39,8 +39,8 @@ final class QueryException extends Exception
 
         $error = json_decode((string) $result->getResponse()->getBody(), true);
 
-        if(!empty($error['failures'])){
-          return $this->formatAsConflictException($error);
+        if (! empty($error['failures'])) {
+            return $this->formatAsConflictException($error);
         }
 
         return match ($error['error']['type']) {
@@ -57,25 +57,25 @@ final class QueryException extends Exception
 
         // Clean that ish up.
         $items = collect($error['failures'] ?? [])
-          ->filter(function (array $item) {
-            return $item['index'] && ! empty($item['cause']);
-          })
+            ->filter(function (array $item) {
+                return $item['index'] && ! empty($item['cause']);
+            })
           // reduce to max limit
-          ->slice(0, $this->errorLimit)
-          ->values();
+            ->slice(0, $this->errorLimit)
+            ->values();
 
         $totalErrors = collect($error['failures'] ?? []);
 
-        $message->push('Conflict Errors ('.'Showing '.$items->count().' of '.$totalErrors->count() .'):');
+        $message->push('Conflict Errors ('.'Showing '.$items->count().' of '.$totalErrors->count().'):');
 
         $items = $items->map(function (array $item) {
-          return implode("\n", [
-                            "Index: {$item['index']}",
-                            "ID: {$item['id']}",
-                            "Error Type: {$item['cause']['type']}",
-                            "Error Reason: {$item['cause']['reason']}",
-                            "\n",
-                          ]);
+            return implode("\n", [
+                "Index: {$item['index']}",
+                "ID: {$item['id']}",
+                "Error Type: {$item['cause']['type']}",
+                "Error Reason: {$item['cause']['reason']}",
+                "\n",
+            ]);
         })->values()->toArray();
 
         $message->push(...$items);
@@ -86,8 +86,8 @@ final class QueryException extends Exception
     private function formatSearchPhaseExecutionException($error): string
     {
         $message = collect();
-      $message->push("Error Type: {$error['error']['type']}");
-      $message->push("Reason: {$error['error']['reason']}\n\n");
+        $message->push("Error Type: {$error['error']['type']}");
+        $message->push("Reason: {$error['error']['reason']}\n\n");
 
         foreach ($error['error']['root_cause'] as $phase) {
             if ($phase['type'] == 'script_exception') {

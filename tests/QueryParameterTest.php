@@ -21,6 +21,7 @@ it('tests save without refresh', function () {
 
     Event::assertDispatched(function (QueryExecuted $event) {
         $event->sql = json_decode($event->sql, true);
+
         return expect($event->sql['refresh'])->toBeFalse();
     });
 
@@ -35,9 +36,10 @@ it('tests update without refresh', function () {
     $user->save();
 
     $firstEvent = Event::dispatched(QueryExecuted::class, function (QueryExecuted $event) {
-      if(is_string($event->sql)) {
-        $event->sql = json_decode($event->sql, TRUE);
-      }
+        if (is_string($event->sql)) {
+            $event->sql = json_decode($event->sql, true);
+        }
+
         return isset($event->sql['refresh']) && $event->sql['refresh'] === true;
     });
 
@@ -48,8 +50,8 @@ it('tests update without refresh', function () {
 
     // Capture and assert the second QueryExecuted event
     $secondEvent = Event::dispatched(QueryExecuted::class, function (QueryExecuted $event) {
-        if(is_string($event->sql)) {
-          $event->sql = json_decode($event->sql, TRUE);
+        if (is_string($event->sql)) {
+            $event->sql = json_decode($event->sql, true);
         }
 
         return isset($event->sql['refresh']) && $event->sql['refresh'] === false;
@@ -75,6 +77,7 @@ it('tests insert without refresh', function () {
 
     Event::assertDispatched(function (QueryExecuted $event) {
         $event->sql = json_decode($event->sql, true);
+
         return expect($event->sql['refresh'])->toBeFalse();
     });
 
@@ -89,7 +92,8 @@ it('tests create without refresh', function () {
     ]);
 
     Event::assertDispatched(function (QueryExecuted $event) {
-      $event->sql = json_decode($event->sql, true);
+        $event->sql = json_decode($event->sql, true);
+
         return expect($event->sql['refresh'])->toBeFalse();
     });
 });
@@ -105,7 +109,8 @@ it('tests firstOrCreate without refresh', function () {
     expect($user['_id'])->not->toBeEmpty();
 
     $insertEvent = Event::dispatched(QueryExecuted::class, function (QueryExecuted $event) {
-      $event->sql = json_decode($event->sql, true);
+        $event->sql = json_decode($event->sql, true);
+
         return isset($event->sql['refresh']) && $event->sql['refresh'] === false;
     });
 
@@ -129,7 +134,8 @@ it('deletes users with specific conditions', function () {
     User::proceedOnConflicts()->where('title', 'admin')->delete();
 
     $proceedEvent = Event::dispatched(QueryExecuted::class, function (QueryExecuted $event) {
-      $event->sql = json_decode($event->sql, true);
+        $event->sql = json_decode($event->sql, true);
+
         return isset($event->sql['conflicts']) && $event->sql['conflicts'] === 'proceed';
     });
     expect($proceedEvent)->not->toBeEmpty()

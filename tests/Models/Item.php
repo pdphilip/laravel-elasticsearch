@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Tests\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Carbon\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
@@ -15,7 +15,9 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Item extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $index = 'items';
+
     protected static $unguarded = true;
 
     public function user(): BelongsTo

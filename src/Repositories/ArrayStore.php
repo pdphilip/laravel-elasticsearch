@@ -1,15 +1,14 @@
 <?php
 
-  declare(strict_types=1);
+declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Repositories;
+namespace PDPhilip\Elasticsearch\Repositories;
 
-  use Closure;
-  use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;
+use Closure;
+use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;
 
-  class ArrayStore implements ArrayStoreContract
-  {
-
+class ArrayStore implements ArrayStoreContract
+{
     /**
      * The repository's store
      *
@@ -20,11 +19,11 @@
     /**
      * Constructor
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function __construct(array $data = [])
     {
-      $this->data = $data;
+        $this->data = $data;
     }
 
     /**
@@ -34,9 +33,9 @@
      */
     public function add(string $key, mixed $value): static
     {
-      $this->data[$key] = self::value($value);
+        $this->data[$key] = self::value($value);
 
-      return $this;
+        return $this;
     }
 
     /**
@@ -44,7 +43,7 @@
      */
     public function get(string $key, mixed $default = null): mixed
     {
-      return $this->all()[$key] ?? $default;
+        return $this->all()[$key] ?? $default;
     }
 
     /**
@@ -54,7 +53,7 @@
      */
     public function all(): array
     {
-      return $this->data;
+        return $this->data;
     }
 
     /**
@@ -65,7 +64,7 @@
      */
     public function isNotEmpty(): bool
     {
-      return ! $this->isEmpty();
+        return ! $this->isEmpty();
     }
 
     /**
@@ -76,20 +75,20 @@
      */
     public function isEmpty(): bool
     {
-      return empty($this->data);
+        return empty($this->data);
     }
 
     /**
      * Merge in other arrays.
      *
-     * @param array<string, mixed> ...$arrays
+     * @param  array<string, mixed>  ...$arrays
      * @return $this
      */
     public function merge(array ...$arrays): static
     {
-      $this->data = array_merge($this->data, ...$arrays);
+        $this->data = array_merge($this->data, ...$arrays);
 
-      return $this;
+        return $this;
     }
 
     /**
@@ -99,22 +98,22 @@
      */
     public function remove(string $key): static
     {
-      unset($this->data[$key]);
+        unset($this->data[$key]);
 
-      return $this;
+        return $this;
     }
 
     /**
      * Overwrite the entire repository.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return $this
      */
     public function set(array $data): static
     {
-      $this->data = $data;
+        $this->data = $data;
 
-      return $this;
+        return $this;
     }
 
     /**
@@ -122,6 +121,6 @@
      */
     public static function value(mixed $value, mixed ...$args): mixed
     {
-      return $value instanceof Closure ? $value(...$args) : $value;
+        return $value instanceof Closure ? $value(...$args) : $value;
     }
-  }
+}

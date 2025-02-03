@@ -1,14 +1,14 @@
 <?php
 
-  declare(strict_types=1);
+declare(strict_types=1);
 
-  namespace PDPhilip\Elasticsearch\Traits;
+namespace PDPhilip\Elasticsearch\Traits;
 
-  use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;
-  use PDPhilip\Elasticsearch\Repositories\ArrayStore;
+use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;
+use PDPhilip\Elasticsearch\Repositories\ArrayStore;
 
-  trait HasOptions
-  {
+trait HasOptions
+{
     /**
      * Request Config
      */
@@ -19,7 +19,7 @@
      */
     public function options(): ArrayStoreContract
     {
-      return $this->options ??= new ArrayStore($this->defaultConfig());
+        return $this->options ??= new ArrayStore($this->defaultConfig());
     }
 
     /**
@@ -29,6 +29,6 @@
      */
     protected function defaultConfig(): array
     {
-      return [];
+        return [];
     }
-  }
+}

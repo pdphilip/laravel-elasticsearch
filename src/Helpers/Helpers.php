@@ -25,12 +25,12 @@ final class Helpers
         return $value;
     }
 
-      public static function uuid()
-      {
+    public static function uuid()
+    {
         // this is the equivelent of how elasticsearch generates UUID
         // see: https://github.com/elastic/elasticsearch/blob/2f2ddad00492fcac8fbfc272607a8db91d279385/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java#L67
         return base64_encode((string) Str::orderedUuid());
-      }
+    }
 
     /**
      * Return the default value of the given value.

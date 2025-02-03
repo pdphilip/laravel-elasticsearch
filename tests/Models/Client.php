@@ -1,6 +1,6 @@
 <?php
 
-  namespace PDPhilip\Elasticsearch\Tests\Models;
+namespace PDPhilip\Elasticsearch\Tests\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +15,9 @@ class Client extends Model
     use HybridRelations;
 
     protected $connection = 'elasticsearch';
+
     protected $table = 'clients';
+
     protected static $unguarded = true;
 
     public function users(): BelongsToMany

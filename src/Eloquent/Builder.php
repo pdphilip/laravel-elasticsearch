@@ -6,7 +6,6 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Closure;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
-use Illuminate\Support\Collection;
 use Iterator;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
@@ -104,25 +103,25 @@ class Builder extends BaseEloquentBuilder
         return $model;
     }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
-  {
-    if ($column instanceof Closure && is_null($operator)) {
-      $column($query = $this->model->newQueryWithoutRelationships());
+    /**
+     * {@inheritdoc}
+     */
+    public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
+    {
+        if ($column instanceof Closure && is_null($operator)) {
+            $column($query = $this->model->newQueryWithoutRelationships());
 
-      $this->query->addNestedWhereQuery($query->getQuery(), $boolean);
-    } else {
-      $this->query->where(...func_get_args());
+            $this->query->addNestedWhereQuery($query->getQuery(), $boolean);
+        } else {
+            $this->query->where(...func_get_args());
+        }
+
+        return $this;
     }
 
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
+    /**
+     * {@inheritdoc}
+     */
     public function get($columns = ['*'])
     {
         $builder = $this->applyScopes();
@@ -177,22 +176,23 @@ class Builder extends BaseEloquentBuilder
      */
     public function chunk($count, callable $callback, $scrollTimeout = '30s')
     {
-      $this->enforceOrderBy();
+        $this->enforceOrderBy();
 
-      foreach ($this->query->connection->searchResponseIterator($this->query->toCompiledQuery(), $scrollTimeout, $count) as $results) {
-        $page = $results['_scroll_id'];
-        $results = $this->model->hydrate(
-          $this->query->processor->processSelect($this->query, $results)
-        );
+        foreach ($this->query->connection->searchResponseIterator($this->query->toCompiledQuery(), $scrollTimeout, $count) as $results) {
+            $page = $results['_scroll_id'];
+            $results = $this->model->hydrate(
+                $this->query->processor->processSelect($this->query, $results)
+            );
 
-        // On each chunk result set, we will pass them to the callback and then let the
-        // developer take care of everything within the callback, which allows us to
-        // keep the memory low for spinning through large result sets for working.
-        if ($callback($results, $page) === FALSE) {
-          return FALSE;
+            // On each chunk result set, we will pass them to the callback and then let the
+            // developer take care of everything within the callback, which allows us to
+            // keep the memory low for spinning through large result sets for working.
+            if ($callback($results, $page) === false) {
+                return false;
+            }
         }
-      }
-      return TRUE;
+
+        return true;
     }
 
     /**
@@ -212,22 +212,23 @@ class Builder extends BaseEloquentBuilder
      */
     public function findOrNew($id, $columns = ['*']): Model
     {
-      $model = parent::findOrNew($id, $columns);
-      $model['id'] = $id; //set the id to the model
+        $model = parent::findOrNew($id, $columns);
+        $model['id'] = $id; //set the id to the model
 
-      return $model;
+        return $model;
     }
 
-
-  public function withoutRefresh()
+    public function withoutRefresh()
     {
-      $this->model->options()->add('refresh', false);
-      return $this->model;
+        $this->model->options()->add('refresh', false);
+
+        return $this->model;
     }
 
     public function withSuffix($suffix)
     {
-      $this->model->options()->add('suffix', $suffix);
-      return $this->model;
+        $this->model->options()->add('suffix', $suffix);
+
+        return $this->model;
     }
 }

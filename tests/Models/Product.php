@@ -11,7 +11,9 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Product extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $table = 'products';
+
     protected static $unguarded = true;
 
     /**

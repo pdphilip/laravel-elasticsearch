@@ -12,18 +12,21 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 class Scoped extends Model
 {
     protected $connection = 'elasticsearch';
+
     protected $fillable = ['name', 'favorite'];
+
     protected $table = 'scoped';
+
     protected $casts = ['birthday' => 'datetime'];
 
-  protected static function boot()
-  {
-    parent::boot();
+    protected static function boot()
+    {
+        parent::boot();
 
-    static::addGlobalScope('favorite', function (Builder $builder) {
-      $builder->where('favorite', true);
-    });
-  }
+        static::addGlobalScope('favorite', function (Builder $builder) {
+            $builder->where('favorite', true);
+        });
+    }
 
     /**
      * Check if we need to run the schema.
