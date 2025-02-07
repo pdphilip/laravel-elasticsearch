@@ -28,6 +28,8 @@ beforeEach(function () {
         ['name' => 'Mark Moe', 'birthday' => new DateTime('2022-05-12 10:53:16')],
         ['name' => 'Error'],
     ]);
+
+    $this->license = DB::connection('elasticsearch')->getLicenseType();
 });
 
 it('aggregate multiple metrics', function () {
@@ -35,11 +37,6 @@ it('aggregate multiple metrics', function () {
     $items = DB::table('items')->bucket('type', 'terms')->getAggregationResults();
     expect($items)->toHaveCount(2)
         ->and($items[0]['type'])->toBe('round')
-        ->and($items[0]['_meta']->getDocCount())->toBe(2);
-
-    $items = DB::table('items')->bucket('name', 'categorize_text', ['field' => 'name'])->getAggregationResults();
-    expect($items)->toHaveCount(3)
-        ->and($items[0]['name'])->toBe('spoon')
         ->and($items[0]['_meta']->getDocCount())->toBe(2);
 
     $items = DB::table('birthday')->bucket('birthday', 'date_histogram', ['field' => 'birthday', 'fixed_interval' => '30d'])->getAggregationResults();
@@ -58,10 +55,20 @@ it('aggregate multiple metrics', function () {
 
 });
 
+//categorize_text is not a Free/Basic License Elasticsearch Feature
+//See https://www.elastic.co/subscriptions @Text categorization aggregation
+it('aggregate categorize_text', function () {
+    $items = DB::table('items')->bucket('name', 'categorize_text', ['field' => 'name'])->getAggregationResults();
+    expect($items)->toHaveCount(3)
+        ->and($items[0]['name'])->toBe('spoon')
+        ->and($items[0]['_meta']->getDocCount())->toBe(2);
+})->skip(fn () => $this->license === 'basic', 'Skipped as "categorize_text" is not a Free/Basic License Elasticsearch Feature');
+
 it('aggregate multiple metrics and return a collection when using a model', function () {
+    //@pest-ignore categorize-text-agg is not a Free/Basic License Elasticsearch Feature
     $items = Item::bucket('name', 'categorize_text', ['field' => 'name'])->getAggregationResults();
     expect($items)->toHaveCount(3)
         ->and($items[0]['name'])->toBe('spoon')
         ->and($items[0]['_meta']->getDocCount())->toBe(2);
 
-});
+})->skip(fn () => $this->license === 'basic', 'Skipped as "categorize_text" is not a Free/Basic License Elasticsearch Feature');

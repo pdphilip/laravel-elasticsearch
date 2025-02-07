@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use PDPhilip\Elasticsearch\Exceptions\InvalidFieldTypeException;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Models\User;
@@ -73,32 +74,37 @@ it('adds soft deletes to a collection', function () {
 
 it('can add index settings, Meta Data, and an Analyser', function () {
     Schema::create('newcollection', function (Blueprint $table) {
-        $table->addIndexSettings('number_of_shards', 3);
+        $table->withSetting('number_of_shards', 3);
         $table->meta(['class' => 'MyApp2::User3']);
 
         $table->addAnalyzer('contacts')
             ->type('custom')
             ->tokenizer('punctuation')
-            ->filter([
-                'lowercase',
-                'english_stop',
-            ])
-            ->char_filter(['emoticons']);
-
+            ->filter(['lowercase', 'english_stop'])
+            ->charFilter(['emoticons']);
         $table->addAnalyzer('autocomplete')
             ->type('custom')
             ->tokenizer('standard')
             ->filter([
                 'lowercase',
-                'autocomplete_filter',
+                'english_stop',
             ]);
+        $table->addTokenizer('punctuation')
+            ->type('pattern')
+            ->pattern('[ .,!?]');
 
+        $table->addCharFilter('emoticons')
+            ->type('mapping')
+            ->mappings([':) => _happy_', ':( => _sad_']);
+        $table->addFilter('english_stop')
+            ->type('stop')
+            ->stopwords('_english_');
     });
 
     $mapping = DB::indices()->get(['index' => 'newcollection'])->asArray();
     expect($mapping['newcollection']['mappings']['_meta']['class'])->toBe('MyApp2::User3')
         ->and($mapping['newcollection']['settings']['index']['number_of_shards'])->toBe('3')
-        ->and($mapping['newcollection']['settings']['index']['analysis'])->toHaveKeys(['autocomplete', 'contacts']);
+        ->and($mapping['newcollection']['settings']['index']['analysis']['analyzer'])->toHaveKeys(['autocomplete', 'contacts']);
 });
 
 it('maps default laravel schemas to ES', function () {
@@ -257,21 +263,19 @@ it('maps ES schemas', function () {
         ->and($index['custom_property']['type'])->toBe('text');
 });
 
-it('throws exceptions on schemas that ES cant have.', function ($columnType) {
+it('throws Invalid Field Type Exception on schemas that ES cant have.', function ($columnType) {
     Schema::create('newcollection', function (Blueprint $table) use ($columnType) {
         $table->$columnType('test', ['foo']);
     });
-})
-    ->with([
-        'bigIncrements',
-        'increments',
-        'mediumIncrements',
-        'tinyIncrements',
-        'smallIncrements',
-        'set',
-        'json',
-        'jsonb',
-    ])->throws(Exception::class);
+})->with([
+    'bigIncrements',
+    'mediumIncrements',
+    'tinyIncrements',
+    'smallIncrements',
+    'set',
+    'json',
+    'jsonb',
+])->throws(InvalidFieldTypeException::class);
 
 it('validates Boost', function () {
     Schema::create('newcollection', function (Blueprint $table) {

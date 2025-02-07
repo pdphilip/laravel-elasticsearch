@@ -262,6 +262,34 @@ class Connection extends BaseConnection
         return $this->getClient()->info()->asArray();
     }
 
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getLicenseInfo(): array
+    {
+        $license = $this->getClient()->license()->get()->asArray();
+        if (! empty($license['license'])) {
+            return $license['license'];
+        }
+
+        return $license;
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getLicenseType(): ?string
+    {
+        $license = $this->getLicenseInfo();
+        if (! empty($license['type'])) {
+            return $license['type'];
+        }
+
+        return null;
+    }
+
     /** {@inheritdoc} */
     public function getDriverName(): string
     {
@@ -603,7 +631,7 @@ class Connection extends BaseConnection
      * @param  array  $params
      * @param  array  $bindings
      */
-    public function select($params, $bindings = [], $useReadPdo = true): array
+    public function select($params, $bindings = [], $useReadPdo = true): Elasticsearch
     {
         return $this->run(
             $this->addClientParams($params),
@@ -631,7 +659,9 @@ class Connection extends BaseConnection
         );
     }
 
-    /** {@inheritdoc} */
+    /** {@inheritdoc}
+     * @throws QueryException
+     */
     protected function runQueryCallback($query, $bindings, \Closure $callback)
     {
         try {
