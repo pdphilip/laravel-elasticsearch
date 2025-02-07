@@ -7,10 +7,14 @@ namespace PDPhilip\Elasticsearch;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
+use Elastic\Elasticsearch\Exception\ClientResponseException;
+use Elastic\Elasticsearch\Exception\MissingParameterException;
+use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
 use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Exception;
+use Generator;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
@@ -249,7 +253,9 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Retrieves information about the client.
+     * Get the client info
+     *
+     * @throws ClientResponseException|ServerResponseException
      */
     public function getClientInfo(): array
     {
@@ -325,6 +331,11 @@ class Connection extends BaseConnection
     // Schema Management
     //----------------------------------------------------------------------
 
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
     public function createAlias(string $index, string $name): void
     {
         $this->indices()->putAlias(compact('index', 'name'));
@@ -342,27 +353,37 @@ class Connection extends BaseConnection
         }
     }
 
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
     public function dropIndex(string $index): void
     {
         $this->indices()->delete(compact('index'));
     }
 
-    /**
-     * Run a reindex statement against the database.
-     *
-     * @param  string|array  $query
-     * @param  array  $bindings
-     * @return array
-     */
-    public function reindex($query, $bindings = [])
-    {
-        return $this->run(
-            $query,
-            $bindings,
-            $this->connection->reindex(...)
-        );
-    }
+    //    /**
+    //     * Run a reindex statement against the database.
+    //     *
+    //     * @param  string|array  $query
+    //     * @param  array  $bindings
+    //     * @return array
+    //     */
+    //    public function reindex($query, $bindings = [])
+    //    {
+    //        return $this->run(
+    //            $query,
+    //            $bindings,
+    //            $this->connection->reindex(...)
+    //        )->asArray();
+    //    }
 
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
     public function updateIndex(string $index, array $body): void
     {
         if ($mappings = $body['mappings'] ?? null) {
@@ -384,9 +405,8 @@ class Connection extends BaseConnection
      * Set the table prefix in use by the connection.
      *
      * @param  string  $suffix
-     * @return void
      */
-    public function setIndexSuffix($suffix)
+    public function setIndexSuffix($suffix): void
     {
         $this->indexSuffix = $suffix;
 
@@ -402,9 +422,8 @@ class Connection extends BaseConnection
      *
      * @param  string  $query
      * @param  array  $bindings
-     * @return bool
      */
-    public function statement($query, $bindings = [], ?Blueprint $blueprint = null)
+    public function statement($query, $bindings = [], ?Blueprint $blueprint = null): bool
     {
         return $this->run($query, $bindings, function ($query, $bindings) {
             if ($this->pretending()) {
@@ -426,7 +445,7 @@ class Connection extends BaseConnection
      * @param  string  $scrollTimeout
      * @param  int  $size
      */
-    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100): \Generator
+    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100): Generator
     {
 
         $scrollParams = [
@@ -535,9 +554,8 @@ class Connection extends BaseConnection
      * @param  string|array  $query
      * @param  array  $bindings
      * @param  float|null  $time
-     * @return void
      */
-    public function logQuery($query, $bindings, $time = null)
+    public function logQuery($query, $bindings, $time = null): void
     {
 
         if (is_array($query)) {
@@ -553,11 +571,8 @@ class Connection extends BaseConnection
 
     /**
      * Prepare the query bindings for execution.
-     *
-     *
-     * @return array
      */
-    public function prepareBindings(array $bindings)
+    public function prepareBindings(array $bindings): array
     {
         return $bindings;
     }
@@ -565,14 +580,17 @@ class Connection extends BaseConnection
     /**
      * Get a new query builder instance.
      */
-    public function query()
+    public function query(): Builder
     {
         return new Builder(
             $this, $this->getQueryGrammar(), $this->getPostProcessor()
         );
     }
 
-    public function reconnectIfMissingConnection()
+    /**
+     * @throws AuthenticationException
+     */
+    public function reconnectIfMissingConnection(): void
     {
         if (is_null($this->connection)) {
             $this->createConnection();
@@ -584,9 +602,8 @@ class Connection extends BaseConnection
      *
      * @param  array  $params
      * @param  array  $bindings
-     * @return array
      */
-    public function select($params, $bindings = [], $useReadPdo = true)
+    public function select($params, $bindings = [], $useReadPdo = true): array
     {
         return $this->run(
             $this->addClientParams($params),

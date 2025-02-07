@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Iterator;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
+use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
  * @property QueryBuilder $query
@@ -230,5 +231,79 @@ class Builder extends BaseEloquentBuilder
         $this->model->options()->add('suffix', $suffix);
 
         return $this->model;
+    }
+
+    //----------------------------------------------------------------------
+    // Schema operations
+    //----------------------------------------------------------------------
+
+    /**
+     * {@inheritdoc}
+     */
+    //    public function truncate(): int
+    //    {
+    //        $result = $this->connection->deleteAll([]);
+    //
+    //        if ($result->isSuccessful()) {
+    //            return $result->getDeletedCount();
+    //        }
+    //
+    //        return 0;
+    //    }
+
+    public function deleteIndex(): void
+    {
+        Schema::connection($this->query->connection->getName())->drop($this->from);
+    }
+
+    public function deleteIndexIfExists(): void
+    {
+        Schema::connection($this->query->connection->getName())->dropIfExists($this->from);
+    }
+
+    public function getIndexMappings(bool $flatten = true): array
+    {
+        return Schema::on($this->query->connection->getName())->getMappings($this->from, $flatten);
+    }
+
+    public function getFieldMappings(bool $flatten = true): array
+    {
+        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, '*', $flatten);
+    }
+
+    public function getFieldMapping(string|array $field = '*', bool $flatten = true): array
+    {
+        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, $field, $flatten);
+    }
+
+    public function getIndexSettings(): array
+    {
+        return Schema::connection($this->query->connection->getName())->getSettings($this->from);
+    }
+
+    public function createIndex(?Closure $callback = null): bool
+    {
+        if (! $this->indexExists()) {
+            Schema::connection($this->query->connection->getName())->create($this->from, $callback);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function indexExists(): bool
+    {
+        return Schema::connection($this->query->connection->getName())->hasTable($this->getModel()->getTable());
+    }
+
+    public function hasField(string $column): bool
+    {
+        return Schema::connection($this->query->connection->getName())->hasColumn($this->from, $column);
+    }
+
+    public function hasFields(array $columns): bool
+    {
+        return Schema::connection($this->query->connection->getName())->hasColumns($this->from, $columns);
     }
 }

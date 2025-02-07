@@ -113,14 +113,37 @@ class Grammar extends BaseGrammar
             // Pass empty string as we only need to modify the property and return it.
             $column = $this->addModifiers('', $blueprint, $property);
             // @phpstan-ignore-next-line
-            $key = Str::snake($column->name);
+            $fieldName = Str::snake($column->name);
             // @phpstan-ignore-next-line
-            unset($column->name);
+            $column->name = $fieldName;
             // @phpstan-ignore-next-line
-            $columns[$key] = $column->toArray();
+            $columns[] = $column->toArray();
         }
 
-        return $columns;
+        return $this->buildPropertiesFromColumns($columns);
+    }
+
+    protected function buildPropertiesFromColumns($columns): array
+    {
+        $properties = [];
+
+        foreach ($columns as $column) {
+            $field = $column['name'];
+            unset($column['name']);
+            if (! empty($properties[$field])) {
+                $type = $column['type'];
+                foreach ($column as $key => $value) {
+                    $properties[$field]['fields'][$type][$key] = $value;
+                }
+
+                continue;
+            }
+            foreach ($column as $key => $value) {
+                $properties[$field][$key] = $value;
+            }
+        }
+
+        return $properties;
     }
 
     protected function getAnalysis(Blueprint $blueprint): array
