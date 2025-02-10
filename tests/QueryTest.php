@@ -174,11 +174,11 @@ it('filters users within range with whereBetween', function () {
             ])->get()
         )->toHaveCount(2)
         ->and(
-            User::whereBetween('age', [
+            User::whereNotBetween('age', [
                 0,
                 25,
-            ], 'and', true)->get()
-        )->toHaveCount(6)
+            ])->get()
+        )->toHaveCount(7, 'this should be 7 (not 6) because null is not between 0 and 25')
         ->and(
             User::whereBetween('age', [
                 13,

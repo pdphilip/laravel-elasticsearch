@@ -13,11 +13,9 @@ beforeEach(function () {
 
 it('tests first or fail', function () {
     $results = DB::table('users')->whereRaw(['foo'])->get();
-})->throws(QueryException::class, 'Error Type: x_content_parse_exception
-Reason: [1:27] [bool] failed to parse field [must]
+})->throws(QueryException::class, 'Error Type: parsing_exception
+Reason: Unknown key for a START_ARRAY in [query].
 
 
-Root Cause Type: x_content_parse_exception
-Root Cause Reason: [1:27] [bool] failed to parse field [must]
-Caused By: illegal_state_exception
-Reason: expected value but got [START_ARRAY]');
+Root Cause Type: parsing_exception
+Root Cause Reason: Unknown key for a START_ARRAY in [query]');

@@ -12,7 +12,7 @@ class Address extends Model
 {
     protected $connection = 'elasticsearch';
 
-    protected $index = 'address';
+    protected $table = 'address';
 
     protected static $unguarded = true;
 

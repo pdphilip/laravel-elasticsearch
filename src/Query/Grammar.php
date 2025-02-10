@@ -918,39 +918,15 @@ class Grammar extends BaseGrammar
         $column = $where['column'];
         $values = $this->getValueForWhere($builder, $where);
 
-        if (! empty($where['not'])) {
-            $query = [
-                'bool' => [
-                    'should' => [
-                        [
-                            'range' => [
-                                $column => [
-                                    'lte' => $values[0],
-                                ],
-                            ],
-                        ],
-                        [
-                            'range' => [
-                                $column => [
-                                    'gte' => $values[1],
-                                ],
-                            ],
-                        ],
-                    ],
+        return [
+            'range' => [
+                $column => [
+                    'gte' => $values[0],
+                    'lte' => $values[1],
                 ],
-            ];
-        } else {
-            $query = [
-                'range' => [
-                    $column => [
-                        'gte' => $values[0],
-                        'lte' => $values[1],
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
+                ...$where['options'],
+            ],
+        ];
     }
 
     /**
