@@ -23,6 +23,7 @@ use InvalidArgumentException;
  * @method $this fuzzyRewrite(string $value) Not allowed in phrase or phrase_prefix.
  * @method $this lenient(bool $value) Not allowed in phrase_prefix.
  * @method $this zeroTermsQuery(string $value) Only for best_fields, most_fields, phrase.
+ * @method $this constantScore(bool $value) Only for best_fields, most_fields, phrase.
  */
 class SearchOptions extends QueryOptions
 {
@@ -44,6 +45,7 @@ class SearchOptions extends QueryOptions
             'zero_terms_query',
             'auto_generate_synonyms_phrase_query',
             'fields',
+            'constant_score',
         ];
     }
 

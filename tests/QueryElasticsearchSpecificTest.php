@@ -70,13 +70,14 @@ it('ES Specific Queries', function () {
     $users = User::whereTermFuzzy('title', 'admik')->get();
     expect($users)->toHaveCount(3);
 
-    $users = User::searchMatch('description', 'exploring')->get();
+    //Was searchMatch()
+    $users = User::where('description', 'exploring')->get();
     expect($users)->toHaveCount(1);
 
-    $users = User::searchMatchPhrase('description', 'exploring the')->get();
+    $users = User::wherePhrase('description', 'exploring the')->get();
     expect($users)->toHaveCount(1);
 
-    $users = User::searchMatchPhrasePrefix('description', 'Robert actively')->get();
+    $users = User::wherePhrasePrefix('description', 'Robert actively')->get();
     expect($users)->toHaveCount(1);
 
 });
@@ -134,7 +135,7 @@ it('can search with field boosting', function () {
 });
 
 it('can search across all fields', function () {
-    $users = User::search('admin', '*')->get();
+    $users = User::search('admin', 'best_fields', ['*'])->get();
     expect($users)->toHaveCount(3);
 });
 

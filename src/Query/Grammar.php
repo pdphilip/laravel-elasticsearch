@@ -72,6 +72,11 @@ class Grammar extends BaseGrammar
         ];
 
         if ($query['filter']) {
+            if (empty($params['body']['query']['bool'])) {
+                $currentQuery = $params['body']['query'];
+                unset($params['body']['query']);
+                $params['body']['query']['bool']['must'] = $currentQuery;
+            }
             $params['body']['query']['bool']['filter'] = $query['filter'];
         }
 
@@ -913,7 +918,7 @@ class Grammar extends BaseGrammar
         $column = $where['column'];
         $values = $this->getValueForWhere($builder, $where);
 
-        if ($where['not']) {
+        if (! empty($where['not'])) {
             $query = [
                 'bool' => [
                     'should' => [
@@ -1036,7 +1041,7 @@ class Grammar extends BaseGrammar
             return '_id';
         }
 
-        // Checks if there is a mapping_map set for this field and return ir ahead of a mapping check.
+        // Checks if there is a mapping_map set for this field and return is ahead of a mapping check.
         if (! empty($mappingMap = $builder->options()->get('mapping_map')) && $mappingMap[$textField]) {
             return $mappingMap[$textField];
         }
@@ -1045,19 +1050,13 @@ class Grammar extends BaseGrammar
             return $textField;
         }
 
-        $mapping = collect(Arr::dot($builder->getMapping()))
-            ->mapWithKeys(function ($value, $key) {
-                return [str($key)->after('.')->beforeLast('.')->toString() => $value];
-            })
-            ->filter(function ($value, $key) use ($textField) {
-                return ! in_array($value, ['text', 'binary']) && str($key)->containsAll(explode('.', $textField));
-            })
-            ->map(function ($value, $key) {
-                return str($key)->replace(['mappings.', 'fields.', 'properties.'], '')->squish()->trim()->toString();
-            })->first();
+        $mapping = collect(Arr::dot($builder->getMapping()));
+        $keywordKey = $mapping->keys()
+            ->filter(fn ($field) => str_starts_with($field, $textField) && ! in_array($mapping[$field], ['text', 'binary']))
+            ->first();
 
-        if (! empty($mapping)) {
-            return $mapping;
+        if (! empty($keywordKey)) {
+            return $keywordKey;
         }
 
         throw new BuilderException("{$textField} does not have a keyword field.");
@@ -1572,7 +1571,7 @@ class Grammar extends BaseGrammar
 
         return [
             'fuzzy' => [
-                $this->getIndexableField($where['column'], $builder) => [
+                $where['column'] => [
                     'value' => (string) $where['value'],
                     ...$where['options'],
                 ],
@@ -1618,6 +1617,31 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereSearch(Builder $builder, array $where): array
     {
+        $fields = $where['options']['fields'] ?? null;
+        if ($fields) {
+            if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+                $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+            }
+            $where['options']['fields'] = $fields;
+        }
+        $constantScore = false;
+        if (isset($where['options']['constant_score'])) {
+            $constantScore = $where['options']['constant_score'];
+            unset($where['options']['constant_score']);
+        }
+        $query = [
+            'multi_match' => [
+                'query' => $where['value'],
+                ...$where['options'],
+            ],
+        ];
+        if ($constantScore) {
+            return [
+                'constant_score' => [
+                    'filter' => $query,
+                ],
+            ];
+        }
 
         return [
             'multi_match' => [

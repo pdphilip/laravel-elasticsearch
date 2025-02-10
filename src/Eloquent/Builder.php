@@ -82,6 +82,7 @@ class Builder extends BaseEloquentBuilder
 
         $this->query->from($model->getTable());
         $this->query->options()->set($this->model?->options()->all() ?? []);
+        $this->getConnection()->setIndex($model->getTable());
 
         return $this;
     }

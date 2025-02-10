@@ -217,6 +217,17 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function getFieldsMapping(string $table, $flatten = false): array
+    {
+        return $this->getFieldMapping($table, '*', $flatten);
+
+    }
+
+    /**
      * Returns the mapping details about your indices.
      *
      * @throws ClientResponseException

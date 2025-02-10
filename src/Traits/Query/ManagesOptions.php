@@ -62,7 +62,7 @@ trait ManagesOptions
         return [$column, $operator, $value, $boolean, $options];
     }
 
-    public function extractOptionsWithNot($type, $column, $value, $not, $boolean, $options = []): array
+    public function extractOptionsWithNot($type, $column, $value, $boolean, $not, $options = []): array
     {
         $operator = null;
         [$column, $operator, $value, $boolean, $not, $options] = $this->extractOptionsFull($type, $column, $operator, $value, $boolean, $not, $options);

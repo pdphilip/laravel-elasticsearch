@@ -48,6 +48,10 @@ final class Sanitizer
                     $sanitized = array_merge($sanitized, self::flattenMappingProperties(['properties' => $details['properties']], $fullKey));
                     unset($sanitized[$fullKey]['properties']);
                 }
+                if (isset($details['fields']) && is_array($details['fields'])) {
+                    $sanitized = array_merge($sanitized, self::flattenMappingProperties(['properties' => $details['fields']], $fullKey));
+                    unset($sanitized[$fullKey]['fields']);
+                }
             }
         }
 

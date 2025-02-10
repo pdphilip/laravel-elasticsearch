@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesOptions;
 
@@ -167,7 +168,7 @@ class Builder extends BaseBuilder
      */
     public function whereIn($column, $values, $boolean = 'and', $not = false, $options = [])
     {
-        [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Terms', $column, $values, $not, $boolean, $options);
+        [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Term', $column, $values, $boolean, $not, $options);
 
         parent::whereIn($column, $values, $boolean, $not)->applyOptions($options);
 
@@ -208,7 +209,7 @@ class Builder extends BaseBuilder
      */
     public function whereBetween($column, iterable $values, $boolean = 'and', $not = false, $options = []): self
     {
-        [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Where', $column, $values, $not, $boolean, $options);
+        [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Where', $column, $values, $boolean, $not, $options);
         $type = 'Between';
 
         $this->wheres[] = compact('column', 'values', 'type', 'boolean', 'not', 'options');
@@ -667,7 +668,7 @@ class Builder extends BaseBuilder
 
     //Match Phrase: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html
 
-    public function wherePhrase($column, $value, $not = false, $boolean = 'and', $options = [])
+    public function wherePhrase($column, $value, $boolean = 'and', $not = false, $options = [])
     {
         $type = 'Phrase';
         [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
@@ -744,6 +745,28 @@ class Builder extends BaseBuilder
     }
 
     public function orWhereNotTerm(string $column, $value, $options = []): self
+    {
+        return $this->whereTerm($column, $value, 'or', true, $options);
+    }
+
+    //Alias for whereTerm
+
+    public function whereExact($column, $value, $boolean = 'and', $not = false, $options = []): self
+    {
+        return $this->whereTerm($column, $value, $boolean, $not, $options);
+    }
+
+    public function orWhereExact($column, $value, $options = []): self
+    {
+        return $this->whereTerm($column, $value, 'or', false, $options);
+    }
+
+    public function whereNotExact($column, $value, $options = []): self
+    {
+        return $this->whereTerm($column, $value, 'and', true, $options);
+    }
+
+    public function orWhereNotExact($column, $value, $options = []): self
     {
         return $this->whereTerm($column, $value, 'or', true, $options);
     }
@@ -956,7 +979,7 @@ class Builder extends BaseBuilder
     {
         $type = 'NestedObject';
         $options = $this->setOptions($options, 'nested');
-        $options->setInnerHits($innerHits);
+        $options->innerHits($innerHits);
         $options = $options->toArray();
 
         if (! is_string($query) && is_callable($query)) {
@@ -1761,7 +1784,7 @@ class Builder extends BaseBuilder
      */
     public function getFrom(): string
     {
-        return $this->connection->getIndexPrefix().$this->from.$this->suffix();
+        return $this->connection->getFullIndex($this->from);
     }
 
     /**
@@ -1802,7 +1825,8 @@ class Builder extends BaseBuilder
     public function getMapping()
     {
         if (empty($this->mapping)) {
-            $this->mapping = $this->connection->indices()->getMapping($this->grammar->compileIndexMappings($this))->asArray();
+            $index = $this->getFrom();
+            $this->mapping = Schema::connection($this->connection->getName())->getFieldsMapping($index, true);
         }
 
         return $this->mapping;
