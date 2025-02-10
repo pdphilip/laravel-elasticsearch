@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesOptions;
@@ -131,12 +132,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add a 'must not' statement to the query.
-     *
-     * @param  BaseBuilder|static  $query
-     * @param  null  $operator
-     * @param  null  $value
-     * @param  string  $boolean
+     * {@inheritdoc}
      */
     public function whereNot($column, $operator = null, $value = null, $boolean = 'and', $options = []): self
     {
@@ -145,6 +141,9 @@ class Builder extends BaseBuilder
         return parent::whereNot($column, $operator, $value, $boolean)->applyOptions($options);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereNot($column, $operator = null, $value = null, $options = []): self
     {
         return $this->whereNot($column, $operator, $value, 'or', $options);
@@ -175,16 +174,25 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereIn($column, $values, $options = [])
     {
         return $this->whereIn($column, $values, 'or', false, $options);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function whereNotIn($column, $values, $boolean = 'and', $options = [])
     {
         return $this->whereIn($column, $values, $boolean, true, $options);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereNotIn($column, $values, $options = [])
     {
         return $this->whereIn($column, $values, 'or', true, $options);
@@ -217,17 +225,25 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //@inheritdoc
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereBetween($column, iterable $values, $options = [])
     {
         return $this->whereBetween($column, $values, 'or', false, $options);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function whereNotBetween($column, iterable $values, $boolean = 'and', $options = [])
     {
         return $this->whereBetween($column, $values, $boolean, true, $options);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereNotBetween($column, iterable $values, $options = [])
     {
         return $this->whereBetween($column, $values, 'or', true, $options);
@@ -240,7 +256,6 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  mixed  $value
      * @param  string  $boolean
-     * @param  bool  $not
      */
     public function whereDate($column, $operator, $value = null, $boolean = 'and', array $options = []): self
     {
@@ -258,6 +273,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function orWhereDate($column, $operator, $value = null, array $options = [])
     {
         return $this->whereDate($column, $operator, $value, 'or', $options);
@@ -777,7 +795,7 @@ class Builder extends BaseBuilder
      *
      * @param  string  $column
      * @param  string  $boolean
-     * @param  null|string  $not
+     * @param  bool  $not
      */
     public function whereTermExists($column, $boolean = 'and', $not = false): self
     {
@@ -1217,49 +1235,6 @@ class Builder extends BaseBuilder
         return $this->search($terms, 'bool_prefix', $columns, $options, true, 'or');
     }
 
-    //    /**
-    //     * Add a 'match' statement to the query.
-    //     *
-    //     * @param  string  $column
-    //     * @param  string  $boolean
-    //     */
-    //    public function searchMatch($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
-    //    {
-    //        $type = 'Match';
-    //
-    //        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-    //
-    //        return $this;
-    //    }
-
-    /**
-     * Add a 'match_phrase' statement to the query.
-     *
-     * @param  string  $boolean
-     */
-    //    public function searchMatchPhrase($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
-    //    {
-    //        $type = 'MatchPhrase';
-    //
-    //        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-    //
-    //        return $this;
-    //    }
-
-    /**
-     * Add a 'match_phrase_prefix' statement to the query.
-     *
-     * @param  string  $boolean
-     */
-    //    public function searchMatchPhrasePrefix($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
-    //    {
-    //        $type = 'MatchPhrasePrefix';
-    //
-    //        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-    //
-    //        return $this;
-    //    }
-
     //----------------------------------------------------------------------
     // Ordering
     //----------------------------------------------------------------------
@@ -1466,14 +1441,12 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * Add another query builder as a nested where to the query builder.
+     * @return array|mixed
      *
-     * @param  BaseBuilder|static  $query
-     * @param  string  $boolean
+     * @throws BuilderException
      */
     public function aggregateMetric($function, $columns = ['*'], $options = [])
     {
-
         //Each column we want aggregated
         $columns = Arr::wrap($columns);
         foreach ($columns as $column) {
