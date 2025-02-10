@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
+use PDPhilip\Elasticsearch\Query\DSL\DslCompiler;
 
 class Grammar extends BaseGrammar
 {
@@ -63,7 +64,6 @@ class Grammar extends BaseGrammar
     public function compileSelect(Builder|BaseBuilder $builder): array
     {
         $query = $this->compileWheres($builder);
-
         $params = [
             'index' => $builder->getFrom(),
             'body' => [
@@ -1178,13 +1178,13 @@ class Grammar extends BaseGrammar
     public function compileWheres(Builder|BaseBuilder $builder): array
     {
         $queryParts = [
-            'query' => 'wheres',
+            //            'query' => 'wheres',
             'filter' => 'filters',
             'postFilter' => 'postFilters',
         ];
 
-        $compiled = [];
-
+        $compiled['query'] = $this->compileBaseQuery($builder, $builder->wheres);
+        //        dd($builder);
         foreach ($queryParts as $queryPart => $builderVar) {
             $clauses = $builder->$builderVar ?? [];
 
@@ -1192,6 +1192,49 @@ class Grammar extends BaseGrammar
         }
 
         return $compiled;
+    }
+
+    protected function compileBaseQuery(Builder $builder, array $wheres = [])
+    {
+        $dslCompiler = new DslCompiler;
+        foreach ($wheres as $where) {
+            $isOr = str_starts_with($where['boolean'], 'or');
+            $isNot = str_ends_with($where['boolean'], 'not');
+
+            // Adjust operator to lowercase
+            if (isset($where['operator'])) {
+                $where['operator'] = strtolower($where['operator']);
+
+                if ($where['operator'] === '!=') {
+                    $isNot = ! $isNot;
+                    $where['operator'] = '=';
+                }
+            }
+            if (! empty($where['not'])) {
+                $isNot = true;
+            }
+
+            // Handle column names
+            if (isset($where['column'])) {
+                $where['column'] = (string) $where['column'];
+
+                // Adjust the column name if necessary
+                if ($where['column'] === 'id') {
+                    $where['column'] = '_id';
+                }
+
+                // Remove table prefix from column if present
+                if (Str::startsWith($where['column'], $builder->from.'.')) {
+                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
+                }
+            }
+            $method = 'compileWhere'.$where['type'];
+            $result = $this->{$method}($builder, $where);
+            $dslCompiler->setResult($result, $isOr, $isNot);
+
+        }
+
+        return $dslCompiler->compileQuery();
     }
 
     /**
@@ -1204,7 +1247,6 @@ class Grammar extends BaseGrammar
 
         // We will add all compiled wheres to this array.
         $compiled = [];
-
         foreach ($wheres as $i => &$where) {
             // Adjust operator to lowercase
             if (isset($where['operator'])) {
@@ -1326,6 +1368,7 @@ class Grammar extends BaseGrammar
         $query = [
             'terms' => [
                 $column => array_values($values),
+                ...$where['options'],
             ],
         ];
 
@@ -1449,8 +1492,8 @@ class Grammar extends BaseGrammar
         return [
             'regexp' => [
                 $this->getIndexableField($where['column'], $builder) => [
-                    ...$where['options'],
                     'value' => Helpers::escape($where['value']),
+                    ...$where['options'],
                 ],
             ],
         ];
@@ -1459,21 +1502,14 @@ class Grammar extends BaseGrammar
     /**
      * Compile a match_phrase clause
      */
-    protected function compileWhereMatchPhrase(Builder $builder, array $where): array
+    protected function compileWherePhrase(Builder $builder, array $where): array
     {
-
-        $allowedArgs = [
-            'analyzer',
-            'zero_terms_query',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-
         return [
             'match_phrase' => [
                 $where['column'] => [
-                    ...$where['options'],
                     'query' => $where['value'],
+                    ...$where['options'],
+
                 ],
             ],
         ];
@@ -1482,56 +1518,47 @@ class Grammar extends BaseGrammar
     /**
      * Compile a match_phrase clause
      */
-    protected function compileWhereMatch(Builder $builder, array $where): array
-    {
-
-        $allowedArgs = [
-            'analyzer',
-            'auto_generate_synonyms_phrase_query',
-            'boost',
-            'fuzziness',
-            'max_expansions',
-            'prefix_length',
-            'fuzzy_transpositions',
-            'fuzzy_rewrite',
-            'lenient',
-            'operator',
-            'minimum_should_match',
-            'zero_terms_query',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-
-        return [
-            'match' => [
-                $where['column'] => [
-                    ...$where['options'],
-                    'query' => $where['value'],
-                ],
-            ],
-        ];
-    }
+    //    protected function compileWhereMatch(Builder $builder, array $where): array
+    //    {
+    //
+    //        $allowedArgs = [
+    //            'analyzer',
+    //            'auto_generate_synonyms_phrase_query',
+    //            'boost',
+    //            'fuzziness',
+    //            'max_expansions',
+    //            'prefix_length',
+    //            'fuzzy_transpositions',
+    //            'fuzzy_rewrite',
+    //            'lenient',
+    //            'operator',
+    //            'minimum_should_match',
+    //            'zero_terms_query',
+    //        ];
+    //
+    //        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
+    //
+    //        return [
+    //            'match' => [
+    //                $where['column'] => [
+    //                    ...$where['options'],
+    //                    'query' => $where['value'],
+    //                ],
+    //            ],
+    //        ];
+    //    }
 
     /**
      * Compile a match_phrase clause
      */
-    protected function compileWhereMatchPhrasePrefix(Builder $builder, array $where): array
+    protected function compileWherePhrasePrefix(Builder $builder, array $where): array
     {
-
-        $allowedArgs = [
-            'analyzer',
-            'max_expansions',
-            'slop',
-            'zero_terms_query',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'match_phrase_prefix' => [
                 $where['column'] => [
-                    ...$where['options'],
                     'query' => $where['value'],
+                    ...$where['options'],
                 ],
             ],
         ];
@@ -1542,21 +1569,12 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereTermFuzzy(Builder $builder, array $where): array
     {
-        $allowedArgs = [
-            'fuzziness',
-            'max_expansions',
-            'prefix_length',
-            'transpositions',
-            'rewrite',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'fuzzy' => [
                 $this->getIndexableField($where['column'], $builder) => [
-                    ...$where['options'],
                     'value' => (string) $where['value'],
+                    ...$where['options'],
                 ],
             ],
         ];
@@ -1567,18 +1585,12 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereTerm(Builder $builder, array $where): array
     {
-        $allowedArgs = [
-            'boost',
-            'case_insensitive',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
 
         return [
             'term' => [
                 $this->getIndexableField($where['column'], $builder) => [
-                    ...$where['options'],
                     'value' => (string) $where['value'],
+                    ...$where['options'],
                 ],
             ],
         ];
@@ -1606,56 +1618,64 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereSearch(Builder $builder, array $where): array
     {
-        // Determine the fields to search
-        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
 
-        // Handle field boosts if fields is an associative array
-        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
-            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
-        }
-
-        // Use multi_match if searching across multiple fields or all fields
-        if (is_array($fields) || $fields === '*') {
-            $queryType = $where['options']['matchType'] ?? 'best_fields';
-
-            $query = [
-                'multi_match' => [
-                    'query' => $where['value'],
-                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
-                    'type' => $queryType,
-                ],
-            ];
-        } else {
-            $query = [
-                'match' => [
-                    $fields => [
-                        'query' => $where['value'],
-                    ],
-                ],
-            ];
-        }
-
-        // Add fuzziness if specified
-        if (! empty($where['options']['fuzziness'])) {
-            $fuzziness = $where['options']['fuzziness'];
-            $mainQueryType = key($query);
-
-            if ($mainQueryType === 'multi_match') {
-                $query['multi_match']['fuzziness'] = $fuzziness;
-            } else {
-                $query['match'][$fields]['fuzziness'] = $fuzziness;
-            }
-        }
-
-        // Wrap in constant_score if specified
-        if (! empty($where['options']['constant_score'])) {
-            $query = [
-                'constant_score' => [
-                    'filter' => $query,
-                ],
-            ];
-        }
-
-        return $query;
+        return [
+            'multi_match' => [
+                'query' => $where['value'],
+                ...$where['options'],
+            ],
+        ];
+        //        //        dd($where);
+        //        // Determine the fields to search
+        //        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
+        //
+        //        // Handle field boosts if fields is an associative array
+        //        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+        //            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+        //        }
+        //
+        //        // Use multi_match if searching across multiple fields or all fields
+        //        if (is_array($fields) || $fields === '*') {
+        //            $queryType = $where['options']['matchType'] ?? 'best_fields';
+        //
+        //            $query = [
+        //                'multi_match' => [
+        //                    'query' => $where['value'],
+        //                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
+        //                    'type' => $queryType,
+        //                ],
+        //            ];
+        //        } else {
+        //            $query = [
+        //                'match' => [
+        //                    $fields => [
+        //                        'query' => $where['value'],
+        //                    ],
+        //                ],
+        //            ];
+        //        }
+        //
+        //        // Add fuzziness if specified
+        //        if (! empty($where['options']['fuzziness'])) {
+        //            $fuzziness = $where['options']['fuzziness'];
+        //            $mainQueryType = key($query);
+        //
+        //            if ($mainQueryType === 'multi_match') {
+        //                $query['multi_match']['fuzziness'] = $fuzziness;
+        //            } else {
+        //                $query['match'][$fields]['fuzziness'] = $fuzziness;
+        //            }
+        //        }
+        //
+        //        // Wrap in constant_score if specified
+        //        if (! empty($where['options']['constant_score'])) {
+        //            $query = [
+        //                'constant_score' => [
+        //                    'filter' => $query,
+        //                ],
+        //            ];
+        //        }
+        //
+        //        return $query;
     }
 }

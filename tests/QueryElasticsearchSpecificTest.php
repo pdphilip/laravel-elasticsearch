@@ -118,7 +118,7 @@ it('Nested Queries', function () {
     // single where in nested
     $users = Post::whereNestedObject('comments', function (Builder $query) {
         $query->whereTerm('comments.country', 'USA');
-    }, options: ['inner_hits' => true])->get();
+    }, true)->get();
 
     expect($users)->toHaveCount(2)
         ->and($users[0]['comments'])->toHaveCount(1)
@@ -127,7 +127,7 @@ it('Nested Queries', function () {
 });
 
 it('can search with field boosting', function () {
-    $users = User::search('John', ['name' => 5, 'description' => 1])->get();
+    $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)
         ->and($users[0]['name'])->toBe('John John Yoe')
         ->and($users[1]['name'])->toBe('John Doe');
@@ -139,7 +139,7 @@ it('can search across all fields', function () {
 });
 
 it('can search with fuzziness', function () {
-    $users = User::search('Jon', ['name' => 5, 'description' => 1], [
+    $users = User::search('Jon', 'best_fields', ['name' => 5, 'description' => 1], [
         'fuzziness' => 'AUTO',
     ])->get();
     expect($users)->toHaveCount(2)
@@ -148,18 +148,18 @@ it('can search with fuzziness', function () {
 });
 
 it('can search with specific fields only', function () {
-    $users = User::search('young', ['description' => 1])->get();
+    $users = User::search('young', 'best_fields', ['description' => 1])->get();
     expect($users)->toHaveCount(1)
         ->and($users[0]['name'])->toBe('Harry Hoe');
 });
 
 it('returns empty result for unmatched query', function () {
-    $users = User::search('nonexistent', ['name' => 1, 'description' => 1])->get();
+    $users = User::search('nonexistent', 'best_fields', ['name' => 1, 'description' => 1])->get();
     expect($users)->toBeEmpty();
 });
 
 it('can use constant score query', function () {
-    $users = User::search('John', ['name' => 5, 'description' => 1], [
+    $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1], [
         'constant_score' => true,
     ])->get();
     expect($users)->toHaveCount(2)

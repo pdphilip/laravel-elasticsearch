@@ -151,7 +151,6 @@ class Processor extends BaseProcessor
      */
     public function processSelect(Builder $query, $result)
     {
-
         $this->rawResponse = $result;
         $this->query = $query;
 

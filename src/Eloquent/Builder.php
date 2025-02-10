@@ -104,6 +104,11 @@ class Builder extends BaseEloquentBuilder
         return $model;
     }
 
+    public function query(): QueryBuilder
+    {
+        return $this->query;
+    }
+
     /**
      * {@inheritdoc}
      */

@@ -370,7 +370,7 @@ it('uses pagination', function () {
         ['name' => 'Lisa Roe', 'age' => 5],
     ]);
 
-    $results = DB::table('users')->searchStartsWith('name', 'John')->limit(2)->getCountForPagination();
+    $results = DB::table('users')->whereStartsWith('name', 'John')->limit(2)->getCountForPagination();
     expect($results)->toBe(1);
 
 });
@@ -399,7 +399,7 @@ it('uses various query operators', function () {
     expect($results)->toHaveCount(1)
         ->and($results->pluck('name'))->toContain('John Doe');
 
-    $results = DB::table('users')->searchStartsWith('name', 'John')->get();
+    $results = DB::table('users')->whereStartsWith('name', 'John')->get();
     expect($results)->toHaveCount(1)
         ->and($results->pluck('name'))->toContain('John Doe');
 
