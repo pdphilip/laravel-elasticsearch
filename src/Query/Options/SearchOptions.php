@@ -72,4 +72,15 @@ class SearchOptions extends QueryOptions
     {
         return $this->type($type);
     }
+
+    public function formatFields()
+    {
+        if ($this->fields) {
+            $fields = $this->fields;
+            if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+                $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+            }
+            $this->fields = $fields;
+        }
+    }
 }

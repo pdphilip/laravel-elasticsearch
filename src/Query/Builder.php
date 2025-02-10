@@ -1085,6 +1085,7 @@ class Builder extends BaseBuilder
         $options->asType($type);
         if ($columns) {
             $options->fields(Arr::wrap($columns));
+            $options->formatFields();
         }
         $this->wheres[] = [
             'type' => 'Search',
@@ -1100,101 +1101,101 @@ class Builder extends BaseBuilder
     // Multi Match query with type:best_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-best-fields
 
-    public function searchTerm($terms, ?array $columns = null, $options = [])
+    public function searchTerm($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'best_fields', $columns, $options);
+        return $this->search($query, 'best_fields', $columns, $options);
     }
 
-    public function orSearchTerm($terms, ?array $columns = null, $options = [])
+    public function orSearchTerm($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'best_fields', $columns, $options, false, 'or');
+        return $this->search($query, 'best_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTerm($terms, ?array $columns = null, $options = [])
+    public function searchNotTerm($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'best_fields', $columns, $options, true);
+        return $this->search($query, 'best_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTerm($terms, ?array $columns = null, $options = [])
+    public function orSearchNotTerm($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'best_fields', $columns, $options, true, 'or');
+        return $this->search($query, 'best_fields', $columns, $options, true, 'or');
     }
 
     // Multi Match query with type:most_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-most-fields
 
-    public function searchTermMost($terms, ?array $columns = null, $options = [])
+    public function searchTermMost($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'most_fields', $columns, $options);
+        return $this->search($query, 'most_fields', $columns, $options);
     }
 
-    public function orSearchTermMost($terms, ?array $columns = null, $options = [])
+    public function orSearchTermMost($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'most_fields', $columns, $options, false, 'or');
+        return $this->search($query, 'most_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTermMost($terms, ?array $columns = null, $options = [])
+    public function searchNotTermMost($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'most_fields', $columns, $options, true);
+        return $this->search($query, 'most_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTermMost($terms, ?array $columns = null, $options = [])
+    public function orSearchNotTermMost($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'most_fields', $columns, $options, true, 'or');
+        return $this->search($query, 'most_fields', $columns, $options, true, 'or');
     }
 
     // Multi Match query with type:cross_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-cross-fields
 
-    public function searchTermCross($terms, ?array $columns = null, $options = [])
+    public function searchTermCross($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'cross_fields', $columns, $options);
+        return $this->search($query, 'cross_fields', $columns, $options);
     }
 
-    public function orSearchTermCross($terms, ?array $columns = null, $options = [])
+    public function orSearchTermCross($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'cross_fields', $columns, $options, false, 'or');
+        return $this->search($query, 'cross_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTermCross($terms, ?array $columns = null, $options = [])
+    public function searchNotTermCross($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'cross_fields', $columns, $options, true);
+        return $this->search($query, 'cross_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTermCross($terms, ?array $columns = null, $options = [])
+    public function orSearchNotTermCross($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'cross_fields', $columns, $options, true, 'or');
+        return $this->search($query, 'cross_fields', $columns, $options, true, 'or');
     }
 
     // Multi Match query with type:phrase
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
 
-    public function searchPhrase($terms, ?array $columns = null, $options = [])
+    public function searchPhrase($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase', $columns, $options);
+        return $this->search($phrase, 'phrase', $columns, $options);
     }
 
-    public function orSearchPhrase($terms, ?array $columns = null, $options = [])
+    public function orSearchPhrase($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase', $columns, $options, false, 'or');
+        return $this->search($phrase, 'phrase', $columns, $options, false, 'or');
     }
 
-    public function searchNotPhrase($terms, ?array $columns = null, $options = [])
+    public function searchNotPhrase($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase', $columns, $options, true);
+        return $this->search($phrase, 'phrase', $columns, $options, true);
     }
 
-    public function orSearchNotPhrase($terms, ?array $columns = null, $options = [])
+    public function orSearchNotPhrase($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase', $columns, $options, true, 'or');
+        return $this->search($phrase, 'phrase', $columns, $options, true, 'or');
     }
 
     // Multi Match query with type:phrase_prefix
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
 
-    public function searchPhrasePrefix($terms, ?array $columns = null, $options = [])
+    public function searchPhrasePrefix($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase_prefix', $columns, $options);
+        return $this->search($phrase, 'phrase_prefix', $columns, $options);
     }
 
     public function orSearchPhrasePrefix($terms, ?array $columns = null, $options = [])
@@ -1202,37 +1203,37 @@ class Builder extends BaseBuilder
         return $this->search($terms, 'phrase_prefix', $columns, $options, false, 'or');
     }
 
-    public function searchNotPhrasePrefix($terms, ?array $columns = null, $options = [])
+    public function searchNotPhrasePrefix($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase_prefix', $columns, $options, true);
+        return $this->search($phrase, 'phrase_prefix', $columns, $options, true);
     }
 
-    public function orSearchNotPhrasePrefix($terms, ?array $columns = null, $options = [])
+    public function orSearchNotPhrasePrefix($phrase, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'phrase_prefix', $columns, $options, true, 'or');
+        return $this->search($phrase, 'phrase_prefix', $columns, $options, true, 'or');
     }
 
     // Multi Match query with type:bool_prefix
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-bool-prefix
 
-    public function searchBoolPrefix($terms, ?array $columns = null, $options = [])
+    public function searchBoolPrefix($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'bool_prefix', $columns, $options);
+        return $this->search($query, 'bool_prefix', $columns, $options);
     }
 
-    public function orSearchBoolPrefix($terms, ?array $columns = null, $options = [])
+    public function orSearchBoolPrefix($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'bool_prefix', $columns, $options, false, 'or');
+        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or');
     }
 
-    public function searchNotBoolPrefix($terms, ?array $columns = null, $options = [])
+    public function searchNotBoolPrefix($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'bool_prefix', $columns, $options, true);
+        return $this->search($query, 'bool_prefix', $columns, $options, true);
     }
 
-    public function orSearchNotBoolPrefix($terms, ?array $columns = null, $options = [])
+    public function orSearchNotBoolPrefix($query, ?array $columns = null, $options = [])
     {
-        return $this->search($terms, 'bool_prefix', $columns, $options, true, 'or');
+        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
     }
 
     //----------------------------------------------------------------------

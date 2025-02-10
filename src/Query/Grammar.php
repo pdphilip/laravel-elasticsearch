@@ -1049,7 +1049,7 @@ class Grammar extends BaseGrammar
             return $clause;
         }
 
-        $optionsToApply = ['boost', 'inner_hits'];
+        $optionsToApply = ['inner_hits'];
         $options = array_intersect_key($where['options'], array_flip($optionsToApply));
 
         foreach ($options as $option => $value) {
@@ -1593,13 +1593,7 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereSearch(Builder $builder, array $where): array
     {
-        $fields = $where['options']['fields'] ?? null;
-        if ($fields) {
-            if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
-                $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
-            }
-            $where['options']['fields'] = $fields;
-        }
+
         $constantScore = false;
         if (isset($where['options']['constant_score'])) {
             $constantScore = $where['options']['constant_score'];
@@ -1619,13 +1613,7 @@ class Grammar extends BaseGrammar
             ];
         }
 
-        return [
-            'multi_match' => [
-                'query' => $where['value'],
-                ...$where['options'],
-            ],
-        ];
-        //        //        dd($where);
+        return $query;
         //        // Determine the fields to search
         //        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
         //
