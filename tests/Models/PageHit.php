@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests\Models;
 
+use PDPhilip\Elasticsearch\Eloquent\DynamicIndex;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 class PageHit extends Model
 {
+    use DynamicIndex;
+
     protected $connection = 'elasticsearch';
 
     protected $table = 'page_hits';

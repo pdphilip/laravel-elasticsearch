@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Data\ModelMeta;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
@@ -23,7 +24,7 @@ trait ElasticsearchModel
 {
     use HasOptions, HasUuids, HybridRelations;
 
-    protected ?string $recordIndex;
+    protected ?ModelMeta $_meta;
 
     protected ?Relation $parentRelation;
 
@@ -51,19 +52,19 @@ trait ElasticsearchModel
         return $value;
     }
 
-    public function getMeta()
+    public function getMeta(): ModelMeta
     {
-        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta'] : [];
+        return $this->_meta;
     }
 
     public function getHighlights()
     {
-        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta']->getHighlights() : [];
+        return $this->getMeta()->getHighlights();
     }
 
     public function getHighlight($column, $deliminator = '')
     {
-        return ! empty($this->attributes['_meta']) ? $this->attributes['_meta']->getHighlight($column, $deliminator) : '';
+        return $this->getMeta()->getHighlight($column);
     }
 
     /**
@@ -71,7 +72,8 @@ trait ElasticsearchModel
      */
     protected function newBaseQueryBuilder()
     {
-        $query = $this->getConnection()->query();
+        $connection = $this->getConnection();
+        $query = $connection->query();
 
         // Since newBaseQueryBuilder is used whenever a new Query builder is needed
         // we hook in to it to pass options we have set at the model level to the query builder.
@@ -96,8 +98,12 @@ trait ElasticsearchModel
      */
     public function newFromBuilder($attributes = [], $connection = null)
     {
+        $meta = $attributes['_meta'] ?? null;
+        if ($meta) {
+            unset($attributes['_meta']);
+        }
         $model = parent::newFromBuilder($attributes, $connection);
-        $model->setTable($attributes['_meta']->getIndex() ?? $model->getTable());
+        $model->_meta->setMeta($meta);
 
         return $model;
     }
@@ -118,6 +124,11 @@ trait ElasticsearchModel
         return Carbon::now()->format($this->getDateFormat());
     }
 
+    public function getFullTable()
+    {
+        return $this->_meta->getFullTable();
+    }
+
     /**
      * Set the table suffix associated with the model.
      *
@@ -126,6 +137,7 @@ trait ElasticsearchModel
     public function setSuffix($suffix): self
     {
         $this->options()->add('suffix', $suffix);
+        $this->_meta->setTableSuffix($suffix);
 
         return $this;
     }

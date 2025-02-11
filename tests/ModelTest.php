@@ -570,7 +570,7 @@ it('tests changes the table index', function () {
     $user->save();
 
     $check = User::withSuffix('_test')->first();
-    expect($check->getTable())->toBe('users_test');
+    expect($check->getFullTable())->toBe('users_test');
 
 });
 
@@ -581,8 +581,8 @@ it('gets the query meta', function () {
     $user->save();
 
     $check = User::first();
-    expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\Meta::class)
-        ->and($check->getMeta()->toArray())->toHaveKeys(['took', 'timed_out', '_shards', 'hits']);
+    expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\ModelMeta::class)
+        ->and($check->getMeta()->toArray())->toHaveKeys(['score', 'index']);
 
 });
 

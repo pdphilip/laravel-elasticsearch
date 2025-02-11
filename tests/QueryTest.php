@@ -388,9 +388,9 @@ it('tests groupby', function () {
     $users = User::groupBy('title')->get();
     expect($users)->toHaveCount(2)
         ->and($users[0]['title'])->toBe('admin')
-        ->and($users[0]['_meta']->getDocCount())->toBe(3)
+        ->and($users[0]->getMeta()->getDocCount())->toBe(3)
         ->and($users[1]['title'])->toBe('user')
-        ->and($users[1]['_meta']->getDocCount())->toBe(5);
+        ->and($users[1]->getMeta()->getDocCount())->toBe(5);
 
     $users = User::groupBy('age')->get();
     expect($users)->toHaveCount(5);

@@ -49,6 +49,22 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function getTable($name): array
+    {
+        return $this->connection->getPostProcessor()->processTables(
+            $this->connection->cat()->indices(
+                [
+                    'index' => $this->connection->getTablePrefix().$name,
+                    'format' => 'json',
+                ]
+            )
+        );
+    }
+
+    /**
      * @throws ClientResponseException
      * @throws ServerResponseException
      * @throws MissingParameterException

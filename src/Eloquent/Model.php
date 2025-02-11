@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
+use PDPhilip\Elasticsearch\Data\ModelMeta;
 
 /**
  * @property object $searchHighlights
@@ -28,6 +29,7 @@ abstract class Model extends BaseModel
         if (empty($this->attributes['id'])) {
             $this->attributes['id'] = $this->newUniqueId();
         }
+        $this->_meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
     }
 
     private static $documentModelClasses = [];

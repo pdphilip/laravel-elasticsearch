@@ -342,10 +342,18 @@ class Connection extends BaseConnection
         return $this->index;
     }
 
-    public function getFullIndex($table = null): string
+    public function getIndexSuffix(): string
+    {
+        return $this->indexSuffix;
+    }
+
+    public function getFullIndex($table = null, $suffix = null): string
     {
         if ($table) {
             $this->setIndex($table);
+        }
+        if ($suffix) {
+            $this->setIndexSuffix($suffix);
         }
 
         return $this->tablePrefix.$this->index.$this->indexSuffix;
@@ -363,7 +371,17 @@ class Connection extends BaseConnection
 
     public function setIndex($index): self
     {
+        if (str_starts_with($index, $this->tablePrefix)) {
+            $index = str_replace($this->tablePrefix, '', $index);
+        }
         $this->index = $index;
+
+        return $this;
+    }
+
+    public function setIndexSuffix($suffix): self
+    {
+        $this->indexSuffix = $suffix;
 
         return $this;
     }
@@ -448,22 +466,6 @@ class Connection extends BaseConnection
             $this->indices()->open(['index' => $index]);
         }
 
-    }
-
-    //----------------------------------------------------------------------
-    // Query Grammar
-    //----------------------------------------------------------------------
-
-    /**
-     * Set the table prefix in use by the connection.
-     *
-     * @param  string  $suffix
-     */
-    public function setIndexSuffix($suffix): void
-    {
-        $this->indexSuffix = $suffix;
-
-        $this->getQueryGrammar()->setIndexSuffix($suffix);
     }
 
     //----------------------------------------------------------------------

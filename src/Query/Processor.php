@@ -7,7 +7,7 @@ namespace PDPhilip\Elasticsearch\Query;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
-use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Data\MetaTransfer;
 
 class Processor extends BaseProcessor
 {
@@ -151,11 +151,10 @@ class Processor extends BaseProcessor
      */
     public function processSelect(Builder $query, $result)
     {
+
         $this->rawResponse = $result;
         $this->query = $query;
-
         $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
-
         if ($this->aggregations) {
             return $this->processAggregations($query, $result);
         }
@@ -193,9 +192,9 @@ class Processor extends BaseProcessor
     /**
      * Create document meta from the given result
      */
-    public function metaFromResult(array $extra = []): Meta
+    public function metaFromResult(array $extra = []): MetaTransfer
     {
-        return Meta::make($this->getRawResponse(), $extra);
+        return MetaTransfer::make($this->getRawResponse(), $extra);
     }
 
     /**

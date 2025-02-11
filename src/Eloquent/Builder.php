@@ -234,7 +234,7 @@ class Builder extends BaseEloquentBuilder
 
     public function withSuffix($suffix)
     {
-        $this->model->options()->add('suffix', $suffix);
+        $this->model->setSuffix($suffix);
 
         return $this->model;
     }

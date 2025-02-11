@@ -15,7 +15,7 @@ test('creates using a suffix', function () {
     $pageHit->setSuffix('_2021-01-01')->save();
 
     $check = PageHit::withSuffix('_2021-01-01')->find($pageHit->id);
-    expect($check->getTable())->toBe('page_hits_2021-01-01');
+    expect($check->getFullTable())->toBe('page_hits_2021-01-01');
 });
 
 test('retrieve page hits across dynamic indices', function () {

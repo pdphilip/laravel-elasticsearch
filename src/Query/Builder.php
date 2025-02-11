@@ -12,7 +12,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Data\Meta;
+use PDPhilip\Elasticsearch\Data\MetaTransfer;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
@@ -535,7 +535,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values): Meta|bool
+    public function insert(array $values): MetaTransfer|bool
     {
         // Since every insert gets treated like a batch insert, we will have to detect
         // if the user is inserting a single document or an array of documents.
@@ -1704,7 +1704,6 @@ class Builder extends BaseBuilder
         if (! $this->hasProcessedSelect()) {
             $this->results = $this->processor->processSelect($this, $this->runSelect());
         }
-
         $this->resultsOffset = $this->offset;
 
         return $this->results;
@@ -1758,15 +1757,24 @@ class Builder extends BaseBuilder
      */
     public function getFrom(): string
     {
-        return $this->connection->getFullIndex($this->from);
+        return $this->connection->getFullIndex($this->from, $this->getIndexSuffix());
     }
 
     /**
      * Set the suffix that is appended to from.
      */
-    public function suffix(): string
+    public function getIndexSuffix(): string
     {
         return $this->options()->get('suffix', '');
+    }
+
+    public function setIndexSuffix($suffix = null): self
+    {
+        if ($suffix) {
+            $this->options()->add('suffix', $suffix);
+        }
+
+        return $this;
     }
 
     public function getLimit()

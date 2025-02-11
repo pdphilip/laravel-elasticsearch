@@ -8,7 +8,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Traits\Makeable;
 
-class Meta implements Arrayable
+class MetaTransfer implements Arrayable
 {
     use Makeable;
 
@@ -43,6 +43,31 @@ class Meta implements Arrayable
     public function getIndex(): ?string
     {
         return Arr::get($this->result, '_index');
+    }
+
+    public function getTook(): ?int
+    {
+        return Arr::get($this->result, 'took', 0);
+    }
+
+    public function getScore(): mixed
+    {
+        return Arr::get($this->result, '_score', 0);
+    }
+
+    public function getShards(): ?array
+    {
+        return Arr::get($this->result, '_shards', []);
+    }
+
+    public function getCursor(): ?array
+    {
+        return Arr::get($this->result, 'cursor', []);
+    }
+
+    public function getSort(): ?array
+    {
+        return Arr::get($this->result, 'sort', []);
     }
 
     public function toArray(): array
