@@ -367,7 +367,7 @@ it('tests morph', function () {
 
     // eager load
     $user = User::with('photos')->find($user->id);
-    //TODO: Figure out why getRelations is not working
+    // TODO: Figure out why getRelations is not working
     //    $relations = $user->getRelations();
     //    dd($relations);
     //    expect($relations)->toHaveKey('photos');

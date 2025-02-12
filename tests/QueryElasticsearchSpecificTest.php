@@ -70,7 +70,7 @@ it('ES Specific Queries', function () {
     $users = User::whereTermFuzzy('title', 'admik')->get();
     expect($users)->toHaveCount(3);
 
-    //Was searchMatch()
+    // Was searchMatch()
     $users = User::where('description', 'exploring')->get();
     expect($users)->toHaveCount(1);
 

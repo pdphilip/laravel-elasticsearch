@@ -2,7 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Query\DSL;
 
-//@internal
+// @internal
 class DslCompiler
 {
     protected array $query = [];
@@ -61,9 +61,9 @@ class DslCompiler
 
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Protected Methods
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     protected function trackClause($clause)
     {
@@ -86,7 +86,7 @@ class DslCompiler
             $this->bool['must_not'] = [];
         }
         $this->bool['must_not'][] = $clause;
-        //Double inc to ensure it's not seen as a single clause
+        // Double inc to ensure it's not seen as a single clause
         $this->clauses += 2;
     }
 

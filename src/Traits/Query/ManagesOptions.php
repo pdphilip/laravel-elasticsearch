@@ -73,7 +73,7 @@ trait ManagesOptions
     protected function extractOptionsFull($type, $column, $operator, $value, $boolean, $not, $options = []): array
     {
         if (is_callable($column)) {
-            //The query is a closure, return it as is
+            // The query is a closure, return it as is
             return [$column, $operator, $value, $boolean, $not, $options];
         }
 
@@ -102,7 +102,7 @@ trait ManagesOptions
         $allowedOptions = $this->returnAllowedOptions($type);
 
         if ($value) {
-            //If either is callable or an array containing valid operators, then we have options
+            // If either is callable or an array containing valid operators, then we have options
             if (is_callable($value) || (is_array($value) && count(array_intersect(array_keys($value), $allowedOptions)))) {
                 $options = $this->parseOptions($value, $type);
                 $value = null;
@@ -112,9 +112,9 @@ trait ManagesOptions
             }
         }
 
-        //Last, let's assess the operator
+        // Last, let's assess the operator
         if ($operator) {
-            //If either is callable or an array containing valid operators, then we have options
+            // If either is callable or an array containing valid operators, then we have options
             if (is_callable($operator) || (is_array($operator) && count(array_intersect(array_keys($operator), $allowedOptions)))) {
                 $options = $this->parseOptions($operator, $type);
                 $operator = null;
@@ -125,7 +125,7 @@ trait ManagesOptions
 
         }
 
-        //Ok, we tried. We have no options, return as is
+        // Ok, we tried. We have no options, return as is
         return [$column, $operator, $value, $boolean, $not, $options];
     }
 
@@ -138,7 +138,7 @@ trait ManagesOptions
     {
         $optionClass = $this->getOptionClass($type);
         if (! $optionClass) {
-            //remove after testing as it's internal and should never happen
+            // remove after testing as it's internal and should never happen
             throw new \Exception('Invalid option type: '.$type);
         }
         if (is_callable($options)) {

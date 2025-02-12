@@ -44,7 +44,7 @@ trait QueriesRelationships
 
         // If this is a hybrid relation then we can not use a normal whereExists() query that relies on a subquery
         // We need to use a `whereIn` query
-        //@phpstan-ignore-next-line
+        // @phpstan-ignore-next-line
         if (Model::isElasticsearchModel($this->getModel()) || $this->isAcrossConnections($relation)) {
             return $this->addHybridHas($relation, $operator, $count, $boolean, $callback);
         }
@@ -52,7 +52,7 @@ trait QueriesRelationships
         // If we only need to check for the existence of the relation, then we can optimize
         // the subquery to only run a "where exists" clause instead of this full "count"
         // clause. This will make these queries run much faster compared with a count.
-        //@phpstan-ignore-next-line
+        // @phpstan-ignore-next-line
         $method = $this->canUseExistsForExistenceCheck($operator, $count) ? 'getRelationExistenceQuery' : 'getRelationExistenceCountQuery';
 
         $hasQuery = $relation->{$method}($relation->getRelated()->newQuery(), $this);

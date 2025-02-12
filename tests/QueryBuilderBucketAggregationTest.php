@@ -55,8 +55,8 @@ it('aggregate multiple metrics', function () {
 
 });
 
-//categorize_text is not a Free/Basic License Elasticsearch Feature
-//See https://www.elastic.co/subscriptions @Text categorization aggregation
+// categorize_text is not a Free/Basic License Elasticsearch Feature
+// See https://www.elastic.co/subscriptions @Text categorization aggregation
 it('aggregate categorize_text', function () {
     $items = DB::table('items')->bucket('name', 'categorize_text', ['field' => 'name'])->getAggregationResults();
     expect($items)->toHaveCount(3)
@@ -65,7 +65,7 @@ it('aggregate categorize_text', function () {
 })->skip(fn () => $this->license === 'basic', 'Skipped as "categorize_text" is not a Free/Basic License Elasticsearch Feature');
 
 it('aggregate multiple metrics and return a collection when using a model', function () {
-    //@pest-ignore categorize-text-agg is not a Free/Basic License Elasticsearch Feature
+    // @pest-ignore categorize-text-agg is not a Free/Basic License Elasticsearch Feature
     $items = Item::bucket('name', 'categorize_text', ['field' => 'name'])->getAggregationResults();
     expect($items)->toHaveCount(3)
         ->and($items[0]['name'])->toBe('spoon')

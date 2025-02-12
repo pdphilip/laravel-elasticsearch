@@ -107,12 +107,12 @@ class Grammar extends BaseGrammar
         if ($builder->bucketAggregations) {
             $params['body']['aggs'] = $this->compileBucketAggregations($builder);
 
-            //If we are aggregating we set the body size to 0 to save on processing time.
+            // If we are aggregating we set the body size to 0 to save on processing time.
             $params['body']['size'] = 0;
         } elseif ($builder->metricsAggregations) {
             $params['body']['aggs'] = $this->compileMetricAggregations($builder);
 
-            //If we are aggregating we set the body size to 0 to save on processing time.
+            // If we are aggregating we set the body size to 0 to save on processing time.
             $params['body']['size'] = 0;
         }
 
@@ -140,7 +140,7 @@ class Grammar extends BaseGrammar
         }
 
         foreach ($builder->bucketAggregations as $aggregation) {
-            //This lets us dynamically set the metric aggregation inside the bucket
+            // This lets us dynamically set the metric aggregation inside the bucket
             if (! empty($metricsAggregations)) {
 
                 $aggregation['aggregations'] = $builder->newQuery();

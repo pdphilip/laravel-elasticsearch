@@ -149,7 +149,7 @@ trait HybridRelations
         // there are multiple types in the morph and we can't use single queries.
         $class = $this->$type;
         if ($class === null) {
-            //@phpstan-ignore-next-line
+            // @phpstan-ignore-next-line
             return new MorphTo($this->newQuery(), $this, $id, $ownerKey, $type, $name);
         }
 

@@ -233,9 +233,9 @@ class Grammar extends BaseGrammar
         return $columns;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Modifiers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     protected function modifyBoost(Blueprint $blueprint, Fluent $property): Fluent
     {
@@ -317,7 +317,7 @@ class Grammar extends BaseGrammar
 
     protected function modifyAnalyzer(Blueprint $blueprint, Fluent $property): Fluent
     {
-        //Nothing to do here, including for consistency or possible future use
+        // Nothing to do here, including for consistency or possible future use
         return $property;
     }
 
@@ -343,7 +343,7 @@ class Grammar extends BaseGrammar
 
     protected function modifyCoerce(Blueprint $blueprint, Fluent $property): Fluent
     {
-        //Nothing to do here, including for consistency or possible future use
+        // Nothing to do here, including for consistency or possible future use
         return $property;
     }
 
@@ -359,7 +359,7 @@ class Grammar extends BaseGrammar
 
     protected function modifyNorms(Blueprint $blueprint, Fluent $property): Fluent
     {
-        //Nothing to do here, including for consistency or possible future use
+        // Nothing to do here, including for consistency or possible future use
         return $property;
     }
 
