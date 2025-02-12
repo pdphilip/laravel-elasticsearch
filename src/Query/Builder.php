@@ -14,6 +14,7 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaTransfer;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
+use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Traits\Query\ManagesOptions;
@@ -85,9 +86,9 @@ class Builder extends BaseBuilder
         return parent::__call($method, $parameters);
     }
 
-    //======================================================================
+    // ======================================================================
     // Inherited Methods
-    //======================================================================
+    // ======================================================================
 
     /**
      * Force the query to only return distinct results.
@@ -155,7 +156,7 @@ class Builder extends BaseBuilder
     public function whereRaw($sql, $bindings = [], $boolean = 'and', $options = []): self
     {
         parent::whereRaw($sql, $bindings, $boolean);
-        //Append options to clause
+        // Append options to clause
         $this->applyOptions($options);
 
         return $this;
@@ -606,9 +607,12 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function newQuery()
+    public function newQuery($from = null)
     {
         $query = new static($this->connection, $this->grammar, $this->processor);
+        if ($from) {
+            $query->from($from);
+        }
 
         // Transfer items
         $query->options()->set($this->options()->all());
@@ -638,13 +642,13 @@ class Builder extends BaseBuilder
         return true;
     }
 
-    //======================================================================
+    // ======================================================================
     // ES Specific Methods
-    //======================================================================
+    // ======================================================================
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Wheres (targeting a field)
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /**
      * Add a "where weekday" statement to the query.
      *
@@ -684,7 +688,7 @@ class Builder extends BaseBuilder
 
     }
 
-    //Match Phrase: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html
+    // Match Phrase: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html
 
     public function wherePhrase($column, $value, $boolean = 'and', $not = false, $options = [])
     {
@@ -711,7 +715,7 @@ class Builder extends BaseBuilder
         return $this->wherePhrase($column, $value, 'or', true, $options);
     }
 
-    //Match Phrase Prefix: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase-prefix.html
+    // Match Phrase Prefix: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase-prefix.html
 
     public function wherePhrasePrefix($column, $value, $boolean = 'and', $not = false, $options = [])
     {
@@ -767,7 +771,7 @@ class Builder extends BaseBuilder
         return $this->whereTerm($column, $value, 'or', true, $options);
     }
 
-    //Alias for whereTerm
+    // Alias for whereTerm
 
     public function whereExact($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
@@ -888,7 +892,7 @@ class Builder extends BaseBuilder
         return $this->whereStartsWith($column, $value, 'or', true, $options);
     }
 
-    //Alias for whereStartsWith
+    // Alias for whereStartsWith
 
     public function wherePrefix($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
@@ -995,15 +999,15 @@ class Builder extends BaseBuilder
      */
     public function whereNestedObject($column, $query, $innerHits = true, $options = [], $boolean = 'and', $not = false): self
     {
+        $from = $this->from;
         $type = 'NestedObject';
         $options = $this->setOptions($options, 'nested');
         $options->innerHits($innerHits);
         $options = $options->toArray();
 
         if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery());
+            call_user_func($query, $query = $this->newQuery($from));
         }
-
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
 
         return $this;
@@ -1070,9 +1074,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Search (Multiple Fields)
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * Add a text search clause to the query.
@@ -1236,9 +1240,9 @@ class Builder extends BaseBuilder
         return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Ordering
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function orderByGeo(string $column, array $coordinates, $direction = 1, array $options = []): self
     {
@@ -1275,9 +1279,9 @@ class Builder extends BaseBuilder
         return $this->orderBy($column, $direction, $options);
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Aggregations & Stats
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * A boxplot metrics aggregation that computes boxplot of numeric values extracted from the aggregated documents.
@@ -1448,7 +1452,7 @@ class Builder extends BaseBuilder
      */
     public function aggregateMetric($function, $columns = ['*'], $options = [])
     {
-        //Each column we want aggregated
+        // Each column we want aggregated
         $columns = Arr::wrap($columns);
         foreach ($columns as $column) {
             $this->metricsAggregations[] = [
@@ -1530,9 +1534,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Scripting
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * Add a script query
@@ -1621,9 +1625,9 @@ class Builder extends BaseBuilder
         return $this->update([]);
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Options
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * Add highlights to query.
@@ -1690,9 +1694,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Executors
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * Get results without re-fetching for subsequent calls.
@@ -1709,9 +1713,9 @@ class Builder extends BaseBuilder
         return $this->results;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Ops
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * Add a filter query by calling the required 'where' method
@@ -1757,7 +1761,8 @@ class Builder extends BaseBuilder
      */
     public function getFrom(): string
     {
-        return $this->connection->getFullIndex($this->from, $this->getIndexSuffix());
+
+        return Sanitizer::qualifiedIndex($this->connection->getTablePrefix(), $this->from, $this->getIndexSuffix());
     }
 
     /**
@@ -1768,14 +1773,14 @@ class Builder extends BaseBuilder
         return $this->options()->get('suffix', '');
     }
 
-    public function setIndexSuffix($suffix = null): self
-    {
-        if ($suffix) {
-            $this->options()->add('suffix', $suffix);
-        }
-
-        return $this;
-    }
+    //    public function setIndexSuffix($suffix = null): self
+    //    {
+    //        if ($suffix) {
+    //            $this->options()->add('suffix', $suffix);
+    //        }
+    //
+    //        return $this;
+    //    }
 
     public function getLimit()
     {
@@ -1826,9 +1831,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Relations & Routing
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function routing(string $routing): self
     {

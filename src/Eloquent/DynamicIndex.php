@@ -17,6 +17,19 @@ trait DynamicIndex
         $this->setSuffix('*');
     }
 
+    /**
+     * Set the table suffix associated with the model.
+     *
+     * @param  string|null  $suffix
+     */
+    public function setSuffix($suffix): self
+    {
+        $this->options()->add('suffix', $suffix);
+        $this->_meta->setTableSuffix($suffix);
+
+        return $this;
+    }
+
     public function save(array $options = [])
     {
         $validatedSuffix = $this->getMeta()->getTableSuffix() !== '*';

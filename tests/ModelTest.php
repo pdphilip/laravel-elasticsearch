@@ -562,17 +562,24 @@ it('tests first or fail', function () {
 it('tests changes the table index', function () {
 
     $schema = Schema::connection('elasticsearch');
-    $schema->dropIfExists('users_test');
-
+    $schema->dropIfExists('urs_test');
     $user = new User;
     $user->name = 'one';
-    $user->setTable('users_test');
+    $user->setTable('urs_test');
     $user->save();
-
-    $check = User::withSuffix('_test')->first();
-    expect($check->getFullTable())->toBe('users_test');
-
+    $check = User::withTable('urs_test')->first();
+    expect($check->getFullTable())->toBe('urs_test');
 });
+
+it('should throw an error if suffix is applied to a non dynamic index', function () {
+
+    $schema = Schema::connection('elasticsearch');
+    $schema->dropIfExists('users_test');
+    $user = new User;
+    $user->name = 'one';
+    $user->withSuffix('_test');
+    $user->save();
+})->throws(\PDPhilip\Elasticsearch\Exceptions\DynamicIndexException::class);
 
 it('gets the query meta', function () {
 

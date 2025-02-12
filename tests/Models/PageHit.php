@@ -30,6 +30,8 @@ class PageHit extends Model
             '2021-01-04',
             '2021-01-05',
         ])->each(function (string $index) use ($schema) {
+            Schema::dropIfExists('page_hits');
+
             Schema::dropIfExists('page_hits_'.$index);
 
             $schema->create('page_hits_'.$index, function (Blueprint $table) {

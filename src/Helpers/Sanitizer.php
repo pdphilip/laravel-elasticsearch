@@ -57,4 +57,12 @@ final class Sanitizer
 
         return $sanitized;
     }
+
+    public static function qualifiedIndex($prefix, $table, $suffix)
+    {
+        $table = str_replace($prefix, '', $table);
+        $table = str_replace($suffix, '', $table);
+
+        return $prefix.$table.$suffix;
+    }
 }

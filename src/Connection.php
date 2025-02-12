@@ -49,10 +49,6 @@ class Connection extends BaseConnection
 
     protected string $connectionName = '';
 
-    protected string $indexSuffix = '';
-
-    protected string $index = '';
-
     /**
      * @var Query\Processor
      */
@@ -337,29 +333,6 @@ class Connection extends BaseConnection
         return $this->getTablePrefix();
     }
 
-    public function getIndex(): ?string
-    {
-        return $this->index;
-    }
-
-    public function getIndexSuffix(): string
-    {
-        return $this->indexSuffix;
-    }
-
-    public function getFullIndex($table = null, $suffix = null): string
-    {
-        if ($table) {
-            $this->setIndex($table);
-        }
-        if ($suffix) {
-            $this->setIndexSuffix($suffix);
-        }
-
-        return $this->tablePrefix.$this->index.$this->indexSuffix;
-
-    }
-
     //----------------------------------------------------------------------
     // Connection Setters
     //----------------------------------------------------------------------
@@ -367,23 +340,6 @@ class Connection extends BaseConnection
     public function setIndexPrefix($prefix): self
     {
         return $this->setTablePrefix($prefix);
-    }
-
-    public function setIndex($index): self
-    {
-        if (str_starts_with($index, $this->tablePrefix)) {
-            $index = str_replace($this->tablePrefix, '', $index);
-        }
-        $this->index = $index;
-
-        return $this;
-    }
-
-    public function setIndexSuffix($suffix): self
-    {
-        $this->indexSuffix = $suffix;
-
-        return $this;
     }
 
     /**

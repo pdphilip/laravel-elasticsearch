@@ -130,24 +130,19 @@ trait ElasticsearchModel
     }
 
     /**
-     * Set the table suffix associated with the model.
-     *
-     * @param  string|null  $suffix
-     */
-    public function setSuffix($suffix): self
-    {
-        $this->options()->add('suffix', $suffix);
-        $this->_meta->setTableSuffix($suffix);
-
-        return $this;
-    }
-
-    /**
      * Get the table suffix associated with the model.
      */
     public function getSuffix(): string
     {
         return $this->options()->get('suffix', '');
+    }
+
+    public function setTable($table)
+    {
+        $this->table = $table;
+        $this->_meta->setTable($table);
+
+        return $this;
     }
 
     /**

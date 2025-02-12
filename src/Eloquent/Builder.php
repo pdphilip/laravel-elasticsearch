@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Closure;
+use Exception;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Iterator;
+use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use PDPhilip\Elasticsearch\Schema\Schema;
@@ -55,7 +57,7 @@ class Builder extends BaseEloquentBuilder
         'tosql',
         'torawsql',
 
-        //ES Metric Aggregations
+        // ES Metric Aggregations
         'stats',
         'extendedstats',
         'medianabsolutedeviation',
@@ -65,7 +67,7 @@ class Builder extends BaseEloquentBuilder
         'matrix',
         'boxplot',
 
-        //ES Bucket Aggregations
+        // ES Bucket Aggregations
         'bucket',
         'bucketAggregation',
     ];
@@ -82,7 +84,6 @@ class Builder extends BaseEloquentBuilder
 
         $this->query->from($model->getTable());
         $this->query->options()->set($this->model?->options()->all() ?? []);
-        $this->getConnection()->setIndex($model->getTable());
 
         return $this;
     }
@@ -220,7 +221,7 @@ class Builder extends BaseEloquentBuilder
     public function findOrNew($id, $columns = ['*']): Model
     {
         $model = parent::findOrNew($id, $columns);
-        $model['id'] = $id; //set the id to the model
+        $model['id'] = $id; // set the id to the model
 
         return $model;
     }
@@ -232,16 +233,34 @@ class Builder extends BaseEloquentBuilder
         return $this->model;
     }
 
+    /**
+     * @throws DynamicIndexException
+     */
     public function withSuffix($suffix)
     {
-        $this->model->setSuffix($suffix);
+        try {
+            $this->model->setSuffix($suffix);
 
-        return $this->model;
+            return $this->model;
+        }
+
+        // DynamicIndex trait required
+        catch (Exception $e) {
+            throw new DynamicIndexException('withSuffix() requires Dynamic Index trait', $this->model, $e);
+        }
     }
 
-    //----------------------------------------------------------------------
+    public function withTable($table)
+    {
+        $this->model->setTable($table);
+        $this->query->from = $table;
+
+        return $this;
+    }
+
+    // ----------------------------------------------------------------------
     // Schema operations
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}
