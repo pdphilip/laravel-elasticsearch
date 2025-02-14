@@ -23,6 +23,8 @@ class Builder extends BaseEloquentBuilder
 {
     use QueriesRelationships;
 
+    protected $queryMeta;
+
     protected $type;
 
     protected $passthru = [
@@ -133,8 +135,8 @@ class Builder extends BaseEloquentBuilder
     public function get($columns = ['*'])
     {
         $builder = $this->applyScopes();
-
-        $models = $builder->getModels($columns);
+        $modelsCollection = $builder->getElasticModels($columns);
+        $models = $modelsCollection->all();
 
         // If we actually found models we will also eager load any relationships that
         // have been specified as needing to be eager loaded, which will solve the
@@ -143,7 +145,12 @@ class Builder extends BaseEloquentBuilder
             $models = $builder->eagerLoadRelations($models);
         }
 
-        return $builder->getModel()->newCollection($models);
+        return ElasticCollection::loadCollection($builder->getModel()->newCollection($models))->loadMeta($modelsCollection->getQueryMeta());
+    }
+
+    public function getRaw(): mixed
+    {
+        return $this->query->getRaw();
     }
 
     /**
@@ -164,7 +171,17 @@ class Builder extends BaseEloquentBuilder
     {
         return $this->model->hydrate(
             $this->query->get($columns)->all()
-        )->all();
+        );
+    }
+
+    public function getElasticModels($columns = ['*'])
+    {
+        $elasticQueryCollection = $this->query->get($columns);
+        $eloquentCollection = $this->model->hydrate(
+            $elasticQueryCollection->all()
+        );
+
+        return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
     }
 
     /**
@@ -172,6 +189,7 @@ class Builder extends BaseEloquentBuilder
      */
     public function hydrate(array $items)
     {
+
         $instance = $this->newModelInstance();
 
         return $instance->newCollection(array_map(function ($item) use ($instance) {

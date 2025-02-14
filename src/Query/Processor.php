@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Query;
 
 use Elastic\Elasticsearch\Response\Elasticsearch;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
-use PDPhilip\Elasticsearch\Data\MetaTransfer;
+use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Data\MetaDTO;
 
 class Processor extends BaseProcessor
 {
@@ -43,7 +44,7 @@ class Processor extends BaseProcessor
         return is_array($this->rawResponse) ? $this->rawResponse : $this->rawResponse->asArray();
     }
 
-    public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
+    public function processInsertGetId(Builder|BaseBuilder $query, $sql, $values, $sequence = null)
     {
         $result = $query->getConnection()->insert($sql, $values);
         $this->rawResponse = $result;
@@ -53,11 +54,59 @@ class Processor extends BaseProcessor
         return $last['index']['_id'] ?? null;
     }
 
+    public function processDistinctAggregations($result, $columns, $withCount): Collection
+    {
+        $keys = [];
+        foreach ($columns as $column) {
+            $keys[] = 'by_'.$column;
+        }
+
+        return collect($this->_parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount));
+    }
+
+    protected function _parseDistinctBucket($columns, $keys, $response, $index, $includeDocCount, $currentData = []): array
+    {
+        $data = [];
+        if (! empty($response[$keys[$index]]['buckets'])) {
+            foreach ($response[$keys[$index]]['buckets'] as $res) {
+
+                $datum = $currentData;
+
+                $col = $columns[$index];
+
+                $datum['doc_count'] = $res['doc_count'];
+                $datum[$col] = $res['key'];
+
+                if ($includeDocCount) {
+                    $datum[$col.'_count'] = $res['doc_count'];
+                }
+
+                if (isset($columns[$index + 1])) {
+                    $nestedData = $this->_parseDistinctBucket($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
+
+                    if (! empty($nestedData)) {
+                        $data = array_merge($data, $nestedData);
+                    } else {
+                        $data[] = $datum;
+                    }
+                } else {
+                    $data[] = $datum;
+                }
+            }
+        }
+
+        return $data;
+    }
+
     public function processAggregations(Builder $query, $result)
     {
         $this->rawResponse = $result;
         $this->query = $query;
-        $this->rawAggregations = $this->getRawResponse()['aggregations'] ?? [];
+        $response = $this->getRawResponse();
+        $this->rawAggregations = $response['aggregations'] ?? [];
+        if (! empty($response['aggregations']['group_by']['after_key'])) {
+            $this->query->getMetaTransfer()->set('after_key', $response['aggregations']['group_by']['after_key']);
+        }
 
         $result = [];
 
@@ -146,25 +195,44 @@ class Processor extends BaseProcessor
 
     /**
      * Process the results of a "select" query.
-     *
-     * @return array
      */
-    public function processSelect(Builder $query, $result)
+    public function processSelect(BaseBuilder|Builder $query, $results): array
     {
-
-        $this->rawResponse = $result;
+        $this->rawResponse = $results;
         $this->query = $query;
-        $this->aggregations = $this->getRawResponse()['aggregations'] ?? [];
+        $response = $this->getRawResponse();
+        $queryMeta = $this->metaFromResult([
+            'query' => 'select',
+            'dsl' => $query->toSql(),
+        ]);
+        $query->setMetaTransfer($queryMeta);
+
+        $documents = collect();
+
+        if ($this->query->distinct) {
+            $query->getMetaTransfer()->set('query', 'distinct');
+            $index = $query->inferIndex();
+            $aggregations = $this->processDistinctAggregations($response, $query->columns, $query->distinctCount ?? false);
+            $documents = $aggregations->map(function ($agg) use ($index) {
+                return $this->liftToMeta($agg, ['_index' => $index], ['doc_count']);
+            });
+
+            $query->getMetaTransfer()->set('total', $documents->count());
+
+            return $documents->all();
+        }
+
+        $this->aggregations = $response['aggregations'] ?? [];
         if ($this->aggregations) {
-            return $this->processAggregations($query, $result);
+            return $this->processAggregations($query, $results);
         }
 
-        $documents = [];
-        foreach ($this->getRawResponse()['hits']['hits'] as $result) {
-            $documents[] = $this->documentFromResult($this->query, $result);
+        foreach ($response['hits']['hits'] as $results) {
+            $documents->add($this->documentFromResult($this->query, $results));
         }
+        $query->getMetaTransfer()->set('total', count($documents));
 
-        return $documents;
+        return $documents->all();
     }
 
     /**
@@ -181,7 +249,6 @@ class Processor extends BaseProcessor
         }
 
         $document['_meta'] = $this->metaFromResult($meta);
-
         if (isset($result['inner_hits'])) {
             $document = $this->addInnerHitsToDocument($document, $result['inner_hits']);
         }
@@ -192,9 +259,21 @@ class Processor extends BaseProcessor
     /**
      * Create document meta from the given result
      */
-    public function metaFromResult(array $extra = []): MetaTransfer
+    public function metaFromResult(array $extra = []): MetaDTO
     {
-        return MetaTransfer::make($this->getRawResponse(), $extra);
+        return MetaDTO::make($this->getRawResponse(), $extra);
+    }
+
+    public function liftToMeta($data, $baseValues, $keys = [])
+    {
+        $meta = MetaDTO::make($baseValues);
+        foreach ($keys as $key) {
+            $meta->set($key, $data[$key]);
+            unset($data[$key]);
+        }
+        $data['_meta'] = $meta;
+
+        return $data;
     }
 
     /**

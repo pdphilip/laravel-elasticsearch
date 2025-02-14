@@ -32,26 +32,10 @@ class Grammar extends BaseGrammar
 
         // If we don't have a query then we must be deleting everything IE truncate.
         if (! isset($clause['body']['query'])) {
-            $clause['body']['query'] = $this->compileWhereMatchAll();
+            $clause['body']['query'] = ['match_all' => (object) []];
         }
 
         return $clause;
-    }
-
-    /**
-     * @return array
-     */
-    protected function compileWhereMatchAll()
-    {
-        return ['match_all' => (object) []];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function compileExists(Builder|BaseBuilder $query)
-    {
-        return $this->compileSelect($query);
     }
 
     /**
@@ -103,12 +87,28 @@ class Grammar extends BaseGrammar
         if (isset($builder->columns)) {
             $params['_source'] = $builder->columns;
         }
-
-        if ($builder->bucketAggregations) {
-            $params['body']['aggs'] = $this->compileBucketAggregations($builder);
-
+        if ($builder->distinct) {
+            if ($builder->columns && $builder->columns !== ['*']) {
+                $params['body']['aggs'] = $this->compileNestedTermAggregations($builder->columns, $builder);
+                $params['body']['size'] = $builder->getSetLimit();
+                unset($params['body']['sort']);
+            } else {
+                // else nothing to aggregate - just a normal query as all records will be distinct anyway
+                $builder->distinct = false;
+            }
+        } elseif ($builder->bucketAggregations) {
+            $sorts = ! empty($params['body']['sort']) ? ($params['body']['sort']) : null;
+            if (! empty($params['body']['from'])) {
+                $afterCount = $params['body']['from'];
+                unset($params['body']['from']);
+                // This of course could be a problem if the user is using from for pagination and they go deep
+                // Leaving it for now
+                $builder->afterKey = $builder->getGroupByAfterKey($afterCount);
+            }
+            $params['body']['aggs'] = $this->compileBucketAggregations($builder, $sorts);
             // If we are aggregating we set the body size to 0 to save on processing time.
             $params['body']['size'] = 0;
+
         } elseif ($builder->metricsAggregations) {
             $params['body']['aggs'] = $this->compileMetricAggregations($builder);
 
@@ -116,81 +116,11 @@ class Grammar extends BaseGrammar
             $params['body']['size'] = 0;
         }
 
-        if ($builder->distinct) {
-            $params['body']['collapse']['field'] = $this->getIndexableField(reset($builder->distinct), $builder);
-        }
-
         if (isset($params['body']['query']) && ! $params['body']['query']) {
             unset($params['body']['query']);
         }
 
         return $params;
-    }
-
-    /**
-     * Compile all aggregations
-     */
-    public function compileBucketAggregations(Builder $builder): array
-    {
-        $aggregations = [];
-
-        $metricsAggregations = [];
-        if ($builder->metricsAggregations) {
-            $metricsAggregations = $this->compileMetricAggregations($builder);
-        }
-
-        foreach ($builder->bucketAggregations as $aggregation) {
-            // This lets us dynamically set the metric aggregation inside the bucket
-            if (! empty($metricsAggregations)) {
-
-                $aggregation['aggregations'] = $builder->newQuery();
-
-                // @phpstan-ignore-next-line
-                $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
-            }
-
-            $result = $this->compileAggregation($builder, $aggregation);
-
-            $aggregations = array_merge_recursive($aggregations, $result);
-        }
-
-        return $aggregations;
-    }
-
-    /**
-     * Compile all aggregations
-     */
-    public function compileMetricAggregations(Builder $builder): array
-    {
-        $aggregations = [];
-
-        foreach ($builder->metricsAggregations as $aggregation) {
-            $result = $this->compileAggregation($builder, $aggregation);
-
-            $aggregations = array_merge_recursive($aggregations, $result);
-        }
-
-        return $aggregations;
-    }
-
-    /**
-     * Compile a single aggregation
-     */
-    public function compileAggregation(Builder $builder, array $aggregation): array
-    {
-        $key = $aggregation['key'];
-
-        $method = 'compile'.ucfirst(Str::camel($aggregation['type'])).'Aggregation';
-
-        $compiled = [
-            $key => $this->$method($builder, $aggregation),
-        ];
-
-        if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {
-            $compiled[$key]['aggs'] = $this->compileMetricAggregations($aggregation['aggregations']);
-        }
-
-        return $compiled;
     }
 
     /**
@@ -284,6 +214,126 @@ class Grammar extends BaseGrammar
         }
 
         return $compiledOrders;
+    }
+
+    public function compileNestedTermAggregations($fields, Builder $builder): array
+    {
+        $currentField = array_shift($fields);
+        $field = $this->getIndexableField($currentField, $builder);
+
+        $terms = [
+            'terms' => [
+                'field' => $field,
+                'size' => $builder->getLimit(),
+            ],
+        ];
+        $sorts = $builder->sorts;
+        $orders = collect($builder->orders);
+        $termsOrders = [];
+        if (isset($sorts['_count'])) {
+            $termsOrders[] = $sorts['_count'] == 1 ? ['_count' => 'asc'] : ['_count' => 'desc'];
+        }
+        $fieldOrder = $orders->where('column', $currentField)->first();
+        if ($fieldOrder) {
+            $termsOrders[] = $fieldOrder['direction'] == 1 ? ['_key' => 'asc'] : ['_key' => 'desc'];
+        }
+        if (! empty($termsOrders)) {
+            $terms['terms']['order'] = $termsOrders;
+        }
+
+        $aggs = ["by_{$currentField}" => $terms];
+        if (! empty($fields)) {
+            $aggs["by_{$currentField}"]['aggs'] = $this->compileNestedTermAggregations($fields, $builder);
+        }
+
+        return $aggs;
+    }
+
+    /**
+     * Compile all aggregations
+     */
+    public function compileBucketAggregations(Builder $builder, $sorts = null): array
+    {
+        $aggregations = collect();
+
+        $metricsAggregations = [];
+        if ($builder->metricsAggregations) {
+            $metricsAggregations = $this->compileMetricAggregations($builder);
+        }
+
+        foreach ($builder->bucketAggregations as $aggregation) {
+            // This lets us dynamically set the metric aggregation inside the bucket
+            if (! empty($metricsAggregations)) {
+
+                $aggregation['aggregations'] = $builder->newQuery();
+
+                // @phpstan-ignore-next-line
+                $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
+            }
+
+            $result = $this->compileAggregation($builder, $aggregation);
+
+            $aggregations = $aggregations->mergeRecursive($result);
+        }
+        if ($sorts) {
+            $flat = $aggregations->dot();
+            foreach ($sorts as $sort) {
+                foreach ($sort as $field => $order) {
+                    $key = ($flat->search($field));
+                    if ($key) {
+                        $sortKey = str_replace('field', 'order', $key);
+                        $flat->put($sortKey, $order['order']);
+                    }
+                }
+
+            }
+            $aggregations = $flat->undot();
+        }
+
+        return $aggregations->all();
+    }
+
+    /**
+     * Compile all aggregations
+     */
+    public function compileMetricAggregations(Builder $builder): array
+    {
+        $aggregations = [];
+
+        foreach ($builder->metricsAggregations as $aggregation) {
+            $result = $this->compileAggregation($builder, $aggregation);
+
+            $aggregations = array_merge_recursive($aggregations, $result);
+        }
+
+        return $aggregations;
+    }
+
+    /**
+     * Compile a single aggregation
+     */
+    public function compileAggregation(Builder $builder, array $aggregation): array
+    {
+        $key = $aggregation['key'];
+
+        // This is neat & cleaver, but it's tedious to trace & maintain
+        $method = 'compile'.ucfirst(Str::camel($aggregation['type'])).'Aggregation';
+
+        $compiledPayload = match ($aggregation['type']) {
+            'composite' => $this->compileCompositeAggregation($builder, $aggregation),
+            'date_histogram' => $this->compileDateHistogramAggregation($builder, $aggregation),
+            'date_range' => $this->compileDateRangeAggregation($builder, $aggregation),
+            'exists' => $this->compileExistsAggregation($builder, $aggregation),
+            default => $this->$method($builder, $aggregation),
+        };
+
+        $compiled = [$key => $compiledPayload];
+
+        if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {
+            $compiled[$key]['aggs'] = $this->compileMetricAggregations($aggregation['aggregations']);
+        }
+
+        return $compiled;
     }
 
     public function compileIndexMappings(Builder $builder)
@@ -468,18 +518,6 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Apply inner hits options to the clause
-     */
-    protected function applyInnerHitsOption(array $clause, $options): array
-    {
-        $firstKey = key($clause);
-
-        $clause[$firstKey]['inner_hits'] = empty($options) || $options === true ? (object) [] : (array) $options;
-
-        return $clause;
-    }
-
-    /**
      * Compile avg aggregation
      */
     protected function compileAvgAggregation(Builder $builder, array $aggregation): array
@@ -530,12 +568,21 @@ class Grammar extends BaseGrammar
      */
     protected function compileCompositeAggregation(Builder $builder, array $aggregation): array
     {
+        $size = $builder->getSetLimit();
+        $afterKey = $builder->afterKey ?? null;
 
         $compiled = [
             'composite' => [
                 'sources' => $aggregation['args'],
             ],
         ];
+
+        if ($size) {
+            $compiled['composite']['size'] = $size;
+        }
+        if ($afterKey) {
+            $compiled['composite']['after'] = $afterKey;
+        }
 
         return $compiled;
     }
@@ -826,6 +873,18 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Apply inner hits options to the clause
+     */
+    protected function applyInnerHitsOption(array $clause, $options): array
+    {
+        $firstKey = key($clause);
+
+        $clause[$firstKey]['inner_hits'] = empty($options) || $options === true ? (object) [] : (array) $options;
+
+        return $clause;
+    }
+
+    /**
      * Compile a child clause
      */
     protected function compileWhereChild(Builder $builder, array $where): array
@@ -1025,13 +1084,18 @@ class Grammar extends BaseGrammar
         if ($builder->connection->options()->get('bypass_map_validation')) {
             return $textField;
         }
-
-        $mapping = collect(Arr::dot($builder->getMapping()));
+        $cacheKey = $builder->from.'_mapping_cache';
+        $mapping = $builder->options()->get($cacheKey);
+        if (! $mapping) {
+            $mapping = collect(Arr::dot($builder->getMapping()));
+            $builder->options()->add($cacheKey, $mapping);
+        }
         $keywordKey = $mapping->keys()
             ->filter(fn ($field) => str_starts_with($field, $textField) && ! in_array($mapping[$field], ['text', 'binary']))
             ->first();
 
         if (! empty($keywordKey)) {
+
             return $keywordKey;
         }
 
@@ -1152,19 +1216,14 @@ class Grammar extends BaseGrammar
      */
     public function compileWheres(Builder|BaseBuilder $builder): array
     {
-        $queryParts = [
-            //            'query' => 'wheres',
-            'filter' => 'filters',
-            'postFilter' => 'postFilters',
-        ];
-
         $compiled['query'] = $this->compileBaseQuery($builder, $builder->wheres);
-        //        dd($builder);
-        foreach ($queryParts as $queryPart => $builderVar) {
-            $clauses = $builder->$builderVar ?? [];
-
-            $compiled[$queryPart] = $this->compileClauses($builder, $clauses);
-        }
+        $compiled['filter'] = $this->compileClauses($builder, $builder->filters ?? []);
+        $compiled['postFilter'] = $this->compileClauses($builder, $builder->postFilters ?? []);
+        //        foreach ($queryParts as $queryPart => $builderVar) {
+        //            $clauses = $builder->$builderVar ?? [];
+        //
+        //            $compiled[$queryPart] = $this->compileClauses($builder, $clauses);
+        //        }
 
         return $compiled;
     }
@@ -1666,4 +1725,7 @@ class Grammar extends BaseGrammar
         //
         //        return $query;
     }
+
+    // Aggregations
+
 }

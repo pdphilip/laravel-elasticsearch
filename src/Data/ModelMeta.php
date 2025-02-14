@@ -105,6 +105,7 @@ final class ModelMeta
             'table_prefix' => $this->tablePrefix,
             'table' => $this->table,
             'table_suffix' => $this->tableSuffix,
+            'doc_Count' => $this->docCount,
             'sort' => $this->sort,
             'cursor' => $this->cursor,
             'highlights' => $this->highlights,
@@ -124,8 +125,11 @@ final class ModelMeta
         $this->table = $table;
     }
 
-    public function setMeta(MetaTransfer $meta): void
+    public function setMeta(?MetaDTO $meta = null): void
     {
+        if (! $meta) {
+            return;
+        }
         $this->score = $meta->getScore();
         $this->highlights = $meta->getHighlights();
         $this->setRecordIndex($meta->getIndex());

@@ -29,7 +29,7 @@ abstract class Model extends BaseModel
         if (empty($this->attributes['id'])) {
             $this->attributes['id'] = $this->newUniqueId();
         }
-        $this->_meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
+        $this->meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
     }
 
     private static $documentModelClasses = [];

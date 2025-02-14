@@ -56,6 +56,8 @@ class Connection extends BaseConnection
 
     protected $requestTimeout;
 
+    public $defaultQueryLimit = 1000;
+
     /** {@inheritdoc}
      * @throws AuthenticationException
      */
@@ -162,6 +164,10 @@ class Connection extends BaseConnection
         }
         if (isset($this->config['options']['meta_header'])) {
             $this->options()->add('meta_header', $this->config['options']['meta_header']);
+        }
+
+        if (isset($this->config['options']['default_limit'])) {
+            $this->defaultQueryLimit = $this->config['options']['default_limit'];
         }
 
     }

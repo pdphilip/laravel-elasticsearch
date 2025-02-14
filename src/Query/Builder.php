@@ -6,13 +6,15 @@ namespace PDPhilip\Elasticsearch\Query;
 
 use Closure;
 use DateTimeInterface;
+use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Data\MetaTransfer;
+use PDPhilip\Elasticsearch\Data\MetaDTO;
+use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Schema\Schema;
@@ -39,6 +41,8 @@ class Builder extends BaseBuilder
 
     public $distinct;
 
+    public $distinctCount = false;
+
     public $filters;
 
     public $highlight;
@@ -49,7 +53,11 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public $limit = 1000;
+    //    public $limit = ;
+
+    public array $sorts = [];
+
+    public mixed $afterKey = null;
 
     public array $metricsAggregations = [];
 
@@ -77,6 +85,8 @@ class Builder extends BaseBuilder
 
     protected $routing;
 
+    protected ?MetaDTO $metaTransfer;
+
     public function __call($method, $parameters)
     {
         if (Str::startsWith($method, 'filterWhere')) {
@@ -95,15 +105,10 @@ class Builder extends BaseBuilder
      *
      * @return $this
      */
-    public function distinct()
+    public function distinct(bool $includeCount = false)
     {
-        $columns = func_get_args();
-
-        if (count($columns) > 0) {
-            $this->distinct = is_array($columns[0]) ? $columns[0] : $columns;
-        } else {
-            $this->distinct = [];
-        }
+        $this->distinctCount = $includeCount;
+        $this->distinct = true;
 
         return $this;
     }
@@ -331,6 +336,9 @@ class Builder extends BaseBuilder
      */
     public function groupBy(...$groups)
     {
+        if (isset($groups[0][0])) {
+            $groups = $groups[0];
+        }
         $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
             $query->from = $this->from;
 
@@ -359,6 +367,11 @@ class Builder extends BaseBuilder
         if (is_string($direction)) {
             $direction = strtolower($direction) == 'asc' ? 1 : -1;
         }
+        if (in_array($column, ['_score', '_count'])) {
+            $this->sorts[$column] = $direction;
+
+            return $this;
+        }
 
         $type = isset($options['type']) ? $options['type'] : 'basic';
 
@@ -371,9 +384,8 @@ class Builder extends BaseBuilder
      * Execute the query as a "select" statement.
      *
      * @param  array  $columns
-     * @return \Illuminate\Support\Collection
      */
-    public function get($columns = ['*'])
+    public function get($columns = ['*']): ElasticCollection
     {
         $original = $this->columns;
 
@@ -382,16 +394,22 @@ class Builder extends BaseBuilder
         }
 
         $results = $this->getResultsOnce();
-
         $this->columns = $original;
+        $collection = ElasticCollection::make($results);
+        $collection->setQueryMeta($this->metaTransfer);
 
-        return collect($results);
+        return $collection;
+    }
+
+    public function getRaw(): mixed
+    {
+        return $this->runSelect()->asArray();
     }
 
     /**
      * Run the query as a "select" statement against the connection.
      *
-     * @return iterable
+     * @return Elasticsearch
      */
     protected function runSelect()
     {
@@ -464,24 +482,13 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function exists()
+    public function exists(): bool
     {
         $this->applyBeforeQueryCallbacks();
 
-        $results = $this->processor->processSelect($this, $this->connection->select(
-            $this->grammar->compileExists($this), $this->getBindings(), ! $this->useWritePdo
-        ));
+        $select = collect($this->getRaw())->dot();
 
-        // If the results have rows, we will get the row and see if the exists column is a
-        // boolean true. If there are no results for this query we will return false as
-        // there are no rows for this query at all, and we can return that info here.
-        if (isset($results[0])) {
-            $results = (array) $results[0];
-
-            return (bool) $results['_id'];
-        }
-
-        return false;
+        return $select->has('hits.total.value') && $select->get('hits.total.value') > 0;
     }
 
     /**
@@ -536,7 +543,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function insert(array $values): MetaTransfer|bool
+    public function insert(array $values): MetaDTO|bool
     {
         // Since every insert gets treated like a batch insert, we will have to detect
         // if the user is inserting a single document or an array of documents.
@@ -1515,7 +1522,6 @@ class Builder extends BaseBuilder
      */
     public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
     {
-
         if (! is_string($args) && is_callable($args)) {
             $args = call_user_func($args, $this->newQuery());
         }
@@ -1761,7 +1767,6 @@ class Builder extends BaseBuilder
      */
     public function getFrom(): string
     {
-
         return Sanitizer::qualifiedIndex($this->connection->getTablePrefix(), $this->from, $this->getIndexSuffix());
     }
 
@@ -1782,9 +1787,14 @@ class Builder extends BaseBuilder
     //        return $this;
     //    }
 
-    public function getLimit()
+    public function getLimit(): int
     {
-        return $this->options()->get('limit', $this->limit);
+        return $this->getSetLimit() > 0 ? $this->getSetLimit() : $this->connection->defaultQueryLimit;
+    }
+
+    public function getSetLimit(): int
+    {
+        return $this->options()->get('limit', $this->limit) ?? 0;
     }
 
     protected function hasProcessedSelect(): bool
@@ -1799,7 +1809,7 @@ class Builder extends BaseBuilder
     /**
      * Get the Elasticsearch representation of the query.
      */
-    public function toCompiledQuery(): array
+    public function toCompiledQuery(): array|string
     {
         return $this->toSql();
     }
@@ -1817,6 +1827,17 @@ class Builder extends BaseBuilder
         }
 
         return $this->mapping;
+    }
+
+    public function getGroupByAfterKey($offset): mixed
+    {
+        $clone = $this->clone();
+        $clone->limit = $offset;
+        $clone->offset = 0;
+        $res = collect($clone->getRaw());
+
+        return $res->pull('aggregations.group_by.after_key');
+
     }
 
     /**
@@ -1926,5 +1947,31 @@ class Builder extends BaseBuilder
         ];
 
         return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    // Internal Operations
+    // ----------------------------------------------------------------------
+
+    // @internal
+    public function setMetaTransfer(MetaDTO $metaTransfer): void
+    {
+        $this->metaTransfer = $metaTransfer;
+    }
+
+    // @internal
+    public function getMetaTransfer(): ?MetaDTO
+    {
+        return $this->metaTransfer;
+    }
+
+    // @internal
+    public function inferIndex(): string
+    {
+        $prefix = $this->connection->getTablePrefix();
+        $table = $this->from;
+        $suffix = $this->options()->get('suffix', '');
+
+        return $prefix.$table.$suffix;
     }
 }

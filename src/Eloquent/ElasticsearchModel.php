@@ -24,7 +24,7 @@ trait ElasticsearchModel
 {
     use HasOptions, HasUuids, HybridRelations;
 
-    protected ?ModelMeta $_meta;
+    protected ?ModelMeta $meta;
 
     protected ?Relation $parentRelation;
 
@@ -54,7 +54,7 @@ trait ElasticsearchModel
 
     public function getMeta(): ModelMeta
     {
-        return $this->_meta;
+        return $this->meta;
     }
 
     public function getHighlights()
@@ -98,12 +98,13 @@ trait ElasticsearchModel
      */
     public function newFromBuilder($attributes = [], $connection = null)
     {
+
         $meta = $attributes['_meta'] ?? null;
         if ($meta) {
             unset($attributes['_meta']);
         }
         $model = parent::newFromBuilder($attributes, $connection);
-        $model->_meta->setMeta($meta);
+        $model->meta->setMeta($meta);
 
         return $model;
     }
@@ -126,7 +127,7 @@ trait ElasticsearchModel
 
     public function getFullTable()
     {
-        return $this->_meta->getFullTable();
+        return $this->meta->getFullTable();
     }
 
     /**
@@ -137,10 +138,10 @@ trait ElasticsearchModel
         return $this->options()->get('suffix', '');
     }
 
-    public function setTable($table)
+    public function setTable($table): static
     {
         $this->table = $table;
-        $this->_meta->setTable($table);
+        $this->meta->setTable($table);
 
         return $this;
     }

@@ -2,7 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Data;
 
-final class QueryMetaData
+final class QueryMeta
 {
     protected string $index = '';
 
@@ -16,7 +16,9 @@ final class QueryMetaData
 
     protected int $total = -1;
 
-    protected string $max_score = '';
+    protected int $hits = -1;
+
+    protected mixed $maxScore = '';
 
     protected mixed $_id = '';
 
@@ -36,49 +38,26 @@ final class QueryMetaData
 
     protected array $cursor = [];
 
-    public function __construct($meta)
+    protected array $afterKey = [];
+
+    public function __construct(?MetaDTO $meta = null)
     {
-        $this->timed_out = $meta['timed_out'] ?? false;
-        unset($meta['timed_out']);
-        if (isset($meta['took'])) {
-            $this->took = $meta['took'];
-            unset($meta['took']);
+        if (! $meta) {
+            return;
         }
-        if (isset($meta['total'])) {
-            $this->total = $meta['total'];
-            unset($meta['total']);
-        }
-        if (isset($meta['max_score'])) {
-            $this->max_score = $meta['max_score'];
-            unset($meta['max_score']);
-        }
-        if (isset($meta['total'])) {
-            $this->total = $meta['total'];
-            unset($meta['total']);
-        }
-        if (isset($meta['shards'])) {
-            $this->shards = $meta['shards'];
-            unset($meta['shards']);
-        }
-        if (isset($meta['sort'])) {
-            $this->sort = $meta['sort'];
-            unset($meta['sort']);
-        }
-        if (isset($meta['cursor'])) {
-            $this->cursor = $meta['cursor'];
-            unset($meta['cursor']);
-        }
-        if (isset($meta['_id'])) {
-            $this->_id = $meta['_id'];
-            unset($meta['_id']);
-        }
-        if (isset($meta['index'])) {
-            $this->index = $meta['index'];
-            unset($meta['index']);
-        }
-        if ($meta) {
-            $this->_meta = $meta;
-        }
+        $this->index = $meta->getIndex();
+        $this->timed_out = $meta->timed_out ?? false;
+        $this->took = $meta->getTook();
+        $this->hits = $meta->getHits();
+        $this->total = $meta->getTotal();
+        $this->maxScore = $meta->getMaxScore();
+        $this->shards = $meta->getShards();
+        $this->query = $meta->getQuery();
+        $this->dsl = $meta->getDsl();
+        $this->afterKey = $meta->getAfterKey();
+        $this->sort = $meta->getSort();
+        $this->cursor = $meta->getCursor();
+        $this->_meta = $meta->toArray();
     }
 
     // ----------------------------------------------------------------------
@@ -147,7 +126,7 @@ final class QueryMetaData
 
     public function getMaxScore(): string
     {
-        return $this->max_score;
+        return $this->maxScore;
     }
 
     public function getShards(): mixed
@@ -165,7 +144,7 @@ final class QueryMetaData
         return $this->error;
     }
 
-    public function asArray(): array
+    public function toArray(): array
     {
         $return = [
             'index' => $this->index,
@@ -175,8 +154,8 @@ final class QueryMetaData
             'took' => $this->took,
             'total' => $this->total,
         ];
-        if ($this->max_score) {
-            $return['max_score'] = $this->max_score;
+        if ($this->maxScore) {
+            $return['max_score'] = $this->maxScore;
         }
         if ($this->shards) {
             $return['shards'] = $this->shards;
