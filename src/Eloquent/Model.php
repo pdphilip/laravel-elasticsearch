@@ -16,12 +16,9 @@ abstract class Model extends BaseModel
 {
     use ElasticsearchModel;
 
-    /**
-     * The primary key type.
-     *
-     * @var string
-     */
     protected $keyType = 'string';
+
+    private static array $documentModelClasses = [];
 
     public function __construct(array $attributes = [])
     {
@@ -31,8 +28,6 @@ abstract class Model extends BaseModel
         }
         $this->meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
     }
-
-    private static $documentModelClasses = [];
 
     /**
      * Indicates if the given model class is a ElasticSearch document model.

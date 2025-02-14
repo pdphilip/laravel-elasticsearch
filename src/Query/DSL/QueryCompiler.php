@@ -3,7 +3,7 @@
 namespace PDPhilip\Elasticsearch\Query\DSL;
 
 // @internal
-class DslCompiler
+class QueryCompiler
 {
     protected array $query = [];
 

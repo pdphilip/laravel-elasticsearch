@@ -416,6 +416,21 @@ class Builder extends BaseBuilder
         return $this->connection->select($this->toCompiledQuery());
     }
 
+    /**
+     * Get results without re-fetching for subsequent calls.
+     *
+     * @return array
+     */
+    protected function getResultsOnce()
+    {
+        if (! $this->hasProcessedSelect()) {
+            $this->results = $this->processor->processSelect($this, $this->runSelect());
+        }
+        $this->resultsOffset = $this->offset;
+
+        return $this->results;
+    }
+
     public function addNestedWhereQuery($query, $boolean = 'and'): self
     {
         $type = 'Nested';
@@ -1698,25 +1713,6 @@ class Builder extends BaseBuilder
         $this->options()->add('refresh', false);
 
         return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    // Executors
-    // ----------------------------------------------------------------------
-
-    /**
-     * Get results without re-fetching for subsequent calls.
-     *
-     * @return array
-     */
-    protected function getResultsOnce()
-    {
-        if (! $this->hasProcessedSelect()) {
-            $this->results = $this->processor->processSelect($this, $this->runSelect());
-        }
-        $this->resultsOffset = $this->offset;
-
-        return $this->results;
     }
 
     // ----------------------------------------------------------------------

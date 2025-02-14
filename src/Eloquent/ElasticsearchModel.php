@@ -45,7 +45,7 @@ trait ElasticsearchModel
      */
     public function getIdAttribute($value = null)
     {
-        // If we don't have a value for 'id', we will use the MongoDB '_id' value.
+        // If we don't have a value for 'id', we will use the Elastic '_id' value.
         // This allows us to work with models in a more sql-like way.
         $value ??= $this->attributes['id'] ?? $this->attributes['_id'] ?? null;
 

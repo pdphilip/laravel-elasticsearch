@@ -256,6 +256,11 @@ class Connection extends BaseConnection
         return $this->connection;
     }
 
+    public function getIndexPrefix(): string
+    {
+        return $this->getTablePrefix();
+    }
+
     /**
      * Get the client info
      *
@@ -334,11 +339,6 @@ class Connection extends BaseConnection
         return new Schema\Grammars\Grammar;
     }
 
-    public function getIndexPrefix(): string
-    {
-        return $this->getTablePrefix();
-    }
-
     // ----------------------------------------------------------------------
     // Connection Setters
     // ----------------------------------------------------------------------
@@ -395,22 +395,6 @@ class Connection extends BaseConnection
     {
         $this->indices()->delete(compact('index'));
     }
-
-    //    /**
-    //     * Run a reindex statement against the database.
-    //     *
-    //     * @param  string|array  $query
-    //     * @param  array  $bindings
-    //     * @return array
-    //     */
-    //    public function reindex($query, $bindings = [])
-    //    {
-    //        return $this->run(
-    //            $query,
-    //            $bindings,
-    //            $this->connection->reindex(...)
-    //        )->asArray();
-    //    }
 
     /**
      * @throws ClientResponseException
@@ -554,18 +538,6 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Add client-specific parameters to the request params
-     */
-    protected function addClientParams(array $params): array
-    {
-        if ($this->requestTimeout) {
-            $params['client']['timeout'] = $this->requestTimeout;
-        }
-
-        return $params;
-    }
-
-    /**
      * Log a query in the connection's query log.
      *
      * @param  string|array  $query
@@ -648,6 +620,18 @@ class Connection extends BaseConnection
         );
     }
 
+    /**
+     * Add client-specific parameters to the request params
+     */
+    protected function addClientParams(array $params): array
+    {
+        if ($this->requestTimeout) {
+            $params['client']['timeout'] = $this->requestTimeout;
+        }
+
+        return $params;
+    }
+
     /** {@inheritdoc}
      * @throws QueryException
      */
@@ -677,4 +661,24 @@ class Connection extends BaseConnection
     {
         return call_user_func_array([$this->connection, $method], $parameters);
     }
+
+    // ----------------------------------------------------------------------
+    // Later/Maybe
+    // ----------------------------------------------------------------------
+
+    //    /**
+    //     * Run a reindex statement against the database.
+    //     *
+    //     * @param  string|array  $query
+    //     * @param  array  $bindings
+    //     * @return array
+    //     */
+    //    public function reindex($query, $bindings = [])
+    //    {
+    //        return $this->run(
+    //            $query,
+    //            $bindings,
+    //            $this->connection->reindex(...)
+    //        )->asArray();
+    //    }
 }

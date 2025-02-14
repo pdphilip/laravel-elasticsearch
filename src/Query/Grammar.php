@@ -13,104 +13,158 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
-use PDPhilip\Elasticsearch\Query\DSL\DslCompiler;
+use PDPhilip\Elasticsearch\Query\DSL\QueryCompiler;
 
 class Grammar extends BaseGrammar
 {
+    // ======================================================================
+    // Create
+    // ======================================================================
+
     /**
-     * Compile a delete query
+     * Compile the given values to an Elasticsearch insert statement
      *
-     *
-     * @throws BuilderException
+     * @param  Builder  $query
      */
-    public function compileDelete(Builder|BaseBuilder $builder): array
+    public function compileInsert($query, array $values): array
     {
-        $clause = $this->compileSelect($builder);
+        $params = [];
 
-        $clause['refresh'] = $builder->options()->get('refresh', true);
-        $clause['conflicts'] = $builder->options()->get('conflicts', 'abort');
-
-        // If we don't have a query then we must be deleting everything IE truncate.
-        if (! isset($clause['body']['query'])) {
-            $clause['body']['query'] = ['match_all' => (object) []];
+        if (! is_array(reset($values))) {
+            $values = [$values];
         }
 
-        return $clause;
+        foreach ($values as $doc) {
+            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) Helpers::uuid());
+            if (isset($doc['child_documents'])) {
+                foreach ($doc['child_documents'] as $childDoc) {
+                    $params['body'][] = [
+                        'index' => [
+                            '_index' => $query->getFrom(),
+                            '_id' => $childDoc['id'],
+                            'parent' => $doc['id'],
+                        ],
+                    ];
+
+                    $params['body'][] = $childDoc['document'];
+                }
+
+                unset($doc['child_documents']);
+            }
+
+            $index = [
+                '_index' => $query->getFrom(),
+                '_id' => $doc['id'],
+            ];
+
+            if (isset($doc['_routing'])) {
+                $index['routing'] = $doc['_routing'];
+                unset($doc['_routing']);
+            } elseif ($routing = $query->getRouting()) {
+                $index['routing'] = $routing;
+            }
+
+            if ($parentId = $query->getParentId()) {
+                $index['parent'] = $parentId;
+            } elseif (isset($doc['_parent'])) {
+                $index['parent'] = $doc['_parent'];
+                unset($doc['_parent']);
+            }
+
+            // We don't want to save the ID as part of the doc.
+            unset($doc['id'], $doc['_id']);
+
+            $params['body'][] = ['index' => $index];
+
+            foreach ($doc as &$property) {
+                $property = $this->getStringValue($property);
+            }
+
+            $params['body'][] = $doc;
+        }
+
+        $params['refresh'] = $query->getOption('refresh', true);
+
+        return $params;
     }
+
+    // ======================================================================
+    // Read
+    // ======================================================================
 
     /**
      * Compile a select statement
      *
-     * @param  Builder  $builder
+     * @param  Builder  $query
      *
      * @throws BuilderException
      */
-    public function compileSelect(Builder|BaseBuilder $builder): array
+    public function compileSelect($query): array
     {
-        $query = $this->compileWheres($builder);
+        $compiled = $this->compileWheres($query);
         $params = [
-            'index' => $builder->getFrom(),
+            'index' => $query->getFrom(),
             'body' => [
-                'query' => $query['query'],
+                'query' => $compiled['query'],
             ],
         ];
 
-        if ($query['filter']) {
+        if ($compiled['filter']) {
             if (empty($params['body']['query']['bool'])) {
                 $currentQuery = $params['body']['query'];
                 unset($params['body']['query']);
                 $params['body']['query']['bool']['must'] = $currentQuery;
             }
-            $params['body']['query']['bool']['filter'] = $query['filter'];
+            $params['body']['query']['bool']['filter'] = $compiled['filter'];
         }
 
-        if ($query['postFilter']) {
-            $params['body']['post_filter'] = $query['postFilter'];
-        }
-
-        // Apply order, offset and limit
-        if ($builder->orders) {
-            $params['body']['sort'] = $this->compileOrders($builder, $builder->orders);
+        if ($compiled['postFilter']) {
+            $params['body']['post_filter'] = $compiled['postFilter'];
         }
 
         // Apply order, offset and limit
-        if ($builder->highlight) {
-            $params['body']['highlight'] = $this->compileHighlight($builder, $builder->highlight);
+        if ($query->orders) {
+            $params['body']['sort'] = $this->compileOrders($query, $query->orders);
         }
 
-        if ($builder->offset) {
-            $params['body']['from'] = $builder->offset;
+        // Apply order, offset and limit
+        if ($query->highlight) {
+            $params['body']['highlight'] = $this->compileHighlight($query, $query->highlight);
         }
 
-        $params['body']['size'] = $builder->getLimit();
-
-        if (isset($builder->columns)) {
-            $params['_source'] = $builder->columns;
+        if ($query->offset) {
+            $params['body']['from'] = $query->offset;
         }
-        if ($builder->distinct) {
-            if ($builder->columns && $builder->columns !== ['*']) {
-                $params['body']['aggs'] = $this->compileNestedTermAggregations($builder->columns, $builder);
-                $params['body']['size'] = $builder->getSetLimit();
+
+        $params['body']['size'] = $query->getLimit();
+
+        if (isset($query->columns)) {
+            $params['_source'] = $query->columns;
+        }
+        if ($query->distinct) {
+            if ($query->columns && $query->columns !== ['*']) {
+                $params['body']['aggs'] = $this->compileNestedTermAggregations($query->columns, $query);
+                $params['body']['size'] = $query->getSetLimit();
                 unset($params['body']['sort']);
             } else {
                 // else nothing to aggregate - just a normal query as all records will be distinct anyway
-                $builder->distinct = false;
+                $query->distinct = false;
             }
-        } elseif ($builder->bucketAggregations) {
+        } elseif ($query->bucketAggregations) {
             $sorts = ! empty($params['body']['sort']) ? ($params['body']['sort']) : null;
             if (! empty($params['body']['from'])) {
                 $afterCount = $params['body']['from'];
                 unset($params['body']['from']);
                 // This of course could be a problem if the user is using from for pagination and they go deep
                 // Leaving it for now
-                $builder->afterKey = $builder->getGroupByAfterKey($afterCount);
+                $query->afterKey = $query->getGroupByAfterKey($afterCount);
             }
-            $params['body']['aggs'] = $this->compileBucketAggregations($builder, $sorts);
+            $params['body']['aggs'] = $this->compileBucketAggregations($query, $sorts);
             // If we are aggregating we set the body size to 0 to save on processing time.
             $params['body']['size'] = 0;
 
-        } elseif ($builder->metricsAggregations) {
-            $params['body']['aggs'] = $this->compileMetricAggregations($builder);
+        } elseif ($query->metricsAggregations) {
+            $params['body']['aggs'] = $this->compileMetricAggregations($query);
 
             // If we are aggregating we set the body size to 0 to save on processing time.
             $params['body']['size'] = 0;
@@ -124,44 +178,720 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile the highlight section of a query
+     * Compile where clauses for a query
      *
-     * @param  array  $highlight
+     * @param  Builder  $query
      */
-    protected function compileHighlight(Builder $builder, $highlight = []): array
+    public function compileWheres($query): array
     {
-        $allowedArgs = [
-            'boundary_chars',
-            'boundary_max_scan',
-            'boundary_scanner',
-            'boundary_scanner_locale',
-            'encoder',
-            'fragmenter',
-            'force_source',
-            'fragment_offset',
-            'fragment_size',
-            'highlight_query',
-            'matched_fields',
-            'number_of_fragments',
-        ];
+        $compiled['query'] = $this->compileBaseQuery($query, $query->wheres);
+        $compiled['filter'] = $this->compileClauses($query, $query->filters ?? []);
+        $compiled['postFilter'] = $this->compileClauses($query, $query->postFilters ?? []);
 
-        $compiledHighlights = $this->getAllowedOptions($highlight['options'], $allowedArgs);
+        return $compiled;
+    }
 
-        foreach ($highlight['column'] as $column => $value) {
+    protected function compileBaseQuery(Builder $builder, array $wheres = [])
+    {
+        $dslCompiler = new QueryCompiler;
+        foreach ($wheres as $where) {
+            $isOr = str_starts_with($where['boolean'], 'or');
+            $isNot = str_ends_with($where['boolean'], 'not');
 
-            if (is_array($value)) {
-                $compiledHighlights['fields'][] = [$column => $value];
-            } elseif ($value != '*') {
-                $compiledHighlights['fields'][] = [$value => (object) []];
+            // Adjust operator to lowercase
+            if (isset($where['operator'])) {
+                $where['operator'] = strtolower($where['operator']);
+
+                if ($where['operator'] === '!=') {
+                    $isNot = ! $isNot;
+                    $where['operator'] = '=';
+                }
             }
+            if (! empty($where['not'])) {
+                $isNot = true;
+            }
+
+            // Handle column names
+            if (isset($where['column'])) {
+                $where['column'] = (string) $where['column'];
+
+                // Adjust the column name if necessary
+                if ($where['column'] === 'id') {
+                    $where['column'] = '_id';
+                }
+
+                // Remove table prefix from column if present
+                if (Str::startsWith($where['column'], $builder->from.'.')) {
+                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
+                }
+            }
+            $method = 'compileWhere'.$where['type'];
+            $result = $this->{$method}($builder, $where);
+            $dslCompiler->setResult($result, $isOr, $isNot);
 
         }
 
-        $compiledHighlights['pre_tags'] = $highlight['preTag'];
-        $compiledHighlights['post_tags'] = $highlight['postTag'];
-
-        return $compiledHighlights;
+        return $dslCompiler->compileQuery();
     }
+
+    /**
+     * Compile general clauses for a query
+     */
+    protected function compileClauses(Builder $builder, array $clauses): array
+    {
+        // The wheres to compile.
+        $wheres = $clauses ?: [];
+
+        // We will add all compiled wheres to this array.
+        $compiled = [];
+        foreach ($wheres as $i => &$where) {
+            // Adjust operator to lowercase
+            if (isset($where['operator'])) {
+                $where['operator'] = strtolower($where['operator']);
+            }
+
+            // Handle column names
+            if (isset($where['column'])) {
+                $where['column'] = (string) $where['column'];
+
+                // Adjust the column name if necessary
+                if ($where['column'] === 'id') {
+                    $where['column'] = '_id';
+                }
+
+                // Remove table prefix from column if present
+                if (Str::startsWith($where['column'], $builder->from.'.')) {
+                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
+                }
+            }
+
+            // Adjust the 'boolean' value of the first where if necessary
+            if (
+                $i === 0 && count($wheres) > 1
+                && str_starts_with($where['boolean'], 'and')
+                && str_starts_with($wheres[$i + 1]['boolean'], 'or')
+            ) {
+                $where['boolean'] = 'or'.(str_ends_with($where['boolean'], ' not') ? ' not' : '');
+            }
+
+            // We use different methods to compile different wheres
+            $method = 'compileWhere'.$where['type'];
+            $result = $this->{$method}($builder, $where);
+
+            // Determine the boolean operator
+            if (str_ends_with($where['boolean'], 'not')) {
+                $boolOperator = 'must_not';
+            } elseif (str_starts_with($where['boolean'], 'or')) {
+                $boolOperator = 'should';
+            } else {
+                $boolOperator = 'must';
+            }
+
+            // Merge the compiled where with the others
+            if (! isset($compiled['bool'][$boolOperator])) {
+                $compiled['bool'][$boolOperator] = [];
+            }
+
+            $compiled['bool'][$boolOperator][] = $result;
+        }
+
+        return $compiled;
+    }
+
+    // ----------------------------------------------------------------------
+    // Where Compilers
+    // ----------------------------------------------------------------------
+
+    /**
+     * Compile a general where clause
+     */
+    protected function compileWhereBasic(Builder $builder, array $where): array
+    {
+        $value = $this->getValueForWhere($builder, $where);
+
+        $operatorsMap = [
+            '>' => 'gt',
+            '>=' => 'gte',
+            '<' => 'lt',
+            '<=' => 'lte',
+        ];
+
+        if (is_null($value) || $where['operator'] == 'exists') {
+            $query = [
+                'exists' => [
+                    'field' => $where['column'],
+                ],
+            ];
+        } elseif (in_array($where['operator'], ['like', 'not like'])) {
+            $query = [
+                'wildcard' => [
+                    $this->getIndexableField($where['column'], $builder) => [
+                        'value' => str_replace('%', '*', $value),
+                        ...($where['options'] ?? []),
+                    ],
+                ],
+            ];
+        } elseif (in_array($where['operator'], array_keys($operatorsMap))) {
+            $operator = $operatorsMap[$where['operator']];
+            $query = [
+                'range' => [
+                    $this->getIndexableField($where['column'], $builder) => [
+                        $operator => $value,
+                        ...($where['options'] ?? []),
+
+                    ],
+                ],
+            ];
+        } else {
+            $query = [
+                'match' => [
+                    $where['column'] => [
+                        'query' => $value,
+                        'operator' => 'and',
+                        ...($where['options'] ?? []),
+                    ],
+                ],
+            ];
+        }
+
+        $query = $this->applyOptionsToClause($query, $where);
+
+        if (
+            ! empty($where['not'])
+            || ($where['operator'] == 'not like' && ! is_null($value))
+            || ($where['operator'] == '<>' && ! is_null($value))
+            || ($where['operator'] == '!=' && ! is_null($value))
+            || ($where['operator'] == '=' && is_null($value))
+            || ($where['operator'] == 'exists' && ! $value)
+        ) {
+            $query = [
+                'bool' => [
+                    'must_not' => [
+                        $query,
+                    ],
+                ],
+            ];
+        }
+
+        return $query;
+    }
+
+    /**
+     * Compile a where not clause
+     *
+     * @param  array  $where
+     */
+    protected function compileWhereNot(Builder $builder, $where): array
+    {
+        return [
+            'bool' => [
+                'must_not' => [
+                    $this->compileWheres($where['query'])['query'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a not in clause
+     */
+    protected function compileWhereNotIn(Builder $builder, array $where): array
+    {
+        return $this->compileWhereIn($builder, $where, true);
+    }
+
+    /**
+     * Compile an in clause
+     */
+    protected function compileWhereIn(Builder $builder, array $where, $not = false): array
+    {
+        $column = $this->getIndexableField($where['column'], $builder);
+        $values = $this->getValueForWhere($builder, $where);
+
+        $query = [
+            'terms' => [
+                $column => array_values($values),
+                ...$where['options'],
+            ],
+        ];
+
+        $query = $this->applyOptionsToClause($query, $where);
+
+        if ($not) {
+            $query = [
+                'bool' => [
+                    'must_not' => [
+                        $query,
+                    ],
+                ],
+            ];
+        }
+
+        return $query;
+    }
+
+    /**
+     * Compile a not null clause
+     */
+    protected function compileWhereNotNull(Builder $builder, array $where): array
+    {
+        $where['operator'] = '!=';
+
+        return $this->compileWhereBasic($builder, $where);
+    }
+
+    /**
+     * Compile a null clause
+     */
+    protected function compileWhereNull(Builder $builder, array $where): array
+    {
+        $where['operator'] = '=';
+
+        return $this->compileWhereBasic($builder, $where);
+    }
+
+    /**
+     * Compile a date clause
+     */
+    protected function compileWhereDate(Builder $builder, array $where): array
+    {
+        if ($where['operator'] == '=') {
+            $value = $this->getValueForWhere($builder, $where);
+
+            $where['value'] = [$value, $value];
+
+            return $this->compileWhereBetween($builder, $where);
+        }
+
+        return $this->compileWhereBasic($builder, $where);
+    }
+
+    /**
+     * Compile a where between clause
+     */
+    protected function compileWhereBetween(Builder $builder, array $where): array
+    {
+        $column = $where['column'];
+        $values = $this->getValueForWhere($builder, $where);
+
+        return [
+            'range' => [
+                $column => [
+                    'gte' => $values[0],
+                    'lte' => $values[1],
+                ],
+                ...$where['options'],
+            ],
+        ];
+    }
+
+    /**
+     * Compile where for function score
+     */
+    protected function compileWhereFunctionScore(Builder $builder, array $where): array
+    {
+        $cleanWhere = $where;
+
+        $compiled = $this->compileWheres($where['query']);
+
+        foreach ($compiled as $queryPart => $clauses) {
+            $compiled[$queryPart] = array_map(function ($clause) use ($where) {
+                if ($clause) {
+                    $this->applyOptionsToClause($clause, $where);
+                }
+
+                return $clause;
+            }, $clauses);
+        }
+
+        $compiled = array_filter($compiled);
+
+        $query = [
+            'function_score' => [
+                $where['functionType'] => ['query' => $compiled['query']],
+            ],
+        ];
+
+        return $query;
+    }
+
+    /**
+     * Compile a where geo bounds clause
+     */
+    protected function compileWhereGeoBoundsIn(Builder $builder, array $where): array
+    {
+        $query = [
+            'geo_bounding_box' => [
+                $where['column'] => $where['bounds'],
+            ],
+        ];
+
+        return $query;
+    }
+
+    /**
+     * Compile a geo distance clause
+     *
+     * @param  Builder  $builder
+     * @param  array  $where
+     */
+    protected function compileWhereGeoDistance($builder, $where): array
+    {
+        $query = [
+            'geo_distance' => [
+                'distance' => $where['distance'],
+                $where['column'] => $where['location'],
+            ],
+        ];
+
+        return $query;
+    }
+
+    /**
+     * Compile a nested clause
+     */
+    protected function compileWhereNested(Builder $builder, array $where): array
+    {
+        $compiled = $this->compileWheres($where['query']);
+
+        foreach ($compiled as $queryPart => $clauses) {
+            $compiled[$queryPart] = array_map(function ($clause) use ($where) {
+                if ($clause) {
+                    $this->applyOptionsToClause($clause, $where);
+                }
+
+                return $clause;
+            }, $clauses);
+        }
+
+        $compiled = array_filter($compiled);
+
+        return reset($compiled);
+    }
+
+    /**
+     * Compile a where nested clause
+     *
+     * @param  array  $where
+     */
+    protected function compileWhereNestedObject(Builder $builder, $where): array
+    {
+        $wheres = $this->compileWheres($where['query']);
+
+        $query = [
+            'nested' => [
+                'path' => $where['column'],
+            ],
+        ];
+
+        $query['nested'] = array_merge($query['nested'], array_filter($wheres));
+
+        $query = $this->applyOptionsToClause($query, $where);
+
+        if (isset($where['operator']) && $where['operator'] === '!=') {
+            $query = [
+                'bool' => [
+                    'must_not' => [
+                        $query,
+                    ],
+                ],
+            ];
+        }
+
+        return $query;
+    }
+
+    /**
+     * Compile a parent clause
+     */
+    protected function compileWhereParent(Builder $builder, array $where): array
+    {
+        return $this->applyWhereRelationship($builder, $where, 'parent');
+    }
+
+    /**
+     * @return array
+     */
+    protected function compileWhereParentId(Builder $builder, array $where)
+    {
+        return [
+            'parent_id' => [
+                'type' => $where['relationType'],
+                'id' => $where['id'],
+            ],
+        ];
+    }
+
+    protected function compileWherePrefix(Builder $builder, array $where): array
+    {
+        $query = [
+            'prefix' => [
+                $this->getIndexableField($where['column'], $builder) => $where['value'],
+            ],
+        ];
+
+        return $query;
+    }
+
+    protected function compileWhereRaw(Builder $builder, array $where): array
+    {
+        return $where['sql']; // Return the raw query as-is
+    }
+
+    /**
+     * Compile a date clause
+     */
+    protected function compileWhereRegex(Builder $builder, array $where): array
+    {
+
+        $allowedArgs = [
+            'flags',
+            'case_insensitive',
+            'max_determinized_states',
+            'rewrite',
+        ];
+
+        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
+
+        return [
+            'regexp' => [
+                $this->getIndexableField($where['column'], $builder) => [
+                    'value' => Helpers::escape($where['value']),
+                    ...$where['options'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    protected function compileWherePhrase(Builder $builder, array $where): array
+    {
+        return [
+            'match_phrase' => [
+                $where['column'] => [
+                    'query' => $where['value'],
+                    ...$where['options'],
+
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    //    protected function compileWhereMatch(Builder $builder, array $where): array
+    //    {
+    //
+    //        $allowedArgs = [
+    //            'analyzer',
+    //            'auto_generate_synonyms_phrase_query',
+    //            'boost',
+    //            'fuzziness',
+    //            'max_expansions',
+    //            'prefix_length',
+    //            'fuzzy_transpositions',
+    //            'fuzzy_rewrite',
+    //            'lenient',
+    //            'operator',
+    //            'minimum_should_match',
+    //            'zero_terms_query',
+    //        ];
+    //
+    //        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
+    //
+    //        return [
+    //            'match' => [
+    //                $where['column'] => [
+    //                    ...$where['options'],
+    //                    'query' => $where['value'],
+    //                ],
+    //            ],
+    //        ];
+    //    }
+
+    /**
+     * Compile a match_phrase clause
+     */
+    protected function compileWherePhrasePrefix(Builder $builder, array $where): array
+    {
+
+        return [
+            'match_phrase_prefix' => [
+                $where['column'] => [
+                    'query' => $where['value'],
+                    ...$where['options'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a term fuzzy clause
+     */
+    protected function compileWhereTermFuzzy(Builder $builder, array $where): array
+    {
+
+        return [
+            'fuzzy' => [
+                $where['column'] => [
+                    'value' => (string) $where['value'],
+                    ...$where['options'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a term clause
+     */
+    protected function compileWhereTerm(Builder $builder, array $where): array
+    {
+
+        return [
+            'term' => [
+                $this->getIndexableField($where['column'], $builder) => [
+                    'value' => (string) $where['value'],
+                    ...$where['options'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Compile a script clause
+     */
+    protected function compileWhereScript(Builder $builder, array $where): array
+    {
+        return [
+            'script' => [
+                'script' => array_merge($where['options'], ['source' => $where['script']]),
+            ],
+        ];
+    }
+
+    /**
+     * Compile a search clause for Elasticsearch.
+     */
+    protected function compileWhereSearch(Builder $builder, array $where): array
+    {
+
+        $constantScore = false;
+        if (isset($where['options']['constant_score'])) {
+            $constantScore = $where['options']['constant_score'];
+            unset($where['options']['constant_score']);
+        }
+        $query = [
+            'multi_match' => [
+                'query' => $where['value'],
+                ...$where['options'],
+            ],
+        ];
+        if ($constantScore) {
+            return [
+                'constant_score' => [
+                    'filter' => $query,
+                ],
+            ];
+        }
+
+        return $query;
+        //        // Determine the fields to search
+        //        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
+        //
+        //        // Handle field boosts if fields is an associative array
+        //        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
+        //            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
+        //        }
+        //
+        //        // Use multi_match if searching across multiple fields or all fields
+        //        if (is_array($fields) || $fields === '*') {
+        //            $queryType = $where['options']['matchType'] ?? 'best_fields';
+        //
+        //            $query = [
+        //                'multi_match' => [
+        //                    'query' => $where['value'],
+        //                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
+        //                    'type' => $queryType,
+        //                ],
+        //            ];
+        //        } else {
+        //            $query = [
+        //                'match' => [
+        //                    $fields => [
+        //                        'query' => $where['value'],
+        //                    ],
+        //                ],
+        //            ];
+        //        }
+        //
+        //        // Add fuzziness if specified
+        //        if (! empty($where['options']['fuzziness'])) {
+        //            $fuzziness = $where['options']['fuzziness'];
+        //            $mainQueryType = key($query);
+        //
+        //            if ($mainQueryType === 'multi_match') {
+        //                $query['multi_match']['fuzziness'] = $fuzziness;
+        //            } else {
+        //                $query['match'][$fields]['fuzziness'] = $fuzziness;
+        //            }
+        //        }
+        //
+        //        // Wrap in constant_score if specified
+        //        if (! empty($where['options']['constant_score'])) {
+        //            $query = [
+        //                'constant_score' => [
+        //                    'filter' => $query,
+        //                ],
+        //            ];
+        //        }
+        //
+        //        return $query;
+    }
+
+    /**
+     * Compile a child clause
+     */
+    protected function compileWhereChild(Builder $builder, array $where): array
+    {
+        return $this->applyWhereRelationship($builder, $where, 'child');
+    }
+
+    /**
+     * Compile a relationship clause
+     */
+    protected function applyWhereRelationship(Builder $builder, array $where, string $relationship): array
+    {
+        $compiled = $this->compileWheres($where['value']);
+
+        $relationshipFilter = "has_{$relationship}";
+        $type = $relationship === 'parent' ? 'parent_type' : 'type';
+
+        // pass filter to query if empty allowing a filter interface to be used in relation query
+        // otherwise match all in relation query
+        if (empty($compiled['query'])) {
+            $compiled['query'] = empty($compiled['filter']) ? ['match_all' => (object) []] : $compiled['filter'];
+        } elseif (! empty($compiled['filter'])) {
+            throw new InvalidArgumentException('Cannot use both filter and query contexts within a relation context');
+        }
+
+        $query = [
+            $relationshipFilter => [
+                $type => $where['documentType'],
+                'query' => $compiled['query'],
+            ],
+        ];
+
+        $query = $this->applyOptionsToClause($query, $where);
+
+        return $query;
+    }
+
+    // ----------------------------------------------------------------------
+    // Order and Highlight
+    // ----------------------------------------------------------------------
 
     /**
      * Compile the orders section of a query
@@ -216,7 +946,54 @@ class Grammar extends BaseGrammar
         return $compiledOrders;
     }
 
-    public function compileNestedTermAggregations($fields, Builder $builder): array
+    /**
+     * Compile the highlight section of a query
+     *
+     * @param  array  $highlight
+     */
+    protected function compileHighlight(Builder $builder, mixed $highlight = []): array
+    {
+        $allowedArgs = [
+            'boundary_chars',
+            'boundary_max_scan',
+            'boundary_scanner',
+            'boundary_scanner_locale',
+            'encoder',
+            'fragmenter',
+            'force_source',
+            'fragment_offset',
+            'fragment_size',
+            'highlight_query',
+            'matched_fields',
+            'number_of_fragments',
+        ];
+
+        $compiledHighlights = $this->getAllowedOptions($highlight['options'], $allowedArgs);
+
+        foreach ($highlight['column'] as $column => $value) {
+
+            if (is_array($value)) {
+                $compiledHighlights['fields'][] = [$column => $value];
+            } elseif ($value != '*') {
+                $compiledHighlights['fields'][] = [$value => (object) []];
+            }
+
+        }
+
+        $compiledHighlights['pre_tags'] = $highlight['preTag'];
+        $compiledHighlights['post_tags'] = $highlight['postTag'];
+
+        return $compiledHighlights;
+    }
+
+    // ======================================================================
+    // Aggregations
+    // ======================================================================
+
+    /**
+     * @throws BuilderException
+     */
+    protected function compileNestedTermAggregations($fields, Builder $builder): array
     {
         $currentField = array_shift($fields);
         $field = $this->getIndexableField($currentField, $builder);
@@ -252,7 +1029,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile all aggregations
      */
-    public function compileBucketAggregations(Builder $builder, $sorts = null): array
+    protected function compileBucketAggregations(Builder $builder, $sorts = null): array
     {
         $aggregations = collect();
 
@@ -296,7 +1073,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile all aggregations
      */
-    public function compileMetricAggregations(Builder $builder): array
+    protected function compileMetricAggregations(Builder $builder): array
     {
         $aggregations = [];
 
@@ -312,7 +1089,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a single aggregation
      */
-    public function compileAggregation(Builder $builder, array $aggregation): array
+    protected function compileAggregation(Builder $builder, array $aggregation): array
     {
         $key = $aggregation['key'];
 
@@ -336,75 +1113,9 @@ class Grammar extends BaseGrammar
         return $compiled;
     }
 
-    public function compileIndexMappings(Builder $builder)
-    {
-        return ['index' => $builder->getFrom() == '' ? '*' : $builder->getFrom()];
-    }
-
-    /**
-     * Compile the given values to an Elasticsearch insert statement
-     */
-    public function compileInsert(Builder|BaseBuilder $builder, array $values): array
-    {
-        $params = [];
-
-        if (! is_array(reset($values))) {
-            $values = [$values];
-        }
-
-        foreach ($values as $doc) {
-            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) Helpers::uuid());
-            if (isset($doc['child_documents'])) {
-                foreach ($doc['child_documents'] as $childDoc) {
-                    $params['body'][] = [
-                        'index' => [
-                            '_index' => $builder->getFrom(),
-                            '_id' => $childDoc['id'],
-                            'parent' => $doc['id'],
-                        ],
-                    ];
-
-                    $params['body'][] = $childDoc['document'];
-                }
-
-                unset($doc['child_documents']);
-            }
-
-            $index = [
-                '_index' => $builder->getFrom(),
-                '_id' => $doc['id'],
-            ];
-
-            if (isset($doc['_routing'])) {
-                $index['routing'] = $doc['_routing'];
-                unset($doc['_routing']);
-            } elseif ($routing = $builder->getRouting()) {
-                $index['routing'] = $routing;
-            }
-
-            if ($parentId = $builder->getParentId()) {
-                $index['parent'] = $parentId;
-            } elseif (isset($doc['_parent'])) {
-                $index['parent'] = $doc['_parent'];
-                unset($doc['_parent']);
-            }
-
-            // We don't want to save the ID as part of the doc.
-            unset($doc['id'], $doc['_id']);
-
-            $params['body'][] = ['index' => $index];
-
-            foreach ($doc as &$property) {
-                $property = $this->getStringValue($property);
-            }
-
-            $params['body'][] = $doc;
-        }
-
-        $params['refresh'] = $builder->getOption('refresh', true);
-
-        return $params;
-    }
+    // ----------------------------------------------------------------------
+    // Aggregation compilers
+    // ----------------------------------------------------------------------
 
     /**
      * Compile sum aggregation
@@ -412,83 +1123,6 @@ class Grammar extends BaseGrammar
     public function compileSumAggregation(Builder $builder, array $aggregation): array
     {
         return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile a delete query
-     *
-     *
-     * @throws BuilderException
-     */
-    public function compileTruncate(Builder|BaseBuilder $builder): array
-    {
-        $clause = $this->compileSelect($builder);
-
-        $clause['body'] = [
-            'query' => [
-                'match_all' => (object) [],
-            ],
-        ];
-
-        $clause['refresh'] = $builder->getOption('refresh', true);
-
-        return $clause;
-    }
-
-    /**
-     * Compile a update query
-     *
-     *
-     * @return array
-     *
-     * @throws BuilderException
-     */
-    public function compileUpdate(Builder|BaseBuilder $builder, $values)
-    {
-        $clause = $this->compileSelect($builder);
-        $clause['body']['conflicts'] = 'proceed';
-        $scripts = [];
-        $params = [];
-
-        foreach ($values as $column => $value) {
-            $value = $this->getStringValue($value);
-            if (Str::startsWith($column, $builder->from.'.')) {
-                $column = Str::replaceFirst($builder->from.'.', '', $column);
-            }
-
-            $param = str($column)->replace('.', '_')->toString();
-
-            $params[$param] = $value;
-            $scripts[] = 'ctx._source.'.$column.' = params.'.$param.';';
-        }
-
-        foreach ($builder->scripts ?? [] as $script) {
-            $params = [
-                ...$params,
-                ...$script['options']['params'],
-            ];
-            $scripts[] = $script['script'];
-        }
-
-        if (! empty($scripts)) {
-            $clause['body']['script']['source'] = implode(' ', $scripts);
-        }
-
-        if (! empty($params)) {
-            $clause['body']['script']['params'] = $params;
-        }
-
-        $clause['refresh'] = $builder->options()->get('refresh', true);
-
-        return $clause;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getDateFormat(): string
-    {
-        return Config::get('laravel-elasticsearch.date_format', 'Y-m-d H:i:s');
     }
 
     /**
@@ -885,30 +1519,6 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile a child clause
-     */
-    protected function compileWhereChild(Builder $builder, array $where): array
-    {
-        return $this->applyWhereRelationship($builder, $where, 'child');
-    }
-
-    /**
-     * Compile a date clause
-     */
-    protected function compileWhereDate(Builder $builder, array $where): array
-    {
-        if ($where['operator'] == '=') {
-            $value = $this->getValueForWhere($builder, $where);
-
-            $where['value'] = [$value, $value];
-
-            return $this->compileWhereBetween($builder, $where);
-        }
-
-        return $this->compileWhereBasic($builder, $where);
-    }
-
-    /**
      * Get value for the where
      *
      * @return mixed
@@ -970,98 +1580,136 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile a where between clause
+     * Apply the given options from a where to a query clause
      */
-    protected function compileWhereBetween(Builder $builder, array $where): array
+    protected function applyOptionsToClause(array $clause, array $where): array
     {
-        $column = $where['column'];
-        $values = $this->getValueForWhere($builder, $where);
+        if (empty($where['options'])) {
+            return $clause;
+        }
 
-        return [
-            'range' => [
-                $column => [
-                    'gte' => $values[0],
-                    'lte' => $values[1],
-                ],
-                ...$where['options'],
-            ],
-        ];
+        $optionsToApply = ['inner_hits'];
+        $options = array_intersect_key($where['options'], array_flip($optionsToApply));
+
+        foreach ($options as $option => $value) {
+            $method = 'apply'.Str::studly($option).'Option';
+
+            if (method_exists($this, $method)) {
+                $clause = $this->$method($clause, $value, $where);
+            }
+        }
+
+        return $clause;
+    }
+
+    private function getAllowedOptions(array $options, array $allowed): array
+    {
+        return array_intersect_key($options, array_flip($allowed));
+    }
+
+    // ======================================================================
+    // Update
+    // ======================================================================
+
+    /**
+     * Compile a update query
+     *
+     *
+     * @param  Builder  $query
+     *
+     * @throws BuilderException
+     */
+    public function compileUpdate($query, $values): array|string
+    {
+        $clause = $this->compileSelect($query);
+        $clause['body']['conflicts'] = 'proceed';
+        $scripts = [];
+        $params = [];
+
+        foreach ($values as $column => $value) {
+            $value = $this->getStringValue($value);
+            if (Str::startsWith($column, $query->from.'.')) {
+                $column = Str::replaceFirst($query->from.'.', '', $column);
+            }
+
+            $param = str($column)->replace('.', '_')->toString();
+
+            $params[$param] = $value;
+            $scripts[] = 'ctx._source.'.$column.' = params.'.$param.';';
+        }
+
+        foreach ($query->scripts ?? [] as $script) {
+            $params = [
+                ...$params,
+                ...$script['options']['params'],
+            ];
+            $scripts[] = $script['script'];
+        }
+
+        if (! empty($scripts)) {
+            $clause['body']['script']['source'] = implode(' ', $scripts);
+        }
+
+        if (! empty($params)) {
+            $clause['body']['script']['params'] = $params;
+        }
+
+        $clause['refresh'] = $query->options()->get('refresh', true);
+
+        return $clause;
+    }
+
+    // ======================================================================
+    // Delete
+    // ======================================================================
+
+    /**
+     * Compile a delete query
+     *
+     * @param  Builder  $query
+     *
+     * @throws BuilderException
+     */
+    public function compileDelete($query): array
+    {
+        $clause = $this->compileSelect($query);
+
+        $clause['refresh'] = $query->options()->get('refresh', true);
+        $clause['conflicts'] = $query->options()->get('conflicts', 'abort');
+
+        // If we don't have a query then we must be deleting everything IE truncate.
+        if (! isset($clause['body']['query'])) {
+            $clause['body']['query'] = ['match_all' => (object) []];
+        }
+
+        return $clause;
     }
 
     /**
-     * Compile a general where clause
+     * Compile a delete query
+     *
+     * @param  Builder  $query
+     *
+     * @throws BuilderException
      */
-    protected function compileWhereBasic(Builder $builder, array $where): array
+    public function compileTruncate($query): array
     {
-        $value = $this->getValueForWhere($builder, $where);
+        $clause = $this->compileSelect($query);
 
-        $operatorsMap = [
-            '>' => 'gt',
-            '>=' => 'gte',
-            '<' => 'lt',
-            '<=' => 'lte',
+        $clause['body'] = [
+            'query' => [
+                'match_all' => (object) [],
+            ],
         ];
 
-        if (is_null($value) || $where['operator'] == 'exists') {
-            $query = [
-                'exists' => [
-                    'field' => $where['column'],
-                ],
-            ];
-        } elseif (in_array($where['operator'], ['like', 'not like'])) {
-            $query = [
-                'wildcard' => [
-                    $this->getIndexableField($where['column'], $builder) => [
-                        'value' => str_replace('%', '*', $value),
-                        ...($where['options'] ?? []),
-                    ],
-                ],
-            ];
-        } elseif (in_array($where['operator'], array_keys($operatorsMap))) {
-            $operator = $operatorsMap[$where['operator']];
-            $query = [
-                'range' => [
-                    $this->getIndexableField($where['column'], $builder) => [
-                        $operator => $value,
-                        ...($where['options'] ?? []),
+        $clause['refresh'] = $query->getOption('refresh', true);
 
-                    ],
-                ],
-            ];
-        } else {
-            $query = [
-                'match' => [
-                    $where['column'] => [
-                        'query' => $value,
-                        'operator' => 'and',
-                        ...($where['options'] ?? []),
-                    ],
-                ],
-            ];
-        }
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        if (
-            ! empty($where['not'])
-            || ($where['operator'] == 'not like' && ! is_null($value))
-            || ($where['operator'] == '<>' && ! is_null($value))
-            || ($where['operator'] == '!=' && ! is_null($value))
-            || ($where['operator'] == '=' && is_null($value))
-            || ($where['operator'] == 'exists' && ! $value)
-        ) {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
+        return $clause;
     }
 
+    // ----------------------------------------------------------------------
+    // Helpers
+    // ----------------------------------------------------------------------
     /**
      * Given a `$field` points to the subfield that is of type keyword.
      *
@@ -1103,629 +1751,18 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Apply the given options from a where to a query clause
-     *
-     * @return array
+     * {@inheritdoc}
      */
-    protected function applyOptionsToClause(array $clause, array $where)
+    public function getDateFormat(): string
     {
-        if (empty($where['options'])) {
-            return $clause;
-        }
-
-        $optionsToApply = ['inner_hits'];
-        $options = array_intersect_key($where['options'], array_flip($optionsToApply));
-
-        foreach ($options as $option => $value) {
-            $method = 'apply'.Str::studly($option).'Option';
-
-            if (method_exists($this, $method)) {
-                $clause = $this->$method($clause, $value, $where);
-            }
-        }
-
-        return $clause;
+        return Config::get('laravel-elasticsearch.date_format', 'Y-m-d H:i:s');
     }
+    // ----------------------------------------------------------------------
+    // Index
+    // ----------------------------------------------------------------------
 
-    /**
-     * Compile where for function score
-     */
-    protected function compileWhereFunctionScore(Builder $builder, array $where): array
+    public function compileIndexMappings(Builder $query): array
     {
-        $cleanWhere = $where;
-
-        $compiled = $this->compileWheres($where['query']);
-
-        foreach ($compiled as $queryPart => $clauses) {
-            $compiled[$queryPart] = array_map(function ($clause) use ($where) {
-                if ($clause) {
-                    $this->applyOptionsToClause($clause, $where);
-                }
-
-                return $clause;
-            }, $clauses);
-        }
-
-        $compiled = array_filter($compiled);
-
-        $query = [
-            'function_score' => [
-                $where['functionType'] => ['query' => $compiled['query']],
-            ],
-        ];
-
-        return $query;
+        return ['index' => $query->getFrom() == '' ? '*' : $query->getFrom()];
     }
-
-    /**
-     * Compile a where geo bounds clause
-     */
-    protected function compileWhereGeoBoundsIn(Builder $builder, array $where): array
-    {
-        $query = [
-            'geo_bounding_box' => [
-                $where['column'] => $where['bounds'],
-            ],
-        ];
-
-        return $query;
-    }
-
-    /**
-     * Compile a geo distance clause
-     *
-     * @param  Builder  $builder
-     * @param  array  $where
-     */
-    protected function compileWhereGeoDistance($builder, $where): array
-    {
-        $query = [
-            'geo_distance' => [
-                'distance' => $where['distance'],
-                $where['column'] => $where['location'],
-            ],
-        ];
-
-        return $query;
-    }
-
-    /**
-     * Compile a nested clause
-     */
-    protected function compileWhereNested(Builder $builder, array $where): array
-    {
-        $compiled = $this->compileWheres($where['query']);
-
-        foreach ($compiled as $queryPart => $clauses) {
-            $compiled[$queryPart] = array_map(function ($clause) use ($where) {
-                if ($clause) {
-                    $this->applyOptionsToClause($clause, $where);
-                }
-
-                return $clause;
-            }, $clauses);
-        }
-
-        $compiled = array_filter($compiled);
-
-        return reset($compiled);
-    }
-
-    /**
-     * Compile where clauses for a query
-     */
-    public function compileWheres(Builder|BaseBuilder $builder): array
-    {
-        $compiled['query'] = $this->compileBaseQuery($builder, $builder->wheres);
-        $compiled['filter'] = $this->compileClauses($builder, $builder->filters ?? []);
-        $compiled['postFilter'] = $this->compileClauses($builder, $builder->postFilters ?? []);
-        //        foreach ($queryParts as $queryPart => $builderVar) {
-        //            $clauses = $builder->$builderVar ?? [];
-        //
-        //            $compiled[$queryPart] = $this->compileClauses($builder, $clauses);
-        //        }
-
-        return $compiled;
-    }
-
-    protected function compileBaseQuery(Builder $builder, array $wheres = [])
-    {
-        $dslCompiler = new DslCompiler;
-        foreach ($wheres as $where) {
-            $isOr = str_starts_with($where['boolean'], 'or');
-            $isNot = str_ends_with($where['boolean'], 'not');
-
-            // Adjust operator to lowercase
-            if (isset($where['operator'])) {
-                $where['operator'] = strtolower($where['operator']);
-
-                if ($where['operator'] === '!=') {
-                    $isNot = ! $isNot;
-                    $where['operator'] = '=';
-                }
-            }
-            if (! empty($where['not'])) {
-                $isNot = true;
-            }
-
-            // Handle column names
-            if (isset($where['column'])) {
-                $where['column'] = (string) $where['column'];
-
-                // Adjust the column name if necessary
-                if ($where['column'] === 'id') {
-                    $where['column'] = '_id';
-                }
-
-                // Remove table prefix from column if present
-                if (Str::startsWith($where['column'], $builder->from.'.')) {
-                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
-                }
-            }
-            $method = 'compileWhere'.$where['type'];
-            $result = $this->{$method}($builder, $where);
-            $dslCompiler->setResult($result, $isOr, $isNot);
-
-        }
-
-        return $dslCompiler->compileQuery();
-    }
-
-    /**
-     * Compile general clauses for a query
-     */
-    protected function compileClauses(Builder $builder, array $clauses): array
-    {
-        // The wheres to compile.
-        $wheres = $clauses ?: [];
-
-        // We will add all compiled wheres to this array.
-        $compiled = [];
-        foreach ($wheres as $i => &$where) {
-            // Adjust operator to lowercase
-            if (isset($where['operator'])) {
-                $where['operator'] = strtolower($where['operator']);
-            }
-
-            // Handle column names
-            if (isset($where['column'])) {
-                $where['column'] = (string) $where['column'];
-
-                // Adjust the column name if necessary
-                if ($where['column'] === 'id') {
-                    $where['column'] = '_id';
-                }
-
-                // Remove table prefix from column if present
-                if (Str::startsWith($where['column'], $builder->from.'.')) {
-                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
-                }
-            }
-
-            // Adjust the 'boolean' value of the first where if necessary
-            if (
-                $i === 0 && count($wheres) > 1
-                && str_starts_with($where['boolean'], 'and')
-                && str_starts_with($wheres[$i + 1]['boolean'], 'or')
-            ) {
-                $where['boolean'] = 'or'.(str_ends_with($where['boolean'], ' not') ? ' not' : '');
-            }
-
-            // We use different methods to compile different wheres
-            $method = 'compileWhere'.$where['type'];
-            $result = $this->{$method}($builder, $where);
-
-            // Determine the boolean operator
-            if (str_ends_with($where['boolean'], 'not')) {
-                $boolOperator = 'must_not';
-            } elseif (str_starts_with($where['boolean'], 'or')) {
-                $boolOperator = 'should';
-            } else {
-                $boolOperator = 'must';
-            }
-
-            // Merge the compiled where with the others
-            if (! isset($compiled['bool'][$boolOperator])) {
-                $compiled['bool'][$boolOperator] = [];
-            }
-
-            $compiled['bool'][$boolOperator][] = $result;
-        }
-
-        return $compiled;
-    }
-
-    /**
-     * Compile a where nested clause
-     *
-     * @param  array  $where
-     */
-    protected function compileWhereNestedObject(Builder $builder, $where): array
-    {
-        $wheres = $this->compileWheres($where['query']);
-
-        $query = [
-            'nested' => [
-                'path' => $where['column'],
-            ],
-        ];
-
-        $query['nested'] = array_merge($query['nested'], array_filter($wheres));
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        if (isset($where['operator']) && $where['operator'] === '!=') {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
-    }
-
-    /**
-     * Compile a where not clause
-     *
-     * @param  array  $where
-     */
-    protected function compileWhereNot(Builder $builder, $where): array
-    {
-        return [
-            'bool' => [
-                'must_not' => [
-                    $this->compileWheres($where['query'])['query'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Compile a not in clause
-     */
-    protected function compileWhereNotIn(Builder $builder, array $where): array
-    {
-        return $this->compileWhereIn($builder, $where, true);
-    }
-
-    /**
-     * Compile an in clause
-     */
-    protected function compileWhereIn(Builder $builder, array $where, $not = false): array
-    {
-        $column = $this->getIndexableField($where['column'], $builder);
-        $values = $this->getValueForWhere($builder, $where);
-
-        $query = [
-            'terms' => [
-                $column => array_values($values),
-                ...$where['options'],
-            ],
-        ];
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        if ($not) {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
-    }
-
-    /**
-     * Compile a not null clause
-     */
-    protected function compileWhereNotNull(Builder $builder, array $where): array
-    {
-        $where['operator'] = '!=';
-
-        return $this->compileWhereBasic($builder, $where);
-    }
-
-    /**
-     * Compile a null clause
-     */
-    protected function compileWhereNull(Builder $builder, array $where): array
-    {
-        $where['operator'] = '=';
-
-        return $this->compileWhereBasic($builder, $where);
-    }
-
-    /**
-     * Compile a parent clause
-     */
-    protected function compileWhereParent(Builder $builder, array $where): array
-    {
-        return $this->applyWhereRelationship($builder, $where, 'parent');
-    }
-
-    /**
-     * Compile a relationship clause
-     */
-    protected function applyWhereRelationship(Builder $builder, array $where, string $relationship): array
-    {
-        $compiled = $this->compileWheres($where['value']);
-
-        $relationshipFilter = "has_{$relationship}";
-        $type = $relationship === 'parent' ? 'parent_type' : 'type';
-
-        // pass filter to query if empty allowing a filter interface to be used in relation query
-        // otherwise match all in relation query
-        if (empty($compiled['query'])) {
-            $compiled['query'] = empty($compiled['filter']) ? ['match_all' => (object) []] : $compiled['filter'];
-        } elseif (! empty($compiled['filter'])) {
-            throw new InvalidArgumentException('Cannot use both filter and query contexts within a relation context');
-        }
-
-        $query = [
-            $relationshipFilter => [
-                $type => $where['documentType'],
-                'query' => $compiled['query'],
-            ],
-        ];
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        return $query;
-    }
-
-    /**
-     * @return array
-     */
-    protected function compileWhereParentId(Builder $builder, array $where)
-    {
-        return [
-            'parent_id' => [
-                'type' => $where['relationType'],
-                'id' => $where['id'],
-            ],
-        ];
-    }
-
-    protected function compileWherePrefix(Builder $builder, array $where): array
-    {
-        $query = [
-            'prefix' => [
-                $this->getIndexableField($where['column'], $builder) => $where['value'],
-            ],
-        ];
-
-        return $query;
-    }
-
-    protected function compileWhereRaw(Builder $builder, array $where): array
-    {
-        return $where['sql']; // Return the raw query as-is
-    }
-
-    /**
-     * Compile a date clause
-     */
-    protected function compileWhereRegex(Builder $builder, array $where): array
-    {
-
-        $allowedArgs = [
-            'flags',
-            'case_insensitive',
-            'max_determinized_states',
-            'rewrite',
-        ];
-
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-
-        return [
-            'regexp' => [
-                $this->getIndexableField($where['column'], $builder) => [
-                    'value' => Helpers::escape($where['value']),
-                    ...$where['options'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Compile a match_phrase clause
-     */
-    protected function compileWherePhrase(Builder $builder, array $where): array
-    {
-        return [
-            'match_phrase' => [
-                $where['column'] => [
-                    'query' => $where['value'],
-                    ...$where['options'],
-
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Compile a match_phrase clause
-     */
-    //    protected function compileWhereMatch(Builder $builder, array $where): array
-    //    {
-    //
-    //        $allowedArgs = [
-    //            'analyzer',
-    //            'auto_generate_synonyms_phrase_query',
-    //            'boost',
-    //            'fuzziness',
-    //            'max_expansions',
-    //            'prefix_length',
-    //            'fuzzy_transpositions',
-    //            'fuzzy_rewrite',
-    //            'lenient',
-    //            'operator',
-    //            'minimum_should_match',
-    //            'zero_terms_query',
-    //        ];
-    //
-    //        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-    //
-    //        return [
-    //            'match' => [
-    //                $where['column'] => [
-    //                    ...$where['options'],
-    //                    'query' => $where['value'],
-    //                ],
-    //            ],
-    //        ];
-    //    }
-
-    /**
-     * Compile a match_phrase clause
-     */
-    protected function compileWherePhrasePrefix(Builder $builder, array $where): array
-    {
-
-        return [
-            'match_phrase_prefix' => [
-                $where['column'] => [
-                    'query' => $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Compile a term fuzzy clause
-     */
-    protected function compileWhereTermFuzzy(Builder $builder, array $where): array
-    {
-
-        return [
-            'fuzzy' => [
-                $where['column'] => [
-                    'value' => (string) $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Compile a term clause
-     */
-    protected function compileWhereTerm(Builder $builder, array $where): array
-    {
-
-        return [
-            'term' => [
-                $this->getIndexableField($where['column'], $builder) => [
-                    'value' => (string) $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
-    }
-
-    private function getAllowedOptions(array $options, array $allowed): array
-    {
-        return array_intersect_key($options, array_flip($allowed));
-    }
-
-    /**
-     * Compile a script clause
-     */
-    protected function compileWhereScript(Builder $builder, array $where): array
-    {
-        return [
-            'script' => [
-                'script' => array_merge($where['options'], ['source' => $where['script']]),
-            ],
-        ];
-    }
-
-    /**
-     * Compile a search clause for Elasticsearch.
-     */
-    protected function compileWhereSearch(Builder $builder, array $where): array
-    {
-
-        $constantScore = false;
-        if (isset($where['options']['constant_score'])) {
-            $constantScore = $where['options']['constant_score'];
-            unset($where['options']['constant_score']);
-        }
-        $query = [
-            'multi_match' => [
-                'query' => $where['value'],
-                ...$where['options'],
-            ],
-        ];
-        if ($constantScore) {
-            return [
-                'constant_score' => [
-                    'filter' => $query,
-                ],
-            ];
-        }
-
-        return $query;
-        //        // Determine the fields to search
-        //        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
-        //
-        //        // Handle field boosts if fields is an associative array
-        //        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
-        //            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
-        //        }
-        //
-        //        // Use multi_match if searching across multiple fields or all fields
-        //        if (is_array($fields) || $fields === '*') {
-        //            $queryType = $where['options']['matchType'] ?? 'best_fields';
-        //
-        //            $query = [
-        //                'multi_match' => [
-        //                    'query' => $where['value'],
-        //                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
-        //                    'type' => $queryType,
-        //                ],
-        //            ];
-        //        } else {
-        //            $query = [
-        //                'match' => [
-        //                    $fields => [
-        //                        'query' => $where['value'],
-        //                    ],
-        //                ],
-        //            ];
-        //        }
-        //
-        //        // Add fuzziness if specified
-        //        if (! empty($where['options']['fuzziness'])) {
-        //            $fuzziness = $where['options']['fuzziness'];
-        //            $mainQueryType = key($query);
-        //
-        //            if ($mainQueryType === 'multi_match') {
-        //                $query['multi_match']['fuzziness'] = $fuzziness;
-        //            } else {
-        //                $query['match'][$fields]['fuzziness'] = $fuzziness;
-        //            }
-        //        }
-        //
-        //        // Wrap in constant_score if specified
-        //        if (! empty($where['options']['constant_score'])) {
-        //            $query = [
-        //                'constant_score' => [
-        //                    'filter' => $query,
-        //                ],
-        //            ];
-        //        }
-        //
-        //        return $query;
-    }
-
-    // Aggregations
-
 }
