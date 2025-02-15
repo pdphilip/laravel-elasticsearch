@@ -172,7 +172,7 @@ class Builder extends BaseEloquentBuilder
     {
         return $this->model->hydrate(
             $this->query->get($columns)->all()
-        );
+        )->all();
     }
 
     public function getElasticModels($columns = ['*'])
