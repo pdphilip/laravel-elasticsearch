@@ -302,6 +302,11 @@ class Grammar extends BaseGrammar
     // Where Compilers
     // ----------------------------------------------------------------------
 
+    public function compileWhereMatchAll(): array
+    {
+        return ['match_all' => (object) []];
+    }
+
     /**
      * Compile a general where clause
      */
@@ -1093,17 +1098,8 @@ class Grammar extends BaseGrammar
     {
         $key = $aggregation['key'];
 
-        // This is neat & cleaver, but it's tedious to trace & maintain
         $method = 'compile'.ucfirst(Str::camel($aggregation['type'])).'Aggregation';
-
-        $compiledPayload = match ($aggregation['type']) {
-            'composite' => $this->compileCompositeAggregation($builder, $aggregation),
-            'date_histogram' => $this->compileDateHistogramAggregation($builder, $aggregation),
-            'date_range' => $this->compileDateRangeAggregation($builder, $aggregation),
-            'exists' => $this->compileExistsAggregation($builder, $aggregation),
-            default => $this->$method($builder, $aggregation),
-        };
-
+        $compiledPayload = $this->$method($builder, $aggregation);
         $compiled = [$key => $compiledPayload];
 
         if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {

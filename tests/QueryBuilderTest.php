@@ -205,10 +205,10 @@ it('tests distinct', function () {
         ['name' => 'spoon', 'type' => 'round'],
     ]);
 
-    $items = DB::table('items')->distinct('name')->get()->pluck('name')->sort()->values()->toArray();
+    $items = DB::table('items')->select('name')->distinct()->get()->pluck('name')->sort()->values()->toArray();
     expect($items)->toHaveCount(3)->toEqual(['fork', 'knife', 'spoon']);
 
-    $types = DB::table('items')->distinct('type')->get()->pluck('type')->sort()->values()->toArray();
+    $types = DB::table('items')->select('type')->distinct()->get()->pluck('type')->sort()->values()->toArray();
     expect($types)->toHaveCount(2)->toEqual(['round', 'sharp']);
 
     $types = DB::table('items')->distinct()->get()->pluck('type')->sort()->values()->toArray();

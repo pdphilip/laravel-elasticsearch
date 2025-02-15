@@ -492,10 +492,14 @@ class Connection extends BaseConnection
         foreach ($hits as $hit) {
             $count++;
             if ($count > $limit) {
-                return;
+                break;
             }
             yield $hit;
         }
+
+        return (function () {
+            yield;
+        })();
     }
 
     /**

@@ -85,7 +85,7 @@ class Builder extends BaseBuilder
 
     protected $routing;
 
-    protected ?MetaDTO $metaTransfer;
+    protected ?MetaDTO $metaTransfer = null;
 
     public function __call($method, $parameters)
     {
@@ -336,9 +336,6 @@ class Builder extends BaseBuilder
      */
     public function groupBy(...$groups)
     {
-        if (isset($groups[0][0])) {
-            $groups = $groups[0];
-        }
         $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
             $query->from = $this->from;
 
@@ -1958,6 +1955,10 @@ class Builder extends BaseBuilder
     // @internal
     public function getMetaTransfer(): ?MetaDTO
     {
+        if (! $this->metaTransfer) {
+            $this->metaTransfer = new MetaDTO([]);
+        }
+
         return $this->metaTransfer;
     }
 

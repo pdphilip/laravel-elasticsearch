@@ -396,7 +396,7 @@ it('tests groupby', function () {
     expect($users)->toHaveCount(5);
 
     $users = User::groupBy('age')->take(2)->get();
-    expect($users)->toHaveCount(5);
+    expect($users)->toHaveCount(2);
 
     $users = User::groupBy('title', 'age')->get();
     expect($users)->toHaveCount(7)
