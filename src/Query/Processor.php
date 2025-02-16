@@ -23,7 +23,7 @@ class Processor extends BaseProcessor
     /**
      * Get the raw aggregation results
      */
-    public function getAggregationResults(): array
+    public function getAggregationResults(): array|Collection
     {
         return $this->aggregations;
     }
@@ -114,11 +114,12 @@ class Processor extends BaseProcessor
                 // I love me the spread operator...
                 $result = [...$result, ...$this->processBucketAggregation($bucketAggregation)];
             }
+            $this->aggregations = collect($result);
         } else {
             // No buckets so it's likely all metrics
             $result = $this->processMetricAggregations($this->rawAggregations);
+            $this->aggregations = $result;
         }
-        $this->aggregations = $result;
 
         return $this->aggregations;
     }
@@ -188,7 +189,7 @@ class Processor extends BaseProcessor
     /**
      * Process the results of a "select" query.
      */
-    public function processSelect(BaseBuilder|Builder $query, $results): array
+    public function processSelect(BaseBuilder|Builder $query, $results): array|Collection
     {
         $this->rawResponse = $results;
         $this->query = $query;
@@ -216,6 +217,7 @@ class Processor extends BaseProcessor
 
         $this->aggregations = $response['aggregations'] ?? [];
         if ($this->aggregations) {
+
             return $this->processAggregations($query, $results);
         }
 

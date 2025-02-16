@@ -10,6 +10,7 @@ use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
@@ -60,6 +61,8 @@ class Builder extends BaseBuilder
     public mixed $afterKey = null;
 
     public array $metricsAggregations = [];
+
+    public mixed $asDsl = false;
 
     /**
      * All the supported clause operators.
@@ -1472,7 +1475,7 @@ class Builder extends BaseBuilder
      *
      * @throws BuilderException
      */
-    public function aggregateMetric($function, $columns = ['*'], $options = [])
+    protected function aggregateMetric($function, $columns = ['*'], $options = [])
     {
         // Each column we want aggregated
         $columns = Arr::wrap($columns);
@@ -1507,7 +1510,7 @@ class Builder extends BaseBuilder
     /**
      * Get the aggregations returned from query
      */
-    public function getAggregationResults(): array
+    public function getAggregationResults(): array|Collection
     {
         $this->getResultsOnce();
 
@@ -1979,13 +1982,35 @@ class Builder extends BaseBuilder
     // V4 Backwards Compatibility
     // ----------------------------------------------------------------------
 
+    public function toDsl()
+    {
+        return $this->toSql();
+    }
+
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
     public function saveWithoutRefresh()
     {
         return $this->withoutRefresh()->save();
     }
 
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
     public function createWithoutRefresh($attributes = [])
     {
         return $this->withoutRefresh()->create($attributes);
+    }
+
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
+    public function firstOrCreateWithoutRefresh($attributes = [])
+    {
+        return $this->withoutRefresh()->firstOrCreate($attributes);
     }
 }

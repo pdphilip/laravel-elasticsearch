@@ -7,7 +7,9 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Support\Collection;
 use Iterator;
+use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
@@ -275,6 +277,104 @@ class Builder extends BaseEloquentBuilder
         $this->query->from = $table;
 
         return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    // Aggregations
+    // ----------------------------------------------------------------------
+
+    public function min($column, array $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->min($column, $options));
+    }
+
+    public function max($column, array $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->max($column, $options));
+    }
+
+    public function sum($column, array $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->sum($column, $options));
+    }
+
+    public function avg($column, array $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->avg($column, $options));
+    }
+
+    public function aggregate($function, $columns = ['*'], $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->aggregate($function, $columns, $options));
+    }
+
+    public function getAggregationResults()
+    {
+        return $this->hydrateAggregationResult($this->query->getAggregationResults());
+    }
+
+    // ES Metric Aggregations
+
+    public function boxplot($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->boxplot($columns, $options));
+    }
+
+    public function cardinality($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->cardinality($columns, $options));
+    }
+
+    public function extendedStats($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->extendedStats($columns, $options));
+    }
+
+    public function matrix($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->matrix($columns, $options));
+    }
+
+    public function medianAbsoluteDeviation($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->medianAbsoluteDeviation($columns, $options));
+    }
+
+    public function percentiles($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->percentiles($columns, $options));
+    }
+
+    public function stats($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->stats($columns, $options));
+    }
+
+    public function stringStats($columns, $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->stringStats($columns, $options));
+    }
+
+    protected function hydrateAggregationResult($result)
+    {
+        if ($result instanceof Collection) {
+            $items = $result->all();
+            // If the first item is a key-value pair, return as is
+            if (! isset($items[0])) {
+                return $items;
+            }
+            $meta = $items[0]['_meta'] ?? new MetaDTO([]);
+            $meta->set('_index', $this->query->inferIndex());
+            $meta->set('query', 'aggregation');
+            $meta->set('dsl', $this->query->toSql());
+            $models = $this->model->hydrate(
+                $items
+            );
+
+            return ElasticCollection::loadCollection($models)->setQueryMeta($meta);
+        }
+
+        return $result;
     }
 
     // ----------------------------------------------------------------------
