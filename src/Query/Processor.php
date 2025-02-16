@@ -109,7 +109,6 @@ class Processor extends BaseProcessor
         }
 
         $result = [];
-
         if (! empty($this->query->bucketAggregations)) {
             foreach ($this->query->bucketAggregations as $bucketAggregation) {
                 // I love me the spread operator...
@@ -119,7 +118,6 @@ class Processor extends BaseProcessor
             // No buckets so it's likely all metrics
             $result = $this->processMetricAggregations($this->rawAggregations);
         }
-
         $this->aggregations = $result;
 
         return $this->aggregations;
@@ -127,7 +125,6 @@ class Processor extends BaseProcessor
 
     public function processBucketAggregation($bucketAggregation)
     {
-
         $key = $bucketAggregation['key'];
 
         if (! isset($this->rawAggregations[$key]['buckets'])) {
@@ -136,8 +133,7 @@ class Processor extends BaseProcessor
 
         return collect($this->rawAggregations[$key]['buckets'])->map(function ($bucket) use ($key) {
 
-            $metricAggs = $this->processMetricAggregations($bucket);
-
+            $metricAggs = $this->processMetricAggregations($bucket, true);
             // ES is super annoying with how it does keys. For composite it returns keys as array but in other cases it does not.
             if (! is_array($bucket['key'])) {
                 $bucket['key'] = [$key => $bucket['key']];
@@ -152,13 +148,11 @@ class Processor extends BaseProcessor
         })->toArray();
     }
 
-    public function processMetricAggregations($bucket)
+    public function processMetricAggregations($bucket, $withinBucket = false)
     {
-
         if (! $this->query->metricsAggregations) {
             return [];
         }
-
         $result = [];
         foreach ($this->query->metricsAggregations as $metricsAggregation) {
             $result = [
@@ -166,9 +160,8 @@ class Processor extends BaseProcessor
                 ...$this->processMetricAggregation($metricsAggregation, $bucket),
             ];
         }
-
         // Single metric agg
-        if (count($this->query->metricsAggregations) == 1) {
+        if (! $withinBucket && count($this->query->metricsAggregations) == 1) {
             $key = array_key_first($result);
 
             return $result[$key];
@@ -179,7 +172,6 @@ class Processor extends BaseProcessor
 
     public function processMetricAggregation($metricsAggregation, $bucket)
     {
-
         $key = $metricsAggregation['key'];
         $type = $metricsAggregation['type'];
 

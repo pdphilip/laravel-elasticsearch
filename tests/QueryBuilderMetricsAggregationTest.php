@@ -27,6 +27,25 @@ it('aggregate multiple metrics', function () {
         ->and($items['min_stock'])->toBe(1.0);
 });
 
+it('bucket and then aggregate a single metric', function () {
+
+    $items = DB::table('items')->groupBy('name')->boxplot('amount');
+    expect($items)->toHaveCount(3)
+        ->and($items[0]['name'])->toBe('fork')
+        ->and($items[0]['boxplot_amount'])->toHaveCount(7);
+
+    $items = DB::table('items')->groupBy('name')->min('amount');
+    expect($items)->toHaveCount(3)
+        ->and($items[0]['name'])->toBe('fork')
+        ->and($items[0]['min_amount'])->toBe(20.0);
+
+    $items = DB::table('items')->groupBy('name', 'type')->min('stock');
+    expect($items)->toHaveCount(3)
+        ->and($items[0]['name'])->toBe('fork')
+        ->and($items[0]['type'])->toBe('sharp')
+        ->and($items[0]['min_stock'])->toBe(5.0);
+});
+
 it('bucket and then aggregate multiple metrics', function () {
 
     $items = DB::table('items')->groupBy('name')->boxplot(['amount', 'stock']);

@@ -336,6 +336,8 @@ class Builder extends BaseBuilder
      */
     public function groupBy(...$groups)
     {
+        $groups = Sanitizer::cleanArrayValues($groups);
+
         $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
             $query->from = $this->from;
 
@@ -384,6 +386,7 @@ class Builder extends BaseBuilder
      */
     public function get($columns = ['*']): ElasticCollection
     {
+
         $original = $this->columns;
 
         if (is_null($original)) {
@@ -1970,5 +1973,19 @@ class Builder extends BaseBuilder
         $suffix = $this->options()->get('suffix', '');
 
         return $prefix.$table.$suffix;
+    }
+
+    // ----------------------------------------------------------------------
+    // V4 Backwards Compatibility
+    // ----------------------------------------------------------------------
+
+    public function saveWithoutRefresh()
+    {
+        return $this->withoutRefresh()->save();
+    }
+
+    public function createWithoutRefresh($attributes = [])
+    {
+        return $this->withoutRefresh()->create($attributes);
     }
 }

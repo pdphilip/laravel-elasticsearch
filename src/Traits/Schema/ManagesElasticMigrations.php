@@ -267,4 +267,13 @@ trait ManagesElasticMigrations
     {
         return $this->addColumn('unsigned_long', $field, $parameters);
     }
+
+    // ----------------------------------------------------------------------
+    // V4 backward compatibility
+    // ----------------------------------------------------------------------
+
+    public function geo(string $field, array $parameters = []): PropertyDefinition
+    {
+        return $this->geoPoint($field, $parameters);
+    }
 }

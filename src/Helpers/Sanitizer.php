@@ -2,6 +2,7 @@
 
 namespace PDPhilip\Elasticsearch\Helpers;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 final class Sanitizer
@@ -64,5 +65,20 @@ final class Sanitizer
         $table = str_replace($suffix, '', $table);
 
         return $prefix.$table.$suffix;
+    }
+
+    public static function cleanArrayValues($input): array
+    {
+        $groups = [];
+        if ($input) {
+            foreach ($input as $val) {
+                $groups = array_merge(
+                    (array) $groups,
+                    Arr::wrap($val)
+                );
+            }
+        }
+
+        return $groups;
     }
 }
