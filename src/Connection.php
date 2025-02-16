@@ -24,6 +24,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
+use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -56,6 +57,10 @@ class Connection extends BaseConnection
 
     protected $requestTimeout;
 
+    protected $idProcessor = false;
+
+    protected ?TimeBasedUUIDGenerator $uuidGenerator;
+
     public $defaultQueryLimit = 1000;
 
     /** {@inheritdoc}
@@ -84,6 +89,8 @@ class Connection extends BaseConnection
         if (! empty($this->config['index_prefix'])) {
             $this->setIndexPrefix($this->config['index_prefix']);
         }
+
+        $this->uuidGenerator = new TimeBasedUUIDGenerator;
     }
 
     // ----------------------------------------------------------------------
@@ -303,6 +310,11 @@ class Connection extends BaseConnection
     public function getDriverName(): string
     {
         return 'elasticsearch';
+    }
+
+    public function getGeneratedId(): ?string
+    {
+        return $this->uuidGenerator->getBase64UUID();
     }
 
     /**

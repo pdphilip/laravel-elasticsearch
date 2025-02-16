@@ -13,7 +13,6 @@ use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\ModelMeta;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
 /**
@@ -34,7 +33,7 @@ trait ElasticsearchModel
 
     public function newUniqueId(): string
     {
-        return Helpers::uuid();
+        return $this->getConnection()->getGeneratedId();
     }
 
     /**

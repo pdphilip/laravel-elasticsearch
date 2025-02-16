@@ -35,7 +35,7 @@ class Grammar extends BaseGrammar
         }
 
         foreach ($values as $doc) {
-            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) Helpers::uuid());
+            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) $query->connection->getGeneratedId());
             if (isset($doc['child_documents'])) {
                 foreach ($doc['child_documents'] as $childDoc) {
                     $params['body'][] = [
