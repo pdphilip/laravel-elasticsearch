@@ -20,6 +20,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
+use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
@@ -59,8 +60,6 @@ class Connection extends BaseConnection
 
     protected $idProcessor = false;
 
-    protected ?TimeBasedUUIDGenerator $uuidGenerator;
-
     public $defaultQueryLimit = 1000;
 
     /** {@inheritdoc}
@@ -90,7 +89,6 @@ class Connection extends BaseConnection
             $this->setIndexPrefix($this->config['index_prefix']);
         }
 
-        $this->uuidGenerator = new TimeBasedUUIDGenerator;
     }
 
     // ----------------------------------------------------------------------
@@ -128,6 +126,8 @@ class Connection extends BaseConnection
                     'ssl_verification' => true,
                     'retires' => null,
                     'meta_header' => null,
+                    'default_limit' => null,
+                    'id_processor' => null,
                 ],
             ],
             $this->config
@@ -314,7 +314,11 @@ class Connection extends BaseConnection
 
     public function getGeneratedId(): ?string
     {
-        return $this->uuidGenerator->getBase64UUID();
+        return match ($this->idProcessor) {
+            'uuid' => Helpers::uuid(),
+            'eid' => TimeBasedUUIDGenerator::generate(),
+            default => TimeBasedUUIDGenerator::generate(), // Until we're able to have Elasticsearch generate it
+        };
     }
 
     /**

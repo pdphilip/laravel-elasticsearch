@@ -2,8 +2,6 @@
 
 namespace PDPhilip\Elasticsearch\Utils;
 
-use Random\RandomException;
-
 /**
  * @internal
  *
@@ -13,85 +11,147 @@ use Random\RandomException;
  * - Atomic sequence number handling (prevents duplicates).
  * - Base64 URL-safe encoding, same as Strings.BASE_64_NO_PADDING_URL_ENCODER.
  * - Matches Elasticsearch’s ID distribution (compression-friendly byte layout).
+ *
+ * // Rational for the byte layout via Elasticsearch source code:
+ * // We have auto-generated ids, which are usually used for append-only workloads.
+ * // So we try to optimize the order of bytes for indexing speed (by having quite
+ * // unique bytes close to the beginning of the ids so that sorting is fast) and
+ * // compression (by making sure we share common prefixes between enough ids)
  */
 class TimeBasedUUIDGenerator
 {
-    private static int $sequenceNumber = 0;
+    private static int $sequenceNumber;
 
     private static int $lastTimestamp = 0;
 
-    private static string $macAddress = '';
+    private static string $macAddress;
 
-    /**
-     * @throws RandomException
-     */
-    public function __construct()
+    private static bool $initialized = false;
+
+    private static function initialize(): void
     {
-        if (! self::$macAddress) {
-            self::$macAddress = self::getMacAddress();
+        if (self::$initialized) {
+            return;
         }
-        if (! self::$sequenceNumber) {
-            self::$sequenceNumber = random_int(0, 0xFFFFFF); // Random 3-byte sequence start
-        }
+
+        self::$sequenceNumber = random_int(0, 0xFFFFFF);
+        self::$macAddress = self::getSecureMungedAddress();
+        self::$initialized = true;
     }
 
-    /**
-     * @throws RandomException
-     */
-    public function getBase64UUID(): string
+    public static function generate(): string
     {
-        $currentTimestamp = self::currentTimeMillis();
+        self::initialize();
 
-        // Ensure timestamp never goes backward
-        if ($currentTimestamp <= self::$lastTimestamp) {
-            self::$sequenceNumber = (self::$sequenceNumber + 1) & 0xFFFFFF; // 3-byte counter
-            if (self::$sequenceNumber == 0) {
-                $currentTimestamp = self::$lastTimestamp + 1;
-            }
-        } else {
-            self::$sequenceNumber = random_int(0, 0xFFFFFF); // Reset sequence when time advances
+        // Increment sequence number (max 3 bytes)
+        $sequenceId = ++self::$sequenceNumber & 0xFFFFFF;
+
+        // Get timestamp and prevent it from going backward
+        $timestamp = max(self::$lastTimestamp, self::getTimestampMillis());
+
+        if ($sequenceId === 0) {
+            $timestamp++;
         }
 
-        self::$lastTimestamp = $currentTimestamp;
+        self::$lastTimestamp = $timestamp;
 
-        // Generate the 15-byte UUID
-        $uuidBytes = [];
-        $sequenceId = self::$sequenceNumber;
+        // 15-byte UUID byte structure
+        $uuidBytes = '';
 
-        // 1st & 3rd byte of sequence ID (for compression)
-        $uuidBytes[] = $sequenceId & 0xFF;
-        $uuidBytes[] = ($sequenceId >> 16) & 0xFF;
+        // 1st & 3rd byte of sequence ID (for better compression)
+        $uuidBytes .= chr($sequenceId & 0xFF);
+        $uuidBytes .= chr(($sequenceId >> 16) & 0xFF);
 
-        // 6-byte timestamp
-        $uuidBytes[] = ($currentTimestamp >> 16) & 0xFF;
-        $uuidBytes[] = ($currentTimestamp >> 24) & 0xFF;
-        $uuidBytes[] = ($currentTimestamp >> 32) & 0xFF;
-        $uuidBytes[] = ($currentTimestamp >> 40) & 0xFF;
+        // Timestamp bytes (ensuring changes are progressive)
+        $uuidBytes .= chr(($timestamp >> 16) & 0xFF);
+        $uuidBytes .= chr(($timestamp >> 24) & 0xFF);
+        $uuidBytes .= chr(($timestamp >> 32) & 0xFF);
+        $uuidBytes .= chr(($timestamp >> 40) & 0xFF);
 
-        // 6-byte MAC address (pre-generated)
-        foreach (str_split(self::$macAddress) as $byte) {
-            $uuidBytes[] = ord($byte);
-        }
+        // Inject munged MAC address
+        $uuidBytes .= self::$macAddress;
 
-        // Remaining bytes
-        $uuidBytes[] = ($currentTimestamp >> 8) & 0xFF;
-        $uuidBytes[] = ($sequenceId >> 8) & 0xFF;
-        $uuidBytes[] = $currentTimestamp & 0xFF;
+        // Remaining timestamp & sequence bytes
+        $uuidBytes .= chr(($timestamp >> 8) & 0xFF);
+        $uuidBytes .= chr(($sequenceId >> 8) & 0xFF);
+        $uuidBytes .= chr($timestamp & 0xFF);
 
-        // Convert to Base64 URL-safe encoding (no padding)
-        return rtrim(strtr(base64_encode(pack('C*', ...$uuidBytes)), '+/', '-_'), '=');
+        // Base64 URL-safe encoding (removes padding)
+        return rtrim(strtr(base64_encode($uuidBytes), '+/', '-_'), '=');
     }
 
-    private static function currentTimeMillis(): int
+    private static function getTimestampMillis(): int
     {
         return (int) (microtime(true) * 1000);
     }
 
-    /**
-     * @throws RandomException
-     */
-    private static function getMacAddress(): string
+    private static function getMacAddress(): ?string
     {
-        return random_bytes(6);
+        static $cachedMac;
+        if ($cachedMac) {
+            return $cachedMac;
+        }
+
+        // Try system commands first
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $output = shell_exec('getmac');
+        } else {
+            $output = shell_exec('ifconfig -a || ip link');
+        }
+
+        if ($output) {
+            if (preg_match('/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/', $output, $matches)) {
+                $mac = str_replace([':', '-'], '', $matches[0]);
+                $macAddress = hex2bin($mac);
+                if (self::isValidAddress($macAddress)) {
+                    $cachedMac = $macAddress;
+
+                    return $cachedMac;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static function isValidAddress(?string $address): bool
+    {
+        return $address !== null && strlen($address) === 6 && preg_match('/[^\x00]/', $address);
+    }
+
+    private static function constructDummyMulticastAddress(): string
+    {
+        static $cachedDummy;
+        if (! $cachedDummy) {
+            $dummy = random_bytes(6);
+            $dummy[0] = chr(ord($dummy[0]) | 0x01); // Set multicast bit
+            $cachedDummy = $dummy;
+        }
+
+        return $cachedDummy;
+    }
+
+    private static function getSecureMungedAddress(): string
+    {
+        static $cachedMungedMac;
+        if ($cachedMungedMac) {
+            return $cachedMungedMac;
+        }
+
+        $macAddress = self::getMacAddress();
+        if (! $macAddress) {
+            $macAddress = self::constructDummyMulticastAddress();
+        }
+
+        // Munging the MAC address (Elasticsearch-like obfuscation)
+        $mungedMac = '';
+        $randomSeed = random_bytes(6);
+        for ($i = 0; $i < 6; $i++) {
+            $mungedMac .= chr(ord($randomSeed[$i]) ^ ord($macAddress[$i]));
+        }
+
+        $cachedMungedMac = $mungedMac;
+
+        return $cachedMungedMac;
     }
 }

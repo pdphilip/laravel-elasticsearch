@@ -7,7 +7,6 @@ namespace PDPhilip\Elasticsearch\Helpers;
 use Closure;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
-use Random\RandomException;
 
 /**
  * @internal
@@ -34,12 +33,9 @@ final class Helpers
         return base64_encode((string) Str::orderedUuid());
     }
 
-    /**
-     * @throws RandomException
-     */
     public static function timeBasedUUID(): string
     {
-        return (new TimeBasedUUIDGenerator)->getBase64UUID();
+        return TimeBasedUUIDGenerator::generate();
     }
 
     /**

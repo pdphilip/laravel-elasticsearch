@@ -2,11 +2,12 @@
 
 namespace PDPhilip\Elasticsearch\Tests\Benchmarks;
 
+use AllowDynamicProperties;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 use PDPhilip\Elasticsearch\Utils\Timer;
 
-class UuidBenchmarks
+#[AllowDynamicProperties] class UuidBenchmarks
 {
     use Timer;
 
@@ -15,49 +16,26 @@ class UuidBenchmarks
         ini_set('memory_limit', $memoryLimit);
     }
 
-    public function testUuidStandard($count = 1000000)
+    public function getId($key)
     {
-        return $this->processTest($count, function () {
-            return Helpers::uuid();
+        return match ($key) {
+            'uuid' => Helpers::uuid(),
+            'eid' => TimeBasedUUIDGenerator::generate(),
+            default => null,
+        };
+    }
+
+    public function testCollisions($type = 'base', $count = 1000000)
+    {
+        return $this->processTest($count, function () use ($type) {
+            return $this->getId($type);
         });
     }
 
-    public function testUuidTimebased($count = 1000000)
+    public function testSpeed($type = 'base', $count = 1000000)
     {
-        return $this->processTest($count, function () {
-            return Helpers::timeBasedUUID();
-        });
-    }
-
-    public function testUuidTimebasedInstantiated($count = 1000000)
-    {
-        $generator = new TimeBasedUUIDGenerator;
-
-        return $this->processTest($count, function () use ($generator) {
-            return $generator->getBase64UUID();
-        });
-    }
-
-    public function testUuidStandardRaw($count = 1000000)
-    {
-        return $this->processTestRaw($count, function () {
-            return Helpers::uuid();
-        });
-    }
-
-    public function testUuidTimebasedRaw($count = 1000000)
-    {
-        return $this->processTestRaw($count, function () {
-            return Helpers::timeBasedUUID();
-        });
-    }
-
-    public function testUuidTimebasedInstantiatedRaw($count = 1000000)
-    {
-        $generator = new TimeBasedUUIDGenerator;
-
-        return $this->processTestRaw($count, function () use ($generator) {
-            return $generator->getBase64UUID();
+        return $this->processTestRaw($count, function () use ($type) {
+            return $this->getId($type);
         });
     }
 
