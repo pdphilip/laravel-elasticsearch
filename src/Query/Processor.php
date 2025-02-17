@@ -61,10 +61,10 @@ class Processor extends BaseProcessor
             $keys[] = 'by_'.$column;
         }
 
-        return collect($this->_parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount));
+        return collect($this->parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount));
     }
 
-    protected function _parseDistinctBucket($columns, $keys, $response, $index, $includeDocCount, $currentData = []): array
+    protected function parseDistinctBucket($columns, $keys, $response, $index, $includeDocCount, $currentData = []): array
     {
         $data = [];
         if (! empty($response[$keys[$index]]['buckets'])) {
@@ -82,7 +82,7 @@ class Processor extends BaseProcessor
                 }
 
                 if (isset($columns[$index + 1])) {
-                    $nestedData = $this->_parseDistinctBucket($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
+                    $nestedData = $this->parseDistinctBucket($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
 
                     if (! empty($nestedData)) {
                         $data = array_merge($data, $nestedData);
@@ -167,23 +167,86 @@ class Processor extends BaseProcessor
 
             return $result[$key];
         }
+        if (isset($result['distinct'])) {
+            $result = $result['distinct'];
+        }
 
         return $result;
+
     }
 
     public function processMetricAggregation($metricsAggregation, $bucket)
     {
         $key = $metricsAggregation['key'];
         $type = $metricsAggregation['type'];
+        if ($this->query->distinct) {
+            return ['distinct' => $this->processDistinctAggregation($bucket, $type)];
+        }
 
-        $result = match ($type) {
+        $result = $this->extractAggResult($type, $bucket, $key);
+
+        return ["{$type}_{$key}" => $result];
+    }
+
+    protected function extractAggResult($type, $bucket, $key)
+    {
+        return match ($type) {
             'count', 'avg', 'max', 'min', 'sum', 'median_absolute_deviation', 'value_count', 'cardinality' => $bucket[$key]['value'],
             'percentiles' => $bucket[$key]['values'],
             'matrix_stats' => $bucket[$key]['fields'][0],
             'extended_stats', 'stats', 'string_stats', 'boxplot' => $bucket[$key],
         };
+    }
 
-        return ["{$type}_{$key}" => $result];
+    public function processDistinctAggregation($result, $metric)
+    {
+        return collect($this->parseDistinctBucketWithMetrics($result, $metric));
+    }
+
+    protected function parseDistinctBucketWithMetrics($response, $metric, $currentData = []): array
+    {
+        $data = [];
+
+        foreach ($response as $aggKey => $aggData) {
+            if (! isset($aggData['buckets']) || ! is_array($aggData['buckets'])) {
+                continue; // Skip non-bucket fields
+            }
+
+            foreach ($aggData['buckets'] as $res) {
+                $datum = $currentData;
+                $datum['doc_count'] = $res['doc_count'] ?? 0;
+                $datum[$aggKey] = $res['key'] ?? null;
+
+                $hasMetric = false;
+
+                foreach ($res as $key => $value) {
+                    if (is_array($value) && strpos($key, "{$metric}_") === 0) {
+                        $datum[$key] = $this->extractAggResult($metric, $res, $key);
+                        $hasMetric = true;
+                    }
+                }
+
+                $nestedAdded = false;
+                $nestedData = [];
+
+                foreach ($res as $nestedKey => $nestedValue) {
+                    if (is_array($nestedValue) && isset($nestedValue['buckets'])) {
+                        $nestedData = $this->parseDistinctBucketWithMetrics([$nestedKey => $nestedValue], $metric, $datum);
+                        if (! empty($nestedData)) {
+                            $nestedAdded = true;
+                        }
+                    }
+                }
+
+                if ($nestedAdded) {
+                    $data = array_merge($data, $nestedData);
+                } elseif ($hasMetric) {
+                    $data[] = $datum;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**

@@ -142,8 +142,19 @@ class Grammar extends BaseGrammar
             $params['_source'] = $query->columns;
         }
         if ($query->distinct) {
-            if ($query->columns && $query->columns !== ['*']) {
-                $params['body']['aggs'] = $this->compileNestedTermAggregations($query->columns, $query);
+            if ($query->columns && $query->columns !== ['*'] || $query->metricsAggregations) {
+                $fields = $query->columns ?? [];
+                $aggs = [];
+                foreach ($query->metricsAggregations as $aggregation) {
+                    if (! in_array($aggregation['key'], $fields)) {
+                        $fields[] = $aggregation['key'];
+                    }
+                    $agg = $this->compileAggregation($query, $aggregation);
+                    $aggs[$aggregation['key']] = reset($agg);
+                    $aggs[$aggregation['key']]['key'] = $aggregation['type'].'_'.$aggregation['key'];
+
+                }
+                $params['body']['aggs'] = $this->compileNestedTermAggregations($fields, $query, $aggs);
                 $params['body']['size'] = $query->getSetLimit();
                 unset($params['body']['sort']);
             } else {
@@ -998,37 +1009,52 @@ class Grammar extends BaseGrammar
     /**
      * @throws BuilderException
      */
-    protected function compileNestedTermAggregations($fields, Builder $builder): array
+    protected function compileNestedTermAggregations($fields, Builder $query, $aggs = []): array
     {
         $currentField = array_shift($fields);
-        $field = $this->getIndexableField($currentField, $builder);
+        $field = $this->getIndexableField($currentField, $query);
 
         $terms = [
             'terms' => [
                 'field' => $field,
-                'size' => $builder->getLimit(),
+                'size' => $query->getLimit(),
             ],
         ];
-        $sorts = $builder->sorts;
-        $orders = collect($builder->orders);
+
+        if (! empty($aggs[$currentField])) {
+            $key = $aggs[$currentField]['key'];
+            $metricAgg = $aggs[$currentField];
+            unset($metricAgg['key']);
+            $terms['aggs'][$key] = $metricAgg;
+        }
+
+        // Sorting logic
+        $sorts = $query->sorts;
+        $orders = collect($query->orders);
         $termsOrders = [];
+
         if (isset($sorts['_count'])) {
             $termsOrders[] = $sorts['_count'] == 1 ? ['_count' => 'asc'] : ['_count' => 'desc'];
         }
+
         $fieldOrder = $orders->where('column', $currentField)->first();
         if ($fieldOrder) {
             $termsOrders[] = $fieldOrder['direction'] == 1 ? ['_key' => 'asc'] : ['_key' => 'desc'];
         }
+
         if (! empty($termsOrders)) {
             $terms['terms']['order'] = $termsOrders;
         }
-
-        $aggs = ["by_{$currentField}" => $terms];
         if (! empty($fields)) {
-            $aggs["by_{$currentField}"]['aggs'] = $this->compileNestedTermAggregations($fields, $builder);
+            $nestedAggs = $this->compileNestedTermAggregations($fields, $query, $aggs);
+            if (! empty($terms['aggs'])) {
+                $terms['aggs'] = array_merge($terms['aggs'], $nestedAggs);
+            } else {
+                $terms['aggs'] = $nestedAggs;
+            }
         }
 
-        return $aggs;
+        return ["by_{$currentField}" => $terms];
     }
 
     /**
