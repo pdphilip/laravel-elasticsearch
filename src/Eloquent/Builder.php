@@ -146,6 +146,39 @@ class Builder extends BaseEloquentBuilder
 
         return $query->update($this->addUpdatedAtColumn($attributes));
     }
+    public function updateOrCreate(array $attributes, array $values = []): Model
+    {
+        // Attempt to find an existing instance matching the attributes
+        $instance = $this->firstWhere($attributes);
+
+        if ($instance) {
+            // Update the instance if found
+            $instance->fill($values)->save();
+        } else {
+            // Create a new instance with attributes and values merged
+            $instance = $this->create(array_merge($attributes, $values));
+        }
+
+        return $instance;
+    }
+    public function updateOrCreateWithoutRefresh(array $attributes, array $values = []): Model
+    {
+        // Attempt to find an existing instance matching the attributes
+        $instance = $this->firstWhere($attributes);
+
+        if ($instance) {
+            // Update the instance without triggering refresh
+            $this->whereKey($instance->getKey())->updateWithoutRefresh($values);
+
+            // Refresh the instance in memory with updated values
+            $instance->fill($values);
+        } else {
+            // Create a new instance without triggering a refresh
+            $instance = $this->createWithoutRefresh(array_merge($attributes, $values));
+        }
+
+        return $instance;
+    }
 
     public function firstOrCreateWithoutRefresh(array $attributes = [], array $values = [])
     {
