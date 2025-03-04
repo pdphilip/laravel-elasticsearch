@@ -61,6 +61,9 @@ class Builder extends BaseEloquentBuilder
         'tosql',
         'torawsql',
 
+        // ES
+        'todsl',
+
         // ES Metric Aggregations
         'stats',
         'extendedstats',

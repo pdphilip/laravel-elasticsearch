@@ -101,6 +101,18 @@ class Builder extends BaseBuilder
         return parent::__call($method, $parameters);
     }
 
+    public function toDsl(): array
+    {
+        $this->applyBeforeQueryCallbacks();
+
+        return $this->grammar->compileSelect($this);
+    }
+
+    public function toSql(): array|string
+    {
+        return $this->toDsl();
+    }
+
     // ======================================================================
     // Inherited Methods
     // ======================================================================
@@ -1984,11 +1996,6 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
     // V4 Backwards Compatibility
     // ----------------------------------------------------------------------
-
-    public function toDsl()
-    {
-        return $this->toSql();
-    }
 
     /**
      * @deprecated v5.0.0

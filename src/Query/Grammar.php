@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
+use PDPhilip\Elasticsearch\Query\DSL\DslBuilder;
 use PDPhilip\Elasticsearch\Query\DSL\QueryCompiler;
 
 class Grammar extends BaseGrammar
@@ -28,69 +29,80 @@ class Grammar extends BaseGrammar
      */
     public function compileInsert($query, array $values): array
     {
-        $params = [];
+
+        $dsl = new DslBuilder;
 
         if (! isset($values[0])) {
             $values = [$values];
         }
-
+        // Process each document to be inserted
         foreach ($values as $doc) {
-            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? null;
+
+            $docId = $doc['_id'] ?? $doc['id'] ?? null;
+
+            // Handle child documents
             if (isset($doc['child_documents'])) {
                 foreach ($doc['child_documents'] as $childDoc) {
-                    $childIndex = [
-                        '_index' => $query->getFrom(),
-                        '_id' => $childDoc['id'],
-                    ];
-                    if ($doc['id']) {
-                        $childIndex['parent'] = $doc['id'];
-                    }
-                    $params['body'][] = [
-                        'index' => $childIndex,
-                    ];
+                    $childId = $childDoc['id'];
 
-                    $params['body'][] = $childDoc['document'];
+                    $childOptions = [];
+                    if ($docId) {
+                        $childOptions['parent'] = $docId;
+                    }
+
+                    // Add the child document index operation
+                    $dsl->indexOperation(
+                        index: $query->getFrom(),
+                        id: $childId,
+                        options: $childOptions);
+
+                    // Add the child document content
+                    $dsl->appendBody($childDoc['document']);
                 }
 
+                // Remove child_documents from the parent document
                 unset($doc['child_documents']);
             }
 
-            $index = [
-                '_index' => $query->getFrom(),
-            ];
-            if ($doc['id']) {
-                $index['_id'] = $doc['id'];
-            }
+            // Prepare main document operation options
+            $options = [];
 
+            // Handle routing
             if (isset($doc['_routing'])) {
-                $index['routing'] = $doc['_routing'];
+                $options['routing'] = $doc['_routing'];
                 unset($doc['_routing']);
             } elseif ($routing = $query->getRouting()) {
-                $index['routing'] = $routing;
+                $options['routing'] = $routing;
             }
 
+            // Handle parent ID
             if ($parentId = $query->getParentId()) {
-                $index['parent'] = $parentId;
+                $options['parent'] = $parentId;
             } elseif (isset($doc['_parent'])) {
-                $index['parent'] = $doc['_parent'];
+                $options['parent'] = $doc['_parent'];
                 unset($doc['_parent']);
             }
 
-            // We don't want to save the ID as part of the doc.
+            // We don't want to save the ID as part of the doc
             unset($doc['id'], $doc['_id']);
 
-            $params['body'][] = ['index' => $index];
+            // Add the document index operation
+            $dsl->indexOperation($query->getFrom(), $docId, $options);
 
+            // Process document properties to ensure proper formatting
             foreach ($doc as &$property) {
                 $property = $this->getStringValue($property);
             }
 
-            $params['body'][] = $doc;
+            // Add the document content
+            $dsl->appendBody($doc);
         }
 
-        $params['refresh'] = $query->getOption('refresh', true);
+        // Set refresh option
+        $dsl->setRefresh($query->getOption('refresh', true));
 
-        return $params;
+        // Return the built DSL
+        return $dsl->getDsl();
     }
 
     // ======================================================================
@@ -703,39 +715,6 @@ class Grammar extends BaseGrammar
     /**
      * Compile a match_phrase clause
      */
-    //    protected function compileWhereMatch(Builder $builder, array $where): array
-    //    {
-    //
-    //        $allowedArgs = [
-    //            'analyzer',
-    //            'auto_generate_synonyms_phrase_query',
-    //            'boost',
-    //            'fuzziness',
-    //            'max_expansions',
-    //            'prefix_length',
-    //            'fuzzy_transpositions',
-    //            'fuzzy_rewrite',
-    //            'lenient',
-    //            'operator',
-    //            'minimum_should_match',
-    //            'zero_terms_query',
-    //        ];
-    //
-    //        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-    //
-    //        return [
-    //            'match' => [
-    //                $where['column'] => [
-    //                    ...$where['options'],
-    //                    'query' => $where['value'],
-    //                ],
-    //            ],
-    //        ];
-    //    }
-
-    /**
-     * Compile a match_phrase clause
-     */
     protected function compileWherePhrasePrefix(Builder $builder, array $where): array
     {
 
@@ -819,57 +798,7 @@ class Grammar extends BaseGrammar
         }
 
         return $query;
-        //        // Determine the fields to search
-        //        $fields = $where['options']['fields'] ?? '*'; // Use '*' for all fields if none are specified
-        //
-        //        // Handle field boosts if fields is an associative array
-        //        if (is_array($fields) && array_keys($fields) !== range(0, count($fields) - 1)) {
-        //            $fields = array_map(fn ($field, $boost) => "{$field}^{$boost}", array_keys($fields), $fields);
-        //        }
-        //
-        //        // Use multi_match if searching across multiple fields or all fields
-        //        if (is_array($fields) || $fields === '*') {
-        //            $queryType = $where['options']['matchType'] ?? 'best_fields';
-        //
-        //            $query = [
-        //                'multi_match' => [
-        //                    'query' => $where['value'],
-        //                    'fields' => is_array($fields) ? $fields : ['*'], // Use '*' for all fields
-        //                    'type' => $queryType,
-        //                ],
-        //            ];
-        //        } else {
-        //            $query = [
-        //                'match' => [
-        //                    $fields => [
-        //                        'query' => $where['value'],
-        //                    ],
-        //                ],
-        //            ];
-        //        }
-        //
-        //        // Add fuzziness if specified
-        //        if (! empty($where['options']['fuzziness'])) {
-        //            $fuzziness = $where['options']['fuzziness'];
-        //            $mainQueryType = key($query);
-        //
-        //            if ($mainQueryType === 'multi_match') {
-        //                $query['multi_match']['fuzziness'] = $fuzziness;
-        //            } else {
-        //                $query['match'][$fields]['fuzziness'] = $fuzziness;
-        //            }
-        //        }
-        //
-        //        // Wrap in constant_score if specified
-        //        if (! empty($where['options']['constant_score'])) {
-        //            $query = [
-        //                'constant_score' => [
-        //                    'filter' => $query,
-        //                ],
-        //            ];
-        //        }
-        //
-        //        return $query;
+
     }
 
     /**
