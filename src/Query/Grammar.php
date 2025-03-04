@@ -35,7 +35,7 @@ class Grammar extends BaseGrammar
         }
 
         foreach ($values as $doc) {
-            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? $query->connection->getGeneratedId();
+            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? null;
             if (isset($doc['child_documents'])) {
                 foreach ($doc['child_documents'] as $childDoc) {
                     $childIndex = [

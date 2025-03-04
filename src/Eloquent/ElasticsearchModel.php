@@ -6,7 +6,6 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -23,7 +22,7 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  */
 trait ElasticsearchModel
 {
-    use HasOptions, HasUuids, HybridRelations;
+    use HasOptions, HybridRelations;
 
     protected ?ModelMeta $meta;
 
@@ -33,10 +32,7 @@ trait ElasticsearchModel
 
     protected array $mappingMap = [];
 
-    public function newUniqueId(): ?string
-    {
-        return $this->getConnection()->getGeneratedId();
-    }
+    protected bool $generatesUniqueIds = false;
 
     /**
      * Custom accessor for the model's id.

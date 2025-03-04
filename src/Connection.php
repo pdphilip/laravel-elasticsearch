@@ -20,12 +20,10 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
-use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
-use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -310,15 +308,6 @@ class Connection extends BaseConnection
     public function getDriverName(): string
     {
         return 'elasticsearch';
-    }
-
-    public function getGeneratedId(): ?string
-    {
-        return match ($this->idProcessor) {
-            'uuid' => Helpers::uuid(),
-            'eid' => TimeBasedUUIDGenerator::generate(),
-            default => null, // Let Elasticsearch generate it
-        };
     }
 
     /**

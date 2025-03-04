@@ -28,7 +28,7 @@ final class Helpers
 
     public static function uuid(): string
     {
-        // this is the equivelent of how elasticsearch generates UUID
+        // this is the equivalent of how elasticsearch generates UUID
         // see: https://github.com/elastic/elasticsearch/blob/2f2ddad00492fcac8fbfc272607a8db91d279385/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java#L67
         return base64_encode((string) Str::orderedUuid());
     }
