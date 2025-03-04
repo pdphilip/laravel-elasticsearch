@@ -35,15 +35,18 @@ class Grammar extends BaseGrammar
         }
 
         foreach ($values as $doc) {
-            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? ((string) $query->connection->getGeneratedId());
+            $doc['id'] = $doc['_id'] ?? $doc['id'] ?? $query->connection->getGeneratedId();
             if (isset($doc['child_documents'])) {
                 foreach ($doc['child_documents'] as $childDoc) {
+                    $childIndex = [
+                        '_index' => $query->getFrom(),
+                        '_id' => $childDoc['id'],
+                    ];
+                    if ($doc['id']) {
+                        $childIndex['parent'] = $doc['id'];
+                    }
                     $params['body'][] = [
-                        'index' => [
-                            '_index' => $query->getFrom(),
-                            '_id' => $childDoc['id'],
-                            'parent' => $doc['id'],
-                        ],
+                        'index' => $childIndex,
                     ];
 
                     $params['body'][] = $childDoc['document'];
@@ -54,8 +57,10 @@ class Grammar extends BaseGrammar
 
             $index = [
                 '_index' => $query->getFrom(),
-                '_id' => $doc['id'],
             ];
+            if ($doc['id']) {
+                $index['_id'] = $doc['id'];
+            }
 
             if (isset($doc['_routing'])) {
                 $index['routing'] = $doc['_routing'];

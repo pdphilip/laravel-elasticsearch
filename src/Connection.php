@@ -47,7 +47,7 @@ class Connection extends BaseConnection
     /**
      * The Elasticsearch connection handler.
      */
-    protected ?Client $connection;
+    protected ?ElasticClient $connection;
 
     protected string $connectionName = '';
 
@@ -183,11 +183,11 @@ class Connection extends BaseConnection
      * Builds and configures a connection to the ElasticSearch client based on
      * the provided configuration settings.
      *
-     * @return Client The configured ElasticSearch client.
+     * @return ElasticClient The configured ElasticSearch client.
      *
      * @throws AuthenticationException
      */
-    protected function createConnection(): Client
+    protected function createConnection(): ElasticClient
     {
 
         $this->validateConnection();
@@ -213,7 +213,7 @@ class Connection extends BaseConnection
             $clientBuilder->setApiKey($this->config['api_key'], $this->config['api_id']);
         }
 
-        return $clientBuilder->build();
+        return new ElasticClient($clientBuilder->build());
     }
 
     /**
@@ -258,7 +258,7 @@ class Connection extends BaseConnection
     // ----------------------------------------------------------------------
     // Connection getters
     // ----------------------------------------------------------------------
-    public function getClient(): ?Client
+    public function getClient(): ?ElasticClient
     {
         return $this->connection;
     }
@@ -275,7 +275,7 @@ class Connection extends BaseConnection
      */
     public function getClientInfo(): array
     {
-        return $this->getClient()->info()->asArray();
+        return $this->elasticClient()->info()->asArray();
     }
 
     /**
@@ -284,7 +284,7 @@ class Connection extends BaseConnection
      */
     public function getLicenseInfo(): array
     {
-        $license = $this->getClient()->license()->get()->asArray();
+        $license = $this->elasticClient()->license()->get()->asArray();
         if (! empty($license['license'])) {
             return $license['license'];
         }
@@ -317,7 +317,8 @@ class Connection extends BaseConnection
         return match ($this->idProcessor) {
             'uuid' => Helpers::uuid(),
             'eid' => TimeBasedUUIDGenerator::generate(),
-            default => TimeBasedUUIDGenerator::generate(), // Until we're able to have Elasticsearch generate it
+            default => TimeBasedUUIDGenerator::generate(),
+            //            default => null, // Let Elasticsearch generate it
         };
     }
 
@@ -387,7 +388,7 @@ class Connection extends BaseConnection
      */
     public function createAlias(string $index, string $name): void
     {
-        $this->indices()->putAlias(compact('index', 'name'));
+        $this->connection->indicesCreateAlias($index, $name);
     }
 
     /**
@@ -396,7 +397,7 @@ class Connection extends BaseConnection
     public function createIndex(string $index, array $body): void
     {
         try {
-            $this->indices()->create(compact('index', 'body'));
+            $this->connection->indicesCreateIndex($index, $body);
         } catch (Exception $e) {
             throw new QueryException($e);
         }
@@ -409,7 +410,7 @@ class Connection extends BaseConnection
      */
     public function dropIndex(string $index): void
     {
-        $this->indices()->delete(compact('index'));
+        $this->connection->indicesDropIndex($index);
     }
 
     /**
@@ -419,15 +420,17 @@ class Connection extends BaseConnection
      */
     public function updateIndex(string $index, array $body): void
     {
-        if ($mappings = $body['mappings'] ?? null) {
-            $this->indices()->putMapping(['index' => $index, 'body' => ['properties' => $mappings['properties']]]);
-        }
-        if ($settings = $body['settings'] ?? null) {
-            $this->indices()->close(['index' => $index]);
-            $this->indices()->putSettings(['index' => $index, 'body' => ['settings' => $settings]]);
-            $this->indices()->open(['index' => $index]);
-        }
+        $this->connection->indicesUpdateIndex($index, $body);
+    }
 
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function getFieldMapping($index, $fields): array
+    {
+        return $this->connection->indicesGetFieldMapping($index, $fields);
     }
 
     // ----------------------------------------------------------------------
@@ -666,6 +669,11 @@ class Connection extends BaseConnection
         return $result;
     }
 
+    public function elasticClient(): Client
+    {
+        return $this->connection->client();
+    }
+
     // ----------------------------------------------------------------------
     // Call Catch
     // ----------------------------------------------------------------------
@@ -677,10 +685,12 @@ class Connection extends BaseConnection
      * @param  array  $parameters
      * @return mixed
      */
-    public function __call($method, $parameters)
-    {
-        return call_user_func_array([$this->connection, $method], $parameters);
-    }
+    //    public function __call($method, $parameters)
+    //    {
+    //        dd($method);
+    //
+    //        return call_user_func_array([$this->connection, $method], $parameters);
+    //    }
 
     // ----------------------------------------------------------------------
     // Later/Maybe

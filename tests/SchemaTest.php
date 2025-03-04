@@ -101,7 +101,7 @@ it('can add index settings, Meta Data, and an Analyser', function () {
             ->stopwords('_english_');
     });
 
-    $mapping = DB::indices()->get(['index' => 'newcollection'])->asArray();
+    $mapping = DB::elasticClient()->indices()->get(['index' => 'newcollection'])->asArray();
     expect($mapping['newcollection']['mappings']['_meta']['class'])->toBe('MyApp2::User3')
         ->and($mapping['newcollection']['settings']['index']['number_of_shards'])->toBe('3')
         ->and($mapping['newcollection']['settings']['index']['analysis']['analyzer'])->toHaveKeys(['autocomplete', 'contacts']);
@@ -356,11 +356,11 @@ it('can modify index properties', function () {
         $table->routingRequired();
     });
 
-    $index = DB::indices()->getMapping(['index' => 'newcollection'])->asArray();
+    $index = DB::elasticClient()->indices()->getMapping(['index' => 'newcollection'])->asArray();
     expect($index['newcollection']['mappings']['dynamic'])->toBe('true');
     expect($index['newcollection']['mappings']['_routing']['required'])->toBeTrue();
 
-    $alias = DB::indices()->getAlias(['index' => 'newcollection'])->asArray();
+    $alias = DB::elasticClient()->indices()->getAlias(['index' => 'newcollection'])->asArray();
     expect($alias['newcollection']['aliases'])->toHaveKey('bar_foo');
 });
 
@@ -494,7 +494,7 @@ it('gets field maping', function () {
 
 function getIndexMapping(string $table)
 {
-    $mapping = DB::indices()->getMapping(['index' => $table])->asArray();
+    $mapping = DB::elasticClient()->indices()->getMapping(['index' => $table])->asArray();
 
     return $mapping[$table]['mappings']['properties'];
 }

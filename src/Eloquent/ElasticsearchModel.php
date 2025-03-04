@@ -18,6 +18,7 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
 /**
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
  * @mixin Builder
+ * @mixin Model
  */
 trait ElasticsearchModel
 {

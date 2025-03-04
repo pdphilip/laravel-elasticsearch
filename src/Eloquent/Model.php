@@ -24,7 +24,10 @@ abstract class Model extends BaseModel
     {
         parent::__construct($attributes);
         if (empty($this->attributes['id'])) {
-            $this->attributes['id'] = $this->newUniqueId();
+            $generatedId = $this->newUniqueId();
+            if ($generatedId) {
+                $this->attributes['id'] = $generatedId;
+            }
         }
         $this->meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
     }

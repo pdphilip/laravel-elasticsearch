@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Elastic\Elasticsearch\Client;
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\ElasticClient as Client;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
 
 test('Connection', function () {

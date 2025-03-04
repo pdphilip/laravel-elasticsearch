@@ -26,6 +26,7 @@ final class QueryException extends Exception
         return match (get_class($result)) {
             MissingParameterException::class => $this->formatMissingParameterException($result),
             ClientResponseException::class => $this->routeClientResponseException($result),
+            default => $result->getMessage(),
         };
     }
 
