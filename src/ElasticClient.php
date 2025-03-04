@@ -6,6 +6,7 @@ use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
+use Illuminate\Support\Arr;
 
 class ElasticClient
 {
@@ -87,11 +88,22 @@ class ElasticClient
     // ----------------------------------------------------------------------
 
     /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function getMappings(string $index): array
+    {
+        $params = ['index' => Arr::wrap($index)];
+
+        return $this->client->indices()->getMapping($params)->asArray();
+    }
+
+    /**
      * @throws ClientResponseException
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function indicesCreateAlias(string $index, string $name)
+    public function createAlias(string $index, string $name)
     {
         $this->client->indices()->putAlias(compact('index', 'name'));
     }
@@ -101,7 +113,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function indicesCreateIndex(string $index, array $body)
+    public function createIndex(string $index, array $body)
     {
         $this->client->indices()->create(compact('index', 'body'));
     }
@@ -111,7 +123,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function indicesDropIndex(string $index)
+    public function dropIndex(string $index)
     {
         $this->client->indices()->delete(compact('index'));
     }
@@ -121,7 +133,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function indicesUpdateIndex(string $index, array $body)
+    public function updateIndex(string $index, array $body)
     {
         if ($mappings = $body['mappings'] ?? null) {
             $this->client->indices()->putMapping(['index' => $index, 'body' => ['properties' => $mappings['properties']]]);
@@ -138,7 +150,7 @@ class ElasticClient
      * @throws ClientResponseException
      * @throws MissingParameterException
      */
-    public function indicesGetFieldMapping(string $index, string $fields): array
+    public function getFieldMapping(string $index, string $fields): array
     {
         return $this->client->indices()->getFieldMapping(compact('index', 'fields'))->asArray();
     }

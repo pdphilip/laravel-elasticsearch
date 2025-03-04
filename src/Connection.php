@@ -388,16 +388,18 @@ class Connection extends BaseConnection
      */
     public function createAlias(string $index, string $name): void
     {
-        $this->connection->indicesCreateAlias($index, $name);
+        $this->connection->createAlias($index, $name);
     }
 
     /**
      * @throws QueryException
      */
-    public function createIndex(string $index, array $body): void
+    public function createIndex(string $index, array $body): array
     {
         try {
-            $this->connection->indicesCreateIndex($index, $body);
+            $this->connection->createIndex($index, $body);
+
+            return $this->connection->getMappings($index);
         } catch (Exception $e) {
             throw new QueryException($e);
         }
@@ -410,7 +412,7 @@ class Connection extends BaseConnection
      */
     public function dropIndex(string $index): void
     {
-        $this->connection->indicesDropIndex($index);
+        $this->connection->dropIndex($index);
     }
 
     /**
@@ -418,9 +420,11 @@ class Connection extends BaseConnection
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function updateIndex(string $index, array $body): void
+    public function updateIndex(string $index, array $body): array
     {
-        $this->connection->indicesUpdateIndex($index, $body);
+        $this->connection->updateIndex($index, $body);
+
+        return $this->connection->getMappings($index);
     }
 
     /**
@@ -430,7 +434,12 @@ class Connection extends BaseConnection
      */
     public function getFieldMapping($index, $fields): array
     {
-        return $this->connection->indicesGetFieldMapping($index, $fields);
+        return $this->connection->getFieldMapping($index, $fields);
+    }
+
+    public function getMappings($index): array
+    {
+        return $this->connection->getMappings($index);
     }
 
     // ----------------------------------------------------------------------
