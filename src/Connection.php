@@ -317,8 +317,7 @@ class Connection extends BaseConnection
         return match ($this->idProcessor) {
             'uuid' => Helpers::uuid(),
             'eid' => TimeBasedUUIDGenerator::generate(),
-            default => TimeBasedUUIDGenerator::generate(),
-            //            default => null, // Let Elasticsearch generate it
+            default => null, // Let Elasticsearch generate it
         };
     }
 

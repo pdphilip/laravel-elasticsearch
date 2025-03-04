@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
@@ -32,7 +33,7 @@ trait ElasticsearchModel
 
     protected array $mappingMap = [];
 
-    public function newUniqueId(): string
+    public function newUniqueId(): ?string
     {
         return $this->getConnection()->getGeneratedId();
     }
@@ -202,7 +203,6 @@ trait ElasticsearchModel
      */
     protected function asDateTime($value): Carbon
     {
-
         return parent::asDateTime($value);
     }
 
@@ -412,6 +412,52 @@ trait ElasticsearchModel
 
     protected function isGuardableColumn($key): bool
     {
+        return true;
+    }
+
+    /**
+     * Perform a model insert operation.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     */
+    protected function performInsert(Builder $query): bool
+    {
+        // via @inheritDoc
+        if ($this->usesUniqueIds()) {
+            $this->setUniqueIds();
+        }
+
+        // via @inheritDoc
+        if ($this->fireModelEvent('creating') === false) {
+            return false;
+        }
+
+        // via @inheritDoc
+        if ($this->usesTimestamps()) {
+            $this->updateTimestamps();
+        }
+
+        $attributes = $this->getAttributesForInsert();
+        // If the model doesn't have an id, get from ES
+        if (empty($attributes['id'])) {
+            $this->insertAndSetId($query, $attributes);
+        }
+
+        // Else insert with all attributes
+        else {
+            if (empty($attributes)) {
+                return true;
+            }
+            $query->insert($attributes);
+        }
+
+        // via @inheritDoc
+        $this->exists = true;
+
+        $this->wasRecentlyCreated = true;
+
+        $this->fireModelEvent('created', false);
+
         return true;
     }
 }
