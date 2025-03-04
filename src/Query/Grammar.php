@@ -30,7 +30,7 @@ class Grammar extends BaseGrammar
     {
         $params = [];
 
-        if (! is_array(reset($values))) {
+        if (! isset($values[0])) {
             $values = [$values];
         }
 

@@ -445,6 +445,7 @@ trait ElasticsearchModel
 
         // Else insert with all attributes
         else {
+            // @phpstan-ignore-next-line
             if (empty($attributes)) {
                 return true;
             }
