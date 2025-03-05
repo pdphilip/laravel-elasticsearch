@@ -26,24 +26,14 @@ class DslBuilder
         return $this->dsl;
     }
 
-    public function getBodyValueAtPath(array $keys)
+    public function getBodyValue(array $keys)
     {
         return $this->getValueAtPath($this->dsl, ['body', ...$keys]);
-    }
-
-    public function getCurrentQuery()
-    {
-        return $this->getValueAtPath($this->dsl, ['body', 'query']);
     }
 
     // ----------------------------------------------------------------------
     // Setters
     // ----------------------------------------------------------------------
-
-    public function clearBodyAtPath(array $keys)
-    {
-        $this->setValueAtPath($this->dsl, ['body', ...$keys], []);
-    }
 
     public function setIndex($index)
     {
@@ -55,48 +45,11 @@ class DslBuilder
         return $this->set(['body', ...$keys], $value);
     }
 
-    /**
-     * Set the query part of the DSL
-     */
-    public function setQuery(array $query): self
+    public function unsetBody(array $keys)
     {
-        return $this->set(['query'], $query);
+        $this->unsetKeyAtPath($this->dsl, ['body', ...$keys]);
     }
 
-    /**
-     * Set the sort part
-     */
-    public function setSort(array $sort): self
-    {
-        return $this->set(['sort'], $sort);
-    }
-
-    /**
-     * Add a sort criteria
-     */
-    public function addSort($field, $direction = 'asc', array $options = []): self
-    {
-        $sortCriteria = [];
-
-        // Handle simple field: direction format
-        if (is_string($field) && ! is_array($direction)) {
-            $sortOptions = ['order' => strtolower($direction)];
-            if (! empty($options)) {
-                $sortOptions = array_merge($sortOptions, $options);
-            }
-            $sortCriteria[$field] = $sortOptions;
-        }
-        // Handle complex sort format (already structured)
-        else {
-            $sortCriteria = $field;
-        }
-
-        return $this->path('sort')->append($sortCriteria);
-    }
-
-    /**
-     * Set the from part (for pagination)
-     */
     public function setFrom(int $from): self
     {
         return $this->set(['from'], $from);
@@ -153,25 +106,6 @@ class DslBuilder
     }
 
     /**
-     * Set an index operation for bulk API
-     */
-    public function indexOperation(string $index, ?string $id = null, array $options = []): self
-    {
-        $operation = array_merge(['_index' => $index], $options);
-
-        if ($id !== null) {
-            $operation['_id'] = $id;
-        }
-
-        return $this->appendBody(['index' => $operation]);
-    }
-
-    public function appendBody(array $payload): self
-    {
-        return $this->path('body')->append($payload);
-    }
-
-    /**
      * Set a refresh parameter
      */
     public function setRefresh(bool $refresh = true): self
@@ -201,6 +135,15 @@ class DslBuilder
     public function setPostFilter(array $filter): self
     {
         return $this->set(['post_filter'], $filter);
+    }
+
+    // ----------------------------------------------------------------------
+    // Bulk
+    // ----------------------------------------------------------------------
+
+    public function appendBody(array $payload): self
+    {
+        return $this->path('body')->append($payload);
     }
 
     // ----------------------------------------------------------------------
@@ -291,6 +234,25 @@ class DslBuilder
     // ----------------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------------
+
+    protected function unsetKeyAtPath(array &$array, array $path): void
+    {
+        $current = &$array;
+
+        foreach ($path as $index => $key) {
+            if (! isset($current[$key])) {
+                return;
+            }
+
+            if ($index === array_key_last($path)) {
+                unset($current[$key]);
+
+                return;
+            }
+
+            $current = &$current[$key];
+        }
+    }
 
     protected function setValueAtPath(array &$array, array $path, $value): void
     {

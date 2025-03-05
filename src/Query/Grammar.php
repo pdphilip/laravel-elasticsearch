@@ -14,6 +14,7 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Query\DSL\DslBuilder;
+use PDPhilip\Elasticsearch\Query\DSL\DslFactory;
 use PDPhilip\Elasticsearch\Query\DSL\QueryCompiler;
 
 class Grammar extends BaseGrammar
@@ -50,11 +51,12 @@ class Grammar extends BaseGrammar
                         $childOptions['parent'] = $docId;
                     }
 
-                    // Add the child document index operation
-                    $dsl->indexOperation(
+                    $childIndex = DslFactory::indexOperation(
                         index: $query->getFrom(),
                         id: $childId,
-                        options: $childOptions);
+                        options: $childOptions
+                    );
+                    $dsl->appendBody($childIndex);
 
                     // Add the child document content
                     $dsl->appendBody($childDoc['document']);
@@ -87,7 +89,12 @@ class Grammar extends BaseGrammar
             unset($doc['id'], $doc['_id']);
 
             // Add the document index operation
-            $dsl->indexOperation($query->getFrom(), $docId, $options);
+            $index = DslFactory::indexOperation(
+                index: $query->getFrom(),
+                id: $docId,
+                options: $options
+            );
+            $dsl->appendBody($index);
 
             // Process document properties to ensure proper formatting
             foreach ($doc as &$property) {
@@ -118,46 +125,41 @@ class Grammar extends BaseGrammar
      */
     public function compileSelect($query): array
     {
+        $dsl = new DslBuilder;
+        $dsl->setIndex($query->getFrom());
         $compiled = $this->compileWheres($query);
-        $params = [
-            'index' => $query->getFrom(),
-            'body' => [
-                'query' => $compiled['query'],
-            ],
-        ];
-
+        $dsl->setBody(['query'], $compiled['query']);
         if ($compiled['filter']) {
-            if (empty($params['body']['query']['bool'])) {
-                $currentQuery = $params['body']['query'];
-                unset($params['body']['query']);
-                $params['body']['query']['bool']['must'] = $currentQuery;
+            if (! $dsl->getBodyValue(['query', 'bool'])) {
+                $currentQuery = $dsl->getBodyValue(['query']);
+                $dsl->unsetBody(['query']);
+                $dsl->setBody(['query', 'bool', 'must'], $currentQuery);
             }
-            $params['body']['query']['bool']['filter'] = $compiled['filter'];
+            $dsl->setBody(['query', 'bool', 'filter'], $compiled['filter']);
         }
 
         if ($compiled['postFilter']) {
-            $params['body']['post_filter'] = $compiled['postFilter'];
+            $dsl->setBody(['post_filter'], $compiled['postFilter']);
         }
 
-        // Apply order, offset and limit
         if ($query->orders) {
-            $params['body']['sort'] = $this->compileOrders($query, $query->orders);
+            $dsl->setBody(['sort'], $this->compileOrders($query, $query->orders));
         }
 
-        // Apply order, offset and limit
         if ($query->highlight) {
-            $params['body']['highlight'] = $this->compileHighlight($query, $query->highlight);
+            $dsl->setBody(['highlight'], $this->compileHighlight($query, $query->highlight));
         }
 
         if ($query->offset) {
-            $params['body']['from'] = $query->offset;
+            $dsl->setBody(['from'], $query->offset);
         }
-
-        $params['body']['size'] = $query->getLimit();
+        $dsl->setBody(['size'], $query->getLimit());
 
         if (isset($query->columns)) {
-            $params['_source'] = $query->columns;
+            $dsl->setSource($query->columns);
         }
+
+        // Distinct and Aggregations
         if ($query->distinct) {
             if ($query->columns && $query->columns !== ['*'] || $query->metricsAggregations) {
                 $fields = $query->columns ?? [];
@@ -171,38 +173,39 @@ class Grammar extends BaseGrammar
                     $aggs[$aggregation['key']]['key'] = $aggregation['type'].'_'.$aggregation['key'];
 
                 }
-                $params['body']['aggs'] = $this->compileNestedTermAggregations($fields, $query, $aggs);
-                $params['body']['size'] = $query->getSetLimit();
-                unset($params['body']['sort']);
+                $dsl->setBody(['aggs'], $this->compileNestedTermAggregations($fields, $query, $aggs));
+                $dsl->setBody(['size'], $query->getSetLimit());
+                $dsl->unsetBody(['sort']);
             } else {
                 // else nothing to aggregate - just a normal query as all records will be distinct anyway
                 $query->distinct = false;
             }
-        } elseif ($query->bucketAggregations) {
-            $sorts = ! empty($params['body']['sort']) ? ($params['body']['sort']) : null;
-            if (! empty($params['body']['from'])) {
-                $afterCount = $params['body']['from'];
-                unset($params['body']['from']);
+        }
+        // Else if we have bucket aggregations
+        elseif ($query->bucketAggregations) {
+            $sorts = $dsl->getBodyValue(['sort']);
+            if ($afterCount = $dsl->getBodyValue(['from'])) {
+                $dsl->unsetBody(['from']);
                 // This of course could be a problem if the user is using from for pagination and they go deep
                 // Leaving it for now
                 $query->afterKey = $query->getGroupByAfterKey($afterCount);
             }
-            $params['body']['aggs'] = $this->compileBucketAggregations($query, $sorts);
-            // If we are aggregating we set the body size to 0 to save on processing time.
-            $params['body']['size'] = 0;
+            $dsl->setBody(['aggs'], $this->compileBucketAggregations($query, $sorts));
+            $dsl->setBody(['size'], 0);
 
-        } elseif ($query->metricsAggregations) {
-            $params['body']['aggs'] = $this->compileMetricAggregations($query);
-
-            // If we are aggregating we set the body size to 0 to save on processing time.
-            $params['body']['size'] = 0;
         }
 
-        if (isset($params['body']['query']) && ! $params['body']['query']) {
-            unset($params['body']['query']);
+        // Else if we have metrics aggregations
+        elseif ($query->metricsAggregations) {
+            $dsl->setBody(['aggs'], $this->compileMetricAggregations($query));
+            $dsl->setBody(['size'], 0);
         }
 
-        return $params;
+        if (! $dsl->getBodyValue(['query'])) {
+            $dsl->unsetBody(['query']);
+        }
+
+        return $dsl->getDsl();
     }
 
     /**
@@ -212,15 +215,18 @@ class Grammar extends BaseGrammar
      */
     public function compileWheres($query): array
     {
-        $compiled['query'] = $this->compileBaseQuery($query, $query->wheres);
-        $compiled['filter'] = $this->compileClauses($query, $query->filters ?? []);
-        $compiled['postFilter'] = $this->compileClauses($query, $query->postFilters ?? []);
+        $compiled['query'] = $this->compileQuery($query, $query->wheres);
+        $compiled['filter'] = $this->compileQuery($query, $query->filters ?? []);
+        $compiled['postFilter'] = $this->compileQuery($query, $query->postFilters ?? []);
 
         return $compiled;
     }
 
-    protected function compileBaseQuery(Builder $builder, array $wheres = [])
+    protected function compileQuery(Builder $builder, array $wheres = []): array
     {
+        if (! $wheres) {
+            return [];
+        }
         $dslCompiler = new QueryCompiler;
         foreach ($wheres as $where) {
             $isOr = str_starts_with($where['boolean'], 'or');
@@ -260,70 +266,6 @@ class Grammar extends BaseGrammar
         }
 
         return $dslCompiler->compileQuery();
-    }
-
-    /**
-     * Compile general clauses for a query
-     */
-    protected function compileClauses(Builder $builder, array $clauses): array
-    {
-        // The wheres to compile.
-        $wheres = $clauses ?: [];
-
-        // We will add all compiled wheres to this array.
-        $compiled = [];
-        foreach ($wheres as $i => &$where) {
-            // Adjust operator to lowercase
-            if (isset($where['operator'])) {
-                $where['operator'] = strtolower($where['operator']);
-            }
-
-            // Handle column names
-            if (isset($where['column'])) {
-                $where['column'] = (string) $where['column'];
-
-                // Adjust the column name if necessary
-                if ($where['column'] === 'id') {
-                    $where['column'] = '_id';
-                }
-
-                // Remove table prefix from column if present
-                if (Str::startsWith($where['column'], $builder->from.'.')) {
-                    $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
-                }
-            }
-
-            // Adjust the 'boolean' value of the first where if necessary
-            if (
-                $i === 0 && count($wheres) > 1
-                && str_starts_with($where['boolean'], 'and')
-                && str_starts_with($wheres[$i + 1]['boolean'], 'or')
-            ) {
-                $where['boolean'] = 'or'.(str_ends_with($where['boolean'], ' not') ? ' not' : '');
-            }
-
-            // We use different methods to compile different wheres
-            $method = 'compileWhere'.$where['type'];
-            $result = $this->{$method}($builder, $where);
-
-            // Determine the boolean operator
-            if (str_ends_with($where['boolean'], 'not')) {
-                $boolOperator = 'must_not';
-            } elseif (str_starts_with($where['boolean'], 'or')) {
-                $boolOperator = 'should';
-            } else {
-                $boolOperator = 'must';
-            }
-
-            // Merge the compiled where with the others
-            if (! isset($compiled['bool'][$boolOperator])) {
-                $compiled['bool'][$boolOperator] = [];
-            }
-
-            $compiled['bool'][$boolOperator][] = $result;
-        }
-
-        return $compiled;
     }
 
     // ----------------------------------------------------------------------
@@ -1476,29 +1418,16 @@ class Grammar extends BaseGrammar
 
     /**
      * Get value for the where
-     *
-     * @return mixed
      */
-    protected function getValueForWhere(Builder $builder, array $where)
+    protected function getValueForWhere(Builder $builder, array $where): mixed
     {
-        switch ($where['type']) {
-            case 'In':
-            case 'NotIn':
-            case 'Between':
-                $value = $where['values'];
-                break;
+        $value = match ($where['type']) {
+            'In', 'NotIn', 'Between' => $where['values'],
+            'Null', 'NotNull' => null,
+            default => $where['value'],
+        };
 
-            case 'Null':
-            case 'NotNull':
-                $value = null;
-                break;
-
-            default:
-                $value = $where['value'];
-        }
-        $value = $this->getStringValue($value);
-
-        return $value;
+        return $this->getStringValue($value);
     }
 
     /**
