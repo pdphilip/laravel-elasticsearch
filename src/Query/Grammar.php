@@ -232,17 +232,17 @@ class Grammar extends BaseGrammar
             $isOr = str_starts_with($where['boolean'], 'or');
             $isNot = str_ends_with($where['boolean'], 'not');
 
+            if (! empty($where['not'])) {
+                $isNot = true;
+            }
             // Adjust operator to lowercase
             if (isset($where['operator'])) {
                 $where['operator'] = strtolower($where['operator']);
-
-                if ($where['operator'] === '!=') {
+                [$operator, $isNegation] = $this->parseNegationOperator($where['operator'], $this->getValueForWhere($builder, $where));
+                $where['operator'] = $operator;
+                if ($isNegation) {
                     $isNot = ! $isNot;
-                    $where['operator'] = '=';
                 }
-            }
-            if (! empty($where['not'])) {
-                $isNot = true;
             }
 
             // Handle column names
@@ -311,53 +311,9 @@ class Grammar extends BaseGrammar
             $query = DslFactory::match($field, $value, $options);
         }
 
-        $query = $this->applyOptionsToClause($query, $where);
+        return $this->applyOptionsToClause($query, $where);
 
-        //        if (
-        //            ! empty($where['not'])
-        //            || ($where['operator'] == 'not like' && ! is_null($value))
-        //            || ($where['operator'] == '<>' && ! is_null($value))
-        //            || ($where['operator'] == '!=' && ! is_null($value))
-        //            || ($where['operator'] == '=' && is_null($value))
-        //            || ($where['operator'] == 'exists' && ! $value)
-        //        ) {
-        //            $query = [
-        //                'bool' => [
-        //                    'must_not' => [
-        //                        $query,
-        //                    ],
-        //                ],
-        //            ];
-        //        }
-
-        return $query;
     }
-
-    //    /**
-    //     * Compile a where not clause
-    //     *
-    //     * @param  array  $where
-    //     */
-    //    protected function compileWhereNot(Builder $builder, $where): array
-    //    {
-    //        dd('YIKES');
-    //
-    //        return [
-    //            'bool' => [
-    //                'must_not' => [
-    //                    $this->compileWheres($where['query'])['query'],
-    //                ],
-    //            ],
-    //        ];
-    //    }
-
-    /**
-     * Compile a not in clause
-     */
-    //    protected function compileWhereNotIn(Builder $builder, array $where): array
-    //    {
-    //        return $this->compileWhereIn($builder, $where, true);
-    //    }
 
     /**
      * Compile an in clause
@@ -373,19 +329,9 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile a not null clause
-     */
-    protected function compileWhereNotNull(Builder $builder, array $where): array
-    {
-        $where['operator'] = '!=';
-
-        return $this->compileWhereBasic($builder, $where);
-    }
-
-    /**
      * Compile a null clause
      */
-    protected function compileWhereNull(Builder $builder, array $where): array
+    protected function compileWhereExists(Builder $builder, array $where): array
     {
         $where['operator'] = '=';
 
@@ -450,20 +396,6 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile a where geo bounds clause
-     */
-    protected function compileWhereGeoBoundsIn(Builder $builder, array $where): array
-    {
-        $query = [
-            'geo_bounding_box' => [
-                $where['column'] => $where['bounds'],
-            ],
-        ];
-
-        return $query;
-    }
-
-    /**
      * Compile a geo distance clause
      *
      * @param  Builder  $builder
@@ -471,14 +403,19 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereGeoDistance($builder, $where): array
     {
-        $query = [
-            'geo_distance' => [
-                'distance' => $where['distance'],
-                $where['column'] => $where['location'],
-            ],
-        ];
+        $options = $where['options'] ?? [];
 
-        return $query;
+        return DslFactory::geoDistance($where['column'], $where['distance'], $where['location'], $options);
+    }
+
+    /**
+     * Compile a where geo bounds clause
+     */
+    protected function compileWhereGeoBoundsIn(Builder $builder, array $where): array
+    {
+        $options = $where['options'] ?? [];
+
+        return DslFactory::geoBoundingBox($where['column'], $where['bounds'], $options);
     }
 
     /**
@@ -510,29 +447,15 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereNestedObject(Builder $builder, $where): array
     {
+        // Compile the inner query
         $wheres = $this->compileWheres($where['query']);
+        $path = $where['column'];
+        $options = $where['options'] ?? [];
+        $wheres = array_filter($wheres);
 
-        $query = [
-            'nested' => [
-                'path' => $where['column'],
-            ],
-        ];
+        $query = DslFactory::nested($path, $wheres, $options);
 
-        $query['nested'] = array_merge($query['nested'], array_filter($wheres));
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        if (isset($where['operator']) && $where['operator'] === '!=') {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
+        return $this->applyOptionsToClause($query, $where);
     }
 
     /**
@@ -548,23 +471,20 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereParentId(Builder $builder, array $where)
     {
-        return [
-            'parent_id' => [
-                'type' => $where['relationType'],
-                'id' => $where['id'],
-            ],
-        ];
+        $type = $where['relationType'];
+        $id = $where['id'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::parentId($type, $id, $options);
     }
 
     protected function compileWherePrefix(Builder $builder, array $where): array
     {
-        $query = [
-            'prefix' => [
-                $this->getIndexableField($where['column'], $builder) => $where['value'],
-            ],
-        ];
+        $field = $this->getIndexableField($where['column'], $builder);
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
 
-        return $query;
+        return DslFactory::prefix($field, $value, $options);
     }
 
     protected function compileWhereRaw(Builder $builder, array $where): array
@@ -578,23 +498,19 @@ class Grammar extends BaseGrammar
     protected function compileWhereRegex(Builder $builder, array $where): array
     {
 
+        // Define the allowed options for regex queries
+        // TODO: Catch this upfront in the builder
         $allowedArgs = [
             'flags',
             'case_insensitive',
             'max_determinized_states',
             'rewrite',
         ];
+        $options = $this->getAllowedOptions($where['options'] ?? [], $allowedArgs);
+        $field = $this->getIndexableField($where['column'], $builder);
+        $value = Helpers::escape($where['value']);
 
-        $where['options'] = $this->getAllowedOptions($where['options'], $allowedArgs);
-
-        return [
-            'regexp' => [
-                $this->getIndexableField($where['column'], $builder) => [
-                    'value' => Helpers::escape($where['value']),
-                    ...$where['options'],
-                ],
-            ],
-        ];
+        return DslFactory::regexp($field, $value, $options);
     }
 
     /**
@@ -602,15 +518,11 @@ class Grammar extends BaseGrammar
      */
     protected function compileWherePhrase(Builder $builder, array $where): array
     {
-        return [
-            'match_phrase' => [
-                $where['column'] => [
-                    'query' => $where['value'],
-                    ...$where['options'],
+        $field = $where['column'];
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
 
-                ],
-            ],
-        ];
+        return DslFactory::matchPhrase($field, $value, $options);
     }
 
     /**
@@ -619,14 +531,11 @@ class Grammar extends BaseGrammar
     protected function compileWherePhrasePrefix(Builder $builder, array $where): array
     {
 
-        return [
-            'match_phrase_prefix' => [
-                $where['column'] => [
-                    'query' => $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
+        $field = $where['column'];
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::matchPhrasePrefix($field, $value, $options);
     }
 
     /**
@@ -635,14 +544,11 @@ class Grammar extends BaseGrammar
     protected function compileWhereTermFuzzy(Builder $builder, array $where): array
     {
 
-        return [
-            'fuzzy' => [
-                $where['column'] => [
-                    'value' => (string) $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
+        $field = $where['column'];
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::fuzzy($field, $value, $options);
     }
 
     /**
@@ -651,14 +557,11 @@ class Grammar extends BaseGrammar
     protected function compileWhereTerm(Builder $builder, array $where): array
     {
 
-        return [
-            'term' => [
-                $this->getIndexableField($where['column'], $builder) => [
-                    'value' => (string) $where['value'],
-                    ...$where['options'],
-                ],
-            ],
-        ];
+        $field = $this->getIndexableField($where['column'], $builder);
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::term($field, $value, $options);
     }
 
     /**
@@ -666,11 +569,10 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereScript(Builder $builder, array $where): array
     {
-        return [
-            'script' => [
-                'script' => array_merge($where['options'], ['source' => $where['script']]),
-            ],
-        ];
+        $source = $where['script'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::script($source, $options);
     }
 
     /**
@@ -678,24 +580,18 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereSearch(Builder $builder, array $where): array
     {
+        $value = $where['value'];
+        $options = $where['options'] ?? [];
 
         $constantScore = false;
-        if (isset($where['options']['constant_score'])) {
-            $constantScore = $where['options']['constant_score'];
-            unset($where['options']['constant_score']);
+        if (isset($options['constant_score'])) {
+            $constantScore = $options['constant_score'];
+            unset($options['constant_score']);
         }
-        $query = [
-            'multi_match' => [
-                'query' => $where['value'],
-                ...$where['options'],
-            ],
-        ];
+        $query = DslFactory::multiMatch($value, $options);
+
         if ($constantScore) {
-            return [
-                'constant_score' => [
-                    'filter' => $query,
-                ],
-            ];
+            return DslFactory::constantScore($query);
         }
 
         return $query;
@@ -735,9 +631,7 @@ class Grammar extends BaseGrammar
             ],
         ];
 
-        $query = $this->applyOptionsToClause($query, $where);
-
-        return $query;
+        return $this->applyOptionsToClause($query, $where);
     }
 
     // ----------------------------------------------------------------------
@@ -846,50 +740,48 @@ class Grammar extends BaseGrammar
      */
     protected function compileNestedTermAggregations($fields, Builder $query, $aggs = []): array
     {
+        // Get the current field to process
         $currentField = array_shift($fields);
         $field = $this->getIndexableField($currentField, $query);
 
-        $terms = [
-            'terms' => [
-                'field' => $field,
-                'size' => $query->getLimit(),
-            ],
-        ];
-
+        $metricAggs = [];
         if (! empty($aggs[$currentField])) {
             $key = $aggs[$currentField]['key'];
             $metricAgg = $aggs[$currentField];
             unset($metricAgg['key']);
-            $terms['aggs'][$key] = $metricAgg;
+            $metricAggs[$key] = $metricAgg;
         }
 
-        // Sorting logic
+        // Prepare sorting
         $sorts = $query->sorts;
         $orders = collect($query->orders);
         $termsOrders = [];
 
+        // Add count-based sorting if specified
         if (isset($sorts['_count'])) {
             $termsOrders[] = $sorts['_count'] == 1 ? ['_count' => 'asc'] : ['_count' => 'desc'];
         }
 
+        // Add field-based sorting if specified
         $fieldOrder = $orders->where('column', $currentField)->first();
         if ($fieldOrder) {
             $termsOrders[] = $fieldOrder['direction'] == 1 ? ['_key' => 'asc'] : ['_key' => 'desc'];
         }
 
-        if (! empty($termsOrders)) {
-            $terms['terms']['order'] = $termsOrders;
-        }
+        // Process nested fields recursively
+        $subAggs = [];
         if (! empty($fields)) {
-            $nestedAggs = $this->compileNestedTermAggregations($fields, $query, $aggs);
-            if (! empty($terms['aggs'])) {
-                $terms['aggs'] = array_merge($terms['aggs'], $nestedAggs);
-            } else {
-                $terms['aggs'] = $nestedAggs;
-            }
+            $subAggs = $this->compileNestedTermAggregations($fields, $query, $aggs);
         }
 
-        return ["by_{$currentField}" => $terms];
+        return DslFactory::nestedTermsAggregation(
+            fieldName: $currentField,
+            field: $field,
+            size: $query->getLimit(),
+            orders: $termsOrders,
+            metricAggs: $metricAggs,
+            subAggs: $subAggs
+        );
     }
 
     /**
@@ -903,34 +795,21 @@ class Grammar extends BaseGrammar
         if ($builder->metricsAggregations) {
             $metricsAggregations = $this->compileMetricAggregations($builder);
         }
-
+        // Process each bucket aggregation
         foreach ($builder->bucketAggregations as $aggregation) {
-            // This lets us dynamically set the metric aggregation inside the bucket
+            // Apply metric aggregations inside the bucket if they exist
             if (! empty($metricsAggregations)) {
-
                 $aggregation['aggregations'] = $builder->newQuery();
-
                 // @phpstan-ignore-next-line
                 $aggregation['aggregations']->metricsAggregations = $builder->metricsAggregations;
             }
 
             $result = $this->compileAggregation($builder, $aggregation);
-
             $aggregations = $aggregations->mergeRecursive($result);
         }
-        if ($sorts) {
-            $flat = $aggregations->dot();
-            foreach ($sorts as $sort) {
-                foreach ($sort as $field => $order) {
-                    $key = ($flat->search($field));
-                    if ($key) {
-                        $sortKey = str_replace('field', 'order', $key);
-                        $flat->put($sortKey, $order['order']);
-                    }
-                }
 
-            }
-            $aggregations = $flat->undot();
+        if ($sorts) {
+            $aggregations = collect(DslFactory::applySortsToAggregations($aggregations->all(), $sorts));
         }
 
         return $aggregations->all();
@@ -990,22 +869,7 @@ class Grammar extends BaseGrammar
      */
     protected function applyBoostOption(array $clause, $value, $where): array
     {
-        $firstKey = key($clause);
-
-        if ($firstKey !== 'term') {
-            return $clause[$firstKey]['boost'] = $value;
-        }
-
-        $key = key($clause['term']);
-
-        $clause['term'] = [
-            $key => [
-                'value' => $clause['term'][$key],
-                'boost' => $value,
-            ],
-        ];
-
-        return $clause;
+        return DslFactory::applyBoost($clause, $value);
     }
 
     /**
@@ -1044,14 +908,10 @@ class Grammar extends BaseGrammar
     protected function compileCategorizeTextAggregation(Builder $builder, array $aggregation): array
     {
 
+        $args = $aggregation['args'];
         $options = $aggregation['options'] ?? [];
 
-        return [
-            'categorize_text' => [
-                ...$aggregation['args'],
-                ...$options,
-            ],
-        ];
+        return DslFactory::categorizeText($args, $options);
     }
 
     /**
@@ -1059,23 +919,12 @@ class Grammar extends BaseGrammar
      */
     protected function compileCompositeAggregation(Builder $builder, array $aggregation): array
     {
+        $sources = $aggregation['args'];
         $size = $builder->getSetLimit();
         $afterKey = $builder->afterKey ?? null;
+        $options = $aggregation['options'] ?? [];
 
-        $compiled = [
-            'composite' => [
-                'sources' => $aggregation['args'],
-            ],
-        ];
-
-        if ($size) {
-            $compiled['composite']['size'] = $size;
-        }
-        if ($afterKey) {
-            $compiled['composite']['after'] = $afterKey;
-        }
-
-        return $compiled;
+        return DslFactory::composite($sources, $size, $afterKey, $options);
     }
 
     /**
@@ -1153,18 +1002,10 @@ class Grammar extends BaseGrammar
      */
     protected function compileMatrixStatsAggregation(Builder $builder, array $aggregation): array
     {
-
-        $metric = $aggregation['type'];
         $options = $aggregation['options'] ?? [];
-
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
-        return [
-            $metric => [
-                'fields' => $field,
-                ...$options,
-            ],
-        ];
+        return DslFactory::matrixStats($field, $options);
     }
 
     /**
@@ -1176,20 +1017,16 @@ class Grammar extends BaseGrammar
         $options = $aggregation['options'] ?? [];
 
         if (is_array($aggregation['args']) && isset($aggregation['args']['script'])) {
-            return [
-                $metric => [
-                    'script' => $aggregation['args']['script'],
-                ],
-            ];
+            return DslFactory::scriptMetricAggregation(
+                metric: $metric,
+                script: $aggregation['args']['script'],
+                options: $options
+            );
         }
+
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
-        return [
-            $metric => [
-                'field' => $field,
-                ...$options,
-            ],
-        ];
+        return DslFactory::metricAggregation($metric, $field, $options);
     }
 
     /**
@@ -1198,33 +1035,45 @@ class Grammar extends BaseGrammar
     protected function compileDateHistogramAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        $compiled = [
-            'date_histogram' => [
-                'field' => $field,
-            ],
-        ];
+        $fixedInterval = null;
+        $calendarInterval = null;
+        $minDocCount = null;
+        $extendedBounds = null;
 
         if (is_array($aggregation['args'])) {
+            // Extract interval parameters
             if (isset($aggregation['args']['fixed_interval'])) {
-                $compiled['date_histogram']['fixed_interval'] = $aggregation['args']['fixed_interval'];
+                $fixedInterval = $aggregation['args']['fixed_interval'];
             }
+
             if (isset($aggregation['args']['calendar_interval'])) {
-                $compiled['date_histogram']['calendar_interval'] = $aggregation['args']['calendar_interval'];
+                $calendarInterval = $aggregation['args']['calendar_interval'];
             }
 
+            // Extract min doc count
             if (isset($aggregation['args']['min_doc_count'])) {
-                $compiled['date_histogram']['min_doc_count'] = $aggregation['args']['min_doc_count'];
+                $minDocCount = $aggregation['args']['min_doc_count'];
             }
 
+            // Extract extended bounds
             if (isset($aggregation['args']['extended_bounds']) && is_array($aggregation['args']['extended_bounds'])) {
-                $compiled['date_histogram']['extended_bounds'] = [];
-                $compiled['date_histogram']['extended_bounds']['min'] = $this->convertDateTime($aggregation['args']['extended_bounds'][0]);
-                $compiled['date_histogram']['extended_bounds']['max'] = $this->convertDateTime($aggregation['args']['extended_bounds'][1]);
+                $extendedBounds = [
+                    'min' => $this->convertDateTime($aggregation['args']['extended_bounds'][0]),
+                    'max' => $this->convertDateTime($aggregation['args']['extended_bounds'][1]),
+                ];
             }
         }
 
-        return $compiled;
+        return DslFactory::dateHistogram(
+            field: $field,
+            fixedInterval: $fixedInterval,
+            calendarInterval: $calendarInterval,
+            minDocCount: $minDocCount,
+            extendedBounds: $extendedBounds,
+            options: $options
+        );
     }
 
     /**
@@ -1232,11 +1081,10 @@ class Grammar extends BaseGrammar
      */
     protected function compileDateRangeAggregation(Builder $builder, array $aggregation): array
     {
-        $compiled = [
-            'date_range' => $aggregation['args'],
-        ];
+        $args = $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        return $compiled;
+        return DslFactory::dateRange($args, $options);
     }
 
     /**
@@ -1245,14 +1093,10 @@ class Grammar extends BaseGrammar
     protected function compileExistsAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        $compiled = [
-            'exists' => [
-                'field' => $field,
-            ],
-        ];
+        return DslFactory::exists($field, $options);
 
-        return $compiled;
     }
 
     /**
@@ -1264,12 +1108,10 @@ class Grammar extends BaseGrammar
 
         $filters = $filter['filter'] ?? [];
         $query = $filter['query'] ?? [];
-
         $allFilters = array_merge($query, $filters);
 
-        return [
-            'filter' => $allFilters ?: ['match_all' => (object) []],
-        ];
+        // Create the filter aggregation
+        return DslFactory::filterAggregation($allFilters);
     }
 
     /**
@@ -1294,14 +1136,9 @@ class Grammar extends BaseGrammar
     protected function compileMissingAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        $compiled = [
-            'missing' => [
-                'field' => $field,
-            ],
-        ];
-
-        return $compiled;
+        return DslFactory::missingAggregation($field, $options);
     }
 
     /**
@@ -1310,12 +1147,9 @@ class Grammar extends BaseGrammar
     protected function compileNestedAggregation(Builder $builder, array $aggregation): array
     {
         $path = is_array($aggregation['args']) ? $aggregation['args']['path'] : $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        return [
-            'nested' => [
-                'path' => $path,
-            ],
-        ];
+        return DslFactory::nestedAggregation($path, $options);
     }
 
     /**
@@ -1323,9 +1157,9 @@ class Grammar extends BaseGrammar
      */
     protected function compileReverseNestedAggregation(Builder $builder, array $aggregation): array
     {
-        return [
-            'reverse_nested' => (object) [],
-        ];
+        $options = $aggregation['options'] ?? [];
+
+        return DslFactory::reverseNestedAggregation($options);
     }
 
     /**
@@ -1334,33 +1168,20 @@ class Grammar extends BaseGrammar
     protected function compileTermsAggregation(Builder $builder, array $aggregation): array
     {
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['key'];
+        $indexableField = $this->getIndexableField($field, $builder);
 
-        $compiled = [
-            'terms' => [
-                'field' => $this->getIndexableField($field, $builder),
-                'size' => $builder->getLimit(),
-            ],
-        ];
-
-        $allowedArgs = [
-            'collect_mode',
-            'exclude',
-            'execution_hint',
-            'include',
-            'min_doc_count',
-            'missing',
-            'order',
-            'script',
-            'show_term_doc_count_error',
-            'size',
+        // Set the base options
+        $options = [
+            'size' => $builder->getLimit(),
         ];
 
         if (is_array($aggregation['args'])) {
-            $validArgs = array_intersect_key($aggregation['args'], array_flip($allowedArgs));
-            $compiled['terms'] = array_merge($compiled['terms'], $validArgs);
+            $additionalOptions = DslFactory::filterTermsAggregationOptions($aggregation['args']);
+            $options = array_merge($options, $additionalOptions);
         }
 
-        return $compiled;
+        // Create the terms aggregation
+        return DslFactory::termsAggregation($indexableField, $builder->getLimit(), $options);
     }
 
     /**
@@ -1368,21 +1189,17 @@ class Grammar extends BaseGrammar
      */
     protected function applyInnerHitsOption(array $clause, $options): array
     {
-        $firstKey = key($clause);
-
-        $clause[$firstKey]['inner_hits'] = empty($options) || $options === true ? (object) [] : (array) $options;
-
-        return $clause;
+        return DslFactory::applyInnerHits($clause, $options);
     }
 
     /**
      * Get value for the where
      */
-    protected function getValueForWhere(Builder $builder, array $where): mixed
+    protected function getValueForWhere(?Builder $builder, array $where): mixed
     {
         $value = match ($where['type']) {
-            'In', 'NotIn', 'Between' => $where['values'],
-            'Null', 'NotNull' => null,
+            'In', 'Between' => $where['values'],
+            'Exists' => null,
             default => $where['value'],
         };
 
@@ -1608,5 +1425,31 @@ class Grammar extends BaseGrammar
     public function compileIndexMappings(Builder $query): array
     {
         return ['index' => $query->getFrom() == '' ? '*' : $query->getFrom()];
+    }
+
+    protected function parseNegationOperator($operator, $value): array
+    {
+
+        if ($operator == 'not like' && ! is_null($value)) {
+            $operator = 'like';
+
+            return [$operator, true];
+        }
+        if ($operator == '<>' && ! is_null($value)) {
+            return [$operator, true];
+        }
+        if ($operator == '!=' && ! is_null($value)) {
+            $operator = '=';
+
+            return [$operator, true];
+        }
+        if ($operator == '=' && is_null($value)) {
+            return [$operator, true];
+        }
+        if ($operator == 'exists' && ! $value) {
+            return [$operator, true];
+        }
+
+        return [$operator, false];
     }
 }

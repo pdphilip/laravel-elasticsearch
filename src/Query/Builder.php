@@ -247,13 +247,44 @@ class Builder extends BaseBuilder
         return $this->whereIn($column, $values, 'or', true, $options);
     }
 
-    //    public function whereNull($columns, $boolean = 'and', $not = false) {}
-    //
-    //    public function orWhereNull($column) {}
-    //
-    //    public function whereNotNull($columns, $boolean = 'and') {}
-    //
-    //    public function orWhereNotNull($column) {}
+    public function whereNull($columns, $boolean = 'and', $not = false)
+    {
+        // whereNull == Not Exists
+        $notExist = ! $not;
+        $type = 'Exists';
+        $wasNot = str_ends_with($boolean, 'not');
+        if ($wasNot) {
+            $notExist = ! $notExist;
+        }
+        $boolParts = explode(' ', $boolean);
+        $boolean = $boolParts[0];
+
+        if ($notExist) {
+            $boolean .= ' not';
+        }
+
+        foreach (Arr::wrap($columns) as $column) {
+            $this->wheres[] = compact('type', 'column', 'boolean');
+        }
+
+        return $this;
+    }
+
+    public function orWhereNull($column)
+    {
+
+        return $this->whereNull($column, 'or');
+    }
+
+    public function whereNotNull($columns, $boolean = 'and')
+    {
+        return $this->whereNull($columns, $boolean, true);
+    }
+
+    public function orWhereNotNull($column)
+    {
+        return $this->whereNotNull($column, 'or');
+    }
 
     /**
      * Add a where between statement to the query.
@@ -715,6 +746,7 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
     // Wheres (targeting a field)
     // ----------------------------------------------------------------------
+
     /**
      * Add a "where weekday" statement to the query.
      *
