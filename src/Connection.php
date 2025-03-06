@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch;
 
+use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
@@ -640,6 +641,11 @@ class Connection extends BaseConnection
         );
     }
 
+    public function raw($dsl)
+    {
+        return $this->connection->search($dsl)->asArray();
+    }
+
     /**
      * Add client-specific parameters to the request params
      */
@@ -655,7 +661,7 @@ class Connection extends BaseConnection
     /** {@inheritdoc}
      * @throws QueryException
      */
-    protected function runQueryCallback($query, $bindings, \Closure $callback)
+    protected function runQueryCallback($query, $bindings, Closure $callback)
     {
         try {
             $result = $callback($query, $bindings);

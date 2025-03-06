@@ -29,6 +29,8 @@ class Builder extends BaseEloquentBuilder
 
     protected $type;
 
+    protected $model;
+
     protected $passthru = [
         'aggregate',
         'average',
@@ -63,6 +65,7 @@ class Builder extends BaseEloquentBuilder
 
         // ES
         'todsl',
+        'rawsearch',
 
         // ES Metric Aggregations
         'stats',
@@ -139,6 +142,9 @@ class Builder extends BaseEloquentBuilder
      */
     public function get($columns = ['*'])
     {
+        if (! is_array($columns)) {
+            $columns = [$columns];
+        }
         $builder = $this->applyScopes();
         $modelsCollection = $builder->getElasticModels($columns);
         $models = $modelsCollection->all();
@@ -452,5 +458,65 @@ class Builder extends BaseEloquentBuilder
     public function hasFields(array $columns): bool
     {
         return Schema::connection($this->query->connection->getName())->hasColumns($this->from, $columns);
+    }
+
+    public function rawSearch($dslBody)
+    {
+        $dsl = [
+            'index' => $this->query->inferIndex(),
+            'body' => $dslBody,
+        ];
+        $items = $this->query->processedRaw($dsl);
+
+        return $this->hydrate($items);
+
+    }
+
+    public function rawAggregation($dslBody)
+    {
+        $dsl = [
+            'index' => $this->query->inferIndex(),
+            'body' => $dslBody,
+        ];
+
+        $results = $this->query->raw($dsl);
+
+        return $results['aggregations'] ?? [];
+    }
+
+    public function rawDsl($dsl)
+    {
+        return $this->query->raw($dsl);
+    }
+
+    // ----------------------------------------------------------------------
+    // V4 Backwards Compatibility
+    // ----------------------------------------------------------------------
+
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
+    public function saveWithoutRefresh()
+    {
+        return $this->withoutRefresh()->save();
+    }
+
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
+    public function createWithoutRefresh($attributes = [])
+    {
+        return $this->withoutRefresh()->create($attributes);
+    }
+
+    /**
+     * @deprecated v5.0.0
+     * @see withoutRefresh()
+     */
+    public function firstOrCreateWithoutRefresh($attributes = [])
+    {
+        return $this->withoutRefresh()->firstOrCreate($attributes);
     }
 }

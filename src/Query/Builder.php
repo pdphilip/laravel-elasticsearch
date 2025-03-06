@@ -2051,34 +2051,8 @@ class Builder extends BaseBuilder
         return $prefix.$table.$suffix;
     }
 
-    // ----------------------------------------------------------------------
-    // V4 Backwards Compatibility
-    // ----------------------------------------------------------------------
-
-    /**
-     * @deprecated v5.0.0
-     * @see withoutRefresh()
-     */
-    public function saveWithoutRefresh()
+    public function processedRaw($dsl): ?array
     {
-        return $this->withoutRefresh()->save();
-    }
-
-    /**
-     * @deprecated v5.0.0
-     * @see withoutRefresh()
-     */
-    public function createWithoutRefresh($attributes = [])
-    {
-        return $this->withoutRefresh()->create($attributes);
-    }
-
-    /**
-     * @deprecated v5.0.0
-     * @see withoutRefresh()
-     */
-    public function firstOrCreateWithoutRefresh($attributes = [])
-    {
-        return $this->withoutRefresh()->firstOrCreate($attributes);
+        return $this->processor->processRaw($this, $this->connection->raw($dsl));
     }
 }

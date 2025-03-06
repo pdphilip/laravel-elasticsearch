@@ -297,6 +297,7 @@ class Processor extends BaseProcessor
      */
     public function documentFromResult(Builder $query, array $result): array
     {
+
         $document = $result['_source'];
         $document['_id'] = $result['_id'];
 
@@ -403,5 +404,16 @@ class Processor extends BaseProcessor
         $this->query = $query;
 
         return ! $this->getRawResponse()['errors'];
+    }
+
+    public function processRaw($query, $response)
+    {
+        $this->rawResponse = $response;
+        $documents = collect();
+        foreach ($response['hits']['hits'] as $results) {
+            $documents->add($this->documentFromResult($query, $results));
+        }
+
+        return $documents->all();
     }
 }
