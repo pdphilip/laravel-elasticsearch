@@ -274,7 +274,7 @@ class Grammar extends BaseGrammar
 
     public function compileWhereMatchAll(): array
     {
-        return ['match_all' => (object) []];
+        return DslFactory::matchAll();
     }
 
     /**
@@ -283,6 +283,8 @@ class Grammar extends BaseGrammar
     protected function compileWhereBasic(Builder $builder, array $where): array
     {
         $value = $this->getValueForWhere($builder, $where);
+        $field = $where['column'];
+        $options = $where['options'] ?? [];
 
         $operatorsMap = [
             '>' => 'gt',
@@ -292,117 +294,82 @@ class Grammar extends BaseGrammar
         ];
 
         if (is_null($value) || $where['operator'] == 'exists') {
-            $query = [
-                'exists' => [
-                    'field' => $where['column'],
-                ],
-            ];
+            $query = DslFactory::exists($field, $options);
+
         } elseif (in_array($where['operator'], ['like', 'not like'])) {
-            $query = [
-                'wildcard' => [
-                    $this->getIndexableField($where['column'], $builder) => [
-                        'value' => str_replace('%', '*', $value),
-                        ...($where['options'] ?? []),
-                    ],
-                ],
-            ];
+            $field = $this->getIndexableField($field, $builder);
+            $wildcardValue = str_replace('%', '*', $value);
+            $query = DslFactory::wildcard($field, $wildcardValue, $options);
+
         } elseif (in_array($where['operator'], array_keys($operatorsMap))) {
             $operator = $operatorsMap[$where['operator']];
-            $query = [
-                'range' => [
-                    $this->getIndexableField($where['column'], $builder) => [
-                        $operator => $value,
-                        ...($where['options'] ?? []),
+            $field = $this->getIndexableField($field, $builder);
+            $query = DslFactory::range($field, [$operator => $value], $options);
 
-                    ],
-                ],
-            ];
         } else {
-            $query = [
-                'match' => [
-                    $where['column'] => [
-                        'query' => $value,
-                        'operator' => 'and',
-                        ...($where['options'] ?? []),
-                    ],
-                ],
-            ];
+            $options['operator'] = $options['operator'] ?? 'and';
+            $query = DslFactory::match($field, $value, $options);
         }
 
         $query = $this->applyOptionsToClause($query, $where);
 
-        if (
-            ! empty($where['not'])
-            || ($where['operator'] == 'not like' && ! is_null($value))
-            || ($where['operator'] == '<>' && ! is_null($value))
-            || ($where['operator'] == '!=' && ! is_null($value))
-            || ($where['operator'] == '=' && is_null($value))
-            || ($where['operator'] == 'exists' && ! $value)
-        ) {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
+        //        if (
+        //            ! empty($where['not'])
+        //            || ($where['operator'] == 'not like' && ! is_null($value))
+        //            || ($where['operator'] == '<>' && ! is_null($value))
+        //            || ($where['operator'] == '!=' && ! is_null($value))
+        //            || ($where['operator'] == '=' && is_null($value))
+        //            || ($where['operator'] == 'exists' && ! $value)
+        //        ) {
+        //            $query = [
+        //                'bool' => [
+        //                    'must_not' => [
+        //                        $query,
+        //                    ],
+        //                ],
+        //            ];
+        //        }
 
         return $query;
     }
 
-    /**
-     * Compile a where not clause
-     *
-     * @param  array  $where
-     */
-    protected function compileWhereNot(Builder $builder, $where): array
-    {
-        return [
-            'bool' => [
-                'must_not' => [
-                    $this->compileWheres($where['query'])['query'],
-                ],
-            ],
-        ];
-    }
+    //    /**
+    //     * Compile a where not clause
+    //     *
+    //     * @param  array  $where
+    //     */
+    //    protected function compileWhereNot(Builder $builder, $where): array
+    //    {
+    //        dd('YIKES');
+    //
+    //        return [
+    //            'bool' => [
+    //                'must_not' => [
+    //                    $this->compileWheres($where['query'])['query'],
+    //                ],
+    //            ],
+    //        ];
+    //    }
 
     /**
      * Compile a not in clause
      */
-    protected function compileWhereNotIn(Builder $builder, array $where): array
-    {
-        return $this->compileWhereIn($builder, $where, true);
-    }
+    //    protected function compileWhereNotIn(Builder $builder, array $where): array
+    //    {
+    //        return $this->compileWhereIn($builder, $where, true);
+    //    }
 
     /**
      * Compile an in clause
      */
     protected function compileWhereIn(Builder $builder, array $where, $not = false): array
     {
-        $column = $this->getIndexableField($where['column'], $builder);
+        $field = $this->getIndexableField($where['column'], $builder);
         $values = $this->getValueForWhere($builder, $where);
+        $options = $where['options'] ?? [];
+        $query = DslFactory::terms($field, $values, $options);
 
-        $query = [
-            'terms' => [
-                $column => array_values($values),
-                ...$where['options'],
-            ],
-        ];
-
-        $query = $this->applyOptionsToClause($query, $where);
-
-        if ($not) {
-            $query = [
-                'bool' => [
-                    'must_not' => [
-                        $query,
-                    ],
-                ],
-            ];
-        }
-
-        return $query;
+        return $this->applyOptionsToClause($query, $where);
     }
 
     /**
@@ -448,16 +415,14 @@ class Grammar extends BaseGrammar
     {
         $column = $where['column'];
         $values = $this->getValueForWhere($builder, $where);
+        $options = $where['options'] ?? [];
 
-        return [
-            'range' => [
-                $column => [
-                    'gte' => $values[0],
-                    'lte' => $values[1],
-                ],
-                ...$where['options'],
-            ],
+        $conditions = [
+            'gte' => $values[0],
+            'lte' => $values[1],
         ];
+
+        return DslFactory::range($column, $conditions, $options);
     }
 
     /**
@@ -465,8 +430,6 @@ class Grammar extends BaseGrammar
      */
     protected function compileWhereFunctionScore(Builder $builder, array $where): array
     {
-        $cleanWhere = $where;
-
         $compiled = $this->compileWheres($where['query']);
 
         foreach ($compiled as $queryPart => $clauses) {
@@ -480,14 +443,10 @@ class Grammar extends BaseGrammar
         }
 
         $compiled = array_filter($compiled);
+        $functionType = $where['functionType'];
+        $options = $where['options'] ?? [];
 
-        $query = [
-            'function_score' => [
-                $where['functionType'] => ['query' => $compiled['query']],
-            ],
-        ];
-
-        return $query;
+        return DslFactory::functionScore($compiled['query'], $functionType, $options);
     }
 
     /**

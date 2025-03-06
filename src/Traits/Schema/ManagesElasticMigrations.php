@@ -276,4 +276,9 @@ trait ManagesElasticMigrations
     {
         return $this->geoPoint($field, $parameters);
     }
+
+    public function field(string $type, string $field, array $parameters = []): PropertyDefinition
+    {
+        return $this->addColumn($type, $field, $parameters);
+    }
 }

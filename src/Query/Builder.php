@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Query;
 use Closure;
 use DateTimeInterface;
 use Elastic\Elasticsearch\Response\Elasticsearch;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
@@ -192,7 +193,32 @@ class Builder extends BaseBuilder
     {
         [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Term', $column, $values, $boolean, $not, $options);
 
-        parent::whereIn($column, $values, $boolean, $not)->applyOptions($options);
+        $type = 'In';
+        if ($not) {
+            $boolean .= ' not';
+        }
+
+        // @inheritdoc
+        if ($this->isQueryable($values)) {
+            [$query, $bindings] = $this->createSub($values);
+            $values = [new Expression($query)];
+            $this->addBinding($bindings, 'where');
+        }
+
+        // @inheritdoc
+        if ($values instanceof Arrayable) {
+            $values = $values->toArray();
+        }
+
+        $this->wheres[] = compact('type', 'column', 'values', 'boolean');
+
+        if (count($values) !== count(Arr::flatten($values, 1))) {
+            throw new InvalidArgumentException('Nested arrays may not be passed to whereIn method.');
+        }
+
+        // @inheritdoc
+        $this->addBinding($this->cleanBindings($values), 'where');
+        $this->applyOptions($options);
 
         return $this;
     }
