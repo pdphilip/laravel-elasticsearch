@@ -159,6 +159,33 @@ class ElasticClient
     }
 
     // ----------------------------------------------------------------------
+    // PIT API
+    // ----------------------------------------------------------------------
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     * @throws MissingParameterException
+     */
+    public function openPit(array $params = []): ?string
+    {
+        $open = $this->client->openPointInTime($params)->asArray();
+
+        return $open['id'] ?? null;
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function closePit(array $params = []): bool
+    {
+        $closed = $this->client->closePointInTime($params)->asArray();
+
+        return $closed['succeeded'] ?? false;
+    }
+
+    // ----------------------------------------------------------------------
     // Cluster
     // ----------------------------------------------------------------------
 

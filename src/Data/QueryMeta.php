@@ -38,7 +38,9 @@ final class QueryMeta
 
     protected array $cursor = [];
 
-    protected array $afterKey = [];
+    protected ?string $pidId = null;
+
+    protected ?array $afterKey = null;
 
     public function __construct(?MetaDTO $meta = null)
     {
@@ -54,6 +56,7 @@ final class QueryMeta
         $this->shards = $meta->getShards();
         $this->query = $meta->getQuery();
         $this->dsl = $meta->getDsl();
+        $this->pidId = $meta->getPitId();
         $this->afterKey = $meta->getAfterKey();
         $this->sort = $meta->getSort();
         $this->cursor = $meta->getCursor();
@@ -195,6 +198,16 @@ final class QueryMeta
         }
 
         return $this->results;
+    }
+
+    public function getPitId()
+    {
+        return $this->pidId;
+    }
+
+    public function getAfterKey()
+    {
+        return $this->afterKey;
     }
 
     // ----------------------------------------------------------------------

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
 use Illuminate\Support\Collection;
 use Iterator;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
+use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
@@ -149,13 +150,20 @@ class Builder extends BaseEloquentBuilder
         $modelsCollection = $builder->getElasticModels($columns);
         $models = $modelsCollection->all();
 
-        // If we actually found models we will also eager load any relationships that
-        // have been specified as needing to be eager loaded, which will solve the
-        // n+1 query issue for the developers to avoid running a lot of queries.
-        if (count($models) > 0) {
+        $models = $this->loadRelations($models, $builder);
 
-            $models = $builder->eagerLoadRelations($models);
+        return ElasticCollection::loadCollection($builder->getModel()->newCollection($models))->loadMeta($modelsCollection->getQueryMeta());
+    }
+
+    public function getPit($columns = ['*'])
+    {
+        if (! is_array($columns)) {
+            $columns = [$columns];
         }
+        $builder = $this->applyScopes();
+        $modelsCollection = $builder->getElasticModelsViaPit($columns);
+        $models = $modelsCollection->all();
+        $models = $this->loadRelations($models, $builder);
 
         return ElasticCollection::loadCollection($builder->getModel()->newCollection($models))->loadMeta($modelsCollection->getQueryMeta());
     }
@@ -196,6 +204,16 @@ class Builder extends BaseEloquentBuilder
         return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
     }
 
+    public function getElasticModelsViaPit($columns = ['*'])
+    {
+        $elasticQueryCollection = $this->query->getPit($columns);
+        $eloquentCollection = $this->model->hydrate(
+            $elasticQueryCollection->all()
+        );
+
+        return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -211,9 +229,14 @@ class Builder extends BaseEloquentBuilder
 
     /**
      * {@inheritdoc}
+     *
+     * @throws BuilderException
      */
     public function chunk($count, callable $callback, $scrollTimeout = '30s')
     {
+        if (! $this->query->connection->allowIdSort) {
+            return $this->chunkByPit($count, $callback);
+        }
         $this->enforceOrderBy();
 
         foreach ($this->query->connection->searchResponseIterator($this->query->toCompiledQuery(), $scrollTimeout, $count) as $results) {
@@ -231,6 +254,63 @@ class Builder extends BaseEloquentBuilder
         }
 
         return true;
+    }
+
+    /**
+     * Chunk the results of a query by comparing IDs in a given order.
+     *
+     * @param  int  $count
+     * @param  string|null  $column
+     * @param  string|null  $alias
+     * @param  bool  $descending
+     *
+     * @throws BuilderException
+     */
+    public function orderedChunkById($count, callable $callback, $column = null, $alias = null, $descending = false): bool
+    {
+        $column ??= '_id';
+        if ($column == '_id' && ! $this->query->connection->allowIdSort) {
+            return $this->chunkByPit($count, $callback);
+        }
+
+        return parent::orderedChunkById($count, $callback, $column, $alias, $descending);
+    }
+
+    /**
+     * @throws BuilderException
+     */
+    public function chunkByPit($count, callable $callback, $keepAlive = '5m'): bool
+    {
+
+        $this->query->keepAlive = $keepAlive;
+        $pitId = $this->query->openPit();
+
+        $searchAfter = null;
+        $page = 1;
+        do {
+            $clone = clone $this;
+            $clone->query->viaPit($pitId, $searchAfter);
+            $results = $clone->getPit();
+            $searchAfter = $results->getAfterKey();
+            $countResults = $results->count();
+
+            if ($countResults == 0) {
+                break;
+            }
+
+            if ($callback($results, $page) === false) {
+                return true;
+            }
+
+            unset($results);
+
+            $page++;
+        } while ($countResults == $count);
+
+        $this->query->closePit($pitId);
+
+        return true;
+
     }
 
     /**
@@ -493,6 +573,19 @@ class Builder extends BaseEloquentBuilder
     public function rawDsl($dsl): array
     {
         return $this->query->raw($dsl)->asArray();
+    }
+
+    // ----------------------------------------------------------------------
+    // Protected
+    // ----------------------------------------------------------------------
+
+    protected function loadRelations($models, $builder)
+    {
+        if (count($models) > 0) {
+            $models = $builder->eagerLoadRelations($models);
+        }
+
+        return $models;
     }
 
     // ----------------------------------------------------------------------

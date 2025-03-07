@@ -20,7 +20,6 @@ use Http\Promise\Promise;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
-use Override;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
@@ -59,7 +58,7 @@ class Connection extends BaseConnection
 
     protected $requestTimeout;
 
-    protected $idProcessor = false;
+    public $allowIdSort = false;
 
     public $defaultQueryLimit = 1000;
 
@@ -128,7 +127,7 @@ class Connection extends BaseConnection
                     'retires' => null,
                     'meta_header' => null,
                     'default_limit' => null,
-                    'id_processor' => null,
+                    'allow_id_sort' => false,
                 ],
             ],
             $this->config
@@ -177,6 +176,7 @@ class Connection extends BaseConnection
         if (isset($this->config['options']['default_limit'])) {
             $this->defaultQueryLimit = $this->config['options']['default_limit'];
         }
+        $this->allowIdSort = $this->config['options']['allow_id_sort'] ?? false;
 
     }
 
@@ -675,11 +675,33 @@ class Connection extends BaseConnection
         return $result;
     }
 
-    #[Override]
-    protected function run(mixed $query, $bindings, Closure $callback)
+    /**
+     * @param  mixed  $query
+     */
+    protected function run($query, $bindings, Closure $callback): mixed
     {
         return parent::run($query, $bindings, $callback);
     }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function openPit(mixed $query): ?string
+    {
+        return $this->connection->openPit($query);
+    }
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function closePit(mixed $query): bool
+    {
+        return $this->connection->closePit($query);
+    }
+
     // ----------------------------------------------------------------------
     // Direct Client Access and cluster methods
     // ----------------------------------------------------------------------

@@ -78,6 +78,11 @@ class MetaDTO implements Arrayable
         return Arr::get($this->result, 'dsl', []);
     }
 
+    public function getPitId()
+    {
+        return Arr::get($this->result, 'pit_id', null);
+    }
+
     public function getAfterKey()
     {
         return Arr::get($this->result, 'after_key', []);

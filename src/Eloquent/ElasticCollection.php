@@ -88,4 +88,14 @@ class ElasticCollection extends Collection
     {
         return $this->meta->getResults();
     }
+
+    public function getPitId()
+    {
+        return $this->meta->getPitId();
+    }
+
+    public function getAfterKey()
+    {
+        return $this->meta->getAfterKey();
+    }
 }

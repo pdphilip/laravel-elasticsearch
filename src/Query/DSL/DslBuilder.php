@@ -137,6 +137,40 @@ class DslBuilder
         return $this->set(['post_filter'], $filter);
     }
 
+    public function setOption(array $keys, $value): self
+    {
+        return $this->set($keys, $value);
+    }
+
+    public function loadDsl($dsl): self
+    {
+        $this->dsl = $dsl;
+
+        return $this;
+    }
+
+    public function appendOption(array $keys, $value): self
+    {
+        $current = $this->getValueAtPath($this->dsl, $keys);
+        if ($current) {
+            if (empty($current[0])) {
+                $current = [$current];
+            }
+        } else {
+            $current = [];
+        }
+        $current[] = $value;
+
+        return $this->set($keys, $current);
+    }
+
+    public function unsetOption(array $keys): self
+    {
+        $this->unsetKeyAtPath($this->dsl, $keys);
+
+        return $this;
+    }
+
     // ----------------------------------------------------------------------
     // Bulk
     // ----------------------------------------------------------------------

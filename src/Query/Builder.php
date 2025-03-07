@@ -59,6 +59,10 @@ class Builder extends BaseBuilder
 
     public array $sorts = [];
 
+    public mixed $pitId = null;
+
+    public string $keepAlive = '5m';
+
     public mixed $afterKey = null;
 
     public array $metricsAggregations = [];
@@ -719,9 +723,15 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritdoc}
+     *
+     * @throws BuilderException
      */
     public function chunk($count, callable $callback, $scrollTimeout = '30s')
     {
+        if (! $this->connection->allowIdSort) {
+            return $this->chunkByPit($count, $callback);
+        }
+
         $this->enforceOrderBy();
 
         foreach ($this->connection->searchResponseIterator($this->toCompiledQuery(), $scrollTimeout, $count) as $results) {
@@ -1850,15 +1860,6 @@ class Builder extends BaseBuilder
         return $this->options()->get('suffix', '');
     }
 
-    //    public function setIndexSuffix($suffix = null): self
-    //    {
-    //        if ($suffix) {
-    //            $this->options()->add('suffix', $suffix);
-    //        }
-    //
-    //        return $this;
-    //    }
-
     public function getLimit(): int
     {
         return $this->getSetLimit() > 0 ? $this->getSetLimit() : $this->connection->defaultQueryLimit;
@@ -2029,6 +2030,82 @@ class Builder extends BaseBuilder
     public function processedRaw($dsl): ?array
     {
         return $this->processor->processRaw($this, $this->connection->raw($dsl));
+    }
+
+    // ----------------------------------------------------------------------
+    // PIT API
+    // ----------------------------------------------------------------------
+
+    public function viaPit($pid, $afterKey): self
+    {
+        $this->pitId = $pid;
+        $this->afterKey = $afterKey;
+
+        return $this;
+    }
+
+    public function after($afterKey): self
+    {
+        $this->afterKey = $afterKey;
+
+        return $this;
+    }
+
+    public function withPitId(?string $value): self
+    {
+        $this->pitId = $value;
+
+        return $this;
+    }
+
+    public function keepAlive(string $value): self
+    {
+        $this->keepAlive = $value;
+
+        return $this;
+    }
+
+    public function openPit(): string
+    {
+        $id = $this->connection->openPit($this->grammar->compileOpenPit($this));
+        $this->withPitId($id);
+
+        return $id;
+    }
+
+    /**
+     * @throws BuilderException
+     */
+    public function getPit($columns = ['*']): ElasticCollection
+    {
+        if (! $this->pitId) {
+            $this->openPit();
+        }
+        $original = $this->columns;
+
+        if (is_null($original)) {
+            $this->columns = $columns;
+        }
+
+        $results = $this->processor->processSelect($this, $this->connection->select($this->grammar->compilePitSelect($this)));
+
+        $this->columns = $original;
+        $collection = ElasticCollection::make($results);
+        $collection->setQueryMeta($this->metaTransfer);
+
+        return $collection;
+
+    }
+
+    public function closePit($pidId = null): bool
+    {
+        if ($pidId) {
+            $this->withPitId($pidId);
+        }
+        $didClose = $this->connection->closePit($this->grammar->compileClosePit($this));
+        $this->withPitId(null);
+
+        return $didClose;
     }
 
     // ----------------------------------------------------------------------

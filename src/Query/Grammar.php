@@ -1268,6 +1268,47 @@ class Grammar extends BaseGrammar
         return array_intersect_key($options, array_flip($allowed));
     }
 
+    // ----------------------------------------------------------------------
+    // PIT Api
+    // ----------------------------------------------------------------------
+    public function compileOpenPit(Builder $query)
+    {
+        $dsl = new DslBuilder;
+        $dsl->setIndex($query->getFrom());
+        $dsl->setOption(['keep_alive'], $query->keepAlive);
+
+        return $dsl->getDsl();
+    }
+
+    /**
+     * @throws BuilderException
+     */
+    public function compilePitSelect(Builder $query)
+    {
+        $dsl = new DslBuilder;
+        $selectDsl = $this->compileSelect($query);
+        $dsl->loadDsl($selectDsl);
+        $dsl->setBody(['pit', 'id'], $query->pitId);
+        $dsl->setBody(['pit', 'keep_alive'], $query->keepAlive);
+        $dsl->appendOption(['body', 'sort'], ['_shard_doc' => ['order' => 'asc']]);
+        if ($query->afterKey) {
+            $dsl->setBody(['search_after'], $query->afterKey);
+        }
+        $dsl->unsetOption(['index']);
+
+        return $dsl->getDsl();
+
+    }
+
+    public function compileClosePit(Builder $query)
+    {
+        $dsl = new DslBuilder;
+        $dsl->setIndex($query->getFrom());
+        $dsl->setBody(['id'], $query->pitId);
+
+        return $dsl->getDsl();
+    }
+
     // ======================================================================
     // Update
     // ======================================================================

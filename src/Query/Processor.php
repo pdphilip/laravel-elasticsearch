@@ -251,6 +251,8 @@ class Processor extends BaseProcessor
 
     /**
      * Process the results of a "select" query.
+     *
+     * @param  Elasticsearch  $results
      */
     public function processSelect(BaseBuilder|Builder $query, $results): array|Collection
     {
@@ -283,11 +285,15 @@ class Processor extends BaseProcessor
 
             return $this->processAggregations($query, $results);
         }
-
+        $lastSort = null;
         foreach ($response['hits']['hits'] as $results) {
             $documents->add($this->documentFromResult($this->query, $results));
+            if (! empty($results['sort'][0])) {
+                $lastSort = $results['sort'];
+            }
         }
         $query->getMetaTransfer()->set('total', count($documents));
+        $query->getMetaTransfer()->set('after_key', $lastSort);
 
         return $documents->all();
     }
