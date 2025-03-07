@@ -629,7 +629,7 @@ class Connection extends BaseConnection
      * @param  array  $query
      * @param  array  $bindings
      */
-    public function update($query, $bindings = []): array
+    public function update($query, $bindings = []): mixed
     {
         $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
 
