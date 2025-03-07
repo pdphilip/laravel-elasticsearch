@@ -6,7 +6,10 @@ use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
+use Elastic\Elasticsearch\Response\Elasticsearch;
+use Http\Promise\Promise;
 use Illuminate\Support\Arr;
+use PDPhilip\Elasticsearch\Query\DSL\DslBuilder;
 
 class ElasticClient
 {
@@ -21,7 +24,7 @@ class ElasticClient
      * @throws ClientResponseException
      * @throws ServerResponseException
      */
-    public function search(array $params = [])
+    public function search(array $params = []): Elasticsearch|Promise
     {
         return $this->client->search($params);
     }
@@ -30,7 +33,7 @@ class ElasticClient
      * @throws ClientResponseException
      * @throws ServerResponseException
      */
-    public function bulk(array $params = [])
+    public function bulk(array $params = []): Elasticsearch|Promise
     {
         return $this->client->bulk($params);
     }
@@ -40,7 +43,7 @@ class ElasticClient
      * @throws ClientResponseException
      * @throws MissingParameterException
      */
-    public function update(array $params = [])
+    public function update(array $params = []): Elasticsearch|Promise
     {
         return $this->client->update($params);
     }
@@ -50,7 +53,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function updateByQuery(array $params = [])
+    public function updateByQuery(array $params = []): Elasticsearch|Promise
     {
         return $this->client->updateByQuery($params);
     }
@@ -60,7 +63,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function deleteByQuery(array $params = [])
+    public function deleteByQuery(array $params = []): Elasticsearch|Promise
     {
         return $this->client->deleteByQuery($params);
     }
@@ -69,7 +72,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws ClientResponseException
      */
-    public function scroll(array $params = [])
+    public function scroll(array $params = []): Elasticsearch|Promise
     {
         return $this->client->scroll($params);
     }
@@ -78,7 +81,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws ClientResponseException
      */
-    public function clearScroll(array $params = [])
+    public function clearScroll(array $params = []): Elasticsearch|Promise
     {
         return $this->client->clearScroll($params);
     }
@@ -103,9 +106,9 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function createAlias(string $index, string $name)
+    public function createAlias(string $index, string $name): Elasticsearch|Promise
     {
-        $this->client->indices()->putAlias(compact('index', 'name'));
+        return $this->client->indices()->putAlias(compact('index', 'name'));
     }
 
     /**
@@ -113,9 +116,9 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function createIndex(string $index, array $body)
+    public function createIndex(string $index, array $body): Elasticsearch|Promise
     {
-        $this->client->indices()->create(compact('index', 'body'));
+        return $this->client->indices()->create(compact('index', 'body'));
     }
 
     /**
@@ -123,9 +126,9 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function dropIndex(string $index)
+    public function dropIndex(string $index): Elasticsearch|Promise
     {
-        $this->client->indices()->delete(compact('index'));
+        return $this->client->indices()->delete(compact('index'));
     }
 
     /**
@@ -133,7 +136,7 @@ class ElasticClient
      * @throws ServerResponseException
      * @throws MissingParameterException
      */
-    public function updateIndex(string $index, array $body)
+    public function updateIndex(string $index, array $body): void
     {
         if ($mappings = $body['mappings'] ?? null) {
             $this->client->indices()->putMapping(['index' => $index, 'body' => ['properties' => $mappings['properties']]]);
@@ -153,5 +156,32 @@ class ElasticClient
     public function getFieldMapping(string $index, string $fields): array
     {
         return $this->client->indices()->getFieldMapping(compact('index', 'fields'))->asArray();
+    }
+
+    // ----------------------------------------------------------------------
+    // Cluster
+    // ----------------------------------------------------------------------
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function clusterSettings($flat = true): array
+    {
+        return $this->client->cluster()->getSettings(['flat_settings' => (bool) $flat])->asArray();
+    }
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function setClusterFieldDataOnId($enabled, $transient = false): array
+    {
+        $type = $transient ? 'transient' : 'persistent';
+        $dsl = new DslBuilder;
+        $dsl->setBody([$type, 'indices.id_field_data.enabled'], (bool) $enabled);
+
+        return $this->client->cluster()->putSettings($dsl->getDsl())->asArray();
+
     }
 }

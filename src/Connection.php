@@ -16,9 +16,11 @@ use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Exception;
 use Generator;
+use Http\Promise\Promise;
 use Illuminate\Database\Connection as BaseConnection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
+use Override;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Builder;
@@ -274,7 +276,7 @@ class Connection extends BaseConnection
      */
     public function getClientInfo(): array
     {
-        return $this->elasticClient()->info()->asArray();
+        return $this->elastic()->info()->asArray();
     }
 
     /**
@@ -283,7 +285,7 @@ class Connection extends BaseConnection
      */
     public function getLicenseInfo(): array
     {
-        $license = $this->elasticClient()->license()->get()->asArray();
+        $license = $this->elastic()->license()->get()->asArray();
         if (! empty($license['license'])) {
             return $license['license'];
         }
@@ -483,7 +485,7 @@ class Connection extends BaseConnection
     /**
      * Run a select statement against the database and return a generator.
      *
-     * @param  string  $query
+     * @param  array  $query
      * @param  array  $bindings
      * @param  bool  $useReadPdo
      * @param  string  $scrollTimeout
@@ -538,15 +540,15 @@ class Connection extends BaseConnection
     /**
      * Run an insert statement against the database.
      *
-     * @param  array  $params
+     * @param  array  $query
      * @param  array  $bindings
      *
      * @throws BulkInsertQueryException
      */
-    public function insert($params, $bindings = []): Elasticsearch
+    public function insert($query, $bindings = []): Elasticsearch
     {
         $result = $this->run(
-            $this->addClientParams($params),
+            $this->addClientParams($query),
             $bindings,
             $this->connection->bulk(...)
         );
@@ -567,7 +569,6 @@ class Connection extends BaseConnection
      */
     public function logQuery($query, $bindings, $time = null): void
     {
-
         if (is_array($query)) {
             $query = json_encode($query);
         }
@@ -625,13 +626,11 @@ class Connection extends BaseConnection
     /**
      * Run an update statement against the database.
      *
-     * @param  string  $query
+     * @param  array  $query
      * @param  array  $bindings
-     * @return array
      */
-    public function update($query, $bindings = [])
+    public function update($query, $bindings = []): array
     {
-        // @phpstan-ignore-next-line
         $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
 
         return $this->run(
@@ -641,9 +640,13 @@ class Connection extends BaseConnection
         );
     }
 
-    public function raw($dsl)
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function raw($value): Elasticsearch|Promise
     {
-        return $this->connection->search($dsl)->asArray();
+        return $this->connection->search($value);
     }
 
     /**
@@ -672,9 +675,36 @@ class Connection extends BaseConnection
         return $result;
     }
 
-    public function elasticClient(): Client
+    #[Override]
+    protected function run(mixed $query, $bindings, Closure $callback)
+    {
+        return parent::run($query, $bindings, $callback);
+    }
+    // ----------------------------------------------------------------------
+    // Direct Client Access and cluster methods
+    // ----------------------------------------------------------------------
+
+    public function elastic(): Client
     {
         return $this->connection->client();
+    }
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function clusterSettings($flat = true): array
+    {
+        return $this->connection->clusterSettings($flat);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function setClusterFieldDataOnId(bool $enabled, bool $transient = false): array
+    {
+        return $this->connection->setClusterFieldDataOnId($enabled, $transient);
     }
 
     // ----------------------------------------------------------------------

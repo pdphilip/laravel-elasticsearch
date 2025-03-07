@@ -39,7 +39,7 @@ class Builder extends BaseBuilder
     public function getTables(): array
     {
         return $this->connection->getPostProcessor()->processTables(
-            $this->connection->elasticClient()->cat()->indices(
+            $this->connection->elastic()->cat()->indices(
                 [
                     'index' => $this->connection->getTablePrefix().'*',
                     'format' => 'json',
@@ -55,7 +55,7 @@ class Builder extends BaseBuilder
     public function getTable($name): array
     {
         return $this->connection->getPostProcessor()->processTables(
-            $this->connection->elasticClient()->cat()->indices(
+            $this->connection->elastic()->cat()->indices(
                 [
                     'index' => $this->connection->getTablePrefix().$name,
                     'format' => 'json',
@@ -74,7 +74,7 @@ class Builder extends BaseBuilder
         $index = $this->parseIndexName($table);
         $params = ['index' => $index];
 
-        return $this->connection->elasticClient()->indices()->exists($params)->asBool();
+        return $this->connection->elastic()->indices()->exists($params)->asBool();
 
     }
 
@@ -87,7 +87,7 @@ class Builder extends BaseBuilder
     {
         $index = $this->parseIndexName($table);
         $params = ['index' => $index, 'fields' => $column];
-        $result = $this->connection->elasticClient()->indices()->getFieldMapping($params)->asArray();
+        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
 
         return ! empty($result[$index]['mappings'][$column]);
     }
@@ -101,7 +101,7 @@ class Builder extends BaseBuilder
     {
         $index = $this->parseIndexName($table);
         $params = ['index' => $index, 'fields' => implode(',', $columns)];
-        $result = $this->connection->elasticClient()->indices()->getFieldMapping($params)->asArray();
+        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
 
         foreach ($columns as $value) {
             if (empty($result[$index]['mappings'][$value])) {
@@ -198,7 +198,7 @@ class Builder extends BaseBuilder
     {
         $params = ['index' => $this->parseIndexName($indices)];
 
-        return $this->connection->elasticClient()->indices()->get($params)->asArray();
+        return $this->connection->elastic()->indices()->get($params)->asArray();
     }
 
     /**
@@ -252,7 +252,7 @@ class Builder extends BaseBuilder
         $index = $this->parseIndexName($table);
         $params = ['index' => Arr::wrap($index)];
 
-        $mappings = $this->connection->elasticClient()->indices()->getMapping($params)->asArray();
+        $mappings = $this->connection->elastic()->indices()->getMapping($params)->asArray();
         if (! $flattenProperties) {
             return $mappings;
         }
@@ -273,7 +273,7 @@ class Builder extends BaseBuilder
         $index = $this->parseIndexName($table);
         $params = ['index' => Arr::wrap($index)];
 
-        return $this->connection->elasticClient()->indices()->getSettings($params)->asArray();
+        return $this->connection->elastic()->indices()->getSettings($params)->asArray();
     }
 
     /**
@@ -303,7 +303,7 @@ class Builder extends BaseBuilder
         ];
         $params = [...$params, ...$options];
 
-        return $this->connection->elasticClient()->reindex($params)->asArray();
+        return $this->connection->elastic()->reindex($params)->asArray();
     }
 
     // ----------------------------------------------------------------------

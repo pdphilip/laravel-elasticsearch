@@ -460,33 +460,39 @@ class Builder extends BaseEloquentBuilder
         return Schema::connection($this->query->connection->getName())->hasColumns($this->from, $columns);
     }
 
-    public function rawSearch($dslBody)
+    // ----------------------------------------------------------------------
+    // Raw methods
+    // ----------------------------------------------------------------------
+
+    public function rawSearch($dslBody, $options = [])
     {
         $dsl = [
             'index' => $this->query->inferIndex(),
             'body' => $dslBody,
+            ...$options,
         ];
+
         $items = $this->query->processedRaw($dsl);
 
         return $this->hydrate($items);
-
     }
 
-    public function rawAggregation($dslBody)
+    public function rawAggregation($dslBody, $options = []): array
     {
         $dsl = [
             'index' => $this->query->inferIndex(),
             'body' => $dslBody,
+            ...$options,
         ];
 
-        $results = $this->query->raw($dsl);
+        $results = $this->query->raw($dsl)->asArray();
 
         return $results['aggregations'] ?? [];
     }
 
-    public function rawDsl($dsl)
+    public function rawDsl($dsl): array
     {
-        return $this->query->raw($dsl);
+        return $this->query->raw($dsl)->asArray();
     }
 
     // ----------------------------------------------------------------------

@@ -2021,6 +2021,16 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    public function raw($value): Elasticsearch
+    {
+        return $this->connection->raw($value);
+    }
+
+    public function processedRaw($dsl): ?array
+    {
+        return $this->processor->processRaw($this, $this->connection->raw($dsl));
+    }
+
     // ----------------------------------------------------------------------
     // Internal Operations
     // ----------------------------------------------------------------------
@@ -2049,10 +2059,5 @@ class Builder extends BaseBuilder
         $suffix = $this->options()->get('suffix', '');
 
         return $prefix.$table.$suffix;
-    }
-
-    public function processedRaw($dsl): ?array
-    {
-        return $this->processor->processRaw($this, $this->connection->raw($dsl));
     }
 }
