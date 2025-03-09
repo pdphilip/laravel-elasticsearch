@@ -204,6 +204,16 @@ class Grammar extends BaseGrammar
         if (! $dsl->getBodyValue(['query'])) {
             $dsl->unsetBody(['query']);
         }
+        if ($query->pitId) {
+            $dsl->setBody(['pit', 'id'], $query->pitId);
+            $dsl->unsetOption(['index']);
+            $dsl->setBody(['pit', 'keep_alive'], $query->keepAlive);
+            $dsl->appendOption(['body', 'sort'], DslFactory::sortByShardDoc());
+        }
+
+        if ($query->afterKey) {
+            $dsl->setBody(['search_after'], $query->afterKey);
+        }
 
         return $dsl->getDsl();
     }
@@ -670,7 +680,6 @@ class Grammar extends BaseGrammar
 
                     $column = '_geo_distance';
                     break;
-
                 default:
                     $orderSettings = [
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
@@ -1280,26 +1289,6 @@ class Grammar extends BaseGrammar
         return $dsl->getDsl();
     }
 
-    /**
-     * @throws BuilderException
-     */
-    public function compilePitSelect(Builder $query)
-    {
-        $dsl = new DslBuilder;
-        $selectDsl = $this->compileSelect($query);
-        $dsl->loadDsl($selectDsl);
-        $dsl->setBody(['pit', 'id'], $query->pitId);
-        $dsl->setBody(['pit', 'keep_alive'], $query->keepAlive);
-        $dsl->appendOption(['body', 'sort'], ['_shard_doc' => ['order' => 'asc']]);
-        if ($query->afterKey) {
-            $dsl->setBody(['search_after'], $query->afterKey);
-        }
-        $dsl->unsetOption(['index']);
-
-        return $dsl->getDsl();
-
-    }
-
     public function compileClosePit(Builder $query)
     {
         $dsl = new DslBuilder;
@@ -1425,7 +1414,6 @@ class Grammar extends BaseGrammar
         if ($textField == '_id' || $textField == 'id') {
             return '_id';
         }
-
         // Checks if there is a mapping_map set for this field and return is ahead of a mapping check.
         if (! empty($mappingMap = $builder->options()->get('mapping_map')) && $mappingMap[$textField]) {
             return $mappingMap[$textField];

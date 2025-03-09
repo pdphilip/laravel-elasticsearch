@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Query;
 use Closure;
 use DateTimeInterface;
 use Elastic\Elasticsearch\Response\Elasticsearch;
+use Generator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
@@ -61,7 +62,7 @@ class Builder extends BaseBuilder
 
     public mixed $pitId = null;
 
-    public string $keepAlive = '5m';
+    public string $keepAlive = '1m';
 
     public mixed $afterKey = null;
 
@@ -84,8 +85,6 @@ class Builder extends BaseBuilder
 
     protected array $mapping = [];
 
-    protected $savedIds = [];
-
     protected $parentId;
 
     protected $results;
@@ -94,6 +93,8 @@ class Builder extends BaseBuilder
     protected $resultsOffset;
 
     protected $routing;
+
+    public $cursorMeta = [];
 
     protected ?MetaDTO $metaTransfer = null;
 
@@ -559,7 +560,7 @@ class Builder extends BaseBuilder
     /**
      * Get a generator for the given query.
      *
-     * @return \Generator
+     * @return Generator
      */
     public function cursor($scrollTimeout = '30s')
     {
@@ -747,6 +748,43 @@ class Builder extends BaseBuilder
         }
 
         return true;
+    }
+
+    /**
+     * @throws BuilderException
+     */
+    public function chunkByPit($count, callable $callback, $keepAlive = '1m'): bool
+    {
+
+        $this->keepAlive = $keepAlive;
+        $pitId = $this->openPit();
+
+        $searchAfter = null;
+        $page = 1;
+        do {
+            $clone = clone $this;
+            $clone->viaPit($pitId, $searchAfter);
+            $results = $clone->getPit();
+            $searchAfter = $results->getAfterKey();
+            $countResults = $results->count();
+
+            if ($countResults == 0) {
+                break;
+            }
+
+            if ($callback($results, $page) === false) {
+                return true;
+            }
+
+            unset($results);
+
+            $page++;
+        } while ($countResults == $count);
+
+        $this->closePit($pitId);
+
+        return true;
+
     }
 
     // ======================================================================
@@ -2044,7 +2082,7 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function after($afterKey): self
+    public function searchAfter($afterKey): self
     {
         $this->afterKey = $afterKey;
 
@@ -2074,26 +2112,15 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @throws BuilderException
+     * Apply PIT and get()
      */
     public function getPit($columns = ['*']): ElasticCollection
     {
         if (! $this->pitId) {
             $this->openPit();
         }
-        $original = $this->columns;
 
-        if (is_null($original)) {
-            $this->columns = $columns;
-        }
-
-        $results = $this->processor->processSelect($this, $this->connection->select($this->grammar->compilePitSelect($this)));
-
-        $this->columns = $original;
-        $collection = ElasticCollection::make($results);
-        $collection->setQueryMeta($this->metaTransfer);
-
-        return $collection;
+        return $this->get($columns);
 
     }
 
@@ -2106,6 +2133,45 @@ class Builder extends BaseBuilder
         $this->withPitId(null);
 
         return $didClose;
+    }
+
+    public function initCursorMeta($cursor): array
+    {
+        $this->cursorMeta = [
+            'pit_id' => null,
+            'page' => 1,
+            'pages' => 0,
+            'records' => 0,
+            'sort_history' => [],
+            'next_sort' => null,
+            'ts' => 0,
+        ];
+
+        if (! empty($cursor)) {
+            $this->cursorMeta = [
+                'pit_id' => $cursor->parameter('pit_id'),
+                'page' => $cursor->parameter('page'),
+                'pages' => $cursor->parameter('pages'),
+                'records' => $cursor->parameter('records'),
+                'sort_history' => $cursor->parameter('sort_history'),
+                'next_sort' => $cursor->parameter('next_sort'),
+                'ts' => $cursor->parameter('ts'),
+            ];
+        }
+
+        return $this->cursorMeta;
+    }
+
+    public function setCursorMeta($cursorPagination)
+    {
+        $this->cursorMeta = $cursorPagination;
+
+        return $this;
+    }
+
+    public function getCursorMeta()
+    {
+        return $this->cursorMeta;
     }
 
     // ----------------------------------------------------------------------

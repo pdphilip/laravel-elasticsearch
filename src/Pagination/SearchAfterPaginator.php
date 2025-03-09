@@ -16,12 +16,7 @@ class SearchAfterPaginator extends CursorPaginator
      */
     public function getParametersForItem($item): array
     {
-        $cursor = $item->getMeta()->getCursor();
-        $search_after = $item->getMeta()->getSort();
-        $cursor['page']++;
-        $cursor['next_sort'] = $search_after;
-
-        return $cursor;
+        return [];
     }
 
     public function toArray(): array
@@ -38,19 +33,50 @@ class SearchAfterPaginator extends CursorPaginator
             'total' => $this->totalRecords(),
             'from' => $this->showingFrom(),
             'to' => $this->showingTo(),
-            'last_page' => $this->lastPage(),
+            'last_page' => $this->totalPages(),
 
         ];
     }
 
+    public function nextCursor(): ?Cursor
+    {
+        if (! $this->hasMore) {
+            return null;
+        }
+        if (! $this->cursor) {
+            $current = $this->cursorMeta();
+        } else {
+            $current = $this->cursor->toArray();
+        }
+        $current['page']++;
+        $current['next_sort'] = $this->searchAfter();
+
+        return new Cursor($current, true);
+    }
+
+    public function cursorMeta(): array
+    {
+        return $this->options['cursorMeta'];
+    }
+
+    public function searchAfter(): array
+    {
+        return $this->options['searchAfter'];
+    }
+
     public function currentPageNumber(): int
     {
-        return $this->options['currentPage'];
+        return $this->cursorMeta()['page'];
     }
 
     public function totalRecords(): int
     {
-        return $this->options['records'];
+        return $this->cursorMeta()['records'];
+    }
+
+    public function totalPages()
+    {
+        return $this->cursorMeta()['pages'];
     }
 
     public function showingFrom(): int
@@ -69,11 +95,6 @@ class SearchAfterPaginator extends CursorPaginator
         $perPage = $this->perPage();
 
         return (($currentPage - 1) * $perPage) + $records;
-    }
-
-    public function lastPage(): int
-    {
-        return $this->options['totalPages'];
     }
 
     //  Builds the cursor for the previous page
@@ -97,6 +118,6 @@ class SearchAfterPaginator extends CursorPaginator
     protected function setItems($items): void
     {
         $this->items = $items instanceof Collection ? $items : Collection::make($items);
-        $this->hasMore = $this->options['currentPage'] < $this->options['totalPages'];
+        $this->hasMore = $this->currentPageNumber() < $this->totalPages();
     }
 }

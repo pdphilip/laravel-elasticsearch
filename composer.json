@@ -82,10 +82,10 @@
     ],
     "lint": "pint -v",
     "types": "phpstan analyse --ansi --memory-limit=2G",
-    "pest": "pest --colors=always",
+    "pest": "pest --colors=always --default-time-limit=600",
     "test:lint": "pint --test -v",
     "test:types": "phpstan analyse --ansi",
-    "test:unit": "pest --colors=always",
+    "test:unit": "pest --colors=always --default-time-limit=600",
     "test": [
       "@test:lint",
       "@test:types",

@@ -160,15 +160,18 @@ class Connection extends BaseConnection
 
     public function setOptions(): void
     {
+        $this->allowIdSort = $this->config['options']['allow_id_sort'] ?? false;
+
+        $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
+
         if (isset($this->config['options']['ssl_verification'])) {
             $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
 
-        $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
-
         if (! empty($this->config['options']['retires'])) {
             $this->options()->add('retires', $this->config['options']['retires']);
         }
+
         if (isset($this->config['options']['meta_header'])) {
             $this->options()->add('meta_header', $this->config['options']['meta_header']);
         }
@@ -176,8 +179,6 @@ class Connection extends BaseConnection
         if (isset($this->config['options']['default_limit'])) {
             $this->defaultQueryLimit = $this->config['options']['default_limit'];
         }
-        $this->allowIdSort = $this->config['options']['allow_id_sort'] ?? false;
-
     }
 
     /**

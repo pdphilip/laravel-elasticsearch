@@ -6,13 +6,20 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Closure;
 use Exception;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\Eloquent\Builder as BaseEloquentBuilder;
+use Illuminate\Pagination\Cursor;
+use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Iterator;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
+use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
+use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
@@ -141,7 +148,7 @@ class Builder extends BaseEloquentBuilder
     /**
      * {@inheritdoc}
      */
-    public function get($columns = ['*'])
+    public function get($columns = ['*']): ElasticCollection
     {
         if (! is_array($columns)) {
             $columns = [$columns];
@@ -279,9 +286,8 @@ class Builder extends BaseEloquentBuilder
     /**
      * @throws BuilderException
      */
-    public function chunkByPit($count, callable $callback, $keepAlive = '5m'): bool
+    public function chunkByPit($count, callable $callback, $keepAlive = '1m'): bool
     {
-
         $this->query->keepAlive = $keepAlive;
         $pitId = $this->query->openPit();
 
@@ -311,6 +317,65 @@ class Builder extends BaseEloquentBuilder
 
         return true;
 
+    }
+
+    /**
+     *  Using Laravel base method name rather
+     *
+     * @throws BindingResolutionException
+     * @throws RuntimeException
+     */
+    public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null): SearchAfterPaginator
+    {
+        if ($perPage < 2) {
+            throw new RuntimeException('Cursor pagination requires a perPage value greater than 1');
+        }
+        if (! $cursor instanceof Cursor) {
+            $cursor = is_string($cursor) ? Cursor::fromEncoded($cursor) : CursorPaginator::resolveCurrentCursor('cursor', $cursor);
+        }
+        $this->query->limit($perPage);
+        $this->query->initCursorMeta($cursor);
+        $cursorMeta = $this->processCursorPaginator($perPage);
+        $search = $this->get($columns);
+        $searchAfter = $search->getAfterKey();
+
+        return $this->searchAfterPaginator($search, $perPage, $cursor, [
+            'path' => Paginator::resolveCurrentPath(),
+            'cursorName' => $cursorName,
+            'cursorMeta' => $cursorMeta,
+            'searchAfter' => $searchAfter,
+        ]);
+    }
+
+    protected function processCursorPaginator($perPage): array
+    {
+        $cursor = $this->query->getCursorMeta();
+        $age = time() - $cursor['ts'];
+        $ttl = 300; // 5 minutes
+        $expired = $age > $ttl;
+        if (! $cursor['pit_id'] || $expired) {
+            $cursor['pit_id'] = $this->query->openPit();
+            $clone = $this->clone();
+            $cursor['records'] = $clone->count();
+            $cursor['pages'] = (int) ceil($cursor['records'] / $perPage);
+        }
+        $cursor['ts'] = time();
+        if ($cursor['next_sort'] && ! in_array($cursor['next_sort'], $cursor['sort_history'])) {
+            $cursor['sort_history'][] = $cursor['next_sort'];
+            $this->query->searchAfter($cursor['next_sort']);
+        }
+        $this->query->withPitId($cursor['pit_id']);
+        $this->query->setCursorMeta($cursor);
+
+        return $cursor;
+    }
+
+    /**
+     * @throws BindingResolutionException
+     */
+    protected function searchAfterPaginator($items, $perPage, $cursor, $options)
+    {
+        return Container::getInstance()->makeWith(SearchAfterPaginator::class, compact('items', 'perPage', 'cursor', 'options'));
     }
 
     /**

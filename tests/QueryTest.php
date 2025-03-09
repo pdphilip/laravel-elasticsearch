@@ -369,7 +369,7 @@ it('uses cursor pagination', function () {
     expect($results->count())->toBe(2)
         ->and($results->first()->age)->toBe(37)
         ->and($results->first()->title)->toBeNull();
-})->todo(['Upgrade to use PIT']);
+});
 
 it('aggregates results by age', function () {
 

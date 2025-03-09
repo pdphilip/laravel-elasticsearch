@@ -77,7 +77,7 @@ test('Prefix', function () {
     $connection = new Connection($config);
 
     expect($connection->getIndexPrefix())->toBe('prefix_');
-})->todo();
+});
 
 test('Schema Builder', function () {
     $schema = DB::connection('elasticsearch')->getSchemaBuilder();
