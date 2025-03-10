@@ -177,6 +177,17 @@ class DslFactory
         ];
     }
 
+    public static function innerNested(string $path, array $query, array $innerHits = []): array
+    {
+        return [
+            'nested' => [
+                'path' => $path,
+                'query' => $query,
+                'inner_hits' => $innerHits,
+            ],
+        ];
+    }
+
     public static function regexp(string $field, string $value, array $options = []): array
     {
         return [

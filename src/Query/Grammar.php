@@ -107,7 +107,6 @@ class Grammar extends BaseGrammar
 
         // Set refresh option
         $dsl->setRefresh($query->getOption('refresh', true));
-
         // Return the built DSL
         return $dsl->getDsl();
     }
@@ -144,7 +143,6 @@ class Grammar extends BaseGrammar
         $compiledOrders = [];
         if ($query->orders) {
             $compiledOrders = $this->compileOrders($query, $query->orders);
-
         }
         if ($query->sorts) {
             $compiledOrders = $this->compileSorts($query, $query->sorts, $compiledOrders);
@@ -484,6 +482,43 @@ class Grammar extends BaseGrammar
         $query = DslFactory::nested($path, $wheres, $options);
 
         return $this->applyOptionsToClause($query, $where);
+    }
+
+    /**
+     * Compile a where nested clause
+     *
+     * @param  array  $where
+     *
+     * @throws BuilderException
+     */
+    protected function compileWhereInnerNested(Builder $builder, $where): array
+    {
+        // Compile the inner filter
+        $innerQuery = $where['query'];
+        $query = $this->compileWheres($innerQuery);
+        $innerHits = [];
+        $compiledOrders = [];
+        if ($innerQuery->orders) {
+            $compiledOrders = $this->compileOrders($innerQuery, $innerQuery->orders);
+        }
+        if ($innerQuery->sorts) {
+            $compiledOrders = $this->compileSorts($innerQuery, $innerQuery->sorts, $compiledOrders);
+        }
+        if ($compiledOrders) {
+            $innerHits['sort'] = $compiledOrders;
+        }
+
+        if ($innerQuery->offset) {
+            $innerHits['from'] = $innerQuery->offset;
+        }
+        if ($size = $innerQuery->getSetLimit()) {
+            $innerHits['size'] = $size;
+        } else {
+            $innerHits['size'] = 100;
+        }
+
+        return DslFactory::innerNested($where['column'], $query['query'], $innerHits);
+
     }
 
     /**

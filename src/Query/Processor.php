@@ -408,7 +408,6 @@ class Processor extends BaseProcessor
     {
         $this->rawResponse = $result;
         $this->query = $query;
-
         return ! $this->getRawResponse()['errors'];
     }
 

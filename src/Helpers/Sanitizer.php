@@ -98,4 +98,16 @@ final class Sanitizer
 
         return $highlights;
     }
+
+    public static function prependParentFieldIfNotPresent($field, $parentField = null)
+    {
+        if (! $parentField) {
+            return $field;
+        }
+        if (Str::contains($field, $parentField.'.')) {
+            return $field;
+        }
+
+        return $parentField.'.'.$field;
+    }
 }
