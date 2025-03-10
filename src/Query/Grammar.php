@@ -295,6 +295,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile a general where clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereBasic(Builder $builder, array $where): array
     {
@@ -313,6 +315,7 @@ class Grammar extends BaseGrammar
             $query = DslFactory::exists($field, $options);
 
         } elseif (in_array($where['operator'], ['like', 'not like'])) {
+            $field = $this->getIndexableField($field, $builder);
             $wildcardValue = str_replace('%', '*', $value);
             // Add wildcards to if not present
             if (! Str::contains($wildcardValue, '*')) {
@@ -336,6 +339,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile an in clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereIn(Builder $builder, array $where, $not = false): array
     {
@@ -349,6 +354,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile a null clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereExists(Builder $builder, array $where): array
     {
@@ -359,6 +366,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile a date clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereDate(Builder $builder, array $where): array
     {
@@ -497,6 +506,9 @@ class Grammar extends BaseGrammar
         return DslFactory::parentId($type, $id, $options);
     }
 
+    /**
+     * @throws BuilderException
+     */
     protected function compileWherePrefix(Builder $builder, array $where): array
     {
         $field = $this->getIndexableField($where['column'], $builder);
@@ -513,6 +525,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile a date clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereRegex(Builder $builder, array $where): array
     {
@@ -572,6 +586,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile a term clause
+     *
+     * @throws BuilderException
      */
     protected function compileWhereTerm(Builder $builder, array $where): array
     {
@@ -709,6 +725,9 @@ class Grammar extends BaseGrammar
         return $compiledOrders;
     }
 
+    /**
+     * @throws BuilderException
+     */
     protected function compileSorts(Builder $builder, $sorts, $compiledOrders): array
     {
         foreach ($sorts as $column => $sort) {
@@ -1205,6 +1224,8 @@ class Grammar extends BaseGrammar
 
     /**
      * Compile terms aggregation
+     *
+     * @throws BuilderException
      */
     protected function compileTermsAggregation(Builder $builder, array $aggregation): array
     {
