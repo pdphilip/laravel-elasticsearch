@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query;
 
+use Carbon\Carbon;
 use Closure;
 use DateTimeInterface;
 use Elastic\Elasticsearch\Response\Elasticsearch;
+use Exception;
 use Generator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
@@ -19,6 +21,7 @@ use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
+use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
@@ -144,9 +147,7 @@ class Builder extends BaseBuilder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
     {
-
         [$column, $operator, $value, $boolean, $options] = $this->extractOptionsWithOperator('Where', $column, $operator, $value, $boolean, $options);
-
         parent::where($column, $operator, $value, $boolean)->applyOptions($options);
 
         return $this;
@@ -796,6 +797,33 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
 
     /**
+     * @throws LogicException
+     */
+    public function whereTimestamp($column, $operator, $value = null, $boolean = 'and', $options = [])
+    {
+        [$column, $operator, $value, $boolean, $options] = $this->extractOptionsWithOperator('Where', $column, $operator, $value, $boolean, $options);
+        [$value, $operator] = $this->prepareValueAndOperator(
+            $value,
+            $operator,
+            func_num_args() == 2
+        );
+        $value = $this->prepareTimestamp($value);
+        $value = (int) $value;
+        $type = 'Date';
+        $this->wheres[] = compact('column', 'operator', 'value', 'type', 'boolean', 'options');
+
+        return $this;
+    }
+
+    /**
+     * @throws LogicException
+     */
+    public function orWhereTimestamp($column, $operator, $value = null, $options = [])
+    {
+        return $this->whereTimestamp($column, $operator, $value, 'or', $options);
+    }
+
+    /**
      * Add a "where weekday" statement to the query.
      *
      * @param  string  $column
@@ -1229,8 +1257,9 @@ class Builder extends BaseBuilder
      *
      * @param  array|Closure  $options
      */
-    public function search(string $query, string $type = 'best_fields', ?array $columns = null, mixed $options = [], bool $not = false, string $boolean = 'and'): self
+    public function search(string $query, string $type = 'best_fields', mixed $columns = null, mixed $options = [], bool $not = false, string $boolean = 'and'): self
     {
+        [$columns, $options] = $this->extractSearch($columns, $options);
         $options = $this->setOptions($options, 'search');
         $options->asType($type);
         if ($columns) {
@@ -1251,22 +1280,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:best_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-best-fields
 
-    public function searchTerm($query, ?array $columns = null, $options = [])
+    public function searchTerm($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'best_fields', $columns, $options);
     }
 
-    public function orSearchTerm($query, ?array $columns = null, $options = [])
+    public function orSearchTerm($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'best_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTerm($query, ?array $columns = null, $options = [])
+    public function searchNotTerm($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'best_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTerm($query, ?array $columns = null, $options = [])
+    public function orSearchNotTerm($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'best_fields', $columns, $options, true, 'or');
     }
@@ -1274,22 +1303,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:most_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-most-fields
 
-    public function searchTermMost($query, ?array $columns = null, $options = [])
+    public function searchTermMost($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'most_fields', $columns, $options);
     }
 
-    public function orSearchTermMost($query, ?array $columns = null, $options = [])
+    public function orSearchTermMost($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'most_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTermMost($query, ?array $columns = null, $options = [])
+    public function searchNotTermMost($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'most_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTermMost($query, ?array $columns = null, $options = [])
+    public function orSearchNotTermMost($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'most_fields', $columns, $options, true, 'or');
     }
@@ -1297,22 +1326,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:cross_fields
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-cross-fields
 
-    public function searchTermCross($query, ?array $columns = null, $options = [])
+    public function searchTermCross($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'cross_fields', $columns, $options);
     }
 
-    public function orSearchTermCross($query, ?array $columns = null, $options = [])
+    public function orSearchTermCross($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'cross_fields', $columns, $options, false, 'or');
     }
 
-    public function searchNotTermCross($query, ?array $columns = null, $options = [])
+    public function searchNotTermCross($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'cross_fields', $columns, $options, true);
     }
 
-    public function orSearchNotTermCross($query, ?array $columns = null, $options = [])
+    public function orSearchNotTermCross($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'cross_fields', $columns, $options, true, 'or');
     }
@@ -1320,22 +1349,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:phrase
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
 
-    public function searchPhrase($phrase, ?array $columns = null, $options = [])
+    public function searchPhrase($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase', $columns, $options);
     }
 
-    public function orSearchPhrase($phrase, ?array $columns = null, $options = [])
+    public function orSearchPhrase($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase', $columns, $options, false, 'or');
     }
 
-    public function searchNotPhrase($phrase, ?array $columns = null, $options = [])
+    public function searchNotPhrase($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase', $columns, $options, true);
     }
 
-    public function orSearchNotPhrase($phrase, ?array $columns = null, $options = [])
+    public function orSearchNotPhrase($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase', $columns, $options, true, 'or');
     }
@@ -1343,22 +1372,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:phrase_prefix
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
 
-    public function searchPhrasePrefix($phrase, ?array $columns = null, $options = [])
+    public function searchPhrasePrefix($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase_prefix', $columns, $options);
     }
 
-    public function orSearchPhrasePrefix($terms, ?array $columns = null, $options = [])
+    public function orSearchPhrasePrefix($terms, mixed $columns = null, $options = [])
     {
         return $this->search($terms, 'phrase_prefix', $columns, $options, false, 'or');
     }
 
-    public function searchNotPhrasePrefix($phrase, ?array $columns = null, $options = [])
+    public function searchNotPhrasePrefix($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase_prefix', $columns, $options, true);
     }
 
-    public function orSearchNotPhrasePrefix($phrase, ?array $columns = null, $options = [])
+    public function orSearchNotPhrasePrefix($phrase, mixed $columns = null, $options = [])
     {
         return $this->search($phrase, 'phrase_prefix', $columns, $options, true, 'or');
     }
@@ -1366,22 +1395,22 @@ class Builder extends BaseBuilder
     // Multi Match query with type:bool_prefix
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-bool-prefix
 
-    public function searchBoolPrefix($query, ?array $columns = null, $options = [])
+    public function searchBoolPrefix($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'bool_prefix', $columns, $options);
     }
 
-    public function orSearchBoolPrefix($query, ?array $columns = null, $options = [])
+    public function orSearchBoolPrefix($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'bool_prefix', $columns, $options, false, 'or');
     }
 
-    public function searchNotBoolPrefix($query, ?array $columns = null, $options = [])
+    public function searchNotBoolPrefix($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'bool_prefix', $columns, $options, true);
     }
 
-    public function orSearchNotBoolPrefix($query, ?array $columns = null, $options = [])
+    public function orSearchNotBoolPrefix($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
     }
@@ -1423,6 +1452,13 @@ class Builder extends BaseBuilder
         ];
 
         return $this->orderBy($column, $direction, $options);
+    }
+
+    public function withSort(string $column, $key, $value): self
+    {
+        $this->sorts[$column] = [$key => $value];
+
+        return $this;
     }
 
     // ----------------------------------------------------------------------
@@ -2202,5 +2238,55 @@ class Builder extends BaseBuilder
         $suffix = $this->options()->get('suffix', '');
 
         return $prefix.$table.$suffix;
+    }
+
+    private function prepareTimestamp($value): string|int
+    {
+        if (is_numeric($value)) {
+            // Convert to integer in case it's a string
+            $value = (int) $value;
+            // Check for milliseconds
+            if ($value > 10000000000) {
+                return $value;
+            }
+
+            // ES expects seconds as a string
+            return (string) Carbon::createFromTimestamp($value)->timestamp;
+        }
+
+        // If it's not numeric, assume it's a date string and try to return TS as a string
+        try {
+            return (string) Carbon::parse($value)->timestamp;
+        } catch (Exception $e) {
+            throw new LogicException('Invalid date or timestamp');
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // V4 Backwards Compatibility
+    // ----------------------------------------------------------------------
+
+    /**
+     * @deprecated v5.0.0
+     * @see whereGeoDistance()
+     */
+    public function filterGeoPoint($field, $distance, $geoPoint)
+    {
+        return $this->whereGeoDistance($field, $geoPoint, $distance);
+
+    }
+
+    /**
+     * @deprecated v5.0.0
+     * @see whereGeoBoundsIn()
+     */
+    public function filterGeoBox($field, $topLeft, $bottomRight)
+    {
+        $bounds = [
+            'top_left' => $topLeft,
+            'bottom_right' => $bottomRight,
+        ];
+
+        return $this->whereGeoBoundsIn($field, $bounds);
     }
 }

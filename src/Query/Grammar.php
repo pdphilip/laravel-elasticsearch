@@ -141,11 +141,17 @@ class Grammar extends BaseGrammar
         if ($compiled['postFilter']) {
             $dsl->setBody(['post_filter'], $compiled['postFilter']);
         }
-
+        $compiledOrders = [];
         if ($query->orders) {
-            $dsl->setBody(['sort'], $this->compileOrders($query, $query->orders));
-        }
+            $compiledOrders = $this->compileOrders($query, $query->orders);
 
+        }
+        if ($query->sorts) {
+            $compiledOrders = $this->compileSorts($query, $query->sorts, $compiledOrders);
+        }
+        if ($compiledOrders) {
+            $dsl->setBody(['sort'], $compiledOrders);
+        }
         if ($query->highlight) {
             $dsl->setBody(['highlight'], $this->compileHighlight($query, $query->highlight));
         }
@@ -307,8 +313,11 @@ class Grammar extends BaseGrammar
             $query = DslFactory::exists($field, $options);
 
         } elseif (in_array($where['operator'], ['like', 'not like'])) {
-            $field = $this->getIndexableField($field, $builder);
             $wildcardValue = str_replace('%', '*', $value);
+            // Add wildcards to if not present
+            if (! Str::contains($wildcardValue, '*')) {
+                $wildcardValue = '*'.$wildcardValue.'*';
+            }
             $query = DslFactory::wildcard($field, $wildcardValue, $options);
 
         } elseif (in_array($where['operator'], array_keys($operatorsMap))) {
@@ -700,6 +709,28 @@ class Grammar extends BaseGrammar
         return $compiledOrders;
     }
 
+    protected function compileSorts(Builder $builder, $sorts, $compiledOrders): array
+    {
+        foreach ($sorts as $column => $sort) {
+            $found = false;
+            $column = $this->getIndexableField($column, $builder);
+            if ($compiledOrders) {
+                foreach ($compiledOrders as $i => $compiledOrder) {
+                    if (array_key_exists($column, $compiledOrder)) {
+                        $compiledOrders[$i][$column] = array_merge($compiledOrder[$column], $sort);
+                        $found = true;
+                        break;
+                    }
+                }
+            }
+            if (! $found) {
+                $compiledOrders[] = [$column => $sort];
+            }
+        }
+
+        return $compiledOrders;
+    }
+
     /**
      * Compile the highlight section of a query
      *
@@ -723,13 +754,14 @@ class Grammar extends BaseGrammar
         ];
 
         $compiledHighlights = $this->getAllowedOptions($highlight['options'], $allowedArgs);
-
         foreach ($highlight['column'] as $column => $value) {
 
             if (is_array($value)) {
                 $compiledHighlights['fields'][] = [$column => $value];
             } elseif ($value != '*') {
                 $compiledHighlights['fields'][] = [$value => (object) []];
+            } else {
+                $compiledHighlights['fields'][] = ['*' => (object) []];
             }
 
         }

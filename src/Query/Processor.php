@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
+use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 
 class Processor extends BaseProcessor
 {
@@ -306,10 +307,9 @@ class Processor extends BaseProcessor
 
         $document = $result['_source'];
         $document['_id'] = $result['_id'];
-
         $meta = ['_index' => $result['_index'], '_score' => $result['_score'] ?? null];
         if (! empty($result['highlight'])) {
-            $meta['highlight'] = $result['highlight'];
+            $meta['highlight'] = Sanitizer::clearKeywordsFromHighlights($result['highlight']);
         }
 
         $document['_meta'] = $this->metaFromResult($meta);

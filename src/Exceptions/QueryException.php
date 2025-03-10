@@ -12,9 +12,25 @@ final class QueryException extends Exception
 {
     private int $errorLimit = 10;
 
-    public function __construct(Exception $previous)
+    protected array $details = [];
+
+    public function __construct(Exception $previous, $dsl = [])
     {
+        $previousClass = get_class($previous);
+        $errorMsg = $previous->getMessage();
+        $errorCode = $previous->getCode();
+        $decoded = $this->_decodeError($errorMsg);
+        $details = [
+            'error' => $decoded['msg'],
+            'details' => $decoded['data'],
+            'code' => $errorCode,
+            'exception' => $previousClass,
+            'dsl' => $dsl,
+            'original' => $errorMsg,
+        ];
+
         parent::__construct($this->formatMessage($previous), $previous->code);
+        $this->details = $details;
     }
 
     /**
@@ -137,5 +153,46 @@ final class QueryException extends Exception
         $message->push(...$error['error']['script_stack']);
 
         return $message->implode(PHP_EOL);
+    }
+
+    private function _decodeError($error): array
+    {
+        $return['msg'] = $error;
+        $return['data'] = [];
+        $jsonStartPos = strpos($error, ': ') + 2;
+        $response = ($error);
+        $title = substr($response, 0, $jsonStartPos);
+        $jsonString = substr($response, $jsonStartPos);
+        if ($this->_isJson($jsonString)) {
+            $errorArray = json_decode($jsonString, true);
+        } else {
+            $errorArray = [$jsonString];
+        }
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $errorReason = $errorArray['error']['reason'] ?? null;
+            if (! $errorReason) {
+                return $return;
+            }
+            $return['msg'] = $title.$errorReason;
+            $cause = $errorArray['error']['root_cause'][0]['reason'] ?? null;
+            if ($cause) {
+                $return['msg'] .= ' - '.$cause;
+            }
+
+            $return['data'] = $errorArray;
+        }
+
+        return $return;
+    }
+
+    private function _isJson($string): bool
+    {
+        return json_validate($string);
+    }
+
+    public function getDetails(): array
+    {
+        return $this->details;
     }
 }

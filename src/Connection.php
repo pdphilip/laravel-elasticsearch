@@ -393,7 +393,7 @@ class Connection extends BaseConnection
 
             return $this->connection->getMappings($index);
         } catch (Exception $e) {
-            throw new QueryException($e);
+            throw new QueryException($e, compact('index', 'body'));
         }
     }
 
@@ -670,7 +670,7 @@ class Connection extends BaseConnection
         try {
             $result = $callback($query, $bindings);
         } catch (Exception $e) {
-            throw new QueryException($e);
+            throw new QueryException($e, $query);
         }
 
         return $result;

@@ -90,11 +90,9 @@ final class ModelMeta
     {
         if ($this->highlights) {
             $this->_mergeFlatKeysIntoNestedArray($data, $this->highlights);
-
-            return (object) $data;
         }
 
-        return null;
+        return (object) $data;
     }
 
     public function toArray(): array

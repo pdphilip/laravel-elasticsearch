@@ -4,6 +4,7 @@ namespace PDPhilip\Elasticsearch\Helpers;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 final class Sanitizer
 {
@@ -80,5 +81,21 @@ final class Sanitizer
         }
 
         return $groups;
+    }
+
+    public static function clearKeywordsFromHighlights($highlights)
+    {
+        foreach ($highlights as $key => $highlight) {
+            if (Str::contains($key, '.keyword')) {
+                $parentField = str_replace('.keyword', '', $key);
+                if (empty($highlights[$parentField])) {
+                    $highlights[$parentField] = $highlight;
+                }
+                unset($highlights[$key]);
+            }
+
+        }
+
+        return $highlights;
     }
 }

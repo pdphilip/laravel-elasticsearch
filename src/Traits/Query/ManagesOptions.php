@@ -70,6 +70,30 @@ trait ManagesOptions
         return [$column, $value, $not, $boolean, $options];
     }
 
+    public function extractSearch($columns = null, $options = []): array
+    {
+        if ($options) {
+            return [$columns, $options];
+        }
+        if (is_callable($columns)) {
+            $options = $columns;
+            $columns = null;
+
+            return [$columns, $options];
+        }
+        if (is_array($columns)) {
+            $isOptions = $this->validatePossibleOptions($columns, 'search');
+            if ($isOptions) {
+                $options = $columns;
+                $columns = null;
+
+                return [$columns, $options];
+            }
+        }
+
+        return [$columns, $options];
+    }
+
     protected function extractOptionsFull($type, $column, $operator, $value, $boolean, $not, $options = []): array
     {
         if (is_callable($column)) {
@@ -171,5 +195,24 @@ trait ManagesOptions
             'nested' => NestedOptions::class,
             default => null
         };
+    }
+
+    protected function validatePossibleOptions(array $data, $type): bool
+    {
+        $optionClass = $this->returnAllowedOptions($type);
+        $keys = array_keys($data);
+        if ($keys) {
+            $valid = true;
+            foreach ($keys as $key) {
+                if (! in_array($key, $optionClass)) {
+                    $valid = false;
+                }
+            }
+
+            return $valid;
+        }
+
+        return false;
+
     }
 }
