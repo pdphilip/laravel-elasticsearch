@@ -64,6 +64,8 @@ class Builder extends BaseBuilder
 
     public array $sorts = [];
 
+    public array $bodyParameters = [];
+
     public mixed $pitId = null;
 
     public string $keepAlive = '1m';
@@ -131,15 +133,22 @@ class Builder extends BaseBuilder
 
     /**
      * Force the query to only return distinct results.
-     *
-     * @return $this
      */
-    public function distinct(bool $includeCount = false)
+    public function distinct(mixed $columns = [], bool $includeCount = false)
     {
-        $this->distinctCount = $includeCount;
+        $original = $this->columns ?? [];
+
+        $withCount = $includeCount;
+        if (is_bool($columns)) {
+            $withCount = $columns;
+        } elseif ($columns) {
+            $columns = Arr::wrap($columns);
+            $this->columns = array_merge($original, $columns);
+        }
+        $this->distinctCount = $withCount;
         $this->distinct = true;
 
-        return $this;
+        return $this->get();
     }
 
     /**
@@ -441,8 +450,6 @@ class Builder extends BaseBuilder
      */
     public function orderByDesc($column, array $options = [])
     {
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
-
         return $this->orderBy($column, 'desc', $options);
     }
 
@@ -460,8 +467,8 @@ class Builder extends BaseBuilder
 
             return $this;
         }
-
-        $type = isset($options['type']) ? $options['type'] : 'basic';
+        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
+        $type = $options['type'] ?? 'basic';
 
         $this->orders[] = compact('column', 'direction', 'type', 'options');
 
@@ -603,12 +610,17 @@ class Builder extends BaseBuilder
     public function count($columns = null, array $options = []): int
     {
         // If columns are specified, we will aggregate the count of the specified columns.
-        if ($columns) {
-            return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-        }
+        //        if ($columns) {
+        //            return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+        //        }
 
         // Otherwise, we will just count the records.
         return $this->connection->count($this->grammar->compileCount($this));
+    }
+
+    public function agg(array $functions, string $column, array $options = [])
+    {
+        return $this->aggregateMultiMetric($functions, $column, $options);
     }
 
     /**
@@ -1468,6 +1480,64 @@ class Builder extends BaseBuilder
         return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
     }
 
+    // Convenience methods for search
+
+    public function searchFuzzy($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'best_fields', $columns, $options);
+    }
+
+    public function orSearchFuzzy($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'best_fields', $columns, $options, false, 'or');
+    }
+
+    public function searchNotFuzzy($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'best_fields', $columns, $options, true);
+    }
+
+    public function orSearchNotFuzzy($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'best_fields', $columns, $options, true, 'or');
+    }
+
+    public function searchFuzzyPrefix($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'bool_prefix', $columns, $options);
+    }
+
+    public function orSearchFuzzyPrefix($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or');
+    }
+
+    public function searchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'bool_prefix', $columns, $options, true);
+    }
+
+    public function orSearchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
+    {
+        $options['fuzziness'] = 'AUTO';
+
+        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
+    }
+
     // ----------------------------------------------------------------------
     // Ordering
     // ----------------------------------------------------------------------
@@ -1694,6 +1764,21 @@ class Builder extends BaseBuilder
         foreach ($columns as $column) {
             $this->metricsAggregations[] = [
                 'key' => $column,
+                'args' => $column,
+                'type' => $function,
+                'options' => $options,
+            ];
+        }
+
+        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
+    }
+
+    protected function aggregateMultiMetric(array $functions, string $column, $options = [])
+    {
+        // Each column we want aggregated
+        foreach ($functions as $function) {
+            $this->metricsAggregations[] = [
+                'key' => $function.'_'.$column,
                 'args' => $column,
                 'type' => $function,
                 'options' => $options,
@@ -2263,6 +2348,33 @@ class Builder extends BaseBuilder
     public function getCursorMeta()
     {
         return $this->cursorMeta;
+    }
+
+    // ----------------------------------------------------------------------
+    // Body Parameter Methods
+    // ----------------------------------------------------------------------
+
+    public function excludeFields(string|array $fields)
+    {
+        $fields = Arr::wrap($fields);
+        $fieldCsv = implode(',', $fields);
+        $this->bodyParameters['_source_excludes'] = $fieldCsv;
+
+        return $this;
+    }
+
+    public function withMinScore(float $val)
+    {
+        $this->bodyParameters['min_score'] = $val;
+
+        return $this;
+    }
+
+    public function withAnalyzer(string $analyzer)
+    {
+        $this->bodyParameters['analyzer'] = $analyzer;
+
+        return $this;
     }
 
     // ----------------------------------------------------------------------

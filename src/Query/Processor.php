@@ -180,13 +180,15 @@ class Processor extends BaseProcessor
     {
         $key = $metricsAggregation['key'];
         $type = $metricsAggregation['type'];
+        $cleanKey = str_replace($type.'_', '', $key);
+
         if ($this->query->distinct) {
             return ['distinct' => $this->processDistinctAggregation($bucket, $type)];
         }
 
         $result = $this->extractAggResult($type, $bucket, $key);
 
-        return ["{$type}_{$key}" => $result];
+        return ["{$type}_{$cleanKey}" => $result];
     }
 
     protected function extractAggResult($type, $bucket, $key)

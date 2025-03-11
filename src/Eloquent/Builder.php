@@ -440,6 +440,20 @@ class Builder extends BaseEloquentBuilder
     // Aggregations
     // ----------------------------------------------------------------------
 
+    /**
+     *  Distinct executes Nested Term Aggs on the specified column(s)
+     */
+    public function distinct(mixed $columns = [], bool $includeCount = false): ElasticCollection
+    {
+        $elasticQueryCollection = $this->query->distinct($columns, $includeCount);
+        $eloquentCollection = $this->model->hydrate(
+            $elasticQueryCollection->all()
+        );
+
+        return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
+
+    }
+
     public function min($column, array $options = [])
     {
         return $this->hydrateAggregationResult($this->query->min($column, $options));
@@ -510,6 +524,11 @@ class Builder extends BaseEloquentBuilder
     public function stringStats($columns, $options = [])
     {
         return $this->hydrateAggregationResult($this->query->stringStats($columns, $options));
+    }
+
+    public function agg(array $functions, string $column, array $options = [])
+    {
+        return $this->hydrateAggregationResult($this->query->agg($functions, $column, $options));
     }
 
     protected function hydrateAggregationResult($result)

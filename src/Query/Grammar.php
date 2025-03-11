@@ -30,7 +30,6 @@ class Grammar extends BaseGrammar
      */
     public function compileInsert($query, array $values): array
     {
-
         $dsl = new DslBuilder;
 
         if (! isset($values[0])) {
@@ -176,6 +175,11 @@ class Grammar extends BaseGrammar
 
         if (isset($query->columns)) {
             $dsl->setSource($query->columns);
+        }
+        if ($query->bodyParameters) {
+            foreach ($query->bodyParameters as $name => $parameter) {
+                $dsl->setBody([$name], $parameter);
+            }
         }
 
         // Distinct and Aggregations
@@ -1517,6 +1521,10 @@ class Grammar extends BaseGrammar
         if ($textField == '_id' || $textField == 'id') {
             return '_id';
         }
+        if (in_array($textField, ['_count', '_score'])) {
+            return $textField;
+        }
+
         // Checks if there is a mapping_map set for this field and return is ahead of a mapping check.
         if (! empty($mappingMap = $builder->options()->get('mapping_map')) && $mappingMap[$textField]) {
             return $mappingMap[$textField];

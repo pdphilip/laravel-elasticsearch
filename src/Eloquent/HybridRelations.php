@@ -40,7 +40,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphOne($related, $name, $type = null, $id = null, $localKey = null): MorphOne
+    public function morphOne($related, $name, $type = null, $id = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
         if (! Model::isElasticsearchModel($related)) {
@@ -78,7 +78,7 @@ trait HybridRelations
     /**
      * {@inheritDoc}
      */
-    public function morphMany($related, $name, $type = null, $id = null, $localKey = null): MorphMany
+    public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
     {
 
         // Check if it is a relation with an original model.
