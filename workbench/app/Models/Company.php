@@ -38,7 +38,7 @@ class Company extends Model
 
     protected $connection = 'elasticsearch';
 
-    //model definition =====================================
+    // model definition =====================================
     public static $statuses = [
 
         1 => [
@@ -50,7 +50,7 @@ class Company extends Model
 
     ];
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function users()
     {

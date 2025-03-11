@@ -14,7 +14,7 @@ function createCompanyData($companies = 1, $photosPerCompany = 5, $logsPerCompan
 {
     $i = 0;
     while ($i < $companies) {
-        //Build the data for this test
+        // Build the data for this test
         $cf = new CompanyFactory;
         $company = $cf->makeOne();
         $company->save();
@@ -26,7 +26,7 @@ function createCompanyData($companies = 1, $photosPerCompany = 5, $logsPerCompan
         $avatar->imageable_type = Company::class;
         $avatar->save();
 
-        //We can collect and bulk insert to save time.
+        // We can collect and bulk insert to save time.
         $photos = collect();
 
         $photoLog = Photo::factory($photosPerCompany)->state([

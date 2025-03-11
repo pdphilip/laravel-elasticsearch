@@ -155,7 +155,7 @@ test('Meta', function () {
 });
 
 test('Get', function () {
-    //this also test bulk insert yay!
+    // this also test bulk insert yay!
     Product::insert([
         ['name' => 'John Doe'],
         ['name' => 'Jane Doe'],
@@ -168,7 +168,7 @@ test('Get', function () {
 });
 
 test('First', function () {
-    //this also test bulk insert yay!
+    // this also test bulk insert yay!
     Product::insert([
         ['name' => 'John Doe'],
         ['name' => 'Jane Doe'],
@@ -308,7 +308,7 @@ test('Dot Notation', function () {
     $this->assertEquals('Paris', $product->{'manufacturer.name'});
 
     // Fill
-    //TODO: Fix this it's not working correctly
+    // TODO: Fix this it's not working correctly
     //    $product->fill(['manufacturer.name' => 'Strasbourg']);
     //
     //    $this->assertEquals('Strasbourg', $product['manufacturer.name']);

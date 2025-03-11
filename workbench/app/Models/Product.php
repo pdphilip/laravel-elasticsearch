@@ -88,7 +88,7 @@ class Product extends Model
         return $avg;
     }
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function user(): \PDPhilip\Elasticsearch\Relations\BelongsTo
     {

@@ -7,11 +7,11 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 use Workbench\App\Models\Product;
 
 it('re-indexs data', function () {
-    //Drop the Schema
+    // Drop the Schema
     Schema::deleteIfExists('products');
     Schema::deleteIfExists('holding_products');
 
-    //Create the Schema For this data set before each test
+    // Create the Schema For this data set before each test
     $productsSchema = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
         $index->text('name');
         $index->float('price');
@@ -62,7 +62,7 @@ it('re-indexs data', function () {
     Schema::connection('elasticsearch')->deleteIfExists('products');
     expect(Schema::connection('elasticsearch')->hasIndex('products'))->toBeFalse();
 
-    //Now let's create the products index again but with proper mapping
+    // Now let's create the products index again but with proper mapping
     $product = Schema::connection('elasticsearch')->create('products', function (IndexBlueprint $index) {
         $index->text('name');
         $index->float('price');
@@ -75,10 +75,10 @@ it('re-indexs data', function () {
     expect(! empty($product['products']['mappings']))->toBeTrue()
         ->and(! empty($product['products']['settings']))->toBeTrue();
 
-    //now we move new to old.
+    // now we move new to old.
     $reindex = Schema::reIndex('holding_products', 'products');
     expect($reindex->getMetaData()->isSuccessful())->toBeTrue();
-    //Sleep to allow ES to catch up
+    // Sleep to allow ES to catch up
     sleep(2);
 
     $countOriginal = DB::connection('elasticsearch')->table('products')->count();
@@ -90,7 +90,7 @@ it('re-indexs data', function () {
     $found = Product::filterGeoPoint('manufacturer.location', '10000km', [0, 0])->get();
     expect($found->isNotEmpty())->toBeTrue();
 
-    //Cleanup
+    // Cleanup
     Schema::deleteIfExists('products');
     Schema::deleteIfExists('holding_products');
 

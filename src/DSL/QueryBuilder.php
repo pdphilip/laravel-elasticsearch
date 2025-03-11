@@ -22,9 +22,9 @@ trait QueryBuilder
     //
     //    protected static array $clauseOperators = ['ne', 'gt', 'gte', 'lt', 'lte', 'between', 'not_between', 'like', 'not_like', 'exists', 'regex'];
 
-    //======================================================================
+    // ======================================================================
     // Parameter builders
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws ParameterException
@@ -195,9 +195,9 @@ trait QueryBuilder
         return ['and' => [$wheres, $clause]];
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Parsers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * @throws ParameterException
@@ -514,7 +514,7 @@ trait QueryBuilder
                     case 'multiple':
                     case 'searchOptions':
 
-                        //Pass through
+                        // Pass through
                         break;
                     default:
                         throw new ParameterException('Unexpected option: '.$key);
@@ -537,7 +537,7 @@ trait QueryBuilder
             $options = array_merge($options, $body);
         }
         if (! empty($options['sort'])) {
-            //ensure that the sort field is prefixed with the nested field
+            // ensure that the sort field is prefixed with the nested field
             $sorts = [];
             foreach ($options['sort'] as $sort) {
                 foreach ($sort as $sortField => $sortPayload) {

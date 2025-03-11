@@ -36,7 +36,7 @@ class UserProfile extends Eloquent
 
     protected $connection = 'elasticsearch';
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function user()
     {

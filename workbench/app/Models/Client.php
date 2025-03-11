@@ -35,7 +35,7 @@ class Client extends Model
     use HasFactory;
     use HybridRelations;
 
-    //model definition =====================================
+    // model definition =====================================
     public static $statuses = [
 
         1 => [
@@ -47,7 +47,7 @@ class Client extends Model
 
     ];
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function clientLogs()
     {

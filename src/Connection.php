@@ -71,7 +71,7 @@ class Connection extends BaseConnection
 
     protected bool $sslVerification = true;
 
-    protected ?int $retires = null; //null will use default
+    protected ?int $retires = null; // null will use default
 
     protected mixed $elasticMetaHeader = null;
 
@@ -155,9 +155,9 @@ class Connection extends BaseConnection
         $this->client = null;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Getters
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /** {@inheritdoc} */
     public function getTablePrefix(): ?string
@@ -264,9 +264,9 @@ class Connection extends BaseConnection
         return new Schema\Grammar;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Setters
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function setIndex(string $index): string
     {

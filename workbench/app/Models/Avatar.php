@@ -33,7 +33,7 @@ class Avatar extends Model
 
     protected $connection = 'elasticsearch';
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function imageable()
     {

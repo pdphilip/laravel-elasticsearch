@@ -169,9 +169,9 @@ class Builder extends BaseBuilder
         return $this->cursor;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Querying Executors
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function all($columns = []): ElasticCollection
     {
@@ -440,9 +440,9 @@ class Builder extends BaseBuilder
 
         return $this->connection->toDsl($wheres, $options, $columns);
     }
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // ES query executors
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function search($columns = '*'): ElasticCollection
     {
@@ -467,9 +467,9 @@ class Builder extends BaseBuilder
         }
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     //  Query Processing (Connection API)
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}
@@ -479,9 +479,9 @@ class Builder extends BaseBuilder
         return new self($this->connection, $this->processor);
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Clause Operators
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function wherePhrase($column, $value, $boolean = 'and'): static
     {
@@ -638,9 +638,9 @@ class Builder extends BaseBuilder
         return $this->whereRegex($column, $expression, 'or');
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Clause Operators (full text search)
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function searchFor($value, $columns = ['*'], $options = [], $boolean = 'and'): static
     {
@@ -785,9 +785,9 @@ class Builder extends BaseBuilder
         return $this->searchBoolPrefix($term, $fields, $options, 'or');
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Clause Operators options (full text search)
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = []): static
     {
@@ -872,9 +872,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Options
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritDoc}
@@ -974,7 +974,7 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //Filters
+    // Filters
 
     public function groupBy(...$groups): Builder
     {
@@ -1044,9 +1044,9 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // ES Search query methods
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function searchQuery($term, $boostFactor = null, $clause = null, $type = 'term'): void
     {
@@ -1145,9 +1145,9 @@ class Builder extends BaseBuilder
         $this->searchOptions['highlight'] = $highlight;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Index/Schema
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /**
      * {@inheritdoc}
      */
@@ -1217,9 +1217,9 @@ class Builder extends BaseBuilder
         return Schema::connection($this->connection->getName())->hasIndex($this->index);
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // PIT API
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function openPit($keepAlive = '5m'): string
     {
@@ -1241,9 +1241,9 @@ class Builder extends BaseBuilder
         return $this->connection->closePit($id);
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Processors
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * @return ElasticCollection|LazyElasticCollection|void
@@ -1306,7 +1306,7 @@ class Builder extends BaseBuilder
             $find = $this->connection->find($wheres, $options, $columns);
         }
 
-        //Else Normal find query
+        // Else Normal find query
         if ($find->isSuccessful()) {
             $data = $find->data;
             if ($returnLazy) {
@@ -1357,9 +1357,9 @@ class Builder extends BaseBuilder
         return 0;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Compilers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     protected function compileWheres(): array
     {
         $wheres = $this->wheres ?: [];
@@ -1376,7 +1376,7 @@ class Builder extends BaseBuilder
             foreach ($wheres as $where) {
                 if ($where['boolean'] == 'or') {
                     $or[] = $and;
-                    //clear AND for the next bucket
+                    // clear AND for the next bucket
                     $and = [];
                 }
 
@@ -1384,7 +1384,7 @@ class Builder extends BaseBuilder
                 $and[] = $result;
             }
             if ($or) {
-                //Add the last AND bucket
+                // Add the last AND bucket
                 $or[] = $and;
                 foreach ($or as $and) {
                     $compiledWheres['or'][] = $this->_prepAndBucket($and);
@@ -1409,9 +1409,9 @@ class Builder extends BaseBuilder
         }
         if ($this->limit) {
             $options['limit'] = $this->limit;
-            //Check if it's first() with no ordering,
-            //Set order to created_at -> asc for consistency
-            //TODO
+            // Check if it's first() with no ordering,
+            // Set order to created_at -> asc for consistency
+            // TODO
         }
         if ($this->cursor) {
             $options['_meta']['cursor'] = $this->cursor;
@@ -1471,9 +1471,9 @@ class Builder extends BaseBuilder
 
         return $final;
     }
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Parsers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     protected function _parseWhereBasic(array $where): array
     {
@@ -1611,7 +1611,7 @@ class Builder extends BaseBuilder
 
     protected function _parseWhereDate(array $where): array
     {
-        //return a normal where clause
+        // return a normal where clause
         return $this->_parseWhereBasic($where);
     }
 
@@ -1730,9 +1730,9 @@ class Builder extends BaseBuilder
         return $result;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Pagination overrides
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}
@@ -1762,9 +1762,9 @@ class Builder extends BaseBuilder
         ])->setAggregate('count', $this->withoutSelectAliases($columns))->get()->all();
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Helpers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     private function _attachOption($key, $value): void
     {
@@ -1837,9 +1837,9 @@ class Builder extends BaseBuilder
         }
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Disabled Methods
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}

@@ -24,7 +24,7 @@ class Bridge
 
     protected ?string $errorLogger;
 
-    protected ?int $maxSize = 10; //ES default
+    protected ?int $maxSize = 10; // ES default
 
     private ?string $index;
 
@@ -44,9 +44,9 @@ class Bridge
         $this->errorLogger = $this->connection->getErrorLoggingIndex();
     }
 
-    //======================================================================
+    // ======================================================================
     // PIT
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws QueryException
@@ -88,7 +88,7 @@ class Bridge
         if (empty($params['body']['sort'])) {
             $params['body']['sort'] = [];
         }
-        //order catch by shard doc
+        // order catch by shard doc
         $params['body']['sort'][] = ['_shard_doc' => ['order' => 'asc']];
 
         if ($searchAfter) {
@@ -126,9 +126,9 @@ class Bridge
         return $res['succeeded'];
     }
 
-    //======================================================================
+    // ======================================================================
     // BYO Query
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws Exception
@@ -187,9 +187,9 @@ class Bridge
         return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag(__FUNCTION__));
     }
 
-    //======================================================================
+    // ======================================================================
     // To DSL
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws QueryException
@@ -209,9 +209,9 @@ class Bridge
         return $this->buildSearchParams($this->index, $searchParams, $searchOptions, $wheres, $opts, $fields, $cols);
     }
 
-    //======================================================================
+    // ======================================================================
     // Find/Search Queries
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws QueryException
@@ -238,13 +238,13 @@ class Bridge
         try {
             $process = $this->client->get($params);
         } catch (ClientResponseException $e) {
-            //if the error is a 404 continue, else throw it
+            // if the error is a 404 continue, else throw it
             if ($e->getCode() !== 404) {
                 $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
             }
 
         } catch (Exception $e) {
-            //Something else went wrong, throw it
+            // Something else went wrong, throw it
             $this->_throwError($e, $params, $this->_queryTag(__FUNCTION__));
         }
 
@@ -291,9 +291,9 @@ class Bridge
         return $this->_sanitizeSearchResponse($process, $params, $this->_queryTag($source));
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Distinct
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -325,7 +325,7 @@ class Bridge
             if (! empty($response['aggregations'])) {
                 $data = $this->_sanitizeDistinctResponse($response['aggregations'], $columns, $includeDocCount);
             }
-            //process limit and skip from all results
+            // process limit and skip from all results
             if ($skip || $limit) {
                 $data = array_slice($data, $skip, $limit);
             }
@@ -336,9 +336,9 @@ class Bridge
         return $this->_return($data, $response, $params, $this->_queryTag(__FUNCTION__));
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Write Queries
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * @throws QueryException
@@ -513,7 +513,7 @@ class Bridge
      */
     public function processIncrementMany($wheres, $newValues, $options, $refresh): Results
     {
-        //TODO INC on nested objects - maybe
+        // TODO INC on nested objects - maybe
 
         $incField = '';
         foreach ($newValues['inc'] as $field => $incValue) {
@@ -551,9 +551,9 @@ class Bridge
         return $this->_return($resultData, $resultMeta, $params, $this->_queryTag(__FUNCTION__));
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Delete Queries
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * @throws QueryException
@@ -589,9 +589,9 @@ class Bridge
         return $this->_return($response['deleteCount'], $response, $params, $this->_queryTag(__FUNCTION__));
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Index administration
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * @throws ClientResponseException
@@ -786,9 +786,9 @@ class Bridge
 
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Aggregates
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /**
      * @throws QueryException
      * @throws ParameterException
@@ -956,9 +956,9 @@ class Bridge
         return $this->_return($data, $meta, $params, $queryTag);
     }
 
-    //======================================================================
+    // ======================================================================
     // Distinct Aggregates
-    //======================================================================
+    // ======================================================================
 
     public function processDistinctAggregate($function, $wheres, $options, $columns): Results
     {
@@ -1111,9 +1111,9 @@ class Bridge
         $this->_throwError(new Exception('Matrix distinct aggregate not supported', 500), [], $this->_queryTag(__FUNCTION__));
     }
 
-    //======================================================================
+    // ======================================================================
     // Helpers
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws QueryException
@@ -1130,11 +1130,11 @@ class Bridge
         $keywordFields = $this->cachedKeywordFields;
 
         if ($keywordFields->isEmpty()) {
-            //No keyword fields
+            // No keyword fields
             return null;
         }
         if ($keywordFields->has($field)) {
-            //Field is a keyword
+            // Field is a keyword
             return $field;
         }
         if ($keywordFields->has($field.'.keyword')) {
@@ -1145,9 +1145,9 @@ class Bridge
         return null;
     }
 
-    //======================================================================
+    // ======================================================================
     // Private & Sanitization methods
-    //======================================================================
+    // ======================================================================
 
     private function _return($data, $meta, $params, $queryTag): Results
     {
@@ -1178,7 +1178,7 @@ class Bridge
         }
 
         if (! $response || $softDeleted) {
-            //Was not found
+            // Was not found
             $result = $this->_return($data, [], $params, $queryTag);
             $result->setError($data['_id'].' not found', 404);
 
@@ -1250,7 +1250,7 @@ class Bridge
                     }
                 }
 
-                //Meta data
+                // Meta data
                 if (! empty($hit['highlight'])) {
                     $datum['_meta']['highlights'] = $this->_sanitizeHighlights($hit['highlight']);
                 }
@@ -1337,7 +1337,7 @@ class Bridge
 
     private function _sanitizeHighlights($highlights)
     {
-        //remove keyword results
+        // remove keyword results
         foreach ($highlights as $field => $vals) {
             if (str_contains($field, '.keyword')) {
                 $cleanField = str_replace('.keyword', '', $field);
@@ -1415,9 +1415,9 @@ class Bridge
         return $mappings->toArray();
     }
 
-    //======================================================================
+    // ======================================================================
     // Error and logging
-    //======================================================================
+    // ======================================================================
 
     /**
      * @throws QueryException
@@ -1461,13 +1461,13 @@ class Bridge
         try {
             $this->client->index($params);
         } catch (Exception $e) {
-            //ignore if problem writing query log
+            // ignore if problem writing query log
         }
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Meta Stasher
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     private function _stashMeta($meta): void
     {

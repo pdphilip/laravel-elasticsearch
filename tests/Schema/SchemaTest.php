@@ -11,36 +11,36 @@ test('create and modify schemas', function () {
     // should clear any existing indices
     Schema::connection('elasticsearch')->deleteIfExists('contacts');
 
-    //should create an index
+    // should create an index
     $contacts = Schema::connection('elasticsearch')->create('contacts', function (IndexBlueprint $index) {
-        //first_name & last_name is automatically added to this field,
-        //you can search by full_name without ever writing to full_name
+        // first_name & last_name is automatically added to this field,
+        // you can search by full_name without ever writing to full_name
         $index->text('first_name')->copyTo('full_name');
         $index->text('last_name')->copyTo('full_name');
         $index->text('full_name');
 
-        //Multiple types => Order matters ::
-        //Top level `email` will be a searchable text field
-        //Sub Property will be a keyword type which can be sorted using orderBy('email.keyword')
+        // Multiple types => Order matters ::
+        // Top level `email` will be a searchable text field
+        // Sub Property will be a keyword type which can be sorted using orderBy('email.keyword')
         $index->text('email');
         $index->keyword('email');
 
-        //Dates have an optional formatting as second parameter
+        // Dates have an optional formatting as second parameter
         $index->date('first_contact', 'epoch_second');
         $index->ip('user_ip');
-        //Objects are defined with dot notation:
+        // Objects are defined with dot notation:
         $index->text('products.name');
         $index->float('products.price')->coerce(false);
 
-        //Disk space considerations ::
-        //Not indexed and not searchable:
+        // Disk space considerations ::
+        // Not indexed and not searchable:
         $index->keyword('internal_notes')->docValues(false);
-        //Remove scoring for search:
+        // Remove scoring for search:
         $index->array('tags')->norms(false);
-        //Remove from index, can't search by this field but can still use for aggregations:
+        // Remove from index, can't search by this field but can still use for aggregations:
         $index->integer('score')->index(false);
 
-        //If null is passed as value, then it will be saved as 'NA' which is searchable
+        // If null is passed as value, then it will be saved as 'NA' which is searchable
         $index->keyword('favorite_color')->nullValue('NA');
 
         $index->nested('meta', [
@@ -58,7 +58,7 @@ test('create and modify schemas', function () {
         ]
         );
 
-        //Alias Example
+        // Alias Example
         $index->text('notes');
         $index->alias('comments', 'notes');
 
@@ -66,15 +66,15 @@ test('create and modify schemas', function () {
         $index->date('created_at');
         $index->date('updated_at');
 
-        //Settings
+        // Settings
         $index->settings('number_of_shards', 3);
         $index->settings('number_of_replicas', 2);
 
-        //Other Mappings
+        // Other Mappings
         $index->map('dynamic', false);
         $index->map('date_detection', false);
 
-        //Custom Mapping
+        // Custom Mapping
         $index->mapProperty('purchase_history', 'flattened');
     });
 
@@ -82,7 +82,7 @@ test('create and modify schemas', function () {
     $this->assertTrue(! empty($contacts['contacts']['settings']));
     $this->assertTrue($contacts['contacts']['mappings']['properties']['meta']['properties']['model']['type'] == 'keyword');
 
-    //should set an analyser
+    // should set an analyser
     $contacts = Schema::connection('elasticsearch')->setAnalyser('contacts', function (AnalyzerBlueprint $settings) {
         $settings->analyzer('my_custom_analyzer')
             ->type('custom')
@@ -107,16 +107,16 @@ test('create and modify schemas', function () {
     });
     $this->assertTrue(! empty($contacts['contacts']['settings']['index']['analysis']['analyzer']['my_custom_analyzer']));
 
-    //should return mappings
+    // should return mappings
     $contacts = Schema::connection('elasticsearch')->getMappings('contacts');
     $this->assertTrue(! empty($contacts['contacts']['mappings']));
 
-    //should return settings
+    // should return settings
 
     $contacts = Schema::connection('elasticsearch')->getSettings('contacts');
     $this->assertTrue(! empty($contacts['contacts']['settings']));
 
-    //should not be able to create an index that already exists
+    // should not be able to create an index that already exists
     try {
         Schema::connection('elasticsearch')->create('contacts', function (IndexBlueprint $index) {
             $index->text('x_name');
@@ -127,13 +127,13 @@ test('create and modify schemas', function () {
         $this->assertTrue(true);
     }
 
-    //should be able to modify an index
+    // should be able to modify an index
     $contacts = Schema::connection('elasticsearch')->modify('contacts', function (IndexBlueprint $index) {
         $index->text('my_favorite_color');
     });
     $this->assertTrue(! empty($contacts['contacts']['mappings']['properties']['my_favorite_color']));
 
-    //should find the index and certain fields
+    // should find the index and certain fields
     $hasIndex = Schema::hasIndex('contacts');
     $this->assertTrue($hasIndex);
     $hasIndex = Schema::hasIndex('contactz');
@@ -156,7 +156,7 @@ test('create and modify schemas', function () {
     ]);
     $this->assertFalse($hasFields);
 
-    //should not be able to delete an index that does not exist
+    // should not be able to delete an index that does not exist
     $deleted = Schema::deleteIfExists('contactz');
     $this->assertFalse($deleted);
     try {
@@ -166,7 +166,7 @@ test('create and modify schemas', function () {
         $this->assertTrue(true);
     }
 
-    //should clean up contacts index
+    // should clean up contacts index
 
     $deleted = Schema::deleteIfExists('contacts');
     $this->assertTrue($deleted);
@@ -196,6 +196,6 @@ it('should create an index will all numeric type mappings', function () {
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_half_float']['type'] == 'half_float');
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_scaled_float']['type'] == 'scaled_float');
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_scaled_float']['scaling_factor'] == 140);
-    //clean up
+    // clean up
     Schema::deleteIfExists('nums_lfg');
 });

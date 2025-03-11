@@ -60,7 +60,7 @@ class Builder extends BaseEloquentBuilder
         'raw',
         'sum',
         'tosql',
-        //ES only:
+        // ES only:
         'matrix',
         'query',
         'rawdsl',
@@ -146,6 +146,7 @@ class Builder extends BaseEloquentBuilder
 
         return $query->update($this->addUpdatedAtColumn($attributes));
     }
+
     public function updateOrCreate(array $attributes, array $values = []): Model
     {
         // Attempt to find an existing instance matching the attributes
@@ -161,6 +162,7 @@ class Builder extends BaseEloquentBuilder
 
         return $instance;
     }
+
     public function updateOrCreateWithoutRefresh(array $attributes, array $values = []): Model
     {
         // Attempt to find an existing instance matching the attributes
@@ -242,7 +244,7 @@ class Builder extends BaseEloquentBuilder
             return $model;
         }
         $model = $this->newModelInstance();
-        $model->_id = $id; //set the id to the model
+        $model->_id = $id; // set the id to the model
 
         return $model;
     }
@@ -300,9 +302,9 @@ class Builder extends BaseEloquentBuilder
         }, $items));
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // ES Filters
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      * {@inheritdoc}
@@ -311,11 +313,11 @@ class Builder extends BaseEloquentBuilder
     {
         $column ??= $this->defaultKeyName();
         $alias ??= $column;
-        //remove sort
+        // remove sort
         $this->query->orders = [];
 
         if ($column === '_id') {
-            //Use PIT
+            // Use PIT
             return $this->_chunkByPit($count, $callback, $keepAlive);
         } else {
             $lastId = null;
@@ -327,7 +329,7 @@ class Builder extends BaseEloquentBuilder
                 if ($countResults == 0) {
                     break;
                 }
-                //@phpstan-ignore-next-line
+                // @phpstan-ignore-next-line
                 if ($callback($results, $page) === false) {
                     return true;
                 }
@@ -382,13 +384,13 @@ class Builder extends BaseEloquentBuilder
         return true;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // ES Search query builders
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     public function chunk(mixed $count, callable $callback, string $keepAlive = '5m'): bool
     {
-        //default to using PIT
+        // default to using PIT
         return $this->_chunkByPit($count, $callback, $keepAlive);
     }
 
@@ -554,9 +556,9 @@ class Builder extends BaseEloquentBuilder
         return $elasticCollection;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Inherited as is but typed
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     /**
      * Create a new instance of the model being queried.
      *
@@ -587,9 +589,9 @@ class Builder extends BaseEloquentBuilder
         return $this->query;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Private methods
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     /**
      *  Using Laravel base method name rather
@@ -599,12 +601,12 @@ class Builder extends BaseEloquentBuilder
     public function cursorPaginate($perPage = null, $columns = ['*'], $cursorName = 'cursor', $cursor = null): SearchAfterPaginator
     {
         if (empty($this->query->orders)) {
-            //try set created_at & updated_at
+            // try set created_at & updated_at
             if (! $this->inferSort()) {
                 throw new MissingOrderException;
             }
         } elseif (count($this->query->orders) === 1) {
-            //try set a tie-breaker with created_at & updated_at
+            // try set a tie-breaker with created_at & updated_at
             $this->inferSort();
         }
 
@@ -615,7 +617,7 @@ class Builder extends BaseEloquentBuilder
         $this->query->limit($perPage);
         $cursorPayload = $this->query->initCursor($cursor);
         $age = time() - $cursorPayload['ts'];
-        $ttl = 300; //5 minutes
+        $ttl = 300; // 5 minutes
         if ($age > $ttl) {
             // cursor is older than 5m, let's refresh it
             $clone = $this->clone();

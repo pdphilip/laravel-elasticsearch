@@ -35,7 +35,7 @@ class ClientProfile extends Eloquent
 
     public $connection = 'elasticsearch';
 
-    //Relationships  =====================================
+    // Relationships  =====================================
 
     public function client()
     {

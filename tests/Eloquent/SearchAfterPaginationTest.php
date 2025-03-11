@@ -11,7 +11,7 @@ it('can paginate a large amount of records', function () {
 
     Post::truncate();
 
-    //Generate a massive amount of data to paginate over.
+    // Generate a massive amount of data to paginate over.
     $collectionToInsert = collect([]);
     $numberOfEntries = 25000;
     for ($i = 1; $i <= $numberOfEntries; $i++) {
@@ -65,7 +65,7 @@ it('can paginate a small amount of records', function () {
 
     Post::truncate();
 
-    //Generate a massive amount of data to paginate over.
+    // Generate a massive amount of data to paginate over.
     $collectionToInsert = collect([]);
     $numberOfEntries = 100;
     for ($i = 1; $i <= $numberOfEntries; $i++) {

@@ -281,7 +281,7 @@ abstract class Model extends BaseModel
         $this->mergeAttributesFromCachedCasts();
 
         $query = $this->newModelQuery();
-        //@phpstan-ignore-next-line
+        // @phpstan-ignore-next-line
         $query->setRefresh(false);
 
         if ($this->exists) {
@@ -406,7 +406,7 @@ abstract class Model extends BaseModel
 
         $parentRelation = $this->getParentRelation();
         if ($parentRelation instanceof Relation) {
-            //@phpstan-ignore-next-line
+            // @phpstan-ignore-next-line
             unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
         }
 
@@ -429,9 +429,9 @@ abstract class Model extends BaseModel
         $this->parentRelation = $relation;
     }
 
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
     // Helpers
-    //----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
 
     protected function isGuardableColumn($key): bool
     {
