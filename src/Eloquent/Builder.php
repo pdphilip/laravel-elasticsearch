@@ -147,7 +147,7 @@ class Builder extends BaseEloquentBuilder
         return $query->update($this->addUpdatedAtColumn($attributes));
     }
 
-    public function updateOrCreate(array $attributes, array $values = []): Model
+    public function updateOrCreate(array $attributes, array $values = []): Model|\Illuminate\Database\Eloquent\Model
     {
         // Attempt to find an existing instance matching the attributes
         $instance = $this->firstWhere($attributes);
@@ -163,7 +163,7 @@ class Builder extends BaseEloquentBuilder
         return $instance;
     }
 
-    public function updateOrCreateWithoutRefresh(array $attributes, array $values = []): Model
+    public function updateOrCreateWithoutRefresh(array $attributes, array $values = []): Model|\Illuminate\Database\Eloquent\Model
     {
         // Attempt to find an existing instance matching the attributes
         $instance = $this->firstWhere($attributes);

@@ -34,6 +34,7 @@ trait QueriesRelationships
     ): Builder|static {
         if (is_string($relation)) {
             if (str_contains($relation, '.')) {
+                // @phpstan-ignore-next-line
                 return $this->hasNested($relation, $operator, $count, $boolean, $callback);
             }
 
