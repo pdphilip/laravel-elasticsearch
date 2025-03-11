@@ -624,6 +624,11 @@ class Connection extends BaseConnection
         );
     }
 
+    public function count($params): int
+    {
+        return $this->connection->count($params);
+    }
+
     /**
      * Run an update statement against the database.
      *

@@ -185,7 +185,8 @@ class Builder extends BaseEloquentBuilder
      */
     public function count($columns = '*'): int
     {
-        return $this->toBase()->getCountForPagination($columns);
+        //        return $this->toBase()->getCountForPagination($columns);
+        return $this->query->count($columns);
     }
 
     /**

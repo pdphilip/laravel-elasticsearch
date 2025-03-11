@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query;
 
-use _PHPStan_e52dec71a\Symfony\Component\String\Exception\RuntimeException;
 use Carbon\Carbon;
 use Closure;
 use DateTimeInterface;
@@ -23,6 +22,7 @@ use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
+use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
@@ -597,10 +597,18 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritdoc}
+     *
+     * @throws BuilderException
      */
-    public function count($columns = '*', array $options = [])
+    public function count($columns = null, array $options = []): int
     {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+        // If columns are specified, we will aggregate the count of the specified columns.
+        if ($columns) {
+            return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
+        }
+
+        // Otherwise, we will just count the records.
+        return $this->connection->count($this->grammar->compileCount($this));
     }
 
     /**
@@ -666,6 +674,7 @@ class Builder extends BaseBuilder
         if (! $batch) {
             $values = [$values];
         }
+
         return $this->processor->processInsert($this, $this->connection->insert($this->grammar->compileInsert($this, $values)));
     }
 

@@ -29,6 +29,11 @@ class ElasticClient
         return $this->client->search($params);
     }
 
+    public function count(array $params = []): int
+    {
+        return $this->client->count($params)->asArray()['count'] ?? 0;
+    }
+
     /**
      * @throws ClientResponseException
      * @throws ServerResponseException

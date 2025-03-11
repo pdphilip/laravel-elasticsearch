@@ -107,6 +107,7 @@ class Grammar extends BaseGrammar
 
         // Set refresh option
         $dsl->setRefresh($query->getOption('refresh', true));
+
         // Return the built DSL
         return $dsl->getDsl();
     }
@@ -114,6 +115,20 @@ class Grammar extends BaseGrammar
     // ======================================================================
     // Read
     // ======================================================================
+
+    /**
+     * @throws BuilderException
+     */
+    public function compileCount($query)
+    {
+        $dsl = new DslBuilder;
+        $dsl->setIndex($query->getFrom());
+        $compiled = $this->compileWheres($query);
+        $query = ! empty($compiled['query']) ? $compiled['query'] : DslFactory::matchAll();
+        $dsl->setBody(['query'], $query);
+
+        return $dsl->getDsl();
+    }
 
     /**
      * Compile a select statement
