@@ -40,10 +40,7 @@ class Builder extends BaseEloquentBuilder
     protected $model;
 
     protected $passthru = [
-        'aggregate',
         'average',
-        'avg',
-        'count',
         'dd',
         'ddrawsql',
         'doesntexist',
@@ -63,29 +60,13 @@ class Builder extends BaseEloquentBuilder
         'insertorignore',
         'insertusing',
         'insertorignoreusing',
-        'max',
-        'min',
         'raw',
         'rawvalue',
-        'sum',
         'tosql',
         'torawsql',
 
         // ES
         'todsl',
-        'rawsearch',
-
-        // ES Metric Aggregations
-        'stats',
-        'extendedstats',
-        'medianabsolutedeviation',
-        'percentiles',
-        'stringstats',
-        'cardinality',
-        'matrix',
-        'boxplot',
-
-        // ES Bucket Aggregations
         'bucket',
         'bucketAggregation',
     ];

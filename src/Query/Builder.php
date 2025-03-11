@@ -604,8 +604,6 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritdoc}
-     *
-     * @throws BuilderException
      */
     public function count($columns = null, array $options = []): int
     {
@@ -757,8 +755,6 @@ class Builder extends BaseBuilder
 
     /**
      * {@inheritdoc}
-     *
-     * @throws BuilderException
      */
     public function chunk($count, callable $callback, $scrollTimeout = '30s')
     {
@@ -783,9 +779,6 @@ class Builder extends BaseBuilder
         return true;
     }
 
-    /**
-     * @throws BuilderException
-     */
     public function chunkByPit($count, callable $callback, $keepAlive = '1m'): bool
     {
 
@@ -828,9 +821,6 @@ class Builder extends BaseBuilder
     // Wheres (targeting a field)
     // ----------------------------------------------------------------------
 
-    /**
-     * @throws LogicException
-     */
     public function whereTimestamp($column, $operator, $value = null, $boolean = 'and', $options = [])
     {
         [$column, $operator, $value, $boolean, $options] = $this->extractOptionsWithOperator('Where', $column, $operator, $value, $boolean, $options);
@@ -847,9 +837,6 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    /**
-     * @throws LogicException
-     */
     public function orWhereTimestamp($column, $operator, $value = null, $options = [])
     {
         return $this->whereTimestamp($column, $operator, $value, 'or', $options);
@@ -1202,8 +1189,6 @@ class Builder extends BaseBuilder
      * @param  string  $column
      * @param  callable|BaseBuilder|static  $query
      * @param  string  $boolean
-     *
-     * @throws Exception
      */
     public function whereNestedObject($column, $query, $innerHits = true, $options = [], $boolean = 'and', $not = false): self
     {
@@ -1221,25 +1206,16 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    /**
-     * @throws Exception
-     */
     public function orWhereNestedObject($column, $query, $innerHits = true, $options = []): self
     {
         return $this->whereNestedObject($column, $query, $innerHits, $options, 'or');
     }
 
-    /**
-     * @throws Exception
-     */
     public function whereNotNestedObject($column, $query, $innerHits = true, $options = []): self
     {
         return $this->whereNestedObject($column, $query, $innerHits, $options, 'and', true);
     }
 
-    /**
-     * @throws Exception
-     */
     public function orWhereNotNestedObject($column, $query, $innerHits = true, $options = []): self
     {
         return $this->whereNestedObject($column, $query, $innerHits, $options, 'or', true);

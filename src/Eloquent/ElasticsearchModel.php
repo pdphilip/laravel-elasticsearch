@@ -21,8 +21,6 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  * @property object $withHighlights
  *
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
- * @mixin Builder
- * @mixin Model
  */
 trait ElasticsearchModel
 {
