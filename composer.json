@@ -24,7 +24,7 @@
     "illuminate/container": "^10.0|^11.0",
     "illuminate/database": "^10.0|^11.0",
     "illuminate/events": "^10.0|^11.0",
-    "elasticsearch/elasticsearch": "^8.15"
+    "elasticsearch/elasticsearch": "^8.17"
   },
   "require-dev": {
     "orchestra/testbench": "^9.0.0||^8.22.0",
@@ -82,11 +82,12 @@
     ],
     "lint": "pint -v",
     "types": "phpstan analyse --ansi --memory-limit=2G",
-    "pest": "pest --colors=always --default-time-limit=600",
+    "pest": "pest --colors=always",
     "test:lint": "pint --test -v",
     "test:types": "phpstan analyse --ansi",
-    "test:unit": "pest --colors=always --default-time-limit=600",
+    "test:unit": "pest --colors=always",
     "test": [
+      "Composer\\Config::disableProcessTimeout",
       "@test:lint",
       "@test:types",
       "@test:unit"
