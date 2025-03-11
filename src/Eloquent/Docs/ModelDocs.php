@@ -9,6 +9,7 @@ use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
 use PDPhilip\Elasticsearch\Collection\ElasticCollection;
+use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use PDPhilip\Elasticsearch\Query\Builder;
@@ -93,7 +94,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  *
  * Index Methods ---------------------------------
  * @method static string getQualifiedKeyName()
- * @method static string getConnection()
+ * @method static Connection getConnection()
  * @method static void truncate()
  * @method static bool indexExists()
  * @method static bool deleteIndexIfExists()
