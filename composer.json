@@ -83,6 +83,7 @@
     "lint": "pint -v",
     "types": "phpstan analyse --ansi --memory-limit=2G",
     "pest": "pest --colors=always",
+    "pest-ids": "pest --colors=always  --configuration phpunit.ids.xml",
     "test:lint": "pint --test -v",
     "test:types": "phpstan analyse --ansi",
     "test:unit": "pest --colors=always",
