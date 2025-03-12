@@ -4,26 +4,32 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Relations;
 
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\MorphTo as BaseMorphTo;
 
 class MorphTo extends BaseMorphTo
 {
     /** {@inheritdoc} */
-    public function addConstraints(): void
+    public function addConstraints()
     {
         if (static::$constraints) {
-            $this->query->where($this->ownerKey, '=', $this->getForeignKeyFrom($this->parent));
+            // For belongs to relationships, which are essentially the inverse of has one
+            // or has many relationships, we need to actually query on the primary key
+            // of the related models matching on the foreign key that's on a parent.
+            $this->query->where(
+                $this->ownerKey ?? $this->getForeignKeyName(),
+                '=',
+                $this->getForeignKeyFrom($this->parent),
+            );
         }
     }
 
     /** {@inheritdoc} */
-    protected function getResultsByType($type): Collection
+    protected function getResultsByType($type)
     {
         $instance = $this->createModelByType($type);
 
-        $key = $instance->getKeyName();
+        $key = $this->ownerKey ?? $instance->getKeyName();
 
         $query = $instance->newQuery();
 

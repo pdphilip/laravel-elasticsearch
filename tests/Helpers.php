@@ -18,7 +18,7 @@ function createCompanyData($companies = 1, $photosPerCompany = 5, $logsPerCompan
         $cf = new CompanyFactory;
         $company = $cf->makeOne();
         $company->save();
-        $companyId = $company->_id;
+        $companyId = $company->id;
 
         $avatar = new Avatar;
         $avatar->url = $company->name.'_pic.jpg';

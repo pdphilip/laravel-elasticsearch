@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests;
 
-use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as Orchestra;
 use PDPhilip\Elasticsearch\ElasticServiceProvider;
-use Workbench\Database\Seeders\DatabaseSeeder;
-
-use function Orchestra\Testbench\workbench_path;
 
 class TestCase extends Orchestra
 {
-    use WithWorkbench;
-
     protected function getPackageProviders($app): array
     {
         return [
@@ -22,25 +16,18 @@ class TestCase extends Orchestra
         ];
     }
 
-    /**
-     * Define database migrations.
-     */
-    protected function defineDatabaseMigrations(): void
-    {
-        // Testing migrations are located in workbench database/migrations
-        $this->loadMigrationsFrom(
-            workbench_path('database/migrations')
-        );
-    }
-
-    protected function defineDatabaseSeeders(): void
-    {
-        $this->seed(DatabaseSeeder::class);
-    }
-
     protected function getEnvironmentSetUp($app): void
     {
-        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.default', 'elasticsearch');
+
+        $app['config']->set('database.connections.sqlite', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'charset' => 'utf8',
+            'collation' => 'utf8_unicode_ci',
+            'prefix' => '',
+        ]);
+
         $app['config']->set('database.connections.elasticsearch', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
@@ -49,6 +36,7 @@ class TestCase extends Orchestra
                 'logging' => true,
             ],
         ]);
+
         $app['config']->set('database.connections.elasticsearch_unsafe', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',

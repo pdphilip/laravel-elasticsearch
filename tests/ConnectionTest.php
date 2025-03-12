@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Elastic\Elasticsearch\Client;
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\ElasticClient as Client;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
 
 test('Connection', function () {
@@ -87,9 +87,4 @@ test('Schema Builder', function () {
 test('Driver Name', function () {
     $driver = DB::connection('elasticsearch')->getDriverName();
     expect($driver === 'elasticsearch')->toBeTrue();
-});
-
-test('Info', function () {
-    $info = DB::connection('elasticsearch')->getClientInfo();
-    expect($info['tagline'])->toBe('You Know, for Search');
 });

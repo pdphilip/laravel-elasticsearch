@@ -4,15 +4,28 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch;
 
+use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
+use Elastic\Elasticsearch\Exception\ClientResponseException;
+use Elastic\Elasticsearch\Exception\MissingParameterException;
+use Elastic\Elasticsearch\Exception\ServerResponseException;
+use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
+use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
+use Elastic\Elasticsearch\Response\Elasticsearch;
+use Exception;
+use Generator;
+use Http\Promise\Promise;
 use Illuminate\Database\Connection as BaseConnection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use PDPhilip\Elasticsearch\DSL\Bridge;
-use PDPhilip\Elasticsearch\DSL\Results;
-use PDPhilip\Elasticsearch\Exceptions\LogicException;
+use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
+use PDPhilip\Elasticsearch\Exceptions\QueryException;
+use PDPhilip\Elasticsearch\Query\Builder;
+use PDPhilip\Elasticsearch\Query\Processor;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
+use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
 
 use function array_replace_recursive;
@@ -21,190 +34,275 @@ use function is_array;
 use function strtolower;
 
 /**
- * @method bool indexModify(array $settings)
- * @method bool indexCreate(array $settings = [])
- * @method array indexSettings(string $index)
- * @method array getIndices(bool $all = false)
- * @method bool indexExists(string $index)
- * @method bool indexDelete()
- * @method array indexMappings(string $index)
- * @method array fieldMapping(string $index, string|array $field, bool $raw)
- * @method Results indicesDsl(string $method, array $params)
- * @method Results reIndex(string $from, string $to)
- * @method bool indexAnalyzerSettings(array $settings)
- * @method Results distinctAggregate(string $function, array $wheres, array $options, array $columns)
- * @method Results aggregate(string $function, array $wheres, array $options, array $columns)
- * @method Results distinct(array $wheres, array $options, array $columns, bool $includeDocCount = false)
- * @method Results find(array $wheres, array $options, array $columns)
- * @method Results save(array $data, string $refresh)
- * @method array insertBulk(array $data, bool $returnData = false, string|null $refresh = false)
- * @method Results multipleAggregate(array $functions, array $wheres, array $options, string $column)
- * @method Results deleteAll(array $wheres, array $options = [])
- * @method Results searchRaw(array $bodyParams, bool $returnRaw = false)
- * @method Results aggregationRaw(array $bodyParams)
- * @method Results search(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
- * @method array toDsl(array $wheres, array $options, array $columns)
- * @method array toDslForSearch(string $searchParams, array $searchOptions, array $wheres, array $options, array $fields, array $columns)
- * @method string openPit(string $keepAlive = '5m')
- * @method bool closePit(string $id)
- * @method Results pitFind(array $wheres, array $options, array $fields, string $pitId, ?array $after, string $keepAlive)
- * @method Results getId(string $_id, array $columns = [],$softDeleteColumn = null)
+ * @mixin Client
+ *
+ * @method Processor getPostProcessor()
  */
 class Connection extends BaseConnection
 {
+    use HasOptions;
+
     const VALID_AUTH_TYPES = ['http', 'cloud'];
 
     /**
      * The Elasticsearch connection handler.
      */
-    protected ?Client $client;
+    protected ?ElasticClient $connection;
 
-    protected string $index = '';
-
-    protected int $maxSize = 10;
-
-    protected string $indexPrefix = '';
-
-    protected bool $allowIdSort = false;
-
-    protected ?string $errorLoggingIndex = null;
-
-    protected bool $sslVerification = true;
-
-    protected ?int $retires = null; // null will use default
-
-    protected mixed $elasticMetaHeader = null;
-
-    protected string $connectionName;
-
-    protected bool $byPassMapValidation = false;
-
-    protected int $insertChunkSize = 1000;
+    protected string $connectionName = '';
 
     /**
      * @var Query\Processor
      */
     protected $postProcessor;
 
-    /** {@inheritdoc} */
+    protected $requestTimeout;
+
+    public $allowIdSort = false;
+
+    public $defaultQueryLimit = 1000;
+
+    /** {@inheritdoc}
+     * @throws AuthenticationException
+     */
     public function __construct(array $config)
     {
         $this->connectionName = $config['name'];
 
         $this->config = $config;
 
-        $this->_sanitizeConfig();
+        $this->sanitizeConfig();
 
-        $this->_validateConnection();
+        $this->validateConnection();
 
         $this->setOptions();
 
-        $this->client = $this->buildConnection();
+        $this->connection = $this->createConnection();
 
         $this->postProcessor = new Query\Processor;
 
         $this->useDefaultSchemaGrammar();
 
         $this->useDefaultQueryGrammar();
+
+        if (! empty($this->config['index_prefix'])) {
+            $this->setIndexPrefix($this->config['index_prefix']);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // Connection Setup
+    // ----------------------------------------------------------------------
+
+    /**
+     * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
+     * This ensures that all required configuration keys exist, even if they are set to null or default values.
+     */
+    private function sanitizeConfig(): void
+    {
+
+        $this->config = array_replace_recursive(
+            [
+                'name' => null,
+                'auth_type' => '',
+                'cloud_id' => null,
+                'hosts' => [],
+                'username' => null,
+                'password' => null,
+                'api_key' => null,
+                'api_id' => null,
+                'index_prefix' => '',
+                'ssl_cert' => null,
+                'ssl' => [
+                    'key' => null,
+                    'key_password' => null,
+                    'cert' => null,
+                    'cert_password' => null,
+                ],
+                'options' => [
+                    'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
+                    'logging' => false,
+                    'ssl_verification' => true,
+                    'retires' => null,
+                    'meta_header' => null,
+                    'default_limit' => null,
+                    'allow_id_sort' => false,
+                ],
+            ],
+            $this->config
+        );
+
+        $this->config['auth_type'] = strtolower($this->config['auth_type']);
+    }
+
+    /**
+     * Validates the connection configuration based on the specified authentication type.
+     *
+     * @throws RuntimeException if the configuration is invalid for the specified authentication type.
+     */
+    private function validateConnection(): void
+    {
+        if (! in_array($this->config['auth_type'], self::VALID_AUTH_TYPES)) {
+            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http or cloud');
+        }
+
+        if ($this->config['auth_type'] === 'cloud' && ! $this->config['cloud_id']) {
+            throw new RuntimeException('auth_type of `cloud` requires `cloud_id` to be set');
+        }
+
+        if ($this->config['auth_type'] === 'http' && (! $this->config['hosts'] || ! is_array($this->config['hosts']))) {
+            throw new RuntimeException('auth_type of `http` requires `hosts` to be set and be an array');
+        }
     }
 
     public function setOptions(): void
     {
-        $this->indexPrefix = $this->config['index_prefix'] ?? '';
+        $this->allowIdSort = $this->config['options']['allow_id_sort'] ?? false;
 
-        if (isset($this->config['options']['allow_id_sort'])) {
-            $this->allowIdSort = $this->config['options']['allow_id_sort'];
-        }
+        $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
+
         if (isset($this->config['options']['ssl_verification'])) {
-            $this->sslVerification = $this->config['options']['ssl_verification'];
+            $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
+
         if (! empty($this->config['options']['retires'])) {
-            $this->retires = $this->config['options']['retires'];
+            $this->options()->add('retires', $this->config['options']['retires']);
         }
+
         if (isset($this->config['options']['meta_header'])) {
-            $this->elasticMetaHeader = $this->config['options']['meta_header'];
+            $this->options()->add('meta_header', $this->config['options']['meta_header']);
         }
 
-        if (! empty($this->config['error_log_index'])) {
-            $this->errorLoggingIndex = $this->indexPrefix
-              ? $this->indexPrefix.'_'.$this->config['error_log_index']
-              : $this->config['error_log_index'];
+        if (isset($this->config['options']['default_limit'])) {
+            $this->defaultQueryLimit = $this->config['options']['default_limit'];
         }
-
-        if (! empty($this->config['options']['bypass_map_validation'])) {
-            $this->byPassMapValidation = $this->config['options']['bypass_map_validation'];
-        }
-
-        if (! empty($this->config['options']['insert_chunk_size'])) {
-            $this->insertChunkSize = $this->config['options']['insert_chunk_size'];
-        }
-
     }
 
-    /** {@inheritdoc} */
-    public function table($table, $as = null)
+    /**
+     * Builds and configures a connection to the ElasticSearch client based on
+     * the provided configuration settings.
+     *
+     * @return ElasticClient The configured ElasticSearch client.
+     *
+     * @throws AuthenticationException
+     */
+    protected function createConnection(): ElasticClient
     {
-        $query = new Query\Builder($this, new Query\Processor);
 
-        return $query->from($table);
+        $this->validateConnection();
+
+        $clientBuilder = ClientBuilder::create();
+
+        // Set the connection type
+        if ($this->config['auth_type'] === 'http') {
+            $clientBuilder = $clientBuilder->setHosts($this->config['hosts']);
+        } else {
+            $clientBuilder = $clientBuilder->setElasticCloudId($this->config['cloud_id']);
+        }
+
+        // Set Builder options
+        $clientBuilder = $this->builderOptions($clientBuilder);
+
+        // Set Authentication
+        if ($this->config['username'] && $this->config['password']) {
+            $clientBuilder->setBasicAuthentication($this->config['username'], $this->config['password']);
+        }
+
+        if ($this->config['api_key']) {
+            $clientBuilder->setApiKey($this->config['api_key'], $this->config['api_id']);
+        }
+
+        return new ElasticClient($clientBuilder->build());
+    }
+
+    /**
+     * Configures and returns the client builder with the provided SSL and retry settings.
+     *
+     * @param  ClientBuilder  $clientBuilder  The callback builder instance.
+     */
+    protected function builderOptions(ClientBuilder $clientBuilder): ClientBuilder
+    {
+        $clientBuilder = $clientBuilder->setSSLVerification($this->options()->get('ssl_verification'));
+        if ($this->options()->get('meta_header')) {
+            $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
+        }
+
+        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retires', 3));
+
+        if ($this->config['options']['logging']) {
+            $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
+        }
+
+        if ($this->config['ssl_cert']) {
+            $clientBuilder = $clientBuilder->setCABundle($this->config['ssl_cert']);
+        }
+
+        if ($this->config['ssl']['cert']) {
+            $clientBuilder = $clientBuilder->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
+        }
+
+        if ($this->config['ssl']['key']) {
+            $clientBuilder = $clientBuilder->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
+        }
+
+        return $clientBuilder;
     }
 
     /** {@inheritdoc} */
     public function disconnect(): void
     {
-        $this->client = null;
+        $this->connection = null;
     }
 
     // ----------------------------------------------------------------------
-    // Getters
+    // Connection getters
     // ----------------------------------------------------------------------
-
-    /** {@inheritdoc} */
-    public function getTablePrefix(): ?string
+    public function getClient(): ?ElasticClient
     {
-        return $this->getIndexPrefix();
+        return $this->connection;
     }
 
-    public function getIndexPrefix(): ?string
+    public function getIndexPrefix(): string
     {
-        return $this->indexPrefix;
+        return $this->getTablePrefix();
     }
 
     /**
-     * Retrieves information about the client.
+     * Get the client info
      *
-     * @return array An associative array containing the client's information.
+     * @throws ClientResponseException|ServerResponseException
      */
     public function getClientInfo(): array
     {
-        return $this->client->info()->asArray();
+        return $this->elastic()->info()->asArray();
     }
 
-    /** {@inheritdoc} */
-    public function getPostProcessor(): Query\Processor
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getLicenseInfo(): array
     {
-        return $this->postProcessor;
+        $license = $this->elastic()->license()->get()->asArray();
+        if (! empty($license['license'])) {
+            return $license['license'];
+        }
+
+        return $license;
     }
 
-    public function setIndexPrefix($newPrefix): void
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getLicenseType(): ?string
     {
-        $this->indexPrefix = $newPrefix;
-    }
+        $license = $this->getLicenseInfo();
+        if (! empty($license['type'])) {
+            return $license['type'];
+        }
 
-    public function getErrorLoggingIndex(): ?string
-    {
-        return $this->errorLoggingIndex;
-    }
-
-    /** {@inheritdoc} */
-    public function getSchemaGrammar(): Schema\Grammar
-    {
-        return new Schema\Grammar;
-    }
-
-    public function getIndex(): string
-    {
-        return $this->index;
+        return null;
     }
 
     /** {@inheritdoc} */
@@ -213,37 +311,20 @@ class Connection extends BaseConnection
         return 'elasticsearch';
     }
 
-    public function getClient(): ?Client
-    {
-        return $this->client;
-    }
-
-    public function getMaxSize(): int
-    {
-        return $this->maxSize;
-    }
-
     /**
-     * Override the default schema builder.
+     * @return Schema\Builder
      */
-    public function getSchemaBuilder(): Schema\Builder
+    public function getSchemaBuilder()
     {
         return new Schema\Builder($this);
     }
 
-    public function getAllowIdSort(): bool
+    /**
+     * @return Schema\Grammars\Grammar
+     */
+    public function getSchemaGrammar()
     {
-        return $this->allowIdSort;
-    }
-
-    public function getBypassMapValidation(): bool
-    {
-        return $this->byPassMapValidation;
-    }
-
-    public function getInsertChunkSize(): int
-    {
-        return $this->insertChunkSize;
+        return new Schema\Grammars\Grammar;
     }
 
     /** {@inheritdoc} */
@@ -259,183 +340,434 @@ class Connection extends BaseConnection
     }
 
     /** {@inheritdoc} */
-    protected function getDefaultSchemaGrammar(): Schema\Grammar
+    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
     {
-        return new Schema\Grammar;
+        return new Schema\Grammars\Grammar;
     }
 
     // ----------------------------------------------------------------------
-    // Setters
+    // Connection Setters
     // ----------------------------------------------------------------------
 
-    public function setIndex(string $index): string
+    public function setIndexPrefix($prefix): self
     {
-        $this->index = $this->indexPrefix && ! str_contains($index, $this->indexPrefix.'_')
-            ? $this->indexPrefix.'_'.$index
-            : $index;
-
-        return $this->getIndex();
-    }
-
-    public function setMaxSize($value): void
-    {
-        $this->maxSize = $value;
-    }
-
-    public function __call($method, $parameters)
-    {
-        if (! $this->index) {
-            $this->index = $this->indexPrefix.'*';
-        }
-
-        // If we are missing a database connection client we need to reconnect.
-        if (! $this->client) {
-            $this->client = $this->buildConnection();
-        }
-        $bridge = new Bridge($this);
-
-        $methodName = 'process'.Str::studly($method);
-
-        if (! method_exists($bridge, $methodName)) {
-            throw new LogicException("{$methodName} does not exist on the bridge.");
-        }
-
-        return $bridge->{$methodName}(...$parameters);
+        return $this->setTablePrefix($prefix);
     }
 
     /**
-     * Sanitizes the configuration array by merging it with a predefined array of default configuration settings.
-     * This ensures that all required configuration keys exist, even if they are set to null or default values.
+     * Set the timeout for the entire Elasticsearch request
+     *
+     * @param  float  $requestTimeout  seconds
      */
-    private function _sanitizeConfig(): void
+    public function setRequestTimeout(float $requestTimeout): self
+    {
+        $this->requestTimeout = $requestTimeout;
+
+        return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    // Schema Management
+    // ----------------------------------------------------------------------
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function createAlias(string $index, string $name): void
+    {
+        $this->connection->createAlias($index, $name);
+    }
+
+    /**
+     * @throws QueryException
+     */
+    public function createIndex(string $index, array $body): array
+    {
+        try {
+            $this->connection->createIndex($index, $body);
+
+            return $this->connection->getMappings($index);
+        } catch (Exception $e) {
+            throw new QueryException($e, compact('index', 'body'));
+        }
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function dropIndex(string $index): void
+    {
+        $this->connection->dropIndex($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function updateIndex(string $index, array $body): array
+    {
+        $this->connection->updateIndex($index, $body);
+
+        return $this->connection->getMappings($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function getFieldMapping($index, $fields): array
+    {
+        return $this->connection->getFieldMapping($index, $fields);
+    }
+
+    public function getMappings($index): array
+    {
+        return $this->connection->getMappings($index);
+    }
+
+    // ----------------------------------------------------------------------
+    // Query Execution
+    // ----------------------------------------------------------------------
+
+    /**
+     * Execute an SQL statement and return the boolean result.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     */
+    public function statement($query, $bindings = [], ?Blueprint $blueprint = null): bool
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) {
+            if ($this->pretending()) {
+                return true;
+            }
+
+            $this->bindValues($query, $this->prepareBindings($bindings));
+
+            $this->recordsHaveBeenModified();
+
+            return $query();
+        });
+    }
+
+    /**
+     * Run a select statement against the database and return a generator.
+     *
+     * @param  array  $query
+     * @param  string  $scrollTimeout
+     * @param  int  $size
+     */
+    public function searchResponseIterator($query, $scrollTimeout = '30s', $size = 100): Generator
     {
 
-        $this->config = array_replace_recursive(
-            [
-                'name' => null,
-                'auth_type' => '',
-                'cloud_id' => null,
-                'hosts' => [],
-                'username' => null,
-                'password' => null,
-                'api_key' => null,
-                'api_id' => null,
-                'index_prefix' => '',
-                'options' => [
-                    'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
-                    'insert_chunk_size' => 1000, // This is the maximum insert chunk size to use when bulk inserting
-                    'logging' => false,
-                    'allow_id_sort' => false,
-                    'ssl_verification' => true,
-                    'retires' => null,
-                    'meta_header' => null,
-                ],
-                'ssl_cert' => null,
-                'ssl' => [
-                    'key' => null,
-                    'key_password' => null,
-                    'cert' => null,
-                    'cert_password' => null,
-                ],
-                'error_log_index' => false,
-            ],
-            $this->config
+        $scrollParams = [
+            'scroll' => $scrollTimeout,
+            'size' => $size, // Number of results per shard
+            'index' => $query['index'],
+            'body' => $query['body'],
+        ];
+
+        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        foreach ($pages as $page) {
+            yield $page;
+        }
+    }
+
+    /**
+     * Run a select statement against the database and return a generator.
+     *
+     * @param  array  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
+     * @param  string  $scrollTimeout
+     */
+    public function cursor($query, $bindings = [], $useReadPdo = false, $scrollTimeout = '30s')
+    {
+
+        $limit = is_array($query) && isset($query['body']['size']) ? $query['body']['size'] : null;
+
+        // We want to scroll by 1000 row chunks
+        $query['body']['size'] = 1000;
+
+        $scrollParams = [
+            'scroll' => $scrollTimeout,
+            'index' => $query['index'],
+            'body' => $query['body'],
+        ];
+
+        $count = 0;
+        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $hits = new SearchHitIterator($pages);
+
+        foreach ($hits as $hit) {
+            $count++;
+            if ($count > $limit) {
+                break;
+            }
+            yield $hit;
+        }
+
+        return (function () {
+            yield;
+        })();
+    }
+
+    /**
+     * Run a delete statement against the database.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @return array
+     */
+    public function delete($query, $bindings = [])
+    {
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->deleteByQuery(...)
+        );
+    }
+
+    /**
+     * Run an insert statement against the database.
+     *
+     * @param  array  $query
+     * @param  array  $bindings
+     *
+     * @throws BulkInsertQueryException
+     */
+    public function insert($query, $bindings = []): Elasticsearch
+    {
+        $result = $this->run(
+            $this->addClientParams($query),
+            $bindings,
+            $this->connection->bulk(...)
         );
 
-        $this->config['auth_type'] = strtolower($this->config['auth_type']);
+        if (! empty($result['errors'])) {
+            throw new BulkInsertQueryException($result);
+        }
 
+        return $result;
     }
 
     /**
-     * Builds and configures a connection to the ElasticSearch client based on
-     * the provided configuration settings.
+     * Log a query in the connection's query log.
      *
-     * @return Client The configured ElasticSearch client.
-     *
+     * @param  string|array  $query
+     * @param  array  $bindings
+     * @param  float|null  $time
+     */
+    public function logQuery($query, $bindings, $time = null): void
+    {
+        if (is_array($query)) {
+            $query = json_encode($query);
+        }
+
+        $this->event(new QueryExecuted($query, $bindings, $time, $this));
+
+        if ($this->loggingQueries) {
+            $this->queryLog[] = compact('query', 'bindings', 'time');
+        }
+    }
+
+    /**
+     * Prepare the query bindings for execution.
+     */
+    public function prepareBindings(array $bindings): array
+    {
+        return $bindings;
+    }
+
+    /**
+     * Get a new query builder instance.
+     */
+    public function query(): Builder
+    {
+        return new Builder(
+            $this,
+            $this->getQueryGrammar(),
+            $this->getPostProcessor()
+        );
+    }
+
+    /**
      * @throws AuthenticationException
      */
-    protected function buildConnection(): Client
+    public function reconnectIfMissingConnection(): void
     {
-
-        $this->_validateConnection();
-
-        $cb = ClientBuilder::create();
-
-        // Set the connection type
-        if ($this->config['auth_type'] === 'http') {
-            $cb = $cb->setHosts($this->config['hosts']);
-        } else {
-            $cb = $cb->setElasticCloudId($this->config['cloud_id']);
+        if (is_null($this->connection)) {
+            $this->createConnection();
         }
-
-        // Set Builder options
-        $cb = $this->_builderOptions($cb);
-
-        // Set Authentication
-        if ($this->config['username'] && $this->config['password']) {
-            $cb->setBasicAuthentication($this->config['username'], $this->config['password']);
-        }
-
-        if ($this->config['api_key']) {
-            $cb->setApiKey($this->config['api_key'], $this->config['api_id']);
-        }
-
-        return $cb->build();
     }
 
     /**
-     * Validates the connection configuration based on the specified authentication type.
+     * Run a select statement against the database.
      *
-     * @throws RuntimeException if the configuration is invalid for the specified authentication type.
+     * @param  array  $params
+     * @param  array  $bindings
      */
-    private function _validateConnection(): void
+    public function select($params, $bindings = [], $useReadPdo = true): Elasticsearch
     {
-        if (! in_array($this->config['auth_type'], self::VALID_AUTH_TYPES)) {
-            throw new RuntimeException('Invalid [auth_type] in database config. Must be: http or cloud');
-        }
+        return $this->run(
+            $this->addClientParams($params),
+            $bindings,
+            $this->connection->search(...)
+        );
+    }
 
-        if ($this->config['auth_type'] === 'cloud' && ! $this->config['cloud_id']) {
-            throw new RuntimeException('auth_type of `cloud` requires `cloud_id` to be set');
-        }
-
-        if ($this->config['auth_type'] === 'http' && (! $this->config['hosts'] || ! is_array($this->config['hosts']))) {
-            throw new RuntimeException('auth_type of `http` requires `hosts` to be set and be an array');
-        }
-
+    public function count($params): int
+    {
+        return $this->connection->count($params);
     }
 
     /**
-     * Configures and returns the client builder with the provided SSL and retry settings.
+     * Run an update statement against the database.
      *
-     * @param  ClientBuilder  $cb  The callback builder instance.
+     * @param  array  $query
+     * @param  array  $bindings
      */
-    protected function _builderOptions(ClientBuilder $cb): ClientBuilder
+    public function update($query, $bindings = []): mixed
     {
-        $cb = $cb->setSSLVerification($this->sslVerification);
-        if (isset($this->elasticMetaHeader)) {
-            $cb = $cb->setElasticMetaHeader($this->elasticMetaHeader);
-        }
+        $updateMethod = isset($query['body']['query']) ? 'updateByQuery' : 'update';
 
-        if (isset($this->retires)) {
-            $cb = $cb->setRetries($this->retires);
-        }
-
-        if ($this->config['options']['logging']) {
-            $cb = $cb->setLogger(Log::getLogger());
-        }
-
-        if ($this->config['ssl_cert']) {
-            $cb = $cb->setCABundle($this->config['ssl_cert']);
-        }
-
-        if ($this->config['ssl']['cert']) {
-            $cb = $cb->setSSLCert($this->config['ssl']['cert'], $this->config['ssl']['cert_password']);
-        }
-
-        if ($this->config['ssl']['key']) {
-            $cb = $cb->setSSLKey($this->config['ssl']['key'], $this->config['ssl']['key_password']);
-        }
-
-        return $cb;
+        return $this->run(
+            $query,
+            $bindings,
+            $this->connection->$updateMethod(...)
+        );
     }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function raw($value): Elasticsearch|Promise
+    {
+        return $this->connection->search($value);
+    }
+
+    /**
+     * Add client-specific parameters to the request params
+     */
+    protected function addClientParams(array $params): array
+    {
+        if ($this->requestTimeout) {
+            $params['client']['timeout'] = $this->requestTimeout;
+        }
+
+        return $params;
+    }
+
+    /** {@inheritdoc}
+     * @throws QueryException
+     */
+    protected function runQueryCallback($query, $bindings, Closure $callback)
+    {
+        try {
+            $result = $callback($query, $bindings);
+        } catch (Exception $e) {
+            throw new QueryException($e, $query);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  mixed  $query
+     */
+    protected function run($query, $bindings, Closure $callback): mixed
+    {
+        return parent::run($query, $bindings, $callback);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function openPit(mixed $query): ?string
+    {
+        return $this->connection->openPit($query);
+    }
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function closePit(mixed $query): bool
+    {
+        return $this->connection->closePit($query);
+    }
+
+    // ----------------------------------------------------------------------
+    // Direct Client Access and cluster methods
+    // ----------------------------------------------------------------------
+
+    public function elastic(): Client
+    {
+        return $this->connection->client();
+    }
+
+    /**
+     * @throws ServerResponseException
+     * @throws ClientResponseException
+     */
+    public function clusterSettings($flat = true): array
+    {
+        return $this->connection->clusterSettings($flat);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function setClusterFieldDataOnId(bool $enabled, bool $transient = false): array
+    {
+        return $this->connection->setClusterFieldDataOnId($enabled, $transient);
+    }
+
+    // ----------------------------------------------------------------------
+    // Call Catch
+    // ----------------------------------------------------------------------
+
+    /**
+     * Dynamically pass methods to the connection.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    //    public function __call($method, $parameters)
+    //    {
+    //        dd($method);
+    //
+    //        return call_user_func_array([$this->connection, $method], $parameters);
+    //    }
+
+    // ----------------------------------------------------------------------
+    // Later/Maybe
+    // ----------------------------------------------------------------------
+
+    //    /**
+    //     * Run a reindex statement against the database.
+    //     *
+    //     * @param  string|array  $query
+    //     * @param  array  $bindings
+    //     * @return array
+    //     */
+    //    public function reindex($query, $bindings = [])
+    //    {
+    //        return $this->run(
+    //            $query,
+    //            $bindings,
+    //            $this->connection->reindex(...)
+    //        )->asArray();
+    //    }
 }
