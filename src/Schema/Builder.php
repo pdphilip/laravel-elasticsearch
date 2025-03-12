@@ -41,7 +41,7 @@ class Builder extends BaseBuilder
         return $this->connection->getPostProcessor()->processTables(
             $this->connection->elastic()->cat()->indices(
                 [
-                    'index' => $this->connection->getTablePrefix() . '*',
+                    'index' => $this->connection->getTablePrefix().'*',
                     'format' => 'json',
                 ]
             )
@@ -57,7 +57,7 @@ class Builder extends BaseBuilder
         return $this->connection->getPostProcessor()->processTables(
             $this->connection->elastic()->cat()->indices(
                 [
-                    'index' => $this->connection->getTablePrefix() . $name,
+                    'index' => $this->connection->getTablePrefix().$name,
                     'format' => 'json',
                 ]
             )
@@ -172,7 +172,7 @@ class Builder extends BaseBuilder
             if ($this->hasTable($table)) {
                 $this->drop($table);
             }
-        } catch (ClientResponseException | MissingParameterException | ServerResponseException $e) {
+        } catch (ClientResponseException|MissingParameterException|ServerResponseException $e) {
         }
     }
 
@@ -376,7 +376,7 @@ class Builder extends BaseBuilder
     {
         $prefix = $this->connection->getIndexPrefix();
         if ($prefix && ! str_starts_with($index, $prefix)) {
-            $index = $prefix . $index;
+            $index = $prefix.$index;
         }
 
         return $index;

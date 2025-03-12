@@ -114,7 +114,7 @@ trait HybridRelations
         }
 
         if ($foreignKey === null) {
-            $foreignKey = Str::snake($relation) . '_id';
+            $foreignKey = Str::snake($relation).'_id';
         }
 
         $instance = new $related;
@@ -206,11 +206,11 @@ trait HybridRelations
         // First, we'll need to determine the foreign key and "other key" for the
         // relationship. Once we have determined the keys we'll make the query
         // instances as well as the relationship instances we need for this.
-        $foreignPivotKey = $foreignPivotKey ?: $this->getForeignKey() . 's';
+        $foreignPivotKey = $foreignPivotKey ?: $this->getForeignKey().'s';
 
         $instance = new $related;
 
-        $relatedPivotKey = $relatedPivotKey ?: $instance->getForeignKey() . 's';
+        $relatedPivotKey = $relatedPivotKey ?: $instance->getForeignKey().'s';
 
         // If no table name was provided, we can guess it by concatenating the two
         // models using underscores in alphabetical order. The two model names
@@ -270,13 +270,13 @@ trait HybridRelations
 
         $instance = new $related;
 
-        $foreignPivotKey = $foreignPivotKey ?: $name . '_id';
+        $foreignPivotKey = $foreignPivotKey ?: $name.'_id';
         $relatedPivotKey = $relatedPivotKey ?: $instance->getForeignKey();
 
         if (! $table) {
             $words = preg_split('/(_)/u', $name, -1, PREG_SPLIT_DELIM_CAPTURE);
             $lastWord = array_pop($words);
-            $table = implode('', $words) . Str::plural($lastWord);
+            $table = implode('', $words).Str::plural($lastWord);
         }
 
         return new MorphToMany(
@@ -324,7 +324,7 @@ trait HybridRelations
             //            $foreignPivotKey = $foreignPivotKey ?: Str::plural($this->getForeignKey());
             $foreignPivotKey = $foreignPivotKey ?: $this->getForeignKey();
 
-            $relatedPivotKey = $relatedPivotKey ?: $name . '_id';
+            $relatedPivotKey = $relatedPivotKey ?: $name.'_id';
         }
 
         return $this->morphToMany(

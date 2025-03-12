@@ -1278,7 +1278,7 @@ class Builder extends BaseBuilder
     {
         $options = array_pop($args);
         $type = array_shift($args);
-        $method = $type == 'Basic' ? 'where' : 'where' . $type;
+        $method = $type == 'Basic' ? 'where' : 'where'.$type;
 
         $this->$method(...$args);
 
@@ -1752,7 +1752,7 @@ class Builder extends BaseBuilder
         // Each column we want aggregated
         foreach ($functions as $function) {
             $this->metricsAggregations[] = [
-                'key' => $function . '_' . $column,
+                'key' => $function.'_'.$column,
                 'args' => $column,
                 'type' => $function,
                 'options' => $options,
@@ -1967,7 +1967,7 @@ class Builder extends BaseBuilder
         }
 
         throw new \Exception(
-            "$option is an invalid conflict option, valid options are: " . implode(', ', self::CONFLICT)
+            "$option is an invalid conflict option, valid options are: ".implode(', ', self::CONFLICT)
         );
     }
 
@@ -2376,7 +2376,7 @@ class Builder extends BaseBuilder
         $table = $this->from;
         $suffix = $this->options()->get('suffix', '');
 
-        return $prefix . $table . $suffix;
+        return $prefix.$table.$suffix;
     }
 
     private function prepareTimestamp($value): string|int

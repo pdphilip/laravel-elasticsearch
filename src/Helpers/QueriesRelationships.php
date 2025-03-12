@@ -131,7 +131,7 @@ trait QueriesRelationships
     {
         // First we select the parent models that have a relation to our related model,
         // Then extracts related model's ids from the pivot column
-        $hasQuery->where($relation->getTable() . '.' . $relation->getMorphType(), $relation->getParent()::class);
+        $hasQuery->where($relation->getTable().'.'.$relation->getMorphType(), $relation->getParent()::class);
         $relations = $hasQuery->pluck($relation->getTable());
         $relations = $relation->extractIds($relations->flatten(1)->toArray(), $relation->getForeignPivotKeyName());
 
@@ -196,6 +196,6 @@ trait QueriesRelationships
             return $this->model->getKeyName();
         }
 
-        throw new Exception(class_basename($relation) . ' is not supported for hybrid query constraints.');
+        throw new Exception(class_basename($relation).' is not supported for hybrid query constraints.');
     }
 }

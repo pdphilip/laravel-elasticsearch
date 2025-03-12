@@ -323,10 +323,10 @@ final class QueryMeta
             if (! $errorReason) {
                 return $return;
             }
-            $return['msg'] = $title . $errorReason;
+            $return['msg'] = $title.$errorReason;
             $cause = $errorArray['error']['root_cause'][0]['reason'] ?? null;
             if ($cause) {
-                $return['msg'] .= ' - ' . $cause;
+                $return['msg'] .= ' - '.$cause;
             }
 
             $return['data'] = $errorArray;

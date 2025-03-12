@@ -242,7 +242,7 @@ it('tests no document', function () {
 });
 
 it('tests find or fail', function () {
-    expect(fn() => User::findOrFail('51c33d8981fec6813e00000a'))
+    expect(fn () => User::findOrFail('51c33d8981fec6813e00000a'))
         ->toThrow(ModelNotFoundException::class);
 });
 
