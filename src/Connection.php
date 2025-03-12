@@ -502,7 +502,7 @@ class Connection extends BaseConnection
         ];
 
         $count = 0;
-        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $pages = new SearchResponseIterator($this->elastic(), $scrollParams);
         $hits = new SearchHitIterator($pages);
 
         foreach ($hits as $hit) {

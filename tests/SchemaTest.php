@@ -492,9 +492,36 @@ it('gets field maping', function () {
 
 });
 
+it('should create an index will all numeric type mappings', function () {
+    Schema::deleteIfExists('nums_lfg');
+    Schema::create('nums_lfg', function (Blueprint $index) {
+        $index->long('lfg_long');
+        $index->integer('lfg_int');
+        $index->short('lfg_short');
+        $index->byte('lfg_byte');
+        $index->double('lfg_double');
+        $index->float('lfg_float');
+        $index->halfFloat('lfg_half_float');
+        $index->scaledFloat('lfg_scaled_float', 140);
+    });
+
+    $mappings = Schema::getMappings('nums_lfg');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_long']['type'] == 'long');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_int']['type'] == 'integer');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_short']['type'] == 'short');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_byte']['type'] == 'byte');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_double']['type'] == 'double');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_float']['type'] == 'float');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_half_float']['type'] == 'half_float');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_scaled_float']['type'] == 'scaled_float');
+    $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_scaled_float']['scaling_factor'] == 140);
+    // clean up
+    Schema::deleteIfExists('nums_lfg');
+});
+
 function getIndexMapping(string $table)
 {
-    $mapping = DB::elastic()->indices()->getMapping(['index' => $table])->asArray();
+    $mapping = DB::connection('elasticsearch')->elastic()->indices()->getMapping(['index' => $table])->asArray();
 
     return $mapping[$table]['mappings']['properties'];
 }
