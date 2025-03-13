@@ -879,6 +879,32 @@ class Builder extends BaseBuilder
         return $this->whereWeekday($column, $operator, $value, 'or', $options);
     }
 
+    // Match: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query.html
+
+    public function whereMatch($column, $value, $boolean = 'and', $not = false, $options = []): self
+    {
+        $type = 'Match';
+        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
+
+        return $this;
+    }
+
+    public function orWhereMatch(string $column, $value, $options = []): self
+    {
+        return $this->whereMatch($column, $value, 'or', false, $options);
+    }
+
+    public function whereNotMatch(string $column, $value, $options = []): self
+    {
+        return $this->whereMatch($column, $value, 'and', true, $options);
+    }
+
+    public function orWhereNotMatch(string $column, $value, $options = []): self
+    {
+        return $this->whereMatch($column, $value, 'or', true, $options);
+    }
+
     // Match Phrase: https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html
 
     public function wherePhrase($column, $value, $boolean = 'and', $not = false, $options = [])
@@ -2326,7 +2352,7 @@ class Builder extends BaseBuilder
     // Body Parameter Methods
     // ----------------------------------------------------------------------
 
-    public function excludeFields(string|array $fields)
+    public function excludeFields(string|array $fields): self
     {
         $fields = Arr::wrap($fields);
         $fieldCsv = implode(',', $fields);
@@ -2335,14 +2361,14 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function withMinScore(float $val)
+    public function withMinScore(float $val): self
     {
         $this->bodyParameters['min_score'] = $val;
 
         return $this;
     }
 
-    public function withAnalyzer(string $analyzer)
+    public function withAnalyzer(string $analyzer): self
     {
         $this->bodyParameters['analyzer'] = $analyzer;
 

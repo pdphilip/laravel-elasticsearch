@@ -132,6 +132,8 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
         $schema->dropIfExists('users');
         $schema->create('users', function (Blueprint $table) {
             $table->text('name', hasKeyword: true);
+            $table->integer('age');
+            $table->keyword('title');
             $table->date('birthday');
             $table->date('created_at');
             $table->date('updated_at');

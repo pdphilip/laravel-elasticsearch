@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Traits\Query;
 
 use PDPhilip\Elasticsearch\Query\Options\DateOptions;
+use PDPhilip\Elasticsearch\Query\Options\MatchOptions;
 use PDPhilip\Elasticsearch\Query\Options\NestedOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhraseOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhrasePrefixOptions;
@@ -13,7 +14,6 @@ use PDPhilip\Elasticsearch\Query\Options\RegexOptions;
 use PDPhilip\Elasticsearch\Query\Options\SearchOptions;
 use PDPhilip\Elasticsearch\Query\Options\TermFuzzyOptions;
 use PDPhilip\Elasticsearch\Query\Options\TermOptions;
-use PDPhilip\Elasticsearch\Query\Options\WhereOptions;
 
 trait ManagesOptions
 {
@@ -183,12 +183,12 @@ trait ManagesOptions
     protected function getOptionClass($type)
     {
         return match (strtolower($type)) {
-            'where' => WhereOptions::class,
+            'where', 'term' => TermOptions::class,
             'date' => DateOptions::class,
             'phrase' => PhraseOptions::class,
             'phraseprefix' => PhrasePrefixOptions::class,
             'search' => SearchOptions::class,
-            'term' => TermOptions::class,
+            'match' => MatchOptions::class,
             'termfuzzy' => TermFuzzyOptions::class,
             'prefix' => PrefixOptions::class,
             'regex' => RegexOptions::class,

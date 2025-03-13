@@ -71,7 +71,7 @@ it('ES Specific Queries', function () {
     expect($users)->toHaveCount(3);
 
     // Was searchMatch()
-    $users = User::where('description', 'exploring')->get();
+    $users = User::whereMatch('description', 'exploring')->get();
     expect($users)->toHaveCount(1);
 
     $users = User::wherePhrase('description', 'exploring the')->get();
