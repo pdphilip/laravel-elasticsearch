@@ -14,4 +14,9 @@ trait BuilderCompatibility
     {
         return new Blueprint($this->connection, $table, $callback);
     }
+
+    public function getTableListing($schema = null, $schemaQualified = true)
+    {
+        return array_column($this->getTables(), 'name');
+    }
 }
