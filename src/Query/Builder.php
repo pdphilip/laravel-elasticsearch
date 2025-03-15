@@ -26,7 +26,6 @@ use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
-use PDPhilip\Elasticsearch\Traits\Query\ManagesOptions;
 
 /**
  * @property Connection $connection

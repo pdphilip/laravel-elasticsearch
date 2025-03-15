@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Database\Schema\Blueprint as BlueprintBase;
 use Illuminate\Support\Fluent;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\BlueprintCompatibility;
 use PDPhilip\Elasticsearch\Schema\Definitions\AnalyzerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\CharFilterPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\FilterPropertyDefinition;
@@ -16,11 +17,10 @@ use PDPhilip\Elasticsearch\Schema\Definitions\NormalizerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Definitions\TokenizerPropertyDefinition;
 use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
-use PDPhilip\Elasticsearch\Traits\Schema\ManagesDefaultMigrations;
-use PDPhilip\Elasticsearch\Traits\Schema\ManagesElasticMigrations;
 
 class Blueprint extends BlueprintBase
 {
+    use BlueprintCompatibility;
     use ManagesDefaultMigrations;
     use ManagesElasticMigrations;
 
@@ -79,16 +79,16 @@ class Blueprint extends BlueprintBase
      *
      * @override
      */
-    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar): void
-    {
-        foreach ($this->toDSL($connection, $grammar) as $statement) {
-            if ($connection->pretending()) {
-                return;
-            }
-
-            $statement($this, $connection);
-        }
-    }
+    //    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar): void
+    //    {
+    //        foreach ($this->toDSL($connection, $grammar) as $statement) {
+    //            if ($connection->pretending()) {
+    //                return;
+    //            }
+    //
+    //            $statement($this, $connection);
+    //        }
+    //    }
 
     /**
      * @return Closure[]

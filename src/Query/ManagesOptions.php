@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Traits\Query;
+namespace PDPhilip\Elasticsearch\Query;
 
 use PDPhilip\Elasticsearch\Query\Options\DateOptions;
 use PDPhilip\Elasticsearch\Query\Options\MatchOptions;

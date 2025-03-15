@@ -11,10 +11,13 @@ use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\GrammarCompatibility;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 
 class Grammar extends BaseGrammar
 {
+    use GrammarCompatibility;
+
     /** @var array */
     protected $modifiers = [
         'Boost',
@@ -274,7 +277,7 @@ class Grammar extends BaseGrammar
     {
         if (! is_null($property->fields)) {
             $fields = $property->fields;
-            $fields && $fields($blueprint = $this->createBlueprint());
+            $fields && $fields($blueprint = $this->createBlueprint($blueprint));
 
             $property->fields = $this->getColumns($blueprint);
         }
@@ -286,7 +289,7 @@ class Grammar extends BaseGrammar
     {
         if (! is_null($property->properties)) {
             $properties = $property->properties;
-            $properties && $properties($blueprint = $this->createBlueprint());
+            $properties && $properties($blueprint = $this->createBlueprint($blueprint));
 
             $property->properties = $this->getColumns($blueprint);
         }
@@ -361,10 +364,5 @@ class Grammar extends BaseGrammar
     {
         // Nothing to do here, including for consistency or possible future use
         return $property;
-    }
-
-    private function createBlueprint(): Blueprint
-    {
-        return new Blueprint('');
     }
 }

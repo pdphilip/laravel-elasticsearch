@@ -45,4 +45,14 @@ final class Helpers
     {
         return $value instanceof Closure ? $value(...$args) : $value;
     }
+
+    public static function getLaravelMajorVersion(): int
+    {
+        $majorVersion = (int) Str::before(app()->version(), '.');
+        if ($majorVersion < 11) {
+            $majorVersion = 11;
+        }
+
+        return $majorVersion;
+    }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Traits\Relations;
+namespace PDPhilip\Elasticsearch\Relations;
 
 trait ManagesRefresh
 {

@@ -22,6 +22,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
 use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
+use PDPhilip\Elasticsearch\Laravel\Compatibility\Connection\ConnectionCompatibility;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
@@ -40,6 +41,7 @@ use function strtolower;
  */
 class Connection extends BaseConnection
 {
+    use ConnectionCompatibility;
     use HasOptions;
 
     const VALID_AUTH_TYPES = ['http', 'cloud'];
@@ -319,31 +321,23 @@ class Connection extends BaseConnection
         return new Schema\Builder($this);
     }
 
-    /**
-     * @return Schema\Grammars\Grammar
-     */
-    public function getSchemaGrammar()
-    {
-        return new Schema\Grammars\Grammar;
-    }
-
     /** {@inheritdoc} */
     protected function getDefaultPostProcessor(): Query\Processor
     {
         return new Query\Processor;
     }
-
-    /** {@inheritdoc} */
-    protected function getDefaultQueryGrammar(): Query\Grammar
-    {
-        return new Query\Grammar;
-    }
-
-    /** {@inheritdoc} */
-    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
-    {
-        return new Schema\Grammars\Grammar;
-    }
+    //
+    //    /** {@inheritdoc} */
+    //    protected function getDefaultQueryGrammar(): Query\Grammar
+    //    {
+    //        return new Query\Grammar;
+    //    }
+    //
+    //    /** {@inheritdoc} */
+    //    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
+    //    {
+    //        return new Schema\Grammars\Grammar;
+    //    }
 
     // ----------------------------------------------------------------------
     // Connection Setters

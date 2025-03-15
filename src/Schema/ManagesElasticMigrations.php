@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Traits\Schema;
+namespace PDPhilip\Elasticsearch\Schema;
 
 use PDPhilip\Elasticsearch\Schema\Definitions\PropertyDefinition;
 

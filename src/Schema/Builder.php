@@ -12,12 +12,14 @@ use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
+use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\BuilderCompatibility;
 
 /**
  * @property Connection $connection
  */
 class Builder extends BaseBuilder
 {
+    use BuilderCompatibility;
     // ----------------------------------------------------------------------
     // Index Config & Reads
     // ----------------------------------------------------------------------
@@ -36,7 +38,7 @@ class Builder extends BaseBuilder
      * @throws ServerResponseException
      * @throws ClientResponseException
      */
-    public function getTables(): array
+    public function getTables($schema = null): array
     {
         return $this->connection->getPostProcessor()->processTables(
             $this->connection->elastic()->cat()->indices(
@@ -352,14 +354,6 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
     // Protected Methods
     // ----------------------------------------------------------------------
-
-    /**
-     * {@inheritDoc}
-     */
-    protected function createBlueprint($table, ?Closure $callback = null): Blueprint
-    {
-        return new Blueprint($table, $callback);
-    }
 
     protected function parseIndexName(string|array $index): string|array
     {

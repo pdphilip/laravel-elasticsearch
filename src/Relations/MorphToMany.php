@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany as EloquentMorphToMany;
 use Illuminate\Support\Arr;
-use PDPhilip\Elasticsearch\Traits\Relations\ManagesRefresh;
 
 use function array_diff;
 use function array_key_exists;
