@@ -326,18 +326,6 @@ class Connection extends BaseConnection
     {
         return new Query\Processor;
     }
-    //
-    //    /** {@inheritdoc} */
-    //    protected function getDefaultQueryGrammar(): Query\Grammar
-    //    {
-    //        return new Query\Grammar;
-    //    }
-    //
-    //    /** {@inheritdoc} */
-    //    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
-    //    {
-    //        return new Schema\Grammars\Grammar;
-    //    }
 
     // ----------------------------------------------------------------------
     // Connection Setters

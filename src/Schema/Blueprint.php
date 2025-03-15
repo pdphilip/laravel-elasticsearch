@@ -75,22 +75,6 @@ class Blueprint extends BlueprintBase
     }
 
     /**
-     * Execute the blueprint against the database.
-     *
-     * @override
-     */
-    //    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar): void
-    //    {
-    //        foreach ($this->toDSL($connection, $grammar) as $statement) {
-    //            if ($connection->pretending()) {
-    //                return;
-    //            }
-    //
-    //            $statement($this, $connection);
-    //        }
-    //    }
-
-    /**
      * @return Closure[]
      */
     public function toDSL(Connection $connection, Grammar $grammar): array
