@@ -82,7 +82,7 @@ class Builder extends BaseEloquentBuilder
         $this->model = $model;
 
         $this->query->from($model->getTable());
-        $this->query->options()->set($this->model?->options()->all() ?? []);
+        $this->query->options()->merge($this->model?->options()->all() ?? []);
 
         return $this;
     }
