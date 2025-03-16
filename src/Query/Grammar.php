@@ -85,7 +85,13 @@ class Grammar extends BaseGrammar
             }
 
             // We don't want to save the ID as part of the doc
-            unset($doc['id'], $doc['_id']);
+            // Unless the Model has explicitly set 'storeIdsInDocument'
+            if($query->getOption('store_ids_in_document', false)){
+              $doc['id'] = $docId;
+              unset($doc['_id']);
+            } else {
+              unset($doc['id'], $doc['_id']);
+            }
 
             // Add the document index operation
             $index = DslFactory::indexOperation(
