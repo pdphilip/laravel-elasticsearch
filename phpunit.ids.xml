@@ -8,8 +8,8 @@
         failOnRisky="true"
 >
     <testsuites>
-        <testsuite name="Tests">
-            <directory suffix="Test.php">./tests</directory>
+        <testsuite name="ID Tests">
+            <directory suffix="WithId.php">./tests</directory>
         </testsuite>
     </testsuites>
     <php>

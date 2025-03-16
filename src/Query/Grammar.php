@@ -352,12 +352,23 @@ class Grammar extends BaseGrammar
             $query = DslFactory::range($field, [$operator => $value], $options);
 
         } else {
-            $options['operator'] = $options['operator'] ?? 'and';
-            $query = DslFactory::match($field, $value, $options);
+            $field = $this->getIndexableField($field, $builder);
+            $query = DslFactory::term($field, $value, $options);
         }
 
         return $this->applyOptionsToClause($query, $where);
 
+    }
+
+    protected function compileWhereMatch(Builder $builder, array $where): array
+    {
+        $field = $where['column'];
+        $values = $this->getValueForWhere($builder, $where);
+        $options = $where['options'] ?? [];
+        $options['operator'] = $options['operator'] ?? 'and';
+        $query = DslFactory::match($field, $values, $options);
+
+        return $this->applyOptionsToClause($query, $where);
     }
 
     /**
@@ -1522,7 +1533,6 @@ class Grammar extends BaseGrammar
      */
     public function getIndexableField(string $textField, Builder $builder): string
     {
-
         // _id doesn't need to be found.
         if ($textField == '_id' || $textField == 'id') {
             return '_id';
@@ -1545,6 +1555,7 @@ class Grammar extends BaseGrammar
             $mapping = collect(Arr::dot($builder->getMapping()));
             $builder->options()->add($cacheKey, $mapping);
         }
+
         $keywordKey = $mapping->keys()
             ->filter(fn ($field) => str_starts_with($field, $textField) && ! in_array($mapping[$field], ['text', 'binary']))
             ->first();

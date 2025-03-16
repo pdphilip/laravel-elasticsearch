@@ -11,7 +11,7 @@ use PDPhilip\Elasticsearch\Schema\Schema;
  * @property string $country
  * @property bool $can_be_eaten
  */
-final class HiddenAnimal extends Model
+class HiddenAnimal extends Model
 {
     protected $connection = 'elasticsearch';
 

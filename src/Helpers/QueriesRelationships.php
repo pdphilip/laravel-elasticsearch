@@ -36,6 +36,7 @@ trait QueriesRelationships
     ): Builder|static {
         if (is_string($relation)) {
             if (str_contains($relation, '.')) {
+                // @phpstan-ignore-next-line
                 return $this->hasNested($relation, $operator, $count, $boolean, $callback);
             }
 
@@ -99,8 +100,8 @@ trait QueriesRelationships
 
         $relations = match (true) {
             $relation instanceof MorphToMany => $relation->getInverse() ?
-              $this->handleMorphedByMany($hasQuery, $relation) :
-              $this->handleMorphToMany($hasQuery, $relation),
+                $this->handleMorphedByMany($hasQuery, $relation) :
+                $this->handleMorphToMany($hasQuery, $relation),
             default => $hasQuery->pluck($this->getHasCompareKey($relation))
         };
 

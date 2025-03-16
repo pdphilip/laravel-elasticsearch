@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Exceptions\InvalidFieldTypeException;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
-use PDPhilip\Elasticsearch\Tests\Models\User;
+use PDPhilip\Elasticsearch\Tests\Models\IdGenerated\User;
 
 beforeEach(function () {
     Schema::dropIfExists('newcollection');

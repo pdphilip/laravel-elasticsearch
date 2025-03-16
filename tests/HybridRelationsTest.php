@@ -220,7 +220,6 @@ it('tests hybrid with', function () {
 it('tests hybrid belongs to many', function () {
     $user = new SqlUser;
     $user2 = new SqlUser;
-
     expect($user)->toBeInstanceOf(SqlUser::class)
         ->and($user->getConnection())->toBeInstanceOf(SQLiteConnection::class)
         ->and($user2)->toBeInstanceOf(SqlUser::class)
@@ -233,9 +232,9 @@ it('tests hybrid belongs to many', function () {
     $user2->fill(['name' => 'Maria Doe'])->save();
     $user2 = SqlUser::query()->find($user2->id);
 
-    // Create MongoDB Skills
+    // Create Elasticsearch Skills
     $skill = Skill::query()->create(['name' => 'Laravel']);
-    $skill2 = Skill::query()->create(['name' => 'MongoDB']);
+    $skill2 = Skill::query()->create(['name' => 'Elasticsearch']);
 
     // sync (pivot is empty)
     $skill->sqlUsers()->sync([$user->id, $user2->id]);

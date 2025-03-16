@@ -47,7 +47,6 @@ it('tests insert', function () {
         ->and($user->created_at)->toBeInstanceOf(Carbon::class)
         ->and($user->name)->toBe('John Doe')
         ->and($user->age)->toBe(35);
-
 });
 
 it('tests update', function () {
@@ -445,7 +444,6 @@ it('tests multiple level dot notation', function () {
         ->and($book->chapters)->toBe(['one' => ['title' => 'The first chapter']])
         ->and($book['chapters.one'])->toBe(['title' => 'The first chapter'])
         ->and($book['chapters.one.title'])->toBe('The first chapter');
-
 });
 
 it('tests chunk by id', function () {
@@ -505,7 +503,6 @@ it('tests cursor across many items', function () {
         $names[] = $cursor;
     }
     expect($names)->toHaveCount(15000);
-
 });
 
 it('tests truncate model', function () {
@@ -590,7 +587,6 @@ it('gets the query meta', function () {
     $check = User::first();
     expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\ModelMeta::class)
         ->and($check->getMeta()->toArray())->toHaveKeys(['score', 'index']);
-
 });
 
 it('tests numeric field name', function () {
@@ -599,17 +595,13 @@ it('tests numeric field name', function () {
     $user->{2} = ['3' => 'two.three'];
     $user->save();
 
-    expect($user->id)->toBeString()->
-    and(isset($user->_id))->toBeTrue()
+    expect($user->id)->toBeString()->and(isset($user->_id))->toBeTrue()
         ->and(User::count())->toBe(1);
 });
 
 it('tests create with null id', function (string $id) {
     $user = User::create([$id => null, 'email' => 'foo@bar']);
-    expect($user->id)->toBeString()->
-    and($user->_id)->toBeString()->
-    and($user->_id)->toBe($user->id)->
-        and(User::count())->toBe(1);
+    expect($user->id)->toBeString()->and($user->_id)->toBeString()->and($user->_id)->toBe($user->id)->and(User::count())->toBe(1);
 })->with([
     'id',
     '_id',

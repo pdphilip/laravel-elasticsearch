@@ -75,7 +75,6 @@ class Builder extends BaseBuilder
         $params = ['index' => $index];
 
         return $this->connection->elastic()->indices()->exists($params)->asBool();
-
     }
 
     /**
@@ -174,7 +173,6 @@ class Builder extends BaseBuilder
                 $this->drop($table);
             }
         } catch (ClientResponseException|MissingParameterException|ServerResponseException $e) {
-
         }
     }
 
@@ -227,7 +225,6 @@ class Builder extends BaseBuilder
         $mapping = reset($mapping);
 
         return Sanitizer::flattenFieldMapping($mapping);
-
     }
 
     /**
@@ -238,7 +235,6 @@ class Builder extends BaseBuilder
     public function getFieldsMapping(string $table, $flatten = false): array
     {
         return $this->getFieldMapping($table, '*', $flatten);
-
     }
 
     /**

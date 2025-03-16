@@ -88,7 +88,6 @@ class Connection extends BaseConnection
         if (! empty($this->config['index_prefix'])) {
             $this->setIndexPrefix($this->config['index_prefix']);
         }
-
     }
 
     // ----------------------------------------------------------------------
@@ -134,7 +133,6 @@ class Connection extends BaseConnection
         );
 
         $this->config['auth_type'] = strtolower($this->config['auth_type']);
-
     }
 
     /**
@@ -155,7 +153,6 @@ class Connection extends BaseConnection
         if ($this->config['auth_type'] === 'http' && (! $this->config['hosts'] || ! is_array($this->config['hosts']))) {
             throw new RuntimeException('auth_type of `http` requires `hosts` to be set and be an array');
         }
-
     }
 
     public function setOptions(): void
@@ -480,7 +477,6 @@ class Connection extends BaseConnection
         foreach ($pages as $page) {
             yield $page;
         }
-
     }
 
     /**
@@ -506,7 +502,7 @@ class Connection extends BaseConnection
         ];
 
         $count = 0;
-        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $pages = new SearchResponseIterator($this->elastic(), $scrollParams);
         $hits = new SearchHitIterator($pages);
 
         foreach ($hits as $hit) {
@@ -595,7 +591,9 @@ class Connection extends BaseConnection
     public function query(): Builder
     {
         return new Builder(
-            $this, $this->getQueryGrammar(), $this->getPostProcessor()
+            $this,
+            $this->getQueryGrammar(),
+            $this->getPostProcessor()
         );
     }
 

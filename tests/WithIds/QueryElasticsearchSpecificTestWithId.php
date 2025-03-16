@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use PDPhilip\Elasticsearch\Query\Builder;
-use PDPhilip\Elasticsearch\Tests\Models\Post;
-use PDPhilip\Elasticsearch\Tests\Models\User;
+use PDPhilip\Elasticsearch\Tests\Models\IdGenerated\Post;
+use PDPhilip\Elasticsearch\Tests\Models\IdGenerated\User;
 
 beforeEach(function () {
     User::executeSchema();
@@ -71,7 +71,7 @@ it('ES Specific Queries', function () {
     expect($users)->toHaveCount(3);
 
     // Was searchMatch()
-    $users = User::whereMatch('description', 'exploring')->get();
+    $users = User::where('description', 'exploring')->get();
     expect($users)->toHaveCount(1);
 
     $users = User::wherePhrase('description', 'exploring the')->get();

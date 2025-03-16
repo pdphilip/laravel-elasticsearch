@@ -6,7 +6,7 @@ use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 
 /**
- * @mixin WhereOptions
+ * @mixin MatchOptions
  * @mixin TermOptions
  * @mixin TermFuzzyOptions
  * @mixin SearchOptions

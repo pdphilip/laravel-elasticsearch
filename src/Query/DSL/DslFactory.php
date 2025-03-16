@@ -40,6 +40,16 @@ class DslFactory
         ];
     }
 
+    public static function term(string $field, $value, array $options = []): array
+    {
+        return [
+            'term' => array_merge(
+                [$field => $value],
+                $options
+            ),
+        ];
+    }
+
     public static function terms(string $field, array $values, array $options = []): array
     {
         return [
@@ -120,17 +130,17 @@ class DslFactory
         ];
     }
 
-    public static function term(string $field, $value, array $options = []): array
-    {
-        return [
-            'term' => [
-                $field => array_merge(
-                    ['value' => (string) $value],
-                    $options
-                ),
-            ],
-        ];
-    }
+    //    public static function term(string $field, $value, array $options = []): array
+    //    {
+    //        return [
+    //            'term' => [
+    //                $field => array_merge(
+    //                    ['value' => (string) $value],
+    //                    $options
+    //                ),
+    //            ],
+    //        ];
+    //    }
 
     public static function multiMatch(string $value, array $options = []): array
     {

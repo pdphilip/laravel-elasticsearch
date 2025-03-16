@@ -300,7 +300,6 @@ class Builder extends BaseEloquentBuilder
         $this->query->closePit($pitId);
 
         return true;
-
     }
 
     /**
@@ -432,7 +431,6 @@ class Builder extends BaseEloquentBuilder
         );
 
         return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
-
     }
 
     public function min($column, array $options = [])
