@@ -7,7 +7,8 @@ use PDPhilip\Elasticsearch\Schema\Grammars\Grammar;
 
 trait BlueprintCompatibility
 {
-    public function build(Connection|\Illuminate\Database\Connection $connection, Grammar|\Illuminate\Database\Schema\Grammars\Grammar $grammar): void
+    // @phpstan-ignore-next-line
+    public function build(Connection|\Illuminate\Database\Connection|null $connection = null, Grammar|\Illuminate\Database\Schema\Grammars\Grammar|null $grammar = null): void
     {
         foreach ($this->toDSL($connection, $grammar) as $statement) {
             if ($connection->pretending()) {

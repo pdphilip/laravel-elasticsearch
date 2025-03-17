@@ -79,6 +79,7 @@ class Blueprint extends BlueprintBase
      */
     public function toDSL(Connection $connection, Grammar $grammar): array
     {
+        // @phpstan-ignore-next-line
         $this->addImpliedCommands($connection, $grammar);
 
         $statements = [];
@@ -86,6 +87,7 @@ class Blueprint extends BlueprintBase
         // Each type of command has a corresponding compiler function on the schema
         // grammar which is used to build the necessary SQL statements to build
         // the blueprint element, so we'll just call that compilers function.
+        // @phpstan-ignore-next-line
         $this->ensureCommandsAreValid($connection);
 
         foreach ($this->commands as $command) {

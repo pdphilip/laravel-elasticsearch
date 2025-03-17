@@ -12,18 +12,21 @@ trait ConnectionCompatibility
      */
     public function getSchemaGrammar()
     {
+        // @phpstan-ignore-next-line
         return new Schema\Grammars\Grammar;
     }
 
     /** {@inheritdoc} */
     protected function getDefaultQueryGrammar(): Query\Grammar
     {
+        // @phpstan-ignore-next-line
         return new Query\Grammar;
     }
 
     /** {@inheritdoc} */
     protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
     {
+        // @phpstan-ignore-next-line
         return new Schema\Grammars\Grammar;
     }
 }
