@@ -4,7 +4,7 @@ namespace PDPhilip\Elasticsearch\Laravel;
 
 use PDPhilip\Elasticsearch\Helpers\Helpers;
 
-$laravelVersion = Helpers::getLaravelMajorVersion();
+$laravelVersion = Helpers::getLaravelCompatabilityVersion();
 
 class_alias("PDPhilip\\Elasticsearch\\Laravel\\v{$laravelVersion}\\Connection\\ConnectionCompatibility", 'PDPhilip\\Elasticsearch\\Laravel\\Compatibility\\Connection\\ConnectionCompatibility');
 class_alias("PDPhilip\\Elasticsearch\\Laravel\\v{$laravelVersion}\\Schema\\BuilderCompatibility", 'PDPhilip\\Elasticsearch\\Laravel\\Compatibility\\Schema\\BuilderCompatibility');

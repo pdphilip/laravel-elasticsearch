@@ -5,7 +5,22 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\ElasticClient as Client;
+use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
+
+function getLaravelVersion(): int
+{
+    try {
+        return Helpers::getLaravelCompatabilityVersion();
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+test('Laravel Compatability for v'.getLaravelVersion().' loaded', function () {
+    expect(getLaravelVersion())->toBeGreaterThan(10)
+        ->and(getLaravelVersion())->toBeLessThan(13);
+});
 
 test('Connection', function () {
     $connection = DB::connection('elasticsearch');

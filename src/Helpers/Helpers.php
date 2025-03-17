@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Helpers;
 
 use Closure;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 
 /**
@@ -46,11 +48,14 @@ final class Helpers
         return $value instanceof Closure ? $value(...$args) : $value;
     }
 
-    public static function getLaravelMajorVersion(): int
+    public static function getLaravelCompatabilityVersion(): int
     {
-        $majorVersion = (int) Str::before(app()->version(), '.');
-        if ($majorVersion < 11) {
+        $majorVersion = (int) Str::before(Application::VERSION, '.');
+        if ($majorVersion === 10) {
             $majorVersion = 11;
+        }
+        if (! in_array($majorVersion, [11, 12], true)) {
+            throw new RuntimeException('Laravel version not supported [found: '.Application::VERSION.']. Supported Major versions are 10/11 and 12.');
         }
 
         return $majorVersion;
