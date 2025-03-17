@@ -117,7 +117,7 @@ trait ElasticsearchModel
 
         // Since newBaseQueryBuilder is used whenever a new Query builder is needed
         // we hook in to it to pass options we have set at the model level to the query builder.
-        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->mappingMap, 'limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
+        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->mappingMap, 'default_limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
 
         return $query;
     }
@@ -128,7 +128,7 @@ trait ElasticsearchModel
     public function newInstance($attributes = [], $exists = false)
     {
         $model = parent::newInstance($attributes, $exists);
-        $model->options()->merge($this->options()->all(), ['mappings' => $this->mappingMap, 'limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
+        $model->options()->merge($this->options()->all(), ['mappings' => $this->mappingMap, 'default_limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
 
         return $model;
     }

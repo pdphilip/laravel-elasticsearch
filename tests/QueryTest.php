@@ -76,6 +76,7 @@ it('tests where clause', function () {
 });
 
 it('tests and where clause', function () {
+
     $users = User::where('age', 35)->where('title', 'admin')->get();
     expect($users)->toHaveCount(2);
 
