@@ -75,8 +75,6 @@ class Builder extends BaseBuilder
 
     public mixed $asDsl = false;
 
-    public string $parentField = '';
-
     /**
      * All the supported clause operators.
      *
@@ -160,7 +158,6 @@ class Builder extends BaseBuilder
     {
 
         [$column, $operator, $value, $boolean, $options] = $this->extractOptionsWithOperator('Where', $column, $operator, $value, $boolean, $options);
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         parent::where($column, $operator, $value, $boolean)->applyOptions($options);
 
         return $this;
@@ -211,7 +208,6 @@ class Builder extends BaseBuilder
     public function whereIn($column, $values, $boolean = 'and', $not = false, $options = [])
     {
         [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Term', $column, $values, $boolean, $not, $options);
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         $type = 'In';
         if ($not) {
             $boolean .= ' not';
@@ -283,7 +279,6 @@ class Builder extends BaseBuilder
         }
 
         foreach (Arr::wrap($columns) as $column) {
-            $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
             $this->wheres[] = compact('type', 'column', 'boolean');
         }
 
@@ -319,7 +314,6 @@ class Builder extends BaseBuilder
     {
         [$column, $values, $not, $boolean, $options] = $this->extractOptionsWithNot('Where', $column, $values, $boolean, $not, $options);
         $type = 'Between';
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         $this->wheres[] = compact('column', 'values', 'type', 'boolean', 'not', 'options');
 
         return $this;
@@ -365,7 +359,6 @@ class Builder extends BaseBuilder
             $operator,
             func_num_args() == 2
         );
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         $type = 'Date';
 
         $this->wheres[] = compact('column', 'operator', 'value', 'type', 'boolean', 'options');
@@ -393,7 +386,6 @@ class Builder extends BaseBuilder
      */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and', array $options = [])
     {
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         switch ($type) {
             case 'Year':
                 $dateType = 'year';
@@ -466,7 +458,6 @@ class Builder extends BaseBuilder
 
             return $this;
         }
-        $column = Sanitizer::prependParentFieldIfNotPresent($column, $this->parentField);
         $type = $options['type'] ?? 'basic';
 
         $this->orders[] = compact('column', 'direction', 'type', 'options');
@@ -736,16 +727,12 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function newQuery($from = null, $viaParentField = null)
+    public function newQuery($from = null)
     {
         $query = new static($this->connection, $this->grammar, $this->processor);
-        if ($viaParentField) {
-            $query->parentField = $viaParentField;
-        }
         if ($from) {
             $query->from($from);
         }
-
         // Transfer items
         $query->options()->set($this->options()->all());
 
@@ -1215,13 +1202,16 @@ class Builder extends BaseBuilder
      */
     public function whereNestedObject($column, $query, $innerHits = true, $options = [], $boolean = 'and', $not = false): self
     {
+
         $from = $this->from;
         $type = 'NestedObject';
         $options = $this->setOptions($options, 'nested');
         $options->innerHits($innerHits);
         $options = $options->toArray();
+
+        $this->options()->add('parentField', $column);
         if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery($from, $column));
+            call_user_func($query, $query = $this->newQuery($from));
         }
 
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
@@ -1251,16 +1241,18 @@ class Builder extends BaseBuilder
         if ($existing) {
             throw new RuntimeException("Nested filter for field '{$column}' already exists.");
         }
-
         $boolean = 'and';
         $not = false;
         $from = $this->from;
         $type = 'InnerNested';
         $options = $this->setOptions($options, 'nested');
         $options = $options->toArray();
+
+        $this->options()->add('parentField', $column);
         if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery($from, $column));
+            call_user_func($query, $query = $this->newQuery($from));
         }
+
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
 
         return $this;

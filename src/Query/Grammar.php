@@ -144,6 +144,9 @@ class Grammar extends BaseGrammar
      */
     public function compileSelect($query): array
     {
+        // Remove parentField on top level query if present
+        $query->options()->remove('parentField');
+
         $dsl = new DslBuilder;
         $dsl->setIndex($query->getFrom());
         $compiled = $this->compileWheres($query);
@@ -297,6 +300,8 @@ class Grammar extends BaseGrammar
                 if (Str::startsWith($where['column'], $builder->from.'.')) {
                     $where['column'] = Str::replaceFirst($builder->from.'.', '', $where['column']);
                 }
+
+                $where['column'] = $this->prependParentField($where['column'], $builder);
             }
             $method = 'compileWhere'.$where['type'];
             $result = $this->{$method}($builder, $where);
@@ -1525,6 +1530,20 @@ class Grammar extends BaseGrammar
     // ----------------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------------
+
+    public function prependParentField($field, Builder $builder): string
+    {
+        if (! empty($parentField = $builder->options()->get('parentField'))) {
+            if (Str::startsWith($field, $parentField)) {
+                return $field;
+            }
+
+            return $parentField.'.'.$field;
+        }
+
+        return $field;
+    }
+
     /**
      * Given a `$field` points to the subfield that is of type keyword.
      *
