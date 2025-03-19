@@ -1083,36 +1083,46 @@ class Builder extends BaseBuilder
         }
     }
 
-    public function minShouldMatch($value): void
+    public function minShouldMatch($value): self
     {
         $this->searchOptions['minimum_should_match'] = $value;
+
+        return $this;
     }
 
-    public function minScore($value): void
+    public function minScore($value): self
     {
         $this->minScore = $value;
+
+        return $this;
     }
 
-    public function boostField($field, $factor): void
+    public function boostField($field, $factor): self
     {
         $this->fields[$field] = $factor ?? 1;
+
+        return $this;
     }
 
-    public function searchFields(array $fields): void
+    public function searchFields(array $fields): self
     {
         foreach ($fields as $field) {
             if (empty($this->fields[$field])) {
                 $this->fields[$field] = 1;
             }
         }
+
+        return $this;
     }
 
-    public function searchField($field, $boostFactor = null): void
+    public function searchField($field, $boostFactor = null): self
     {
         $this->fields[$field] = $boostFactor ?? 1;
+
+        return $this;
     }
 
-    public function highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = []): void
+    public function highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = []): self
     {
         $highlightFields = [
             '*' => (object) [],
@@ -1143,6 +1153,8 @@ class Builder extends BaseBuilder
         $highlight['fields'] = $highlightFields;
 
         $this->searchOptions['highlight'] = $highlight;
+
+        return $this;
     }
 
     // ----------------------------------------------------------------------
