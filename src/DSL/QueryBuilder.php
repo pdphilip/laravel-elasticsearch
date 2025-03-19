@@ -274,7 +274,7 @@ trait QueryBuilder
     private function _parseCondition($condition, $parentField = null): array
     {
         $field = key($condition);
-        if ($parentField) {
+        if ($parentField && ! in_array($field, ['must', 'should'])) {
             if (! str_starts_with($field, $parentField.'.')) {
                 $field = $parentField.'.'.$field;
             }
