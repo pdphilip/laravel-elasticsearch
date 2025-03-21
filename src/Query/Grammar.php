@@ -444,7 +444,6 @@ class Grammar extends BaseGrammar
     protected function compileWhereFunctionScore(Builder $builder, array $where): array
     {
         $compiled = $this->compileWheres($where['query']);
-
         foreach ($compiled as $queryPart => $clauses) {
             $compiled[$queryPart] = array_map(function ($clause) use ($where) {
                 if ($clause) {
@@ -457,9 +456,9 @@ class Grammar extends BaseGrammar
 
         $compiled = array_filter($compiled);
         $functionType = $where['functionType'];
-        $options = $where['options'] ?? [];
+        $functionOptions = $where['options'];
 
-        return DslFactory::functionScore($compiled['query'], $functionType, $options);
+        return DslFactory::functionScore($compiled['query'], $functionType, $functionOptions);
     }
 
     /**
@@ -960,7 +959,6 @@ class Grammar extends BaseGrammar
 
         foreach ($builder->metricsAggregations as $aggregation) {
             $result = $this->compileAggregation($builder, $aggregation);
-
             $aggregations = array_merge_recursive($aggregations, $result);
         }
 
@@ -1138,10 +1136,11 @@ class Grammar extends BaseGrammar
      */
     protected function compileMatrixStatsAggregation(Builder $builder, array $aggregation): array
     {
-        $options = $aggregation['options'] ?? [];
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
 
-        return DslFactory::matrixStats($field, $options);
+        $options = $aggregation['options'] ?? [];
+        $fields = $aggregation['args'];
+
+        return DslFactory::matrixStats($fields, $options);
     }
 
     /**

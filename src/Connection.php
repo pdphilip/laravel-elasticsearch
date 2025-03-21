@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch;
 use Closure;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\Endpoints\Indices;
 use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
@@ -411,6 +412,11 @@ class Connection extends BaseConnection
     public function getMappings($index): array
     {
         return $this->connection->getMappings($index);
+    }
+
+    public function indices(): Indices
+    {
+        return $this->connection->indices();
     }
 
     // ----------------------------------------------------------------------

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Schema;
 
 use Closure;
+use Elastic\Elasticsearch\Endpoints\Indices;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\BuilderCompatibility;
 
@@ -34,10 +36,6 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
     // Index getters
     // ----------------------------------------------------------------------
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     */
     public function getTables($schema = null): array
     {
         return $this->connection->getPostProcessor()->processTables(
@@ -50,10 +48,6 @@ class Builder extends BaseBuilder
         );
     }
 
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     */
     public function getTable($name): array
     {
         return $this->connection->getPostProcessor()->processTables(
@@ -66,11 +60,6 @@ class Builder extends BaseBuilder
         );
     }
 
-    /**
-     * @throws ClientResponseException
-     * @throws ServerResponseException
-     * @throws MissingParameterException
-     */
     public function hasTable($table): bool
     {
         $index = $this->parseIndexName($table);
@@ -79,11 +68,6 @@ class Builder extends BaseBuilder
         return $this->connection->elastic()->indices()->exists($params)->asBool();
     }
 
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
-     */
     public function hasColumn($table, $column): bool
     {
         $index = $this->parseIndexName($table);
@@ -93,11 +77,6 @@ class Builder extends BaseBuilder
         return ! empty($result[$index]['mappings'][$column]);
     }
 
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
-     */
     public function hasColumns($table, $columns): bool
     {
         $index = $this->parseIndexName($table);
@@ -189,10 +168,6 @@ class Builder extends BaseBuilder
 
     /**
      *  Includes settings and mappings
-     *
-     * @throws ClientResponseException
-     * @throws ServerResponseException
-     * @throws MissingParameterException
      */
     public function getIndex(string|array $indices = '*'): array
     {
@@ -202,9 +177,7 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
+     * Returns the list of indices.
      */
     public function getIndices(): array
     {
@@ -213,15 +186,11 @@ class Builder extends BaseBuilder
 
     /**
      *  Returns the mapping details about your indices.
-     *
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
      */
-    public function getFieldMapping(string $table, string $column, $flatten = false): array
+    public function getFieldMapping(string $table, string $column, $raw = false): array
     {
         $mapping = $this->connection->getFieldMapping($this->parseIndexName($table), $column);
-        if (! $flatten) {
+        if ($raw) {
             return $mapping;
         }
         $mapping = reset($mapping);
@@ -230,28 +199,23 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @throws ClientResponseException
-     * @throws ServerResponseException
-     * @throws MissingParameterException
+     * Returns the mapping details about your indices.
      */
-    public function getFieldsMapping(string $table, $flatten = false): array
+    public function getFieldsMapping(string $table, $raw = false): array
     {
-        return $this->getFieldMapping($table, '*', $flatten);
+        return $this->getFieldMapping($table, '*', $raw);
     }
 
     /**
      * Returns the mapping details about your indices.
-     *
-     * @throws ClientResponseException
-     * @throws ServerResponseException
      */
-    public function getMappings(string|array $table, $flattenProperties = false): array
+    public function getMappings(string|array $table, $raw = false): array
     {
         $index = $this->parseIndexName($table);
         $params = ['index' => Arr::wrap($index)];
 
         $mappings = $this->connection->elastic()->indices()->getMapping($params)->asArray();
-        if (! $flattenProperties) {
+        if ($raw) {
             return $mappings;
         }
         $mappings = reset($mappings);
@@ -262,9 +226,6 @@ class Builder extends BaseBuilder
 
     /**
      * Shows you the currently configured settings for one or more indices
-     *
-     * @throws ClientResponseException
-     * @throws ServerResponseException
      */
     public function getSettings(string|array $table): array
     {
@@ -276,10 +237,6 @@ class Builder extends BaseBuilder
 
     /**
      * Replaces `hasIndex` method.
-     *
-     * @throws ClientResponseException
-     * @throws ServerResponseException
-     * @throws MissingParameterException
      */
     public function indexExists($index): bool
     {
@@ -302,6 +259,11 @@ class Builder extends BaseBuilder
         $params = [...$params, ...$options];
 
         return $this->connection->elastic()->reindex($params)->asArray();
+    }
+
+    public function indices(): Indices
+    {
+        return $this->connection->indices();
     }
 
     // ----------------------------------------------------------------------
@@ -331,21 +293,11 @@ class Builder extends BaseBuilder
         $this->table($index, $callback);
     }
 
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
-     */
     public function hasField($index, $field): bool
     {
         return $this->hasColumn($index, $field);
     }
 
-    /**
-     * @throws ServerResponseException
-     * @throws ClientResponseException
-     * @throws MissingParameterException
-     */
     public function hasFields($index, $fields): bool
     {
         return $this->hasColumns($index, $fields);
@@ -374,5 +326,17 @@ class Builder extends BaseBuilder
         }
 
         return $index;
+    }
+
+    // ----------------------------------------------------------------------
+    // Disabled
+    // ----------------------------------------------------------------------
+
+    /**
+     * @throws LogicException
+     */
+    public function hasIndex($table, $index, $type = null)
+    {
+        throw new LogicException('Elasticsearch does not support index types. Please use the `hasTable` method instead.');
     }
 }

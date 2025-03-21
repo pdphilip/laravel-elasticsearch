@@ -83,14 +83,14 @@ it('ES Specific Queries', function () {
 });
 
 it('can use function score', function () {
-    $users = User::functionScore('random_score', function (Builder $query) {
+    $users = User::functionScore('random_score', [
+        'seed' => 2,
+        'field' => '_seq_no',
+    ], function (Builder $query) {
         $query->whereTermFuzzy('title.keyword', 'admik');
     })->get();
-
-    expect($users)->toHaveCount(2)
-        ->and($users[0]['name'])->toBe('John John Yoe')
-        ->and($users[1]['name'])->toBe('John Doe');
-})->todo();
+    expect($users)->toHaveCount(3);
+});
 
 it('Nested Queries', function () {
 

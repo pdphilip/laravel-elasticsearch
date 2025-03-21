@@ -560,19 +560,19 @@ class Builder extends BaseEloquentBuilder
         Schema::connection($this->query->connection->getName())->dropIfExists($this->from);
     }
 
-    public function getIndexMappings(bool $flatten = true): array
+    public function getIndexMappings(bool $raw = false): array
     {
-        return Schema::on($this->query->connection->getName())->getMappings($this->from, $flatten);
+        return Schema::on($this->query->connection->getName())->getMappings($this->from, $raw);
     }
 
-    public function getFieldMappings(bool $flatten = true): array
+    public function getFieldMappings(bool $raw = false): array
     {
-        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, '*', $flatten);
+        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, '*', $raw);
     }
 
-    public function getFieldMapping(string|array $field = '*', bool $flatten = true): array
+    public function getFieldMapping(string|array $field = '*', bool $raw = false): array
     {
-        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, $field, $flatten);
+        return Schema::connection($this->query->connection->getName())->getFieldMapping($this->from, $field, $raw);
     }
 
     public function getIndexSettings(): array

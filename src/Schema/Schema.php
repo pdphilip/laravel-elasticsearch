@@ -7,7 +7,7 @@ namespace PDPhilip\Elasticsearch\Schema;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @mixin Builder
+ * @mixin static Builder
  *
  * @see \PDPhilip\Elasticsearch\Schema\Builder
  */

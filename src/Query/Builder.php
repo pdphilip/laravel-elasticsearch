@@ -1750,12 +1750,15 @@ class Builder extends BaseBuilder
      */
     protected function aggregateMetric($function, $columns = ['*'], $options = [])
     {
+        if ($function == 'matrix_stats' && is_array($columns)) {
+            $args = $columns;
+        }
         // Each column we want aggregated
         $columns = Arr::wrap($columns);
         foreach ($columns as $column) {
             $this->metricsAggregations[] = [
                 'key' => $column,
-                'args' => $column,
+                'args' => ! empty($args) ? $args : $column,
                 'type' => $function,
                 'options' => $options,
             ];
@@ -2034,15 +2037,15 @@ class Builder extends BaseBuilder
     /**
      * Adds a function score of any type
      *
-     * @param  string  $boolean
-     * @param  array  $options  see elastic search docs for options
+     * @param  string  $functionType
+     * @param  array  $functionOptions  see elastic search docs for options
      */
-    public function functionScore($functionType, callable $query, $boolean = 'and', $options = []): self
+    public function functionScore($functionType, array $functionOptions, callable $query, string $boolean = 'and'): self
     {
-
         $type = 'FunctionScore';
+        $options = $functionOptions;
 
-        call_user_func($query, $query = $this->newQuery());
+        call_user_func($query, $query = $this->newQuery($this->from));
 
         $this->wheres[] = compact('functionType', 'query', 'type', 'boolean', 'options');
 
@@ -2101,7 +2104,7 @@ class Builder extends BaseBuilder
     {
         if (empty($this->mapping)) {
             $index = $this->getFrom();
-            $this->mapping = Schema::connection($this->connection->getName())->getFieldsMapping($index, true);
+            $this->mapping = Schema::connection($this->connection->getName())->getFieldsMapping($index);
         }
 
         return $this->mapping;

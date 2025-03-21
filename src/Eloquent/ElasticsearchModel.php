@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\ModelMeta;
+use PDPhilip\Elasticsearch\Eloquent\Docs\ModelDocs;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
@@ -21,10 +22,11 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  * @property object $withHighlights
  *
  * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ * @mixin \PDPhilip\Elasticsearch\Eloquent\Builder
  */
 trait ElasticsearchModel
 {
-    use HasOptions, HybridRelations;
+    use HasOptions, HybridRelations, ModelDocs;
 
     protected ?ModelMeta $meta;
 

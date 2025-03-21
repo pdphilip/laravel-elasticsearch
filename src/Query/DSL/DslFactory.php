@@ -255,12 +255,12 @@ class DslFactory
         ];
     }
 
-    public static function functionScore(array $query, string $functionType, array $options = []): array
+    public static function functionScore(array $query, string $functionType, array $functionOptions = []): array
     {
         return [
             'function_score' => array_merge(
-                [$functionType => ['query' => $query]],
-                $options
+                ['query' => $query],
+                [$functionType => $functionOptions],
             ),
         ];
     }
@@ -355,11 +355,11 @@ class DslFactory
         ];
     }
 
-    public static function matrixStats(string $field, array $options = []): array
+    public static function matrixStats(mixed $fields, array $options = []): array
     {
         return [
             'matrix_stats' => array_merge(
-                ['fields' => $field],
+                ['fields' => $fields],
                 $options
             ),
         ];

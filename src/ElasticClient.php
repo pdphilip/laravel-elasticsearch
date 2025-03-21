@@ -3,6 +3,7 @@
 namespace PDPhilip\Elasticsearch;
 
 use Elastic\Elasticsearch\Client;
+use Elastic\Elasticsearch\Endpoints\Indices;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
@@ -94,6 +95,11 @@ class ElasticClient
     // ----------------------------------------------------------------------
     // Indices
     // ----------------------------------------------------------------------
+
+    public function indices(): Indices
+    {
+        return $this->client->indices();
+    }
 
     /**
      * @throws ServerResponseException

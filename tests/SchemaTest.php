@@ -441,13 +441,12 @@ it('lists table mappings', function () {
     DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
     DB::connection('elasticsearch')->table('newcollection_two')->insert(['test' => 'value']);
 
-    $tables = Schema::getMappings('newcollection');
-
+    $tables = Schema::getMappings('newcollection', true);
     expect($tables)->toBeArray()
         ->and(count($tables))->toBe(1)
         ->and($tables)->toHaveKeys(['newcollection']);
 
-    $tables = Schema::getMappings(['newcollection', 'newcollection_two']);
+    $tables = Schema::getMappings(['newcollection', 'newcollection_two'], true);
 
     expect($tables)->toBeArray()
         ->and(count($tables))->toBe(2)
@@ -484,7 +483,7 @@ it('can reindex data', function () {
 it('gets field maping', function () {
     DB::connection('elasticsearch')->table('newcollection')->insert(['test' => 'value']);
 
-    $field = Schema::getFieldMapping('newcollection', 'test');
+    $field = Schema::getFieldMapping('newcollection', 'test', true);
 
     expect($field)->toBeArray()
         ->and(count($field))->toBe(1)
@@ -505,7 +504,7 @@ it('should create an index will all numeric type mappings', function () {
         $index->scaledFloat('lfg_scaled_float', 140);
     });
 
-    $mappings = Schema::getMappings('nums_lfg');
+    $mappings = Schema::getMappings('nums_lfg', true);
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_long']['type'] == 'long');
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_int']['type'] == 'integer');
     $this->assertTrue($mappings['nums_lfg']['mappings']['properties']['lfg_short']['type'] == 'short');

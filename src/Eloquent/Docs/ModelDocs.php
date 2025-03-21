@@ -8,16 +8,15 @@ use Closure;
 use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
-use PDPhilip\Elasticsearch\Collection\ElasticCollection;
-use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Eloquent\Builder;
+use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
-use PDPhilip\Elasticsearch\Query\Builder;
 
 /**
  * Query Builder Methods ---------------------------------
  *
- * @method static $this query()
+ * @method static Builder query()
  * @method static $this where(array|Closure|Expression|string $column, $operator = null, $value = null, $boolean = 'and')
  * @method static $this whereIn(string $column, array $values)
  * @method static $this whereExact(string $column, string $value, $boolean = 'and')
@@ -86,6 +85,7 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static ElasticCollection insert($values, $returnData = null):
  * @method static ElasticCollection insertWithoutRefresh($values, $returnData = null)
  * @method static array toDsl(array $columns = ['*'])
+ * @method static array toSql(array $columns = ['*'])
  * @method static mixed rawDsl(array $bodyParams)
  * @method static ElasticCollection rawSearch(array $bodyParams)
  * @method static array rawAggregation(array $bodyParams)
@@ -93,8 +93,6 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static bool chunkById(mixed $count, callable $callback, $column = '_id', $alias = null, $keepAlive = '5m')
  *
  * Index Methods ---------------------------------
- * @method static string getQualifiedKeyName()
- * @method static Connection getConnection()
  * @method static void truncate()
  * @method static bool indexExists()
  * @method static bool deleteIndexIfExists()
@@ -103,27 +101,6 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * @method static array getIndexMappings()
  * @method static array getFieldMapping(string|array $field = '*', $raw = false)
  * @method static array getIndexOptions()
- *
- * Search Methods - Due for sunsetting, keep for now
- * @method static $this term(string $term, $boostFactor = null)
- * @method static $this andTerm(string $term, $boostFactor = null)
- * @method static $this orTerm(string $term, $boostFactor = null)
- * @method static $this fuzzyTerm(string $term, $boostFactor = null)
- * @method static $this andFuzzyTerm(string $term, $boostFactor = null)
- * @method static $this orFuzzyTerm(string $term, $boostFactor = null)
- * @method static $this regEx(string $term, $boostFactor = null)
- * @method static $this andRegEx(string $term, $boostFactor = null)
- * @method static $this orRegEx(string $term, $boostFactor = null)
- * @method static $this phrase(string $term, $boostFactor = null)
- * @method static $this andPhrase(string $term, $boostFactor = null)
- * @method static $this orPhrase(string $term, $boostFactor = null)
- * @method static $this minShouldMatch(int $value)
- * @method static $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', $globalOptions = [])
- * @method static $this minScore(float $value)
- * @method static $this field(string $field, int $boostFactor = null)
- * @method static $this fields(array $fields)
- * @method static array searchModels(array $columns = ['*'])
- * @method static ElasticCollection search(array $columns = ['*'])
  *
  * @property object $search_highlights
  * @property object $with_highlights

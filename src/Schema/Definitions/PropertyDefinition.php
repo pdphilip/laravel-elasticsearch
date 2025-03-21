@@ -24,6 +24,7 @@ use Illuminate\Support\Fluent;
  * @method PropertyDefinition coerce(bool $value)
  * @method PropertyDefinition docValues(bool $value)
  * @method PropertyDefinition norms(bool $value)
+ * @method PropertyDefinition path(string $name)
  */
 class PropertyDefinition extends Fluent
 {

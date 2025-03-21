@@ -34,6 +34,7 @@ class Grammar extends BaseGrammar
         'Coerce',
         'DocValues',
         'Norms',
+        'Path',
     ];
 
     public function compileCreate(Blueprint $blueprint, Fluent $command, Connection $connection): Closure
@@ -315,6 +316,12 @@ class Grammar extends BaseGrammar
             unset($property->indexField);
         }
 
+        return $property;
+    }
+
+    protected function modifyPath(Blueprint $blueprint, Fluent $property): Fluent
+    {
+        // Nothing to do here, including for consistency or possible future use
         return $property;
     }
 
