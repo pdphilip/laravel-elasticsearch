@@ -247,12 +247,12 @@ it('tests find or fail', function () {
 });
 
 it('tests create', function () {
-    $user = User::create(['name' => 'Jane Poe']);
+    $user = User::withoutRefresh()->create(['name' => 'Jane Poe']);
     expect($user)->toBeInstanceOf(User::class)
         ->and(Model::isElasticsearchModel($user))->toBeTrue()
         ->and($user->exists)->toBeTrue()
         ->and($user->name)->toBe('Jane Poe');
-
+    sleep(1);
     $check = User::where('name', 'Jane Poe')->first();
     expect($check)->toBeInstanceOf(User::class)
         ->and($check->id)->toBe($user->id);

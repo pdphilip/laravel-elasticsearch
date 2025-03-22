@@ -19,10 +19,8 @@ trait DynamicIndex
 
     /**
      * Set the table suffix associated with the model.
-     *
-     * @param  string|null  $suffix
      */
-    public function setSuffix($suffix): self
+    public function setSuffix(?string $suffix): self
     {
         $this->options()->add('suffix', $suffix);
         $this->meta->setTableSuffix($suffix);
@@ -30,9 +28,22 @@ trait DynamicIndex
         return $this;
     }
 
+    /**
+     * Get the table suffix associated with the model.
+     */
+    public function getSuffix(): string
+    {
+        return $this->options()->get('suffix', '');
+    }
+
+    public function getRecordSuffix(): string
+    {
+        return $this->getMeta()->getTableSuffix();
+    }
+
     public function save(array $options = [])
     {
-        $validatedSuffix = $this->getMeta()->getTableSuffix() !== '*';
+        $validatedSuffix = $this->getRecordSuffix() !== '*';
         if (! $validatedSuffix) {
             throw new LogicException('Suffix for Dynamic index must be set before saving');
         }

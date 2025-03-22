@@ -29,6 +29,15 @@ abstract class Model extends BaseModel
         $this->meta = new ModelMeta($this->getTable(), $this->getConnection()->getTablePrefix());
     }
 
+    public function getTable()
+    {
+        if (! empty($this->index)) {
+            return $this->index;
+        }
+
+        return parent::getTable();
+    }
+
     /**
      * Indicates if the given model class is a ElasticSearch document model.
      * It must be a subclass of {@see BaseModel} and use the

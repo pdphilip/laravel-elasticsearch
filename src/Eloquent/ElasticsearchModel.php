@@ -172,14 +172,6 @@ trait ElasticsearchModel
         return $this->meta->getFullTable();
     }
 
-    /**
-     * Get the table suffix associated with the model.
-     */
-    public function getSuffix(): string
-    {
-        return $this->options()->get('suffix', '');
-    }
-
     public function setTable($table): static
     {
         $this->table = $table;

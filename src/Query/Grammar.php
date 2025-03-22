@@ -31,7 +31,6 @@ class Grammar extends BaseGrammar
     public function compileInsert($query, array $values): array
     {
         $dsl = new DslBuilder;
-
         if (! isset($values[0])) {
             $values = [$values];
         }

@@ -657,7 +657,6 @@ class Builder extends BaseBuilder
      */
     public function insert(array $values): MetaDTO|bool
     {
-
         // Since every insert gets treated like a batch insert, we will have to detect
         // if the user is inserting a single document or an array of documents.
         $batch = true;
@@ -2066,6 +2065,13 @@ class Builder extends BaseBuilder
     public function getIndexSuffix(): string
     {
         return $this->options()->get('suffix', '');
+    }
+
+    public function withSuffix(string $suffix): self
+    {
+        $this->options()->add('suffix', $suffix);
+
+        return $this;
     }
 
     public function getLimit(): int
