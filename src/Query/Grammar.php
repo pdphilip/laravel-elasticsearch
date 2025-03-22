@@ -1559,8 +1559,8 @@ class Grammar extends BaseGrammar
         }
 
         // Checks if there is a mapping_map set for this field and return is ahead of a mapping check.
-        if (! empty($mappingMap = $builder->options()->get('mapping_map')) && ! empty($mappingMap[$textField])) {
-            return $mappingMap[$textField];
+        if (! empty($queryFieldMap = $builder->options()->get('mapping_map')) && ! empty($queryFieldMap[$textField])) {
+            return $queryFieldMap[$textField];
         }
 
         if ($builder->connection->options()->get('bypass_map_validation')) {
