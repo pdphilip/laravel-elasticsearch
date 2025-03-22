@@ -2076,12 +2076,17 @@ class Builder extends BaseBuilder
 
     public function getLimit(): int
     {
-        return $this->getSetLimit() > 0 ? $this->getSetLimit() : $this->connection->defaultQueryLimit;
+        return $this->getSetLimit() ?? $this->getDefaultLimit() ?? $this->connection->getDefaultLimit();
     }
 
-    public function getSetLimit(): int
+    public function getSetLimit(): ?int
     {
-        return $this->options()->get('limit', $this->limit) ?? 0;
+        return $this->options()->get('limit', $this->limit) ?? null;
+    }
+
+    public function getDefaultLimit(): ?int
+    {
+        return $this->options()->get('default_limit', $this->limit) ?? null;
     }
 
     protected function hasProcessedSelect(): bool

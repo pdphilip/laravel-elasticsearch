@@ -328,6 +328,11 @@ class Connection extends BaseConnection
         return new Query\Processor;
     }
 
+    public function getDefaultLimit(): int
+    {
+        return $this->defaultQueryLimit;
+    }
+
     // ----------------------------------------------------------------------
     // Connection Setters
     // ----------------------------------------------------------------------

@@ -205,7 +205,7 @@ class Grammar extends BaseGrammar
 
                 }
                 $dsl->setBody(['aggs'], $this->compileNestedTermAggregations($fields, $query, $aggs));
-                $dsl->setBody(['size'], $query->getSetLimit());
+                $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
                 $dsl->unsetBody(['sort']);
             } else {
                 // else nothing to aggregate - just a normal query as all records will be distinct anyway
@@ -1053,7 +1053,7 @@ class Grammar extends BaseGrammar
     protected function compileCompositeAggregation(Builder $builder, array $aggregation): array
     {
         $sources = $aggregation['args'];
-        $size = $builder->getSetLimit();
+        $size = $builder->getSetLimit() ?? 0;
         $afterKey = $builder->afterKey ?? null;
         $options = $aggregation['options'] ?? [];
 

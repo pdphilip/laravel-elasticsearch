@@ -16,7 +16,7 @@ class Post extends Model
 
     protected static $unguarded = true;
 
-    protected array $mappingMap = [
+    protected $mappingMap = [
         'comments.country' => 'comments.country.keyword',
         'comments.likes' => 'comments.likes',
     ];

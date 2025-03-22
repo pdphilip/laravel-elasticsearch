@@ -33,7 +33,7 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
         'member_status' => MemberStatus::class,
     ];
 
-    protected array $mappingMap = [
+    protected $mappingMap = [
         'title' => 'title.keyword',
     ];
 

@@ -32,13 +32,33 @@ trait ElasticsearchModel
 
     protected ?Relation $parentRelation;
 
-    protected int $defaultLimit = 1000;
+    /**
+     * The default results limit for the model.
+     *
+     * @var int
+     */
+    protected $defaultLimit = 0;
 
-    protected array $mappingMap = [];
+    /**
+     * The default field mapping that will be used to validate keyword fields
+     *
+     * @var array
+     */
+    protected $mappingMap = [];
 
-    protected bool $generatesUniqueIds = false;
+    /**
+     * Model generates unique ids or Elasticsearch generates them.
+     *
+     * @var bool
+     */
+    protected $generatesUniqueIds = false;
 
-    protected bool $storeIdInDocument = false;
+    /**
+     * Option to store the id in the document.
+     *
+     * @var bool
+     */
+    protected $storeIdInDocument = false;
 
     // ----------------------------------------------------------------------
     // Meta
