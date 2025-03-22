@@ -196,9 +196,16 @@ class Processor extends BaseProcessor
         return match ($type) {
             'count', 'avg', 'max', 'min', 'sum', 'median_absolute_deviation', 'value_count', 'cardinality' => $bucket[$key]['value'],
             'percentiles' => $bucket[$key]['values'],
-            'matrix_stats' => $bucket[$key]['fields'][0],
+            'matrix_stats' => $this->extractMatrixResult($bucket, $key),
             'extended_stats', 'stats', 'string_stats', 'boxplot' => $bucket[$key],
         };
+    }
+
+    protected function extractMatrixResult($bucket, $key): ?array
+    {
+        $results = collect($bucket[$key]['fields']);
+
+        return $results->where('name', $key)->first();
     }
 
     public function processDistinctAggregation($result, $metric)
