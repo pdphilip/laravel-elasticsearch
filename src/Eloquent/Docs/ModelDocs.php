@@ -62,7 +62,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orSearchPhrase($phrase, $fields = ['*'], $options = [])
  * @method static $this orSearchPhrasePrefix($phrase, $fields = ['*'], $options = [])
  * @method static $this orSearchBoolPrefix($phrase, $fields = ['*'], $options = [])
- * @method static $this withHighlights(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
+ * @method static $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
  * @method static $this asFuzzy(?int $depth = null)
  * @method static $this setMinShouldMatch(int $value)
  * @method static $this setBoost(int $value)

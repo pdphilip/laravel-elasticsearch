@@ -1952,11 +1952,11 @@ class Builder extends BaseBuilder
     /**
      * Add highlights to query.
      *
-     * @param  string|string[]  $column
+     * @param  string|string[]  $columns
      */
-    public function highlight($column = ['*'], $preTag = '<em>', $postTag = '</em>', array $options = []): self
+    public function highlight($columns = [], $preTag = '<em>', $postTag = '</em>', array $options = []): self
     {
-        $column = Arr::wrap($column);
+        $column = Arr::wrap($columns);
 
         $this->highlight = compact('column', 'preTag', 'postTag', 'options');
 
