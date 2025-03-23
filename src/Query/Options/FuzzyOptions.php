@@ -1,9 +1,8 @@
 <?php
 
 namespace PDPhilip\Elasticsearch\Query\Options;
-
 /**
- * @method $this fuzziness(string|int $value)
+ * @method $this fuzziness(string $value)
  * @method $this maxExpansions(int $value)
  * @method $this prefixLength(int $value)
  * @method $this transpositions(bool $value)

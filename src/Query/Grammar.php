@@ -648,7 +648,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a term fuzzy clause
      */
-    protected function compileWhereTermFuzzy(Builder $builder, array $where): array
+    protected function compileWhereFuzzy(Builder $builder, array $where): array
     {
 
         $field = $where['column'];

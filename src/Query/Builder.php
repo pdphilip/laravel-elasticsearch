@@ -1038,28 +1038,28 @@ class Builder extends BaseBuilder
      *
      * @param  string  $boolean
      */
-    public function whereTermFuzzy($column, $value, $boolean = 'and', $not = false, $options = []): self
+    public function whereFuzzy($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
-        $type = 'TermFuzzy';
+        $type = 'Fuzzy';
         [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
         $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
 
         return $this;
     }
 
-    public function orWhereTermFuzzy(string $column, $value, array $options = []): self
+    public function orWhereFuzzy(string $column, $value, array $options = []): self
     {
-        return $this->whereTermFuzzy($column, $value, 'or', false, $options);
+        return $this->whereFuzzy($column, $value, 'or', false, $options);
     }
 
-    public function whereNotTermFuzzy(string $column, $value, array $options = []): self
+    public function whereNotFuzzy(string $column, $value, array $options = []): self
     {
-        return $this->whereTermFuzzy($column, $value, 'and', true, $options);
+        return $this->whereFuzzy($column, $value, 'and', true, $options);
     }
 
-    public function orWhereNotTermFuzzy(string $column, $value, array $options = []): self
+    public function orWhereNotFuzzy(string $column, $value, array $options = []): self
     {
-        return $this->whereTermFuzzy($column, $value, 'or', true, $options);
+        return $this->whereFuzzy($column, $value, 'or', true, $options);
     }
 
     /**

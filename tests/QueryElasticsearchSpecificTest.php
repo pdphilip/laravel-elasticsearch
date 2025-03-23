@@ -67,7 +67,7 @@ it('ES Specific Queries', function () {
     $users = User::whereTermExists('title')->get();
     expect($users)->toHaveCount(8);
 
-    $users = User::whereTermFuzzy('title', 'admik')->get();
+    $users = User::whereFuzzy('title', 'admik')->get();
     expect($users)->toHaveCount(3);
 
     // Was searchMatch()
@@ -87,7 +87,7 @@ it('can use function score', function () {
         'seed' => 2,
         'field' => '_seq_no',
     ], function (Builder $query) {
-        $query->whereTermFuzzy('title.keyword', 'admik');
+        $query->whereFuzzy('title.keyword', 'admik');
     })->get();
     expect($users)->toHaveCount(3);
 });
