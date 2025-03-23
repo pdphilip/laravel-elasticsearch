@@ -1119,15 +1119,20 @@ class Builder extends BaseBuilder
     /**
      * Add a 'distance from point' statement to the query.
      *
-     * @param  string  $column
+     * @param  string  $field
      */
-    public function whereGeoBoundsIn($column, array $bounds, $validationMethod = null, $boolean = 'and', bool $not = false): self
+    public function whereGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null, $boolean = 'and', bool $not = false): self
     {
+        $column = $field;
+        $bounds = [
+            'top_left' => $topLeft,
+            'bottom_right' => $bottomRight,
+        ];
         $options = [];
         if ($validationMethod) {
             $options['validation_method'] = $validationMethod;
         }
-        $type = 'GeoBoundsIn';
+        $type = 'GeoBox';
         $this->wheres[] = [
             'column' => $column,
             'bounds' => $bounds,
@@ -1140,29 +1145,30 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function orWhereGeoBoundsIn($column, array $bounds, $validationMethod = null): self
+    public function orWhereGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null): self
     {
-        return $this->whereGeoBoundsIn($column, $bounds, $validationMethod, 'or');
+        return $this->whereGeoBox($field, $topLeft, $bottomRight, $validationMethod, 'or');
     }
 
-    public function whereNotGeoBoundsIn($column, array $bounds, $validationMethod = null): self
+    public function whereNotGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null): self
     {
-        return $this->whereGeoBoundsIn($column, $bounds, $validationMethod, 'and', true);
+        return $this->whereGeoBox($field, $topLeft, $bottomRight, $validationMethod, 'and', true);
     }
 
-    public function orWhereNotGeoBoundsIn($column, array $bounds, $validationMethod = null): self
+    public function orWhereNotGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null): self
     {
-        return $this->whereGeoBoundsIn($column, $bounds, $validationMethod, 'or', true);
+        return $this->whereGeoBox($field, $topLeft, $bottomRight, $validationMethod, 'or', true);
     }
 
     /**
      * Add a 'distance from point' statement to the query.
      *
-     * @param  string  $column
+     * @param  string  $field
      * @param  string  $boolean
      */
-    public function whereGeoDistance($column, array $location, string $distance, $distanceType = null, $validationMethod = null, $boolean = 'and', bool $not = false): self
+    public function whereGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null, $boolean = 'and', bool $not = false): self
     {
+        $column = $field;
         $type = 'GeoDistance';
         $options = [];
         if ($distanceType) {
@@ -1177,19 +1183,19 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function orWhereGeoDistance($column, array $location, string $distance, $distanceType = null, $validationMethod = null): self
+    public function orWhereGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null): self
     {
-        return $this->whereGeoDistance($column, $location, $distance, $distanceType, $validationMethod, 'or', false);
+        return $this->whereGeoDistance($field, $distance, $location, $distanceType, $validationMethod, 'or', false);
     }
 
-    public function whereNotGeoDistance($column, array $location, string $distance, $distanceType = null, $validationMethod = null): self
+    public function whereNotGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null): self
     {
-        return $this->whereGeoDistance($column, $location, $distance, $distanceType, $validationMethod, 'and', true);
+        return $this->whereGeoDistance($field, $distance, $location, $distanceType, $validationMethod, 'and', true);
     }
 
-    public function orWhereNotGeoDistance($column, array $location, string $distance, $distanceType = null, $validationMethod = null): self
+    public function orWhereNotGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null): self
     {
-        return $this->whereGeoDistance($column, $location, $distance, $distanceType, $validationMethod, 'or', true);
+        return $this->whereGeoDistance($field, $distance, $location, $distanceType, $validationMethod, 'or', true);
     }
 
     /**
@@ -2442,21 +2448,16 @@ class Builder extends BaseBuilder
      */
     public function filterGeoPoint($field, $distance, $geoPoint)
     {
-        return $this->whereGeoDistance($field, $geoPoint, $distance);
+        return $this->whereGeoDistance($field, $distance, $geoPoint);
     }
 
     /**
      * @deprecated v5.0.0
-     * @see whereGeoBoundsIn()
+     * @see whereGeoBox()
      */
     public function filterGeoBox($field, $topLeft, $bottomRight)
     {
-        $bounds = [
-            'top_left' => $topLeft,
-            'bottom_right' => $bottomRight,
-        ];
-
-        return $this->whereGeoBoundsIn($field, $bounds);
+        return $this->whereGeoBox($field, $topLeft, $bottomRight);
     }
 
     /**

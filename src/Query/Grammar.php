@@ -476,7 +476,7 @@ class Grammar extends BaseGrammar
     /**
      * Compile a where geo bounds clause
      */
-    protected function compileWhereGeoBoundsIn(Builder $builder, array $where): array
+    protected function compileWhereGeoBox(Builder $builder, array $where): array
     {
         $options = $where['options'] ?? [];
 

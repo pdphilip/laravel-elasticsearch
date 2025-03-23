@@ -43,10 +43,12 @@ class DslFactory
     public static function term(string $field, $value, array $options = []): array
     {
         return [
-            'term' => array_merge(
-                [$field => $value],
-                $options
-            ),
+            'term' => [
+                $field => [
+                    'value' => $value,
+                    ...$options,
+                ],
+            ],
         ];
     }
 

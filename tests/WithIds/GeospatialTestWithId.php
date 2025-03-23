@@ -40,11 +40,11 @@ beforeEach(function () {
 
 it('finds locations within a defined polygon', function () {
 
-    $locations = Location::whereGeoBoundsIn('location',
-        ['top_left' => ['lon' => -0.1450383, 'lat' => 51.5069158],
-            'bottom_right' => ['lon' => -0.1270247, 'lat' => 51.5013233],
-
-        ])->get();
+    $locations = Location::whereGeoBox(
+        field: 'location',
+        topLeft: ['lon' => -0.1450383, 'lat' => 51.5069158],
+        bottomRight: ['lon' => -0.1270247, 'lat' => 51.5013233]
+    )->get();
 
     expect($locations->count())->toBe(1);
 
@@ -54,7 +54,7 @@ it('finds locations within a defined polygon', function () {
 })->todo('need to add more checks around geo bounding box');
 
 it('finds locations near a point within max distance', function () {
-    $locations = Location::whereGeoDistance('point', ['lat' => 51.5049537, 'lon' => -0.1392173], '200m')->get();
+    $locations = Location::whereGeoDistance('point', '200m', ['lat' => 51.5049537, 'lon' => -0.1392173])->get();
 
     expect($locations->count())->toBe(1);
 

@@ -103,7 +103,7 @@ final class ModelMeta
             'table_prefix' => $this->tablePrefix,
             'table' => $this->table,
             'table_suffix' => $this->tableSuffix,
-            'doc_Count' => $this->docCount,
+            'doc_count' => $this->docCount,
             'sort' => $this->sort,
             'cursor' => $this->cursor,
             'highlights' => $this->highlights,

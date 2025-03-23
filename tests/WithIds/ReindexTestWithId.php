@@ -53,7 +53,7 @@ it('re-indexs data', function () {
     expect(count($find))->toEqual(100);
 
     try {
-        Product::whereGeoDistance('manufacturer.location', [0, 0], '10000km')->get();
+        Product::whereGeoDistance('manufacturer.location', '10000km', [0, 0])->get();
     } catch (QueryException $exception) {
         expect($exception->getMessage())->toContain('failed to find geo field')
             ->and($exception->getDetails())->toBeArray('failed to find geo field');
@@ -98,7 +98,7 @@ it('re-indexs data', function () {
     expect($countOriginal)->toEqual(100)
         ->and($countHolding)->toEqual(100);
 
-    $found = Product::whereGeoDistance('manufacturer.location', [0, 0], '10000km')->get();
+    $found = Product::whereGeoDistance('manufacturer.location', '10000km', [0, 0])->get();
     expect($found->isNotEmpty())->toBeTrue();
 
     // Cleanup

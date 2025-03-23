@@ -3,8 +3,8 @@
 namespace PDPhilip\Elasticsearch\Query\Options;
 
 /**
- * @method TermOptions boost(float|int $value)
- * @method TermOptions caseInsensitive(bool $value)
+ * @method $this boost(float|int $value)
+ * @method $this caseInsensitive(bool $value)
  */
 class TermOptions extends QueryOptions
 {

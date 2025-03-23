@@ -69,6 +69,11 @@ trait ElasticsearchModel
         return $this->meta;
     }
 
+    public function getMetaAsArray(): array
+    {
+        return $this->meta->toArray();
+    }
+
     // ----------------------------------------------------------------------
     // Highlights
     // ----------------------------------------------------------------------

@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 /**
  * @mixin MatchOptions
  * @mixin TermOptions
- * @mixin TermFuzzyOptions
+ * @mixin FuzzyOptions
  * @mixin SearchOptions
  * @mixin DateOptions
  * @mixin PhraseOptions
@@ -22,9 +22,10 @@ abstract class QueryOptions extends Fluent
     {
         $key = Str::snake($method);
 
-        if (! in_array($key, $this->allowedOptions(), true)) {
-            throw new \InvalidArgumentException("Option '{$key}' is not allowed for this query type.");
-        }
+        // Let ES validate the option
+        //        if (! in_array($key, $this->allowedOptions(), true)) {
+        //            throw new \InvalidArgumentException("Option '{$key}' is not allowed for this query type.");
+        //        }
 
         $this->{$key} = $parameters[0];
 

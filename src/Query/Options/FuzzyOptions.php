@@ -9,7 +9,7 @@ namespace PDPhilip\Elasticsearch\Query\Options;
  * @method $this transpositions(bool $value)
  * @method $this rewrite(string $value)
  */
-class TermFuzzyOptions extends QueryOptions
+class FuzzyOptions extends QueryOptions
 {
     public function allowedOptions(): array
     {
