@@ -1863,13 +1863,18 @@ class Builder extends BaseBuilder
      *
      * @param  string  $boolean
      */
-    public function whereScript(string $script, $boolean = 'and', array $options = []): self
+    public function whereScript(string $script, array $options = [], $boolean = 'and'): self
     {
         $type = 'Script';
 
         $this->wheres[] = compact('script', 'boolean', 'type', 'options');
 
         return $this;
+    }
+
+    public function orWhereScript(string $script, array $options = []): self
+    {
+        return $this->whereScript($script, $options, 'or');
     }
 
     /**
