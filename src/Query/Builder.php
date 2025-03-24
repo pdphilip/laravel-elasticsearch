@@ -459,7 +459,11 @@ class Builder extends BaseBuilder
             $this->sorts[$column] = $direction;
 
             return $this;
+        } elseif (is_array($direction)) {
+            $options = $direction;
+            $direction = 1;
         }
+
         $type = $options['type'] ?? 'basic';
 
         $this->orders[] = compact('column', 'direction', 'type', 'options');
@@ -1548,6 +1552,10 @@ class Builder extends BaseBuilder
     public function orderByGeo(string $column, array $coordinates, $direction = 1, array $options = []): self
     {
 
+        if (is_array($direction)) {
+            $options = $direction;
+            $direction = 1;
+        }
         $options = [
             ...$options,
             'type' => 'geoDistance',

@@ -783,10 +783,16 @@ class Grammar extends BaseGrammar
                     $orderSettings = [
                         $column => $order['options']['coordinates'],
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
-                        'unit' => $order['options']['unit'] ?? 'km',
-                        'distance_type' => $order['options']['distance_type'] ?? 'arc',
                     ];
-
+                    if (! empty($order['options']['unit'])) {
+                        $orderSettings['unit'] = $order['options']['unit'];
+                    }
+                    if (! empty($order['options']['mode'])) {
+                        $orderSettings['mode'] = $order['options']['mode'];
+                    }
+                    if (! empty($order['options']['distance_type'])) {
+                        $orderSettings['distance_type'] = $order['options']['distance_type'];
+                    }
                     $column = '_geo_distance';
                     break;
                 default:
