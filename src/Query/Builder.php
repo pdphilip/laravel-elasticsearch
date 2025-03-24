@@ -69,7 +69,9 @@ class Builder extends BaseBuilder
 
     public string $keepAlive = '1m';
 
-    public mixed $afterKey = null;
+    public mixed $searchAfter = null;
+
+    public mixed $after = null;
 
     public array $metricsAggregations = [];
 
@@ -2134,7 +2136,7 @@ class Builder extends BaseBuilder
 
     public function getGroupByAfterKey($offset): mixed
     {
-        $clone = $this->clone();
+        $clone = clone $this;
         $clone->limit = $offset;
         $clone->offset = 0;
         $res = collect($clone->getRaw());
@@ -2268,14 +2270,14 @@ class Builder extends BaseBuilder
     public function viaPit($pid, $afterKey): self
     {
         $this->pitId = $pid;
-        $this->afterKey = $afterKey;
+        $this->searchAfter = $afterKey;
 
         return $this;
     }
 
     public function searchAfter($afterKey): self
     {
-        $this->afterKey = $afterKey;
+        $this->searchAfter = $afterKey;
 
         return $this;
     }

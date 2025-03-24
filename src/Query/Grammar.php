@@ -219,11 +219,13 @@ class Grammar extends BaseGrammar
                 $dsl->unsetBody(['from']);
                 // This of course could be a problem if the user is using from for pagination and they go deep
                 // Leaving it for now
-                $query->afterKey = $query->getGroupByAfterKey($afterCount);
+                $query->after = $query->getGroupByAfterKey($afterCount);
             }
+
             $dsl->setBody(['aggs'], $this->compileBucketAggregations($query, $sorts));
             $dsl->setBody(['size'], 0);
 
+            //            return $dsl->getDsl();
         }
 
         // Else if we have metrics aggregations
@@ -242,8 +244,8 @@ class Grammar extends BaseGrammar
             $dsl->appendOption(['body', 'sort'], DslFactory::sortByShardDoc());
         }
 
-        if ($query->afterKey) {
-            $dsl->setBody(['search_after'], $query->afterKey);
+        if ($query->searchAfter) {
+            $dsl->setBody(['search_after'], $query->searchAfter);
         }
 
         return $dsl->getDsl();
@@ -924,7 +926,6 @@ class Grammar extends BaseGrammar
     protected function compileBucketAggregations(Builder $builder, $sorts = null): array
     {
         $aggregations = collect();
-
         $metricsAggregations = [];
         if ($builder->metricsAggregations) {
             $metricsAggregations = $this->compileMetricAggregations($builder);
@@ -1054,7 +1055,7 @@ class Grammar extends BaseGrammar
     {
         $sources = $aggregation['args'];
         $size = $builder->getSetLimit() ?? 0;
-        $afterKey = $builder->afterKey ?? null;
+        $afterKey = $builder->after ?? null;
         $options = $aggregation['options'] ?? [];
 
         return DslFactory::composite($sources, $size, $afterKey, $options);
