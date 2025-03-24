@@ -5,7 +5,6 @@ namespace PDPhilip\Elasticsearch\Query\Options;
 /**
  * @method $this scoreMode(string $value)
  * @method $this ignoreUnmapped(bool $value)
- * @method $this innerHits(bool $value)
  */
 class NestedOptions extends QueryOptions
 {
@@ -14,7 +13,6 @@ class NestedOptions extends QueryOptions
         return [
             'score_mode',
             'ignore_unmapped',
-            'inner_hits',
         ];
     }
 }

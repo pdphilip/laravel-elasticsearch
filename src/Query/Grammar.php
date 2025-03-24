@@ -517,6 +517,10 @@ class Grammar extends BaseGrammar
         // Compile the inner query
         $wheres = $this->compileWheres($where['query']);
         $path = $where['column'];
+        if (! $wheres['query']) {
+            $wheres['query'] = DslFactory::exists($path);
+        }
+
         $options = $where['options'] ?? [];
         $wheres = array_filter($wheres);
 
@@ -525,18 +529,9 @@ class Grammar extends BaseGrammar
         return $this->applyOptionsToClause($query, $where);
     }
 
-    /**
-     * Compile a where nested clause
-     *
-     * @param  array  $where
-     *
-     * @throws BuilderException
-     */
-    protected function compileWhereInnerNested(Builder $builder, $where): array
+    public function _buildInnerHits($innerQuery)
     {
-        // Compile the inner filter
-        $innerQuery = $where['query'];
-        $query = $this->compileWheres($innerQuery);
+
         $innerHits = [];
         $compiledOrders = [];
         if ($innerQuery->orders) {
@@ -554,9 +549,22 @@ class Grammar extends BaseGrammar
         }
         if ($size = $innerQuery->getSetLimit()) {
             $innerHits['size'] = $size;
-        } else {
-            $innerHits['size'] = 100;
         }
+
+        return $innerHits;
+    }
+
+    /**
+     * Compile a where nested clause
+     *
+     * @param  array  $where
+     */
+    protected function compileWhereInnerNested(Builder $builder, $where): array
+    {
+        // Compile the inner filter
+        $innerQuery = $where['query'];
+        $query = $this->compileWheres($innerQuery);
+        $innerHits = $this->_buildInnerHits($innerQuery);
 
         return DslFactory::innerNested($where['column'], $query['query'], $innerHits);
 
@@ -765,7 +773,7 @@ class Grammar extends BaseGrammar
             if (Str::startsWith($column, $builder->from.'.')) {
                 $column = Str::replaceFirst($builder->from.'.', '', $column);
             }
-
+            $column = $this->prependParentField($column, $builder);
             $column = $this->getIndexableField($column, $builder);
 
             $type = $order['type'] ?? 'basic';
@@ -808,6 +816,7 @@ class Grammar extends BaseGrammar
     {
         foreach ($sorts as $column => $sort) {
             $found = false;
+            $column = $this->prependParentField($column, $builder);
             $column = $this->getIndexableField($column, $builder);
             if ($compiledOrders) {
                 foreach ($compiledOrders as $i => $compiledOrder) {
@@ -1324,9 +1333,11 @@ class Grammar extends BaseGrammar
     /**
      * Apply inner hits options to the clause
      */
-    protected function applyInnerHitsOption(array $clause, $options): array
+    protected function applyInnerHitsOption(array $clause, $options, $where): array
     {
-        return DslFactory::applyInnerHits($clause, $options);
+        $innerHits = $this->_buildInnerHits($where['query']);
+
+        return DslFactory::applyInnerHits($clause, $innerHits);
     }
 
     /**
@@ -1385,13 +1396,11 @@ class Grammar extends BaseGrammar
         if (empty($where['options'])) {
             return $clause;
         }
-
         $optionsToApply = ['inner_hits'];
         $options = array_intersect_key($where['options'], array_flip($optionsToApply));
 
         foreach ($options as $option => $value) {
             $method = 'apply'.Str::studly($option).'Option';
-
             if (method_exists($this, $method)) {
                 $clause = $this->$method($clause, $value, $where);
             }

@@ -1205,15 +1205,20 @@ class Builder extends BaseBuilder
      *
      * @param  string  $column
      * @param  callable|BaseBuilder|static  $query
+     * @param  bool  $filterInnerHits
+     * @param  array  $options
      * @param  string  $boolean
+     * @param  bool  $not
      */
-    public function whereNestedObject($column, $query, $innerHits = true, $options = [], $boolean = 'and', $not = false): self
+    public function whereNestedObject($column, $query, $filterInnerHits = false, $options = [], $boolean = 'and', $not = false): self
     {
 
         $from = $this->from;
         $type = 'NestedObject';
         $options = $this->setOptions($options, 'nested');
-        $options->innerHits($innerHits);
+        if ($filterInnerHits) {
+            $options->innerHits(true);
+        }
         $options = $options->toArray();
 
         $this->options()->add('parentField', $column);
@@ -1226,19 +1231,19 @@ class Builder extends BaseBuilder
         return $this;
     }
 
-    public function orWhereNestedObject($column, $query, $innerHits = true, $options = []): self
+    public function orWhereNestedObject($column, $query, $filterInnerHits = false, $options = []): self
     {
-        return $this->whereNestedObject($column, $query, $innerHits, $options, 'or');
+        return $this->whereNestedObject($column, $query, $filterInnerHits, $options, 'or');
     }
 
-    public function whereNotNestedObject($column, $query, $innerHits = true, $options = []): self
+    public function whereNotNestedObject($column, $query, $filterInnerHits = false, $options = []): self
     {
-        return $this->whereNestedObject($column, $query, $innerHits, $options, 'and', true);
+        return $this->whereNestedObject($column, $query, $filterInnerHits, $options, 'and', true);
     }
 
-    public function orWhereNotNestedObject($column, $query, $innerHits = true, $options = []): self
+    public function orWhereNotNestedObject($column, $query, $filterInnerHits = false, $options = []): self
     {
-        return $this->whereNestedObject($column, $query, $innerHits, $options, 'or', true);
+        return $this->whereNestedObject($column, $query, $filterInnerHits, $options, 'or', true);
     }
 
     public function filterNested($column, $query, $options = [])
@@ -1564,11 +1569,9 @@ class Builder extends BaseBuilder
         return $this->orderBy($column, -1, $options);
     }
 
-    public function orderByNested(string $column, $direction = 1, mixed $options = []): self
+    public function orderByNested(string $column, $direction = 1, string $mode = 'avg'): self
     {
-        if (is_string($options)) {
-            $options = ['mode' => $options];
-        }
+        $options = ['mode' => $mode];
         $options = [
             ...$options,
             'nested' => ['path' => Str::beforeLast($column, '.')],

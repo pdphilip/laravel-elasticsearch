@@ -540,11 +540,11 @@ class DslFactory
         return $clause;
     }
 
-    public static function applyInnerHits(array $clause, $options)
+    public static function applyInnerHits(array $clause, $innerHits)
     {
         $firstKey = key($clause);
 
-        $clause[$firstKey]['inner_hits'] = empty($options) || $options === true ? (object) [] : (array) $options;
+        $clause[$firstKey]['inner_hits'] = empty($innerHits) ? (object) [] : (array) $innerHits;
 
         return $clause;
     }
