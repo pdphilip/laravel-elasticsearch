@@ -344,4 +344,9 @@ class Blueprint extends BlueprintBase
     {
         return $this->addCommand('update');
     }
+
+    public function mapProperty($name, $type, $parameters = []): PropertyDefinition
+    {
+        return $this->addColumn($type, $name, $parameters);
+    }
 }

@@ -123,9 +123,14 @@ trait ManagesElasticMigrations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/parent-join.html
      */
-    public function join(string $name, array $relations): PropertyDefinition
+    public function join(string $parent, string $child): PropertyDefinition
     {
-        return $this->addColumn('join', $name, compact('relations'));
+        $name = $parent.'_'.$child.'_join';
+        $parameters = [
+            'relations' => [$parent => $child],
+        ];
+
+        return $this->addColumn('join', $name, $parameters);
     }
 
     /**

@@ -184,6 +184,11 @@ class Builder extends BaseBuilder
         return $this->getIndex();
     }
 
+    public function getIndicesSummary(): array
+    {
+        return $this->getTables();
+    }
+
     /**
      *  Returns the mapping details about your indices.
      */
