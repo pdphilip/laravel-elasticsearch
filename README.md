@@ -1,80 +1,120 @@
-<img align="left" width="70" height="70" src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-x-es.png">
-
-# Laravel-Elasticsearch
+<img
+src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-es-banner.png"
+alt="Laravel Elasticsearch"
+/>
 
 [![Latest Stable Version](http://img.shields.io/github/release/pdphilip/laravel-elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/phpstan.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/phpstan.yml?query=branch%3Amain++)
 [![Total Downloads](http://img.shields.io/packagist/dm/pdphilip/elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
-### Laravel-Elasticsearch: An Elasticsearch implementation of Laravel's Eloquent ORM
+
+## Laravel-Elasticsearch <br/> An Elasticsearch implementation of Laravel's Eloquent ORM
+
+### The Power of Elasticsearch with Laravel's Eloquent
 
 This package extends Laravel's Eloquent model and query builder with seamless integration of Elasticsearch functionalities. Designed to feel native to Laravel, this package enables you to work with Eloquent models while leveraging the
 powerful search and analytics capabilities of Elasticsearch.
 
-Examples:
-
-```php
-$logs = UserLog::where('created_at','>=',Carbon::now()->subDays(30))->get();
-```
-
-```php
-$updates = UserLog::where('status', 1)->update(['status' => 4]);
-```
-
-```php
-$updates = UserLog::where('status', 1)->paginate(50);
-```
-
-```php
-$profiles = UserProfile::whereIn('country_code',['US','CA'])->orderByDesc('last_login')->take(10)->get();
-```
-
-```php
-$deleted = UserProfile::where('state','unsubscribed')->where('updated_at','<=',Carbon::now()->subDays(90))->delete();
-```
-
-```php
-$search = UserProfile::phrase('loves espressos')->highlight()->search();
-```
-
-### Read the [Documentation](https://elasticsearch.pdphilip.com/)
 ---
-> #### Using [OpenSearch](https://opensearch.pdphilip.com/)? [Github](https://github.com/pdphilip/laravel-opensearch)
+
+The Eloquent you already know:
+
+```php
+UserLog::where('created_at','>=',Carbon::now()->subDays(30))->get();
+```
+
+```php
+UserLog::create([
+    'user_id' => '2936adb0-b10d-11ed-8e03-0b234bda3e12',
+    'ip' => '62.182.98.146',
+    'location' => [40.7185,-74.0025],
+    'country_code' => 'US',
+    'status' => 1,
+]);
+```
+
+```php
+UserLog::where('status', 1)->update(['status' => 4]);
+```
+
+```php
+UserLog::where('status', 4)->orderByDesc('created_at')->paginate(50);
+```
+
+```php
+UserProfile::whereIn('country_code',['US','CA'])
+    ->orderByDesc('last_login')->take(10)->get();
+```
+
+```php
+UserProfile::where('state','unsubscribed')
+    ->where('updated_at','<=',Carbon::now()->subDays(90))->delete();
+```
+
+Elasticsearch with Eloquent:
+
+```php
+UserProfile::searchTerm('Laravel')->orSearchTerm('Elasticsearch')->get();
+```
+
+```php
+UserProfile::searchPhrasePrefix('loves espressos and t')->highlight()->get();
+```
+
+```php
+UserProfile::whereMatch('bio', 'PHP')->get();
+```
+
+```php
+UserLog::whereGeoDistance('location', '10km', [40.7185,-74.0025])->get();
+```
+
+```php
+UserProfile::whereFuzzy('description', 'qick brwn fx')->get();
+```
+
+Built in Relationships (even to SQL models):
+
+```php
+UserLog::where('status', 1)->orderByDesc('created_at')->with('user')->get();
+```
+
 ---
-> #### [Package Tests](https://github.com/pdphilip/laravel-elasticsearch-tests)
----
+
+# Read the [Documentation](https://elasticsearch.pdphilip.com/)
 
 ## Installation
 
 ### Maintained versions (Elasticsearch 8.x):
 
-**Laravel 10.x & 11.x (main):**
+**Laravel 10.x, 11.x & 12.x (main):**
 
 ```bash
 composer require pdphilip/elasticsearch
 ```
 
-| Laravel Version | Command                                        | Maintained |
-|-----------------|------------------------------------------------|------------|
-| Laravel 10 & 11 | `composer require pdphilip/elasticsearch:~4 `  | ✅          |
-| Laravel 9       | `composer require pdphilip/elasticsearch:~3.9` | ✅          |
-| Laravel 8       | `composer require pdphilip/elasticsearch:~3.8` | ✅          |
+| Laravel Version    | Command                                        | Maintained |
+|--------------------|------------------------------------------------|------------|
+| Laravel 10/11/12   | `composer require pdphilip/elasticsearch:~5 `  | ✅ Active   |
+| Laravel 10/11 (v4) | `composer require pdphilip/elasticsearch:~4`   | 🛠️ LTS    |
+| Laravel 9          | `composer require pdphilip/elasticsearch:~3.9` | 🛠️ LTS    |
+| Laravel 8          | `composer require pdphilip/elasticsearch:~3.8` | 🛠️ LTS    |
 
 ### Unmaintained versions (Elasticsearch 8.x):
 
 | Laravel Version   | Command                                        | Maintained |
 |-------------------|------------------------------------------------|------------|
-| Laravel 7.x       | `composer require pdphilip/elasticsearch:~2.7` | ❌          |
-| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~2.6` | ❌          |
+| Laravel 7.x       | `composer require pdphilip/elasticsearch:~2.7` | ❌ EOL      |
+| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~2.6` | ❌ EOL      |
 
 ### Unmaintained versions (Elasticsearch 7.x):
 
 | Laravel Version   | Command                                        | Maintained |
 |-------------------|------------------------------------------------|------------|
-| Laravel 9.x       | `composer require pdphilip/elasticsearch:~1.9` | ❌          |
-| Laravel 8.x       | `composer require pdphilip/elasticsearch:~1.8` | ❌          |
-| Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌          |
-| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌          |
+| Laravel 9.x       | `composer require pdphilip/elasticsearch:~1.9` | ❌ EOL      |
+| Laravel 8.x       | `composer require pdphilip/elasticsearch:~1.8` | ❌ EOL      |
+| Laravel 7.x       | `composer require pdphilip/elasticsearch:~1.7` | ❌ EOL      |
+| Laravel 6.x (5.8) | `composer require pdphilip/elasticsearch:~1.6` | ❌ EOL      |
 
 ## Configuration
 
@@ -89,9 +129,9 @@ ES_CLOUD_ID=
 ES_API_ID=
 ES_API_KEY=
 ES_SSL_CA=
-ES_INDEX_PREFIX=my_app
+ES_INDEX_PREFIX=my_app_
 # prefix will be added to all indexes created by the package with an underscore
-# ex: my_app_user_logs for UserLog.php model
+# ex: my_app_user_logs for UserLog model
 ES_SSL_CERT=
 ES_SSL_CERT_PASSWORD=
 ES_SSL_KEY=
@@ -102,6 +142,9 @@ ES_OPT_VERIFY_SSL=true
 ES_OPT_RETRIES=
 ES_OPT_META_HEADERS=true
 ES_ERROR_INDEX=
+ES_OPT_BYPASS_MAP_VALIDATION=false
+ES_OPT_DEFAULT_LIMIT=1000
+
 ```
 
 For multiple nodes, pass in as comma-separated:
@@ -122,7 +165,7 @@ ES_CLOUD_ID=XXXXX:ZXVyb3BlLXdl.........SQwYzM1YzU5ODI5MTE0NjQ3YmEyNDZlYWUzOGNkN2
 ES_API_ID=
 ES_API_KEY=
 ES_SSL_CA=
-ES_INDEX_PREFIX=my_app
+ES_INDEX_PREFIX=my_app_
 ES_ERROR_INDEX=
 ```
 
@@ -132,35 +175,37 @@ ES_ERROR_INDEX=
 
 ```php
 'elasticsearch' => [
-    'driver'       => 'elasticsearch',
-    'auth_type'    => env('ES_AUTH_TYPE', 'http'), //http or cloud
-    'hosts'        => explode(',', env('ES_HOSTS', 'http://localhost:9200')),
-    'username'     => env('ES_USERNAME', ''),
-    'password'     => env('ES_PASSWORD', ''),
-    'cloud_id'     => env('ES_CLOUD_ID', ''),
-    'api_id'       => env('ES_API_ID', ''),
-    'api_key'      => env('ES_API_KEY', ''),
-    'ssl_cert'     => env('ES_SSL_CA', ''),
-    'ssl'          => [
-        'cert'          => env('ES_SSL_CERT', ''),
+    'driver' => 'elasticsearch',
+    'auth_type' => env('ES_AUTH_TYPE', 'http'), //http or cloud
+    'hosts' => explode(',', env('ES_HOSTS', 'http://localhost:9200')),
+    'username' => env('ES_USERNAME', ''),
+    'password' => env('ES_PASSWORD', ''),
+    'cloud_id' => env('ES_CLOUD_ID', ''),
+    'api_id' => env('ES_API_ID', ''),
+    'api_key' => env('ES_API_KEY', ''),
+    'ssl_cert' => env('ES_SSL_CA', ''),
+    'ssl' => [
+        'cert' => env('ES_SSL_CERT', ''),
         'cert_password' => env('ES_SSL_CERT_PASSWORD', ''),
-        'key'           => env('ES_SSL_KEY', ''),
-        'key_password'  => env('ES_SSL_KEY_PASSWORD', ''),
+        'key' => env('ES_SSL_KEY', ''),
+        'key_password' => env('ES_SSL_KEY_PASSWORD', ''),
     ],
     'index_prefix' => env('ES_INDEX_PREFIX', false),
-    'options'      => [
-        'allow_id_sort'    => env('ES_OPT_ID_SORTABLE', false),
+    'options' => [
+        'bypass_map_validation' => env('ES_OPT_BYPASS_MAP_VALIDATION', false),
+        'logging' => env('ES_OPT_LOGGING', false),
         'ssl_verification' => env('ES_OPT_VERIFY_SSL', true),
-        'retires'          => env('ES_OPT_RETRIES', null),
-        'meta_header'      => env('ES_OPT_META_HEADERS', true),
+        'retires' => env('ES_OPT_RETRIES', null),
+        'meta_header' => env('ES_OPT_META_HEADERS', true),
+        'default_limit' => env('ES_OPT_DEFAULT_LIMIT', true),
+        'allow_id_sort' => env('ES_OPT_ID_SORTABLE', false),
     ],
-    'error_log_index' => env('ES_ERROR_INDEX', false), //If set will log ES errors to this index, ex: 'laravel_es_errors'
 ],
 ```
 
 ### 3. If packages are not autoloaded, add the service provider:
 
-For **Laravel 11**:
+For **Laravel 11 +**:
 
 ```php
 //bootstrap/providers.php
@@ -191,82 +236,44 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 
 ## Getting Started
 
-- [Installation](https://elasticsearch.pdphilip.com/#installation)
-- [Configuration](https://elasticsearch.pdphilip.com/#configuration)
+- [Installation](https://elasticsearch.pdphilip.com/getting-started)
+- [Configuration](https://elasticsearch.pdphilip.com/getting-started#configuration-guide)
 
-## Eloquent
+### Eloquent
 
-- [The Base Model](https://elasticsearch.pdphilip.com/the-base-model)
-- [Querying Models](https://elasticsearch.pdphilip.com/querying-models)
-- [Saving Models](https://elasticsearch.pdphilip.com/saving-models)
-- [Deleting Models](https://elasticsearch.pdphilip.com/deleting-models)
-- [Ordering and Pagination](https://elasticsearch.pdphilip.com/ordering-and-pagination)
-- [Distinct and GroupBy](https://elasticsearch.pdphilip.com/distinct)
-- [Aggregations](https://elasticsearch.pdphilip.com/aggregation)
-- [Chunking](https://elasticsearch.pdphilip.com/chunking)
-- [Nested Queries](https://elasticsearch.pdphilip.com/nested-queries)
-- [Elasticsearch Specific Queries](https://elasticsearch.pdphilip.com/es-specific)
-- [Full-Text Search](https://elasticsearch.pdphilip.com/full-text-search)
-- [Dynamic Indices](https://elasticsearch.pdphilip.com/dynamic-indices)
+- [The Base Model](https://elasticsearch.pdphilip.com/eloquent/the-base-model)
+- [Saving Models](https://elasticsearch.pdphilip.com/eloquent/saving-models)
+- [Deleting Models](https://elasticsearch.pdphilip.com/eloquent/deleting-models)
+- [Querying Models](https://elasticsearch.pdphilip.com/eloquent/querying-models)
+- [Eloquent Queries](https://elasticsearch.pdphilip.com/eloquent/eloquent-queries)
+- [ES Eloquent Queries](https://elasticsearch.pdphilip.com/eloquent/es-queries)
+- [Cross Fields Search Queries](https://elasticsearch.pdphilip.com/eloquent/search-queries)
+- [Aggregation Queries](https://elasticsearch.pdphilip.com/eloquent/aggregation)
+- [Distinct and GroupBy Queries](https://elasticsearch.pdphilip.com/eloquent/distinct)
+- [Nested Queries](https://elasticsearch.pdphilip.com/eloquent/nested-queries)
+- [Ordering and Pagination](https://elasticsearch.pdphilip.com/eloquent/ordering-and-pagination)
+- [Chunking](https://elasticsearch.pdphilip.com/eloquent/chunking)
+- [Dynamic Indices](https://elasticsearch.pdphilip.com/eloquent/dynamic-indices)
 
-## Relationships
+### Relationships
 
-- [Elasticsearch to Elasticsearch](https://elasticsearch.pdphilip.com/es-es)
-- [Elasticsearch to MySQL](https://elasticsearch.pdphilip.com/es-mysql)
+- [Elasticsearch to Elasticsearch](https://elasticsearch.pdphilip.com/relationships/es-es)
+- [Elasticsearch to SQL](https://elasticsearch.pdphilip.com/relationships/es-sql)
 
-## Schema/Index
+### Migrations: Schema/Index
 
-- [Migrations](https://elasticsearch.pdphilip.com/migrations)
-- [Re-indexing Process](https://elasticsearch.pdphilip.com/re-indexing)
+- [Migrations](https://elasticsearch.pdphilip.com/schema/migrations)
+- [Index Blueprint](https://elasticsearch.pdphilip.com/schema/index-blueprint)
 
-## Misc
+### Misc
 
-- [Handling Errors](https://elasticsearch.pdphilip.com/handling-errors)
+- [Mapping ES to Eloquent](https://elasticsearch.pdphilip.com/notes/elasticsearch-to-eloquent-map)
 
----
+## Credits
 
-# New in Version 4
+- [David Philip](https://github.com/pdphilip)
+- [@use-the-fork](https://github.com/use-the-fork)
 
-(and 3.9.1/3.8.1)
+## License
 
-- [Search Highlighting](https://elasticsearch.pdphilip.com/full-text-search#highlighting)
-- [whereTimestamp()](https://elasticsearch.pdphilip.com/es-specific#where-timestamp)
-- [Raw Aggregation](https://elasticsearch.pdphilip.com/es-specific#raw-aggregation-queries)
-- [Updated Error Handling](https://elasticsearch.pdphilip.com/handling-errors)
-- [Chunk Upgrade: Point In Time (PIT)](https://elasticsearch.pdphilip.com/chunking#chunking-under-the-hood-pit)
-
----
-
-# New in Version 3
-
-### Nested Queries [(see)](https://elasticsearch.pdphilip.com/nested-queries)
-
-- [Nested Object Queries](https://elasticsearch.pdphilip.com/nested-queries#where-nested-object)
-- [Order By Nested](https://elasticsearch.pdphilip.com/nested-queries#order-by-nested-field)
-- [Filter Nested Values](https://elasticsearch.pdphilip.com/nested-queries#filtering-nested-values): Filters nested values of the parent collection
-
-### New `Where` clauses
-
-- [Phrase Matching](https://elasticsearch.pdphilip.com/es-specific#where-phrase): The enhancement in phrase matching capabilities allows for refined search precision, facilitating the targeting of exact word sequences within textual
-  fields, thus improving search specificity
-  and relevance.
-- [Exact Matching](https://elasticsearch.pdphilip.com/es-specific#where-exact): Strengthening exact match queries enables more stringent search criteria, ensuring the retrieval of documents that precisely align with specified parameters.
-
-### Sorting Enhancements
-
-- [Ordering with ES features](https://elasticsearch.pdphilip.com/ordering-and-pagination#extending-ordering-for-elasticsearch-features): Includes modes and missing values for sorting fields.
-- [Order by Geo Distance](https://elasticsearch.pdphilip.com/ordering-and-pagination#order-by-geo-distance)
-
-### Saving Updates
-
-- [First Or Create](https://elasticsearch.pdphilip.com/saving-models#first-or-create)
-- [First Or Create without Refresh](https://elasticsearch.pdphilip.com/saving-models#first-or-create-without-refresh)
-
-### Grouped Queries
-
-- [Grouped Queries](https://elasticsearch.pdphilip.com/querying-models#grouped-queries): Queries can be grouped allowing multiple conditions to be nested within a single query block.
-
----
-
-### Roadmap
-- Add Global modifer on model to add a *, or an index modifer to end of the table. that way you can do global search or add to a sub index.
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
