@@ -234,7 +234,7 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 
 # Documentation Links
 
-## Getting Started
+### Getting Started
 
 - [Installation](https://elasticsearch.pdphilip.com/getting-started)
 - [Configuration](https://elasticsearch.pdphilip.com/getting-started#configuration-guide)
