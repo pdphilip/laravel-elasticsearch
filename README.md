@@ -197,7 +197,7 @@ ES_ERROR_INDEX=
         'ssl_verification' => env('ES_OPT_VERIFY_SSL', true),
         'retires' => env('ES_OPT_RETRIES', null),
         'meta_header' => env('ES_OPT_META_HEADERS', true),
-        'default_limit' => env('ES_OPT_DEFAULT_LIMIT', true),
+        'default_limit' => env('ES_OPT_DEFAULT_LIMIT', 1000),
         'allow_id_sort' => env('ES_OPT_ID_SORTABLE', false),
     ],
 ],
