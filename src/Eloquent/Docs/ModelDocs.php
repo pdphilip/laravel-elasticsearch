@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent\Docs;
 
-use Closure;
-use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
@@ -17,25 +15,57 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * Query Builder Methods ---------------------------------
  *
  * @method static Builder query()
- * @method static $this where(array|Closure|Expression|string $column, $operator = null, $value = null, $boolean = 'and', $options = [])
- * @method static $this whereIn(string $column, array $values, $options = [])
- * @method static $this whereExact(string $column, string $value, $boolean = 'and', $options = [])
+ * @method static $this where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
+ * @method static $this whereNot($column, $operator = null, $value = null, $boolean = 'and', $options = [])
+ * @method static $this orWhere($column, $operator = null, $value = null, $options = [])
+ * @method static $this orWhereNot($column, $operator = null, $value = null, $options = [])
+ * @method static $this whereRaw($dsl, $bindings = [], $boolean = 'and', $options = [])
+ * @method static $this whereIn($column, $values, $boolean = 'and', $not = false, $options = [])
+ * @method static $this whereNotIn($column, $values, $boolean = 'and', $options = [])
+ * @method static $this orWhereIn($column, $values, $options = [])
+ * @method static $this orWhereNotIn($column, $values, $options = [])
+ * @method static $this whereNull($columns, $boolean = 'and', $not = false)
+ * @method static $this whereNotNull($columns, $boolean = 'and')
+ * @method static $this orWhereNull($columns)
+ * @method static $this orWhereNotNull($columns)
+ * @method static $this whereExact($column, $value, $boolean = 'and', $not = false, $options = [])
+ * @method static $this whereNotExact($column, $value, $options = [])
+ * @method static $this orWhereExact($column, $value, $options = [])
+ * @method static $this orWhereNotExact($column, $value, $options = [])
+ * @method static $this whereTermExists($column, $boolean = 'and', $not = false)
+ * @method static $this whereNotTermExists($column)
+ * @method static $this orWhereTermExists($column)
+ * @method static $this orWhereNotTermsExists($column)
+ * @method static $this whereFuzzy($column, $value, $boolean = 'and', $not = false, $options = [])
+ * @method static $this whereNotFuzzy($column, $value, $options = [])
+ * @method static $this orWhereFuzzy($column, $value, $options = [])
+ * @method static $this orWhereNotFuzzy($column, $value, $options = [])
+ * @method static $this wherePrefix($column, $value, $boolean = 'and', $not = false, $options = [])
+ * @method static $this whereNotPrefix($column, $value, $options = [])
+ * @method static $this orWherePrefix($column, $value, $options = [])
+ * @method static $this orWhereNotPrefix($column, $value, $options = [])
+ * @method static $this whereGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null, $boolean = 'and', bool $not = false)
+ * @method static $this whereNotGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null)
+ * @method static $this orWhereGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null)
+ * @method static $this orWhereNotGeoBox($field, array $topLeft, array $bottomRight, $validationMethod = null)
+ * @method static $this whereGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null, $boolean = 'and', bool $not = false)
+ * @method static $this whereNotGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null)
+ * @method static $this orWhereGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null)
+ * @method static $this orWhereNotGeoDistance($field, string $distance, array $location, $distanceType = null, $validationMethod = null)
+ * @method static $this whereNestedObject($column, $query, $filterInnerHits = false, $options = [], $boolean = 'and', $not = false)
+ * @method static $this whereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
+ * @method static $this orWhereNestedObject($column, $query, $filterInnerHits = false, $options = [])
+ * @method static $this orWhereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this wherePhrase(string $column, string $value, $boolean = 'and', $options = [])
  * @method static $this wherePhrasePrefix(string $column, string $value, $boolean = 'and', $options = [])
  * @method static $this whereDate($column, $operator = null, $value = null, $boolean = 'and', $options = [])
  * @method static $this whereTimestamp($column, $operator = null, $value = null, $boolean = 'and', $options = [])
  * @method static $this whereRegex(string $column, string $regex, $options = [])
- * @method static $this orWhere(array|Closure|Expression|string $column, $operator = null, $value = null, $options = [])
- * @method static $this orWhereIn(string $column, array $values, $options = [])
- * @method static $this orWhereExact(string $column, string $value, $options = [])
  * @method static $this orWherePhrase(string $column, string $value, $options = [])
  * @method static $this orWherePhrasePrefix(string $column, string $value, $options = [])
  * @method static $this orWhereDate($column, $operator = null, $value = null, $options = [])
  * @method static $this orWhereTimestamp($column, $operator = null, $value = null, $options = [])
  * @method static $this orWhereRegex(string $column, string $regex, $options = [])
- * @method static $this whereNestedObject(string $column, Callable $callback, string $scoreType = 'avg', $options = [])
- * @method static $this whereNotNestedObject(string $column, Callable $callback, string $scoreType = 'avg', $options = [])
- * @method static $this queryNested(string $column, Callable $callback, $options = [])
  *
  * Filter and order methods ---------------------------------
  * @method static $this orderBy(string $column, string $direction = 'asc')
@@ -63,9 +93,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orSearchPhrasePrefix($phrase, $fields = ['*'], $options = [])
  * @method static $this orSearchBoolPrefix($phrase, $fields = ['*'], $options = [])
  * @method static $this highlight(array $fields = [], string|array $preTag = '<em>', string|array $postTag = '</em>', array $globalOptions = [])
- * @method static $this asFuzzy(?int $depth = null)
- * @method static $this setMinShouldMatch(int $value)
- * @method static $this setBoost(int $value)
+ * @method static $this withoutRefresh()
  *
  * Query Executors --------------------------------------------
  * @method static Model|null find($id)
@@ -73,7 +101,6 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static ElasticCollection get(array $columns = ['*'])
  * @method static Model|null first(array $columns = ['*'])
  * @method static Model firstOrCreate(array $attributes, array $values = [])
- * @method static Model firstOrCreateWithoutRefresh(array $attributes, array $values = [])
  * @method static int|array sum(array|string $columns)
  * @method static int|array min(array|string $columns)
  * @method static int|array max(array|string $columns)
@@ -82,7 +109,6 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static LengthAwarePaginator paginate(int $perPage = 15, array $columns = ['*'], string $pageName = 'page', ?int $page = null, ?int $total = null)
  * @method static SearchAfterPaginator cursorPaginate(int|null $perPage = null, array $columns = [], string $cursorName = 'cursor', ?Cursor $cursor = null)
  * @method static ElasticCollection insert($values, $returnData = null):
- * @method static ElasticCollection insertWithoutRefresh($values, $returnData = null)
  * @method static array toDsl(array $columns = ['*'])
  * @method static array toSql(array $columns = ['*'])
  * @method static mixed rawDsl(array $bodyParams)

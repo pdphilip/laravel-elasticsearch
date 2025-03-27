@@ -1031,12 +1031,12 @@ class Builder extends BaseBuilder
         return $this->whereTermExists($column, 'and', true);
     }
 
-    public function orWhereTermExists($column, $options = [])
+    public function orWhereTermExists($column)
     {
         return $this->whereTermExists($column, 'or', false);
     }
 
-    public function orWhereNotTermsExists($column, $options = [])
+    public function orWhereNotTermsExists($column)
     {
         return $this->whereTermExists($column, 'or', true);
     }
