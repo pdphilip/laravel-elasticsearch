@@ -23,7 +23,6 @@ class ElasticServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        require_once __DIR__.'/Laravel/compatibility-loader.php';
         // Add database driver.
         $this->app->resolving('db', function ($db) {
             $db->extend('elasticsearch', function ($config, $name) {

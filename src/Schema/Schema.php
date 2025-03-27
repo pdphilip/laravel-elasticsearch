@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @mixin static Builder
  *
- * @see \PDPhilip\Elasticsearch\Schema\Builder
+ * @see Builder
  */
 class Schema extends Facade
 {
