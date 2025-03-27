@@ -20,6 +20,7 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
@@ -28,6 +29,8 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 
 /**
+ * @method $this save()
+ *
  * @property Connection $connection
  * @property Processor $processor
  * @property Grammar $grammar

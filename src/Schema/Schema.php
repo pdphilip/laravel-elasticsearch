@@ -4,10 +4,43 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Schema;
 
+use Elastic\Elasticsearch\Endpoints\Indices;
 use Illuminate\Support\Facades\Facade;
+use PDPhilip\Elasticsearch\Exceptions\LogicException;
 
 /**
- * @mixin static Builder
+ * @method static Builder overridePrefix(string $value)
+ * @method static array getTables()
+ * @method static array getTable($name)
+ * @method static bool hasTable($table)
+ * @method static bool hasColumn($table, $column)
+ * @method static bool hasColumns($table, $columns)
+ * @method static void table($table, $callback)
+ * @method static void index($table, $callback)
+ * @method static void create($table, $callback)
+ * @method static void createIfNotExists($table, $callback)
+ * @method static void drop($table)
+ * @method static void dropIfExists($table)
+ * @method static array getIndex($indices)
+ * @method static array getIndices()
+ * @method static array getIndicesSummary()
+ * @method static array getFieldMapping($table, $column, $raw = false)
+ * @method static array getFieldsMapping($table, $raw = false)
+ * @method static array getMappings($table, $raw = false)
+ * @method static array getSettings($table)
+ * @method static bool indexExists($table)
+ * @method static array reindex($from, $to, $options = [])
+ * @method static Indices indices()
+ * @method static void modify($index, $callback)
+ * @method static void delete($index)
+ * @method static void deleteIfExists($index)
+ * @method static void setAnalyser($index, $callback)
+ * @method static bool hasField($index, $field)
+ * @method static bool hasFields($index, $fields)
+ * @method static LogicException hasIndex($table, $index, $type = null)
+ *** Laravel Inherited
+ * @method static \Illuminate\Database\Connection getConnection()
+ * @method static void blueprintResolver(\Closure $resolver)
  *
  * @see Builder
  */
