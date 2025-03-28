@@ -109,7 +109,7 @@ trait HybridRelations
             $relation = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'];
         }
 
-        if ($this->nonElasticModel($related)) {
+        if ($this->nonElasticModel($related, true)) {
             return parent::belongsTo($related, $foreignKey, $otherKey, $relation);
         }
 
