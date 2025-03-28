@@ -1591,6 +1591,11 @@ class Builder extends BaseBuilder
         return $this->orderBy($column, $direction, $options);
     }
 
+    public function orderByNestedDesc(string $column, string $mode = 'avg'): self
+    {
+        return $this->orderByNested($column, 'desc', $mode);
+    }
+
     public function withSort(string $column, $key, $value): self
     {
         $this->sorts[$column] = [$key => $value];
