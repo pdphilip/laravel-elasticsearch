@@ -28,7 +28,7 @@ trait ElasticsearchModel
 {
     use HasOptions, HybridRelations, ModelDocs;
 
-    protected ?ModelMeta $meta;
+    protected ?ModelMeta $_meta;
 
     protected ?Relation $parentRelation;
 
@@ -66,12 +66,12 @@ trait ElasticsearchModel
 
     public function getMeta(): ModelMeta
     {
-        return $this->meta;
+        return $this->_meta;
     }
 
     public function getMetaAsArray(): array
     {
-        return $this->meta->toArray();
+        return $this->_meta->toArray();
     }
 
     // ----------------------------------------------------------------------
@@ -171,7 +171,7 @@ trait ElasticsearchModel
             unset($attributes['_meta']);
         }
         $model = parent::newFromBuilder($attributes, $connection);
-        $model->meta->setMeta($meta);
+        $model->_meta->setMeta($meta);
 
         return $model;
     }
@@ -194,13 +194,13 @@ trait ElasticsearchModel
 
     public function getFullTable()
     {
-        return $this->meta->getFullTable();
+        return $this->_meta->getFullTable();
     }
 
     public function setTable($table): static
     {
         $this->table = $table;
-        $this->meta->setTable($table);
+        $this->_meta->setTable($table);
 
         return $this;
     }

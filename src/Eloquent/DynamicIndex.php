@@ -23,7 +23,7 @@ trait DynamicIndex
     public function setSuffix(?string $suffix): self
     {
         $this->options()->add('suffix', $suffix);
-        $this->meta->setTableSuffix($suffix);
+        $this->_meta->setTableSuffix($suffix);
 
         return $this;
     }

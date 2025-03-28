@@ -27,7 +27,7 @@ abstract class Model extends BaseModel
             $this->attributes['id'] = $this->newUniqueId();
         }
         $connection = $this->getConnection();
-        $this->meta = new ModelMeta($this->getTable(), $connection->getTablePrefix());
+        $this->_meta = new ModelMeta($this->getTable(), $connection->getTablePrefix());
         if (! $this->defaultLimit) {
             $this->defaultLimit = $connection->getDefaultLimit();
         }

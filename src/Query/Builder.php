@@ -1988,7 +1988,7 @@ class Builder extends BaseBuilder
      *
      * @param  string|string[]  $columns
      */
-    public function highlight($columns = [], $preTag = '<em>', $postTag = '</em>', array $options = []): self
+    public function highlight($columns = ['*'], $preTag = '<em>', $postTag = '</em>', array $options = []): self
     {
         $column = Arr::wrap($columns);
 
