@@ -427,6 +427,46 @@ class Processor extends BaseProcessor
         return ! $this->getRawResponse()['errors'];
     }
 
+    public function processBulkInsert(Builder $query, Elasticsearch $result): array
+    {
+        $this->rawResponse = $result;
+        $this->query = $query;
+
+        $process = $result->asArray();
+
+        $outcome = [
+            'hasErrors' => $process['errors'],
+            'total' => count($process['items']),
+            'took' => $process['took'],
+            'success' => 0,
+            'created' => 0,
+            'modified' => 0,
+            'failed' => 0,
+            'errors' => [],
+        ];
+        if (! empty($process['items'])) {
+            foreach ($process['items'] as $item) {
+                if (! empty($item['index']['error'])) {
+                    $outcome['errors'][] = [
+                        'id' => $item['index']['_id'],
+                        'type' => $item['index']['error']['type'],
+                        'reason' => $item['index']['error']['reason'],
+                    ];
+                    $outcome['failed']++;
+                } else {
+                    $outcome['success']++;
+                    if ($item['index']['status'] == 201) {
+                        $outcome['created']++;
+                    } else {
+                        $outcome['modified']++;
+                    }
+                }
+            }
+        }
+
+        return $outcome;
+    }
+
     public function processRaw($query, $response)
     {
         $this->rawResponse = $response;

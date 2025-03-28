@@ -687,6 +687,14 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Same as insert, but returns the ES data of the operation.
+     */
+    public function bulkInsert(array $values): array
+    {
+        return $this->processor->processBulkInsert($this, $this->connection->insert($this->grammar->compileInsert($this, $values), [], true));
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function update(array $values)

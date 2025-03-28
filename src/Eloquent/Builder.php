@@ -70,6 +70,7 @@ class Builder extends BaseEloquentBuilder
         'bucket',
         'bucketaggregation',
         'openpit',
+        'bulkinsert',
     ];
 
     /**

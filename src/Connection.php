@@ -535,7 +535,7 @@ class Connection extends BaseConnection
      *
      * @throws BulkInsertQueryException
      */
-    public function insert($query, $bindings = []): Elasticsearch
+    public function insert($query, $bindings = [], $continueWithErrors = false): Elasticsearch
     {
         $result = $this->run(
             $this->addClientParams($query),
@@ -543,7 +543,7 @@ class Connection extends BaseConnection
             $this->connection->bulk(...)
         );
 
-        if (! empty($result['errors'])) {
+        if (! $continueWithErrors && ! empty($result['errors'])) {
             throw new BulkInsertQueryException($result);
         }
 
