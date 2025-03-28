@@ -2288,6 +2288,9 @@ class Builder extends BaseBuilder
 
     public function viaPit($pid, $afterKey): self
     {
+        if (! $pid) {
+            $pid = $this->openPit();
+        }
         $this->pitId = $pid;
         $this->searchAfter = $afterKey;
 

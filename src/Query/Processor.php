@@ -57,6 +57,12 @@ class Processor extends BaseProcessor
 
     public function processDistinctAggregations($result, $columns, $withCount): Collection
     {
+        if (! empty($result['hits']['hits']) && is_array($result['hits']['hits'])) {
+            $last = collect($result['hits']['hits'])->last();
+            if (! empty($last['sort'])) {
+                $this->query->getMetaTransfer()->set('after_key', $last['sort']);
+            }
+        }
         $keys = [];
         foreach ($columns as $column) {
             $keys[] = 'by_'.$column;

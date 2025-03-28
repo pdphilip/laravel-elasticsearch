@@ -68,7 +68,8 @@ class Builder extends BaseEloquentBuilder
         // ES
         'todsl',
         'bucket',
-        'bucketAggregation',
+        'bucketaggregation',
+        'openpit',
     ];
 
     /**
