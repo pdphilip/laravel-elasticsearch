@@ -458,7 +458,7 @@ class Builder extends BaseBuilder
         if (is_string($direction)) {
             $direction = strtolower($direction) == 'asc' ? 1 : -1;
         }
-        if (in_array($column, ['_score', '_count'])) {
+        if (in_array($column, ['_count'])) {
             $this->sorts[$column] = $direction;
 
             return $this;

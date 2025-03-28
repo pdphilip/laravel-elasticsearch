@@ -79,7 +79,7 @@ trait ManagesOptions
         if ($options) {
             return [$columns, $options];
         }
-        if (is_callable($columns)) {
+        if (is_callable($columns) && ! is_string($columns)) {
             $options = $columns;
             $columns = null;
 
@@ -100,7 +100,7 @@ trait ManagesOptions
 
     protected function extractOptionsFull($type, $column, $operator, $value, $boolean, $not, $options = []): array
     {
-        if (is_callable($column)) {
+        if (is_callable($column) && ! is_string($column)) {
             // The query is a closure, return it as is
             return [$column, $operator, $value, $boolean, $not, $options];
         }
@@ -129,7 +129,7 @@ trait ManagesOptions
         }
         $allowedOptions = $this->returnAllowedOptions();
 
-        if ($value) {
+        if ($value && ! is_string($value)) {
             // If either is callable or an array containing valid operators, then we have options
             if (is_callable($value) || (is_array($value) && count(array_intersect(array_keys($value), $allowedOptions)))) {
                 $options = $this->parseOptions($value);
@@ -141,7 +141,7 @@ trait ManagesOptions
         }
 
         // Last, let's assess the operator
-        if ($operator) {
+        if ($operator && ! is_string($operator)) {
             // If either is callable or an array containing valid operators, then we have options
             if (is_callable($operator) || (is_array($operator) && count(array_intersect(array_keys($operator), $allowedOptions)))) {
                 $options = $this->parseOptions($operator);
