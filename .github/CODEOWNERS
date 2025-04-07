@@ -1,0 +1,11 @@
+# Laravel Elasticsearch Package Code Ownership
+# Defines who must review changes to specific parts of the codebase.
+
+# Package metadata and config
+/composer.json @pdphilip
+/LICENSE       @pdphilip
+/.github/      @pdphilip
+/README.md     @pdphilip
+
+# Core source code
+/src/          @pdphilip

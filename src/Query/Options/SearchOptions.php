@@ -23,6 +23,7 @@ use InvalidArgumentException;
  * @method $this fuzzyRewrite(string $value) Not allowed in phrase or phrase_prefix.
  * @method $this lenient(bool $value) Not allowed in phrase_prefix.
  * @method $this zeroTermsQuery(string $value) Only for best_fields, most_fields, phrase.
+ * @method $this fields(array $fields)
  * @method $this constantScore(bool $value) Only for best_fields, most_fields, phrase.
  */
 class SearchOptions extends QueryOptions
