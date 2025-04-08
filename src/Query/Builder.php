@@ -1340,7 +1340,7 @@ class Builder extends BaseBuilder
      *
      * @param  array|Closure  $options
      */
-    public function search(string $query, string $type = 'best_fields', mixed $columns = null, mixed $options = [], bool $not = false, string $boolean = 'and'): self
+    public function search(string $query, string $type = 'best_fields', mixed $columns = null, mixed $options = [], bool $not = false, string $boolean = 'and', array $appendedOptions = []): self
     {
         [$columns, $options] = $this->extractSearch($columns, $options);
         $options = $this->setOptions($options, 'search');
@@ -1349,12 +1349,18 @@ class Builder extends BaseBuilder
             $options->fields(Arr::wrap($columns));
             $options->formatFields();
         }
+        $options = $options->toArray();
+        if ($appendedOptions) {
+            // prioritize given options
+            $options = array_merge($appendedOptions, $options);
+        }
+
         $this->wheres[] = [
             'type' => 'Search',
             'value' => $query,
             'boolean' => $boolean,
             'not' => $not,
-            'options' => $options->toArray(),
+            'options' => $options,
         ];
 
         return $this;
@@ -1502,58 +1508,43 @@ class Builder extends BaseBuilder
 
     public function searchFuzzy($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'best_fields', $columns, $options);
+        return $this->search($query, 'best_fields', $columns, $options, false, 'and', ['fuzziness' => 'AUTO']);
     }
 
     public function orSearchFuzzy($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'best_fields', $columns, $options, false, 'or');
+        return $this->search($query, 'best_fields', $columns, $options, false, 'or', ['fuzziness' => 'AUTO']);
     }
 
     public function searchNotFuzzy($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'best_fields', $columns, $options, true);
+        return $this->search($query, 'best_fields', $columns, $options, true, 'and', ['fuzziness' => 'AUTO']);
     }
 
     public function orSearchNotFuzzy($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
 
-        return $this->search($query, 'best_fields', $columns, $options, true, 'or');
+        return $this->search($query, 'best_fields', $columns, $options, true, 'or', ['fuzziness' => 'AUTO']);
     }
 
     public function searchFuzzyPrefix($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'bool_prefix', $columns, $options);
+        return $this->search($query, 'bool_prefix', $columns, $options, false, 'and', ['fuzziness' => 'AUTO']);
     }
 
     public function orSearchFuzzyPrefix($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or');
+        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or', ['fuzziness' => 'AUTO']);
     }
 
     public function searchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'bool_prefix', $columns, $options, true);
+        return $this->search($query, 'bool_prefix', $columns, $options, true, 'and', ['fuzziness' => 'AUTO']);
     }
 
     public function orSearchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
     {
-        $options['fuzziness'] = 'AUTO';
-
-        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
+        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or', ['fuzziness' => 'AUTO']);
     }
 
     // ----------------------------------------------------------------------
