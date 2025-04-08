@@ -53,7 +53,7 @@ class ElasticCollection extends Collection
 
     public function getQueryMetaAsArray(): array
     {
-        return $this->meta->asArray();
+        return $this->meta->toArray();
     }
 
     public function getDsl(): array

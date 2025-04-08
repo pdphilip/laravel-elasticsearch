@@ -147,6 +147,11 @@ final class QueryMeta
         return $this->error;
     }
 
+    public function getTotalHits(): int
+    {
+        return $this->hits;
+    }
+
     public function toArray(): array
     {
         $return = [
@@ -156,6 +161,7 @@ final class QueryMeta
             'timed_out' => $this->timed_out,
             'took' => $this->took,
             'total' => $this->total,
+            'hits' => $this->hits,
         ];
         if ($this->maxScore) {
             $return['max_score'] = $this->maxScore;

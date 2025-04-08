@@ -606,3 +606,20 @@ it('tests create with null id', function (string $id) {
     'id',
     '_id',
 ]);
+
+it('tests meta total hits', function () {
+    $users = [];
+    for ($i = 0; $i < 8500; $i++) {
+        $users[] = [
+            'name' => "User {$i}",
+            'age' => rand(1, 100),
+            'order' => $i,
+            'title' => rand(0, 1) ? 'admin' : 'user',
+        ];
+    }
+    User::insert($users);
+
+    $query = User::wherePhrasePrefix('name', 'User')->limit(10)->get();
+    expect($query->getQueryMeta()->getTotalHits())->toBe(8500)
+        ->and(count($query))->toBe(10);
+});
