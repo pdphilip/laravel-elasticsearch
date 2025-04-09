@@ -254,7 +254,7 @@ class Connection extends BaseConnection
     /** {@inheritdoc} */
     public function disconnect(): void
     {
-        $this->connection = null;
+        $this->connection = $this->createConnection();
     }
 
     // ----------------------------------------------------------------------
@@ -596,7 +596,7 @@ class Connection extends BaseConnection
     public function reconnectIfMissingConnection(): void
     {
         if (is_null($this->connection)) {
-            $this->createConnection();
+            $this->connection = $this->createConnection();
         }
     }
 

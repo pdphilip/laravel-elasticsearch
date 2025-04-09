@@ -41,7 +41,7 @@ test('Reconnect', function () {
     expect(spl_object_hash($c1) !== spl_object_hash($c2))->toBeTrue();
 });
 
-test('Disconnect And Create New Connection', function () {
+test('Disconnect as reconnect And Create New Connection', function () {
     $connection = DB::connection('elasticsearch');
     expect($connection)->toBeInstanceOf(Connection::class);
     $client = $connection->getClient();
@@ -49,7 +49,7 @@ test('Disconnect And Create New Connection', function () {
 
     $connection->disconnect();
     $client = $connection->getClient();
-    expect($client)->toBeNull();
+    expect($client)->not()->toBeNull();
     DB::purge('elasticsearch');
 
     $connection = DB::connection('elasticsearch');
