@@ -159,8 +159,8 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  *===========================================
  * Filter and order methods
  *===========================================
- * @method static $this orderBy($column, $direction = 'asc')
- * @method static $this orderByDesc($column)
+ * @method static $this orderBy($column, $direction = 'asc',$options = [])
+ * @method static $this orderByDesc($column,$options = [])
  *-----------------------------------
  * @method static $this groupBy($groups)
  *-----------------------------------

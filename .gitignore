@@ -23,7 +23,6 @@ secrets.nix
 build
 composer.lock
 coverage
-docs
 phpunit.xml
 phpstan.neon
 testbench.yaml
