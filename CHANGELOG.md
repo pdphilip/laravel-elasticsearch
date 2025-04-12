@@ -2,6 +2,19 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.0.4 - 2025-04-12
+
+This release is compatible with Laravel 10, 11 & 12
+
+### What's changed
+
+- Connection `disconnect()` resets connection - removing connection is unnecessary in the context of Elasticsearch. Issue #64
+- Added `getTotalHits()` helper method from query meta
+- Bug fix:  `searchFuzzy()` parses options as a closure
+- Minor code reorganising
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.3...v5.0.4
+
 ## v5.0.3 - 2025-03-28
 
 This release is compatible with Laravel 10, 11 & 12
@@ -44,8 +57,8 @@ People::bulkInsert([
     ],
 ]);
 
-```
 
+```
 Returns:
 
 ```json
@@ -65,8 +78,8 @@ Returns:
     }
   ]
 }
-```
 
+```
 #### 2. Bug fix: `distinct()` aggregation now appends `searchAfter` key in meta
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.1...v5.0.2
@@ -95,98 +108,114 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 ### Upgrading
 
 - Please take a look at the [upgrade guide](https://elasticsearch.pdphilip.com/upgrade-guide/) carefully, as there are several significant breaking changes.
-
+  
 - [New features are detailed here](https://elasticsearch.pdphilip.com/whats-new/)
+  
 
 ```json
 "pdphilip/elasticsearch": "^5",
-```
 
+```
 ### Breaking Changes
 
 #### 1. Connection
 
-- **Index Prefix Handling**  
-  The `ES_INDEX_PREFIX` no longer auto-appends an underscore (`_`).  
-  Old behavior: `ES_INDEX_PREFIX=my_prefix` → `my_prefix_`  
+- **Index Prefix Handling**
+  The `ES_INDEX_PREFIX` no longer auto-appends an underscore (`_`).
+  Old behavior: `ES_INDEX_PREFIX=my_prefix` → `my_prefix_`
   New: set explicitly if needed → `ES_INDEX_PREFIX=my_prefix_`
 
 #### 2. Models
 
-- **Model ID Field**  
-  `$model->_id` is deprecated. Use `$model->id` instead.  
+- **Model ID Field**
+  `$model->_id` is deprecated. Use `$model->id` instead.
   If your model had a separate `id` field, you must rename it.
-
-- **Default Limit Constant**  
+  
+- **Default Limit Constant**
   `MAX_SIZE` constant is removed. Use `$defaultLimit` property:
-
+  
   ```php
   use PDPhilip\Elasticsearch\Eloquent\Model;
-
+  
   class Product extends Model
   {
       protected $defaultLimit = 10000;
       protected $connection = 'elasticsearch';
   }
+  
   ```
 
 #### 3. Queries
 
 - `where()` Behavior Changed
-
+  
   Now uses term query instead of match.
-
+  
   ```php
   // Old:
   Product::where('name', 'John')->get(); // match query
   // New:
   Product::whereMatch('name', 'John')->get(); // match query
   Product::where('name', 'John')->get();      // term query
+  
   ```
-
 - `orderByRandom()` Removed
-
+  
   Replace with `functionScore()` [Docs](https://elasticsearch.pdphilip.com/upgrade-guide#queries)
-
+  
 - Full-text Search Options Updated
   Methods like `asFuzzy()`, `setMinShouldMatch()`, `setBoost()` removed.
   Use callback-based SearchOptions instead:
+  
   ```php
   Product::searchTerm('espresso time', function (SearchOptions $options) {
         $options->searchFuzzy();
       $options->boost(2);
         $options->minimumShouldMatch(2);
   })->get();
+  
   ```
 - Legacy Search Methods Removed
   All `{xx}->search()` methods been removed. Use `{multi_match}->get()` instead.
+  
 
 #### 4. Distinct & GroupBy
 
 - `distinct()` and `groupBy()` behavior updated. [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/)
-
+  
   Review queries using them and refactor accordingly.
+  
 
 #### 5. Schema
 
 - `IndexBlueprint` and `AnalyzerBlueprint` has been removed and replaced with a single `Blueprint` class
-
+  
   ```diff
   -   use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
   -   use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
+  
   ```
-
 - `Schema::hasIndex` has been removed. Use `Schema::hasTable` or `Schema::indexExists` instead.
+  
 - `geo($field)` field property has been replaced with `geoPoint($field)`
+  
 - `{field}->index($bool)` field property has been replaced with `{field}->indexField($bool)`;
+  
 - `alias()` field type has been removed. Use `aliasField()` instead.
+  
 - `settings()` method has been replaced with `withSetting()`
+  
 - `map()` method has been replaced with `withMapping()`
+  
 - `analyzer()` method has been replaced with `addAnalyzer()`
+  
 - `tokenizer()` method has been replaced with `addTokenizer()`
+  
 - `charFilter()` method has been replaced with `addCharFilter()`
+  
 - `filter()` method has been replaced with `addFilter()`
+  
 
 #### 6. Dynamic Indices
 
@@ -230,8 +259,8 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 ```php
 Connection::on('elasticsearch')->elastic()->{clientMethod}();
-```
 
+```
 ### What's Changed
 
 * V5.0.0 by @use-the-fork in https://github.com/pdphilip/laravel-elasticsearch/pull/54
