@@ -3,7 +3,7 @@
 namespace PDPhilip\Elasticsearch\Tests\Benchmarks;
 
 use AllowDynamicProperties;
-use PDPhilip\Elasticsearch\Helpers\Helpers;
+use PDPhilip\Elasticsearch\Utils\Helpers;
 use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 use PDPhilip\Elasticsearch\Utils\Timer;
 

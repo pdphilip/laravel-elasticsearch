@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Traits;
 
 use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;
-use PDPhilip\Elasticsearch\Repositories\ArrayStore;
+use PDPhilip\Elasticsearch\Utils\ArrayStore;
 
 trait HasOptions
 {

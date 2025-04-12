@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Helpers;
+namespace PDPhilip\Elasticsearch\Utils;
 
 use Closure;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 
 final class Helpers
 {

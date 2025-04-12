@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Helpers;
+namespace PDPhilip\Elasticsearch\Relations\Traits;
 
 use Closure;
 use Exception;

@@ -13,8 +13,8 @@ use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
-use PDPhilip\Elasticsearch\Helpers\Sanitizer;
 use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\BuilderCompatibility;
+use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 /**
  * @property Connection $connection

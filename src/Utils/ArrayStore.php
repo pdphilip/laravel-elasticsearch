@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Repositories;
+namespace PDPhilip\Elasticsearch\Utils;
 
 use Closure;
 use PDPhilip\Elasticsearch\Contracts\ArrayStore as ArrayStoreContract;

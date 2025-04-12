@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\ElasticClient as Client;
-use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
+use PDPhilip\Elasticsearch\Utils\Helpers;
 
 function getLaravelVersion(): int
 {

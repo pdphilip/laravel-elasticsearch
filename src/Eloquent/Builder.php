@@ -18,9 +18,9 @@ use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
-use PDPhilip\Elasticsearch\Helpers\QueriesRelationships;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 use PDPhilip\Elasticsearch\Query\Builder as QueryBuilder;
+use PDPhilip\Elasticsearch\Relations\Traits\QueriesRelationships;
 use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**

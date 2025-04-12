@@ -2,9 +2,9 @@
 
 namespace PDPhilip\Elasticsearch\Laravel\Compatibility\Schema;
 
-use PDPhilip\Elasticsearch\Helpers\Helpers;
 use PDPhilip\Elasticsearch\Laravel\v11\Schema\BuilderCompatibility as BuilderCompatibility11;
 use PDPhilip\Elasticsearch\Laravel\v12\Schema\BuilderCompatibility as BuilderCompatibility12;
+use PDPhilip\Elasticsearch\Utils\Helpers;
 
 $laravelVersion = Helpers::getLaravelCompatabilityVersion();
 

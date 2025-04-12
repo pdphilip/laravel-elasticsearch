@@ -9,7 +9,7 @@ use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
-use PDPhilip\Elasticsearch\Helpers\Sanitizer;
+use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 class Processor extends BaseProcessor
 {

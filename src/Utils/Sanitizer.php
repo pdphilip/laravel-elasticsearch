@@ -1,6 +1,6 @@
 <?php
 
-namespace PDPhilip\Elasticsearch\Helpers;
+namespace PDPhilip\Elasticsearch\Utils;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;

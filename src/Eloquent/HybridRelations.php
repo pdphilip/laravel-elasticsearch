@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Support\Str;
-use PDPhilip\Elasticsearch\Helpers\EloquentBuilder;
 use PDPhilip\Elasticsearch\Relations\BelongsTo;
 use PDPhilip\Elasticsearch\Relations\BelongsToMany;
 use PDPhilip\Elasticsearch\Relations\HasMany;
@@ -14,6 +13,7 @@ use PDPhilip\Elasticsearch\Relations\MorphMany;
 use PDPhilip\Elasticsearch\Relations\MorphOne;
 use PDPhilip\Elasticsearch\Relations\MorphTo;
 use PDPhilip\Elasticsearch\Relations\MorphToMany;
+use PDPhilip\Elasticsearch\Relations\Traits\EloquentBuilder;
 
 trait HybridRelations
 {
