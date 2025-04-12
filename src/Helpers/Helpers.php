@@ -10,9 +10,6 @@ use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 use PDPhilip\Elasticsearch\Utils\TimeBasedUUIDGenerator;
 
-/**
- * @internal
- */
 final class Helpers
 {
     public static function escape($value): string
