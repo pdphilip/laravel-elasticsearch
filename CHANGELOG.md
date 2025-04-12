@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this `laravel-elasticsearch` will be documented in this file.
+All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
 ## v5.0.3 - 2025-03-28
 
