@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany as EloquentMorphToMany;
 use Illuminate\Support\Arr;
+use PDPhilip\Elasticsearch\Relations\Traits\InteractsWithPivotTable;
 
 use function array_diff;
 use function array_key_exists;
@@ -25,6 +26,7 @@ use function is_numeric;
 
 class MorphToMany extends EloquentMorphToMany
 {
+    use InteractsWithPivotTable;
     use ManagesRefresh;
 
     /** {@inheritdoc} */
@@ -164,9 +166,9 @@ class MorphToMany extends EloquentMorphToMany
 
         $records = $this->formatRecordsList($ids);
 
-        $current = Arr::wrap($current);
-
-        $detach = array_diff($current, array_keys($records));
+        // We need to make sure that all keys are processed and saved as strings since we store them as keywords a 13 != '13' this fixes that.
+        $current = array_map(fn ($key) => (string) $key, Arr::wrap($current));
+        $detach = array_diff($current, array_map(fn ($key) => (string) $key, array_keys($records)));
 
         // We need to make sure we pass a clean array, so that it is not interpreted
         // as an associative array.
@@ -248,7 +250,8 @@ class MorphToMany extends EloquentMorphToMany
                 $id = $this->parseIds($id);
             }
 
-            $id = (array) $id;
+            // ID Must always be a string val
+            $id = Arr::wrap((string) $id);
 
             $query = $this->newRelatedQuery();
             $query->whereIn($this->relatedKey, $id);
