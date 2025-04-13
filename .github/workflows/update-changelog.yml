@@ -4,6 +4,9 @@ on:
   release:
     types: [ released ]
 
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -14,7 +17,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          token: ${{ secrets.ADMIN_PAT }}
 
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@v1
@@ -28,4 +30,3 @@ jobs:
           branch: main
           commit_message: Update CHANGELOG
           file_pattern: CHANGELOG.md
-          token: ${{ secrets.ADMIN_PAT }}
