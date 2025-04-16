@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany as EloquentMorphToMany;
 use Illuminate\Support\Arr;
+use PDPhilip\Elasticsearch\Eloquent\Model as EsModel;
 use PDPhilip\Elasticsearch\Relations\Traits\InteractsWithPivotTable;
 
 use function array_diff;
@@ -80,7 +81,7 @@ class MorphToMany extends EloquentMorphToMany
     protected function setWhere()
     {
         if ($this->getInverse()) {
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            if (EsModel::isElasticsearchModel($this->parent)) {
                 $ids = $this->extractIds((array) $this->parent->{$this->table});
 
                 $this->query->whereIn($this->relatedKey, $ids);
@@ -89,7 +90,7 @@ class MorphToMany extends EloquentMorphToMany
                     ->whereIn($this->foreignPivotKey, (array) $this->parent->{$this->parentKey});
             }
         } else {
-            match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            match (EsModel::isElasticsearchModel($this->parent)) {
                 true => $this->query->whereIn($this->relatedKey, (array) $this->parent->{$this->relatedPivotKey}),
                 false => $this->query
                     ->whereIn($this->getQualifiedForeignPivotKeyName(), (array) $this->parent->{$this->parentKey}),
@@ -143,7 +144,7 @@ class MorphToMany extends EloquentMorphToMany
         // in this joining table. We'll spin through the given IDs, checking to see
         // if they exist in the array of current ones, and if not we will insert.
         if ($this->getInverse()) {
-            $current = match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            $current = match (EsModel::isElasticsearchModel($this->parent)) {
                 true => $this->parent->{$this->table} ?: [],
                 false => $this->parent->{$this->relationName} ?: [],
             };
@@ -154,7 +155,7 @@ class MorphToMany extends EloquentMorphToMany
                 $current = $this->extractIds($current);
             }
         } else {
-            $current = match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            $current = match (EsModel::isElasticsearchModel($this->parent)) {
                 true => $this->parent->{$this->relatedPivotKey} ?: [],
                 false => $this->parent->{$this->relationName} ?: [],
             };
@@ -216,7 +217,7 @@ class MorphToMany extends EloquentMorphToMany
 
             if ($this->getInverse()) {
                 // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+                if (EsModel::isElasticsearchModel($this->parent)) {
                     $this->parent->push($this->table, [
                         [
                             $this->relatedPivotKey => $model->{$this->relatedKey},
@@ -239,7 +240,7 @@ class MorphToMany extends EloquentMorphToMany
                 ], true);
 
                 // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+                if (EsModel::isElasticsearchModel($this->parent)) {
                     $this->parent->push($this->relatedPivotKey, (array) $id, true);
                 } else {
                     $this->addIdToParentRelationData($id);
@@ -261,7 +262,7 @@ class MorphToMany extends EloquentMorphToMany
                 $query->push($this->foreignPivotKey, $this->parent->{$this->parentKey});
 
                 // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+                if (EsModel::isElasticsearchModel($this->parent)) {
                     foreach ($id as $item) {
                         $this->parent->push($this->table, [
                             [
@@ -285,7 +286,7 @@ class MorphToMany extends EloquentMorphToMany
                 ], true);
 
                 // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+                if (EsModel::isElasticsearchModel($this->parent)) {
                     $this->parent->push($this->relatedPivotKey, $id, true);
                 } else {
                     foreach ($id as $item) {
@@ -328,7 +329,7 @@ class MorphToMany extends EloquentMorphToMany
                 ];
             }
 
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            if (EsModel::isElasticsearchModel($this->parent)) {
                 $this->parent->pull($this->table, $data);
             } else {
                 $value = $this->parent->{$this->relationName}
@@ -345,7 +346,7 @@ class MorphToMany extends EloquentMorphToMany
             $query->pull($this->foreignPivotKey, $this->parent->{$this->parentKey});
         } else {
             // Remove the relation from the parent.
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            if (EsModel::isElasticsearchModel($this->parent)) {
                 $this->parent->pull($this->relatedPivotKey, $ids);
             } else {
                 $value = $this->parent->{$this->relationName}
