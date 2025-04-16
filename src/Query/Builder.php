@@ -2107,12 +2107,16 @@ class Builder extends BaseBuilder
 
     public function getLimit(): int
     {
-        return $this->getSetLimit() ?? $this->getDefaultLimit() ?? $this->connection->getDefaultLimit();
+        return $this->getSetLimit();
     }
 
-    public function getSetLimit(): ?int
+    public function getSetLimit(): int
     {
-        return $this->options()->get('limit', $this->limit) ?? null;
+        // If a limit was explicitly set we use that over the defaults.
+        return $this->limit
+          ?? $this->options()->get('limit')
+          ?? $this->getDefaultLimit()
+          ?? $this->connection->getDefaultLimit();
     }
 
     public function getDefaultLimit(): ?int
