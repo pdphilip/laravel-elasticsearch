@@ -43,6 +43,9 @@ it('tests limit clauses', function () {
     $products = ProductWithDefaultConnectionLimit::all();
     expect($products)->toHaveCount(4);
 
+    $products = ProductWithDefaultConnectionLimit::limit(3)->get();
+    expect($products)->toHaveCount(3);
+
     $products = ProductWithLimit::limit(3)->get();
     expect($products)->toHaveCount(3);
 });
