@@ -25,7 +25,7 @@ beforeEach(function () {
     ]);
 });
 
-it('tests where clause', function () {
+it('tests limit clauses', function () {
 
     class ProductWithLimit extends Product
     {
