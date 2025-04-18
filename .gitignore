@@ -8,6 +8,7 @@ vendor
 !secrets/.env*
 .sb*
 secrets.nix
+.aider*
 
 # pre-commit
 .pre-commit-config.yaml
