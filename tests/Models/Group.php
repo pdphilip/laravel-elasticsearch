@@ -17,7 +17,7 @@ class Group extends Model
 
     protected static $unguarded = true;
 
-    public function users(): BelongsToMany
+    public function groupUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'users', 'groups', 'users', 'id', 'id', 'users');
     }

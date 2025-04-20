@@ -321,22 +321,22 @@ it('tests belongs to many sync already present', function () {
 
 it('tests belongs to many custom', function () {
     $user = User::create(['name' => 'John Doe']);
-    $group = $user->groups()->create(['name' => 'Admins']);
+    $group = $user->userGroups()->create(['name' => 'Admins']);
 
-    // Refetch
+    // Re-fetch
     $user = User::find($user->id);
     $group = Group::find($group->id);
 
     // Check for custom relation attributes
     expect($group->getAttributes())->toHaveKey('users')
         ->and($user->getAttributes())->toHaveKey('groups')
-        ->and($user->groups->pluck('id')->toArray())->toContain($group->id)
-        ->and($group->users->pluck('id')->toArray())->toContain($user->id)
-        ->and($user->groups()->first()->id)->toBe($group->id)
-        ->and($group->users()->first()->id)->toBe($user->id);
+        ->and($user->userGroups->pluck('id')->toArray())->toContain($group->id)
+        ->and($group->groupUsers->pluck('id')->toArray())->toContain($user->id)
+        ->and($user->userGroups()->first()->id)->toBe($group->id)
+        ->and($group->groupUsers()->first()->id)->toBe($user->id);
 
     // Assert they are attached
-})->todo();
+});
 
 it('tests morph', function () {
     $user = User::create(['name' => 'John Doe']);
@@ -854,7 +854,7 @@ it('tests has many has', function () {
         $query->where('rating', '<', 5);
     })->get();
     expect($authors)->toHaveCount(1);
-})->todo();
+});
 
 it('tests has one has', function () {
     $user1 = User::create(['name' => 'John Doe']);
@@ -874,7 +874,7 @@ it('tests has one has', function () {
 
     $users = User::has('role', '!=', 0)->get();
     expect($users)->toHaveCount(2);
-})->todo();
+});
 
 it('tests nested keys', function () {
     $client = Client::create([

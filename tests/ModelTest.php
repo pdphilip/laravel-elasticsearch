@@ -457,7 +457,7 @@ it('tests chunk by id', function () {
     });
 
     expect($names)->toBe(['fork', 'spork', 'spoon']);
-})->todo();
+});
 
 it('tests chunk across many items', function () {
     $users = [];
