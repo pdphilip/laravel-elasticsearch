@@ -89,7 +89,7 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
         return $this->belongsToMany(Client::class);
     }
 
-    public function groups()
+    public function userGroups()
     {
         return $this->belongsToMany(Group::class, 'groups', 'users', 'groups', 'id', 'id', 'groups');
     }
