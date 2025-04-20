@@ -548,9 +548,7 @@ class Grammar extends BaseGrammar
             $innerHits['from'] = $innerQuery->offset;
         }
         if ($size = $innerQuery->getSetLimit()) {
-            // TODO: David should we handle this diffrently?
-            // Nested queries have a hard limit of 100 for inner_hits size
-            $innerHits['size'] = min($size, 100);
+            $innerHits['size'] = $size;
         }
 
         return $innerHits;
