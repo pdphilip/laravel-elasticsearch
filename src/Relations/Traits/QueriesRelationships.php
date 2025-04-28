@@ -27,13 +27,8 @@ trait QueriesRelationships
      *
      * @throws Exception
      */
-    public function has(
-        $relation,
-        $operator = '>=',
-        $count = 1,
-        $boolean = 'and',
-        ?Closure $callback = null
-    ): Builder|static {
+    public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', ?Closure $callback = null): Builder|static
+    {
         if (is_string($relation)) {
             if (str_contains($relation, '.')) {
                 // @phpstan-ignore-next-line
@@ -79,13 +74,8 @@ trait QueriesRelationships
      *
      * @throws Exception
      */
-    public function addHybridHas(
-        Relation $relation,
-        string $operator = '>=',
-        int $count = 1,
-        string $boolean = 'and',
-        ?Closure $callback = null
-    ): mixed {
+    public function addHybridHas(Relation $relation, string $operator = '>=', int $count = 1, string $boolean = 'and', ?Closure $callback = null): mixed
+    {
         $hasQuery = $relation->getQuery();
         if ($callback) {
             $hasQuery->callScope($callback);
@@ -102,12 +92,20 @@ trait QueriesRelationships
             $relation instanceof MorphToMany => $relation->getInverse() ?
                 $this->handleMorphedByMany($hasQuery, $relation) :
                 $this->handleMorphToMany($hasQuery, $relation),
-            default => $hasQuery->pluck($this->getHasCompareKey($relation))
+            default => $this->handleDefaultForeignIdsLookup($hasQuery, $relation)
         };
 
         $relatedIds = $this->getConstrainedRelatedIds($relations, $operator, $count);
 
         return $this->whereIn($this->getRelatedConstraintKey($relation), $relatedIds, $boolean, $not);
+    }
+
+    private function handleDefaultForeignIdsLookup($query, $relation)
+    {
+        $key = $this->getHasCompareKey($relation);
+        $query->whereNotNull($key);
+
+        return $query->pluck($key);
     }
 
     /**
