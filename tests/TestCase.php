@@ -36,6 +36,15 @@ class TestCase extends Orchestra
                 'logging' => true,
             ],
         ]);
+        $app['config']->set('database.connections.elasticsearch_with_default_limit', [
+            'driver' => 'elasticsearch',
+            'auth_type' => 'http',
+            'hosts' => ['http://localhost:9200'],
+            'options' => [
+                'default_limit' => 4,
+                'logging' => true,
+            ],
+        ]);
 
         $app['config']->set('database.connections.elasticsearch_unsafe', [
             'driver' => 'elasticsearch',

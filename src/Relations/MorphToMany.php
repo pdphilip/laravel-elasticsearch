@@ -251,7 +251,7 @@ class MorphToMany extends EloquentMorphToMany
             }
 
             // ID Must always be a string val
-            $id = Arr::wrap((string) $id);
+            $id = array_map(fn ($item) => (string) $item, Arr::wrap($id));
 
             $query = $this->newRelatedQuery();
             $query->whereIn($this->relatedKey, $id);
