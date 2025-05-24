@@ -2,6 +2,18 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.0.5 - 2025-05-19
+
+This release is compatible with Laravel 10, 11 & 12
+
+### What's Changed
+
+* Merging in bug fixes  by @use-the-fork in https://github.com/pdphilip/laravel-elasticsearch/pull/65
+* Updated outstanding tests
+* Fixed bug in  relations`has()` method
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.4...v5.0.5
+
 ## v5.0.4 - 2025-04-12
 
 This release is compatible with Laravel 10, 11 & 12
@@ -58,6 +70,7 @@ People::bulkInsert([
 ]);
 
 
+
 ```
 Returns:
 
@@ -78,6 +91,7 @@ Returns:
     }
   ]
 }
+
 
 ```
 #### 2. Bug fix: `distinct()` aggregation now appends `searchAfter` key in meta
@@ -115,6 +129,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 ```json
 "pdphilip/elasticsearch": "^5",
 
+
 ```
 ### Breaking Changes
 
@@ -143,6 +158,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
       protected $connection = 'elasticsearch';
   }
   
+  
   ```
 
 #### 3. Queries
@@ -157,6 +173,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   // New:
   Product::whereMatch('name', 'John')->get(); // match query
   Product::where('name', 'John')->get();      // term query
+  
   
   ```
 - `orderByRandom()` Removed
@@ -173,6 +190,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
       $options->boost(2);
         $options->minimumShouldMatch(2);
   })->get();
+  
   
   ```
 - Legacy Search Methods Removed
@@ -194,6 +212,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   -   use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
   -   use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
+  
   
   ```
 - `Schema::hasIndex` has been removed. Use `Schema::hasTable` or `Schema::indexExists` instead.
@@ -259,6 +278,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 ```php
 Connection::on('elasticsearch')->elastic()->{clientMethod}();
+
 
 ```
 ### What's Changed
