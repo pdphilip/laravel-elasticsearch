@@ -275,6 +275,7 @@ class Builder extends BaseEloquentBuilder
     public function chunkByPit($count, callable $callback, $keepAlive = '1m'): bool
     {
         $this->query->keepAlive = $keepAlive;
+        $this->query->limit = $count;
         $pitId = $this->query->openPit();
 
         $searchAfter = null;
