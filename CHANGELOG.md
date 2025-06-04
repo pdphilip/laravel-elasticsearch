@@ -2,6 +2,16 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.0.6 - 2025-06-04
+
+This release is compatible with Laravel 10, 11 & 12
+
+### What's Changed
+
+* Bug fix: Chunking `$count` value fixed for setting query limit correctly, via #68
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.5...v5.0.6
+
 ## v5.0.5 - 2025-05-19
 
 This release is compatible with Laravel 10, 11 & 12
@@ -71,6 +81,7 @@ People::bulkInsert([
 
 
 
+
 ```
 Returns:
 
@@ -91,6 +102,7 @@ Returns:
     }
   ]
 }
+
 
 
 ```
@@ -130,6 +142,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 "pdphilip/elasticsearch": "^5",
 
 
+
 ```
 ### Breaking Changes
 
@@ -159,6 +172,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   }
   
   
+  
   ```
 
 #### 3. Queries
@@ -173,6 +187,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   // New:
   Product::whereMatch('name', 'John')->get(); // match query
   Product::where('name', 'John')->get();      // term query
+  
   
   
   ```
@@ -190,6 +205,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
       $options->boost(2);
         $options->minimumShouldMatch(2);
   })->get();
+  
   
   
   ```
@@ -212,6 +228,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   -   use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
   -   use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
+  
   
   
   ```
@@ -278,6 +295,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 ```php
 Connection::on('elasticsearch')->elastic()->{clientMethod}();
+
 
 
 ```
