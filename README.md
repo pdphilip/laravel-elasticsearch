@@ -277,3 +277,7 @@ Now, you're all set to use Elasticsearch with Laravel as if it were native to th
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## Looking to use Elasticsearch for full-text search of your SQL models?
+
+<a href="https://github.com/pdphilip/elasticlens"> <img src="https://cdn.snipform.io/pdphilip/elasticlens/elasticlens-banner.svg" alt="ElasticLens for Laravel" /> </a>
