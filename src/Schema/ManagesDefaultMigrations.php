@@ -258,7 +258,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function nullableTimestamps($precision = 0)
+    public function nullableTimestamps($precision = 0): void
     {
         $this->timestamps($precision);
     }
@@ -266,7 +266,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function timestamps($precision = 0)
+    public function timestamps($precision = 0): void
     {
         $this->timestamp('created_at');
         $this->timestamp('updated_at');

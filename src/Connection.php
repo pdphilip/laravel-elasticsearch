@@ -169,7 +169,7 @@ class Connection extends BaseConnection
         }
 
         if (! empty($this->config['options']['retires'])) {
-            $this->options()->add('retires', $this->config['options']['retires']);
+            $this->options()->add('retires', (int) $this->config['options']['retires']);
         }
 
         if (isset($this->config['options']['meta_header'])) {
@@ -177,7 +177,7 @@ class Connection extends BaseConnection
         }
 
         if (isset($this->config['options']['default_limit'])) {
-            $this->defaultQueryLimit = $this->config['options']['default_limit'];
+            $this->defaultQueryLimit = (int) $this->config['options']['default_limit'];
         }
     }
 
