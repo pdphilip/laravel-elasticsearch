@@ -2414,6 +2414,13 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    public function withTrackTotalHits(bool $val): self
+    {
+        $this->bodyParameters['track_total_hits'] = $val;
+
+        return $this;
+    }
+
     // ----------------------------------------------------------------------
     // Internal Operations
     // ----------------------------------------------------------------------
