@@ -71,6 +71,7 @@ class Builder extends BaseEloquentBuilder
         'bucketaggregation',
         'openpit',
         'bulkinsert',
+        'createonly',
     ];
 
     /**
@@ -95,7 +96,7 @@ class Builder extends BaseEloquentBuilder
     public function newModelInstance($attributes = [])
     {
         $model = $this->model->newInstance($attributes)->setConnection(
-            $this->query->getConnection()->getName()
+            $this->query->connection->getName()
         );
 
         // Merge in our options.
@@ -216,7 +217,7 @@ class Builder extends BaseEloquentBuilder
         $instance = $this->newModelInstance();
 
         return $instance->newCollection(array_map(function ($item) use ($instance) {
-            return $instance->newFromBuilder($item, $this->getConnection()->getName());
+            return $instance->newFromBuilder($item, $this->query->connection->getName());
         }, $items));
     }
 
@@ -392,6 +393,17 @@ class Builder extends BaseEloquentBuilder
         $this->model->options()->add('refresh', false);
 
         return $this->model;
+    }
+
+    /**
+     * Explicitly control the Elasticsearch refresh behavior for write ops.
+     * Accepts: true, false, or 'wait_for'.
+     */
+    public function withRefresh(bool|string $refresh): static
+    {
+        $this->query->options()->add('refresh', $refresh);
+
+        return $this;
     }
 
     /**
@@ -642,6 +654,27 @@ class Builder extends BaseEloquentBuilder
     public function rawDsl($dsl): array
     {
         return $this->query->raw($dsl)->asArray();
+    }
+
+    /**
+     * Force insert operations to use op_type=create for dedupe semantics.
+     * When set, attempts to create an existing _id will fail with a 409 from Elasticsearch.
+     */
+    public function createOnly(): static
+    {
+        // mark insert op type on the underlying query options
+        $this->query->options()->add('insert_op_type', 'create');
+
+        return $this;
+    }
+
+    /**
+     * Convenience method to perform a create-only insert and surface 409s as exceptions.
+     * Accepts single document attributes or an array of documents.
+     */
+    public function createOrFail(array $attributes)
+    {
+        return $this->createOnly()->create($attributes);
     }
 
     // ----------------------------------------------------------------------

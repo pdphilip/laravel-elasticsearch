@@ -107,8 +107,9 @@ class DslBuilder
 
     /**
      * Set a refresh parameter
+     * Accepts: true, false, or 'wait_for'
      */
-    public function setRefresh(bool $refresh = true): self
+    public function setRefresh(bool|string $refresh = true): self
     {
         return $this->set(['refresh'], $refresh);
     }

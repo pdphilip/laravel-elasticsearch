@@ -446,16 +446,17 @@ class Processor extends BaseProcessor
         ];
         if (! empty($process['items'])) {
             foreach ($process['items'] as $item) {
-                if (! empty($item['index']['error'])) {
+                $action = array_key_first($item) ?? 'index';
+                if (! empty($item[$action]['error'])) {
                     $outcome['errors'][] = [
-                        'id' => $item['index']['_id'],
-                        'type' => $item['index']['error']['type'],
-                        'reason' => $item['index']['error']['reason'],
+                        'id' => $item[$action]['_id'] ?? null,
+                        'type' => $item[$action]['error']['type'] ?? null,
+                        'reason' => $item[$action]['error']['reason'] ?? null,
                     ];
                     $outcome['failed']++;
                 } else {
                     $outcome['success']++;
-                    if ($item['index']['status'] == 201) {
+                    if (($item[$action]['status'] ?? 200) == 201) {
                         $outcome['created']++;
                     } else {
                         $outcome['modified']++;

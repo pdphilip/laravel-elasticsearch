@@ -181,6 +181,8 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static array getModels($columns = ['*'])
  * @method static ElasticCollection get($columns = ['*'])
  * @method static ElasticCollection insert($values, $returnData = null)
+ * @method static self createOnly()
+ * @method static self createOrFail(array $attributes)
  *-----------------------------------
  * @method static array toDsl($columns = ['*'])
  * @method static array toSql($columns = ['*'])
