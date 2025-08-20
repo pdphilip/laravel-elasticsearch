@@ -13,6 +13,8 @@ use Generator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Query\Grammars\Grammar;
+use Illuminate\Database\Query\Processors\Processor;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -108,6 +110,12 @@ class Builder extends BaseBuilder
 
     protected ?MetaDTO $metaTransfer = null;
 
+    public function __construct(...$args)
+    {
+        parent::__construct(...$args);
+        $this->applyConnectionOptions();
+    }
+
     public function __call($method, $parameters)
     {
         if (Str::startsWith($method, 'filterWhere')) {
@@ -117,7 +125,7 @@ class Builder extends BaseBuilder
         return parent::__call($method, $parameters);
     }
 
-    public function toDsl(): array
+    public function toDsl(): array|string
     {
         $this->applyBeforeQueryCallbacks();
 
@@ -127,6 +135,14 @@ class Builder extends BaseBuilder
     public function toSql(): array|string
     {
         return $this->toDsl();
+    }
+
+    private function applyConnectionOptions()
+    {
+        $trackTotalHits = $this->connection->options()->get('track_total_hits');
+        if ($trackTotalHits !== null) {
+            $this->bodyParameters['track_total_hits'] = $trackTotalHits;
+        }
     }
 
     // ======================================================================
@@ -2410,6 +2426,23 @@ class Builder extends BaseBuilder
     public function withAnalyzer(string $analyzer): self
     {
         $this->bodyParameters['analyzer'] = $analyzer;
+
+        return $this;
+    }
+
+    public function withTrackTotalHits(bool|int|null $val = true): self
+    {
+        if ($val === null) {
+            return $this->withoutTrackTotalHits();
+        }
+        $this->bodyParameters['track_total_hits'] = $val;
+
+        return $this;
+    }
+
+    public function withoutTrackTotalHits(): self
+    {
+        unset($this->bodyParameters['track_total_hits']);
 
         return $this;
     }
