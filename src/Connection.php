@@ -123,6 +123,7 @@ class Connection extends BaseConnection
                     'cert_password' => null,
                 ],
                 'options' => [
+                    'track_total_hits' => null, // null -> skips - max 10k by default; true -> full values; false -> no hit tracking, returns -1; int -> max hit tracking val, ex 20000
                     'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
                     'logging' => false,
                     'ssl_verification' => true,
@@ -161,6 +162,8 @@ class Connection extends BaseConnection
     public function setOptions(): void
     {
         $this->allowIdSort = $this->config['options']['allow_id_sort'] ?? false;
+
+        $this->options()->add('track_total_hits', $this->config['options']['track_total_hits'] ?? null);
 
         $this->options()->add('bypass_map_validation', $this->config['options']['bypass_map_validation'] ?? null);
 
