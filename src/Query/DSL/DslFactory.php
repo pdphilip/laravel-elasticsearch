@@ -19,17 +19,6 @@ class DslFactory
         return ['index' => $operation];
     }
 
-    public static function createOperation(string $index, mixed $id = null, array $options = []): array
-    {
-        $operation = array_merge(['_index' => $index], $options);
-
-        if ($id !== null) {
-            $operation['_id'] = $id;
-        }
-
-        return ['create' => $operation];
-    }
-
     // ----------------------------------------------------------------------
     // Query
     // ----------------------------------------------------------------------

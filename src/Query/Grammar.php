@@ -66,7 +66,6 @@ class Grammar extends BaseGrammar
 
             // Prepare main document operation options
             $options = [];
-            $opType = null;
 
             // Handle routing
             if (isset($doc['_routing'])) {
@@ -84,18 +83,6 @@ class Grammar extends BaseGrammar
                 unset($doc['_parent']);
             }
 
-            // Respect explicit op_type selection from document
-            if (isset($doc['_op_type'])) {
-                $opType = $doc['_op_type'];
-                unset($doc['_op_type']);
-            } elseif (isset($doc['op_type'])) {
-                $opType = $doc['op_type'];
-                unset($doc['op_type']);
-            } else {
-                // Also allow query option to drive op type
-                $opType = $query->getOption('insert_op_type', null);
-            }
-
             // We don't want to save the ID as part of the doc
             // Unless the Model has explicitly set 'storeIdsInDocument'
             if ($query->getOption('store_ids_in_document', false)) {
@@ -104,21 +91,19 @@ class Grammar extends BaseGrammar
             } else {
                 unset($doc['id'], $doc['_id']);
             }
-
-            // Add the document operation (index or create)
-            if ($opType && strtolower((string) $opType) === 'create') {
-                $index = DslFactory::createOperation(
-                    index: $query->getFrom(),
-                    id: $docId,
-                    options: $options
-                );
-            } else {
-                $index = DslFactory::indexOperation(
-                    index: $query->getFrom(),
-                    id: $docId,
-                    options: $options
-                );
+            if (! empty($doc['_op_type'])) {
+                $options['op_type'] = $doc['_op_type'];
+                unset($doc['_op_type']);
+            } elseif ($optType = $query->getOption('op_type')) {
+                $options['op_type'] = $optType;
             }
+
+            // Add the document operation
+            $index = DslFactory::indexOperation(
+                index: $query->getFrom(),
+                id: $docId,
+                options: $options
+            );
             $dsl->appendBody($index);
 
             // Process document properties to ensure proper formatting

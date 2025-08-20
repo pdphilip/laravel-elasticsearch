@@ -138,6 +138,11 @@ class DslBuilder
         return $this->set(['post_filter'], $filter);
     }
 
+    public function setOpType(string $type): self
+    {
+        return $this->set(['op_type'], $type);
+    }
+
     public function setOption(array $keys, $value): self
     {
         return $this->set($keys, $value);

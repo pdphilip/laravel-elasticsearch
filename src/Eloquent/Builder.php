@@ -388,22 +388,27 @@ class Builder extends BaseEloquentBuilder
         return $model;
     }
 
-    public function withoutRefresh()
+    public function withoutRefresh(): Model
     {
-        $this->model->options()->add('refresh', false);
-
-        return $this->model;
+        return $this->withRefresh(false);
     }
 
     /**
      * Explicitly control the Elasticsearch refresh behavior for write ops.
      * Accepts: true, false, or 'wait_for'.
      */
-    public function withRefresh(bool|string $refresh): static
+    public function withRefresh(bool|string $refresh): Model
     {
-        $this->query->options()->add('refresh', $refresh);
+        $this->model->options()->add('refresh', $refresh);
 
-        return $this;
+        return $this->model;
+    }
+
+    public function withOpType(string $value)
+    {
+        $this->model->options()->add('op_type', $value);
+
+        return $this->model;
     }
 
     /**
@@ -660,12 +665,12 @@ class Builder extends BaseEloquentBuilder
      * Force insert operations to use op_type=create for dedupe semantics.
      * When set, attempts to create an existing _id will fail with a 409 from Elasticsearch.
      */
-    public function createOnly(): static
+    public function createOnly(): Model
     {
         // mark insert op type on the underlying query options
-        $this->query->options()->add('insert_op_type', 'create');
+        $this->withOpType('create');
 
-        return $this;
+        return $this->model;
     }
 
     /**
