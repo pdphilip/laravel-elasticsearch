@@ -56,5 +56,15 @@ class TestCase extends Orchestra
                 'logging' => true,
             ],
         ]);
+
+        $app['config']->set('database.connections.elasticsearch_with_default_track_total_hits', [
+            'driver' => 'elasticsearch',
+            'auth_type' => 'http',
+            'hosts' => ['http://localhost:9200'],
+            'options' => [
+                'track_total_hits' => true,
+                'logging' => true,
+            ],
+        ]);
     }
 }

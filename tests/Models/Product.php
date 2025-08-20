@@ -29,4 +29,17 @@ class Product extends Model
             $table->date('updated_at');
         });
     }
+
+    public static function buildRecords($limit = 100)
+    {
+        $records = [];
+        while ($limit) {
+            $records[] = [
+                'state' => rand(1, 100),
+            ];
+            $limit--;
+        }
+        Product::insert($records);
+        //        Product::withoutRefresh()->insert($records);
+    }
 }
