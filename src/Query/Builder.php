@@ -1332,6 +1332,38 @@ class Builder extends BaseBuilder
     }
 
     /**
+     *  Add a 'query_string' statement to query
+     */
+    public function whereQueryString($column, $value, array $options = []): self
+    {
+        return $this->_buildQueryStringWheres($column, $value, 'and', false, $options);
+    }
+
+    public function orWhereQueryString($column, $value, array $options = []): self
+    {
+        return $this->_buildQueryStringWheres($column, $value, 'or', false, $options);
+    }
+
+    public function whereNotQueryString($column, $value, array $options = []): self
+    {
+        return $this->_buildQueryStringWheres($column, $value, 'and', true, $options);
+    }
+
+    public function orWhereNotQueryString($column, $value, array $options = []): self
+    {
+        return $this->_buildQueryStringWheres($column, $value, 'or', true, $options);
+    }
+
+    private function _buildQueryStringWheres($column, $value, $boolean, $not, $options): self
+    {
+        $type = 'QueryString';
+
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
+
+        return $this;
+    }
+
+    /**
      * Add any where clause with given options.
      */
     public function whereWithOptions(...$args): self
