@@ -14,7 +14,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 /**
  * Query Builder Methods ---------------------------------
  *
- * @method static Builder query()
+ * @method static $this query()
  *-----------------------------------
  * @method static $this where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
  * @method static $this whereNot($column, $operator = null, $value = null, $boolean = 'and', $options = [])
