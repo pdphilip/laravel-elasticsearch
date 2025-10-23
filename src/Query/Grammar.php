@@ -229,15 +229,13 @@ class Grammar extends BaseGrammar
             }
 
             $dsl->setBody(['aggs'], $this->compileBucketAggregations($query, $sorts));
-            $dsl->setBody(['size'], 0);
-
-            //            return $dsl->getDsl();
+            $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
         }
 
         // Else if we have metrics aggregations
         elseif ($query->metricsAggregations) {
             $dsl->setBody(['aggs'], $this->compileMetricAggregations($query));
-            $dsl->setBody(['size'], 0);
+            $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
         }
 
         if (! $dsl->getBodyValue(['query'])) {
@@ -806,7 +804,7 @@ class Grammar extends BaseGrammar
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
                     ];
 
-                    $allowedOptions = ['missing', 'mode', 'nested'];
+                    $allowedOptions = ['missing', 'mode', 'nested', 'unmapped_type'];
 
                     $options = isset($order['options']) ? array_intersect_key($order['options'], array_flip($allowedOptions)) : [];
 
