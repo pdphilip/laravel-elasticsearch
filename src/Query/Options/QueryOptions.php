@@ -22,11 +22,6 @@ abstract class QueryOptions extends Fluent
     {
         $key = Str::snake($method);
 
-        // Let ES validate the option
-        //        if (! in_array($key, $this->allowedOptions(), true)) {
-        //            throw new \InvalidArgumentException("Option '{$key}' is not allowed for this query type.");
-        //        }
-
         $this->{$key} = $parameters[0];
 
         return $this;

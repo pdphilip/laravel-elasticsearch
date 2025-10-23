@@ -13,6 +13,7 @@ use PDPhilip\Elasticsearch\Query\Options\NestedOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhraseOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhrasePrefixOptions;
 use PDPhilip\Elasticsearch\Query\Options\PrefixOptions;
+use PDPhilip\Elasticsearch\Query\Options\QueryStringOptions;
 use PDPhilip\Elasticsearch\Query\Options\RegexOptions;
 use PDPhilip\Elasticsearch\Query\Options\SearchOptions;
 use PDPhilip\Elasticsearch\Query\Options\TermOptions;
@@ -219,6 +220,7 @@ trait ManagesOptions
             'prefix' => PrefixOptions::class,
             'regex' => RegexOptions::class,
             'nested' => NestedOptions::class,
+            'querystring' => QueryStringOptions::class,
             default => null
         };
     }

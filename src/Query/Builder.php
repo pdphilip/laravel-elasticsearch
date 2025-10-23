@@ -1332,38 +1332,6 @@ class Builder extends BaseBuilder
     }
 
     /**
-     *  Add a 'query_string' statement to query
-     */
-    public function whereQueryString($column, $value, array $options = []): self
-    {
-        return $this->_buildQueryStringWheres($column, $value, 'and', false, $options);
-    }
-
-    public function orWhereQueryString($column, $value, array $options = []): self
-    {
-        return $this->_buildQueryStringWheres($column, $value, 'or', false, $options);
-    }
-
-    public function whereNotQueryString($column, $value, array $options = []): self
-    {
-        return $this->_buildQueryStringWheres($column, $value, 'and', true, $options);
-    }
-
-    public function orWhereNotQueryString($column, $value, array $options = []): self
-    {
-        return $this->_buildQueryStringWheres($column, $value, 'or', true, $options);
-    }
-
-    private function _buildQueryStringWheres($column, $value, $boolean, $not, $options): self
-    {
-        $type = 'QueryString';
-
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
-    }
-
-    /**
      * Add any where clause with given options.
      */
     public function whereWithOptions(...$args): self
@@ -1593,6 +1561,52 @@ class Builder extends BaseBuilder
     public function orSearchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
     {
         return $this->search($query, 'bool_prefix', $columns, $options, true, 'or', ['fuzziness' => 'AUTO']);
+    }
+
+    /**
+     *   Add a 'query_string' statement to query
+     *
+     * @throws Exception
+     */
+    public function searchQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    {
+        return $this->_buildQueryStringWheres($columns, $query, 'and', false, $options);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function orSearchQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    {
+        return $this->_buildQueryStringWheres($columns, $query, 'or', false, $options);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function searchNotQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    {
+        return $this->_buildQueryStringWheres($columns, $query, 'and', true, $options);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function orSearchNotQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    {
+        return $this->_buildQueryStringWheres($columns, $query, 'or', true, $options);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function _buildQueryStringWheres($column, $value, $boolean, $not, $options): self
+    {
+        $type = 'QueryString';
+        $options = $this->setOptions($options, 'querystring')->toArray();
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
+
+        return $this;
     }
 
     // ----------------------------------------------------------------------
