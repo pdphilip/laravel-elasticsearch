@@ -267,7 +267,7 @@ class DslFactory
         ];
     }
 
-    public static function queryString(mixed $query, mixed $fields, array $options = [])
+    public static function queryString(mixed $query, mixed $fields, array $options = [], $type = 'query_string')
     {
         $payload['query'] = (string) $query;
         if ($fields) {
@@ -275,7 +275,7 @@ class DslFactory
         }
 
         return [
-            'query_string' => array_merge(
+            $type => array_merge(
                 $payload,
                 $options
             ),
