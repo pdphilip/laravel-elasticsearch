@@ -75,7 +75,7 @@ trait ManagesOptions
         return [$column, $value, $not, $boolean, $options];
     }
 
-    public function extractSearch($columns = null, $options = []): array
+    public function extractSearch($columns = null, $options = [], $as = 'search'): array
     {
         if ($options) {
             return [$columns, $options];
@@ -87,7 +87,7 @@ trait ManagesOptions
             return [$columns, $options];
         }
         if (is_array($columns)) {
-            $isOptions = $this->validatePossibleOptions($columns, 'search');
+            $isOptions = $this->validatePossibleOptions($columns, $as);
             if ($isOptions) {
                 $options = $columns;
                 $columns = null;

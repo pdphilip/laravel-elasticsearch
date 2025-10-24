@@ -267,21 +267,16 @@ class DslFactory
         ];
     }
 
-    public static function queryString(string|array $field, mixed $query, array $options = [])
+    public static function queryString(mixed $query, mixed $fields, array $options = [])
     {
-        $fields = is_array($field) ? $field : [$field];
-        $type = 'query_string';
-        if (! empty($options['simple_query_string'])) {
-            $type = 'simple_query_string';
+        $payload['query'] = (string) $query;
+        if ($fields) {
+            $payload['fields'] = is_array($fields) ? $fields : [$fields];
         }
-        unset($options['simple_query_string']);
 
         return [
-            $type => array_merge(
-                [
-                    'query' => (string) $query,
-                    'fields' => $fields,
-                ],
+            'query_string' => array_merge(
+                $payload,
                 $options
             ),
         ];

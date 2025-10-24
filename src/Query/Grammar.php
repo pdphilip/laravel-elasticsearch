@@ -723,11 +723,11 @@ class Grammar extends BaseGrammar
 
     private function compileWhereQueryString(Builder $builder, array $where)
     {
-        $fields = $where['column'];
+        $fields = $where['columns'];
         $query = $where['value'];
         $options = $where['options'] ?? [];
 
-        return DslFactory::queryString($fields, $query, $options);
+        return DslFactory::queryString($query, $fields, $options);
     }
 
     /**

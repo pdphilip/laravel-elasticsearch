@@ -6,6 +6,7 @@ namespace PDPhilip\Elasticsearch\Query\Options;
  * QueryStringOptions for Query String Queries.
  *
  *
+ * @method $this type(string $value) //Options: best_fields, most_fields, cross_fields, phrase, phrase_prefix, bool_prefix
  * @method $this allowLeadingWildcard(bool $value)
  * @method $this analyzeWildcard(bool $value)
  * @method $this analyzer(string $analyzer)
@@ -24,13 +25,13 @@ namespace PDPhilip\Elasticsearch\Query\Options;
  * @method $this quoteFieldSuffix(string $value)
  * @method $this rewrite(string $value)
  * @method $this timeZone(string $value)
- * @method $this simpleQueryString(bool $value)
  */
 class QueryStringOptions extends QueryOptions
 {
     public function allowedOptions(): array
     {
         return [
+            'type',
             'allow_leading_wildcard',
             'analyze_wildcard',
             'analyzer',
@@ -51,12 +52,6 @@ class QueryStringOptions extends QueryOptions
             'quote_field_suffix',
             'rewrite',
             'time_zone',
-            'simple_query_string',
         ];
-    }
-
-    public function asSimple()
-    {
-        $this->simpleQueryString(true);
     }
 }

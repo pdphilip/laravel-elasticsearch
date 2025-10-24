@@ -1568,7 +1568,7 @@ class Builder extends BaseBuilder
      *
      * @throws Exception
      */
-    public function searchQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    public function searchQueryString(mixed $query, mixed $columns = null, $options = []): self
     {
         return $this->_buildQueryStringWheres($columns, $query, 'and', false, $options);
     }
@@ -1576,7 +1576,7 @@ class Builder extends BaseBuilder
     /**
      * @throws Exception
      */
-    public function orSearchQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    public function orSearchQueryString(mixed $query, mixed $columns = null, $options = []): self
     {
         return $this->_buildQueryStringWheres($columns, $query, 'or', false, $options);
     }
@@ -1584,7 +1584,7 @@ class Builder extends BaseBuilder
     /**
      * @throws Exception
      */
-    public function searchNotQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    public function searchNotQueryString(mixed $query, mixed $columns = null, $options = []): self
     {
         return $this->_buildQueryStringWheres($columns, $query, 'and', true, $options);
     }
@@ -1592,7 +1592,7 @@ class Builder extends BaseBuilder
     /**
      * @throws Exception
      */
-    public function orSearchNotQueryString(mixed $query, string|array $columns = '*', $options = []): self
+    public function orSearchNotQueryString(mixed $query, mixed $columns = null, $options = []): self
     {
         return $this->_buildQueryStringWheres($columns, $query, 'or', true, $options);
     }
@@ -1600,11 +1600,12 @@ class Builder extends BaseBuilder
     /**
      * @throws Exception
      */
-    private function _buildQueryStringWheres($column, $value, $boolean, $not, $options): self
+    private function _buildQueryStringWheres($columns, $value, $boolean, $not, $options): self
     {
         $type = 'QueryString';
+        [$columns, $options] = $this->extractSearch($columns, $options, 'querystring');
         $options = $this->setOptions($options, 'querystring')->toArray();
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
+        $this->wheres[] = compact('columns', 'value', 'type', 'boolean', 'not', 'options');
 
         return $this;
     }

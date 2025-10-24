@@ -25,6 +25,7 @@ class Product extends Model
 
         $schema->dropIfExists('products');
         $schema->create('products', function (Blueprint $table) {
+            $table->integer('price');
             $table->date('created_at');
             $table->date('updated_at');
         });
