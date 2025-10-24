@@ -17,6 +17,7 @@ namespace PDPhilip\Elasticsearch\Query\Options;
  * @method $this fuzzyMaxExpansions(int $value)
  * @method $this fuzzyPrefixLength(int $value)
  * @method $this fuzzyTranspositions(bool $value)
+ * @method $this fuzzyRewrite(int $value)
  * @method $this lenient(bool $value)
  * @method $this maxDeterminizedStates(int $value)
  * @method $this minimumShouldMatch(string $value)
@@ -43,7 +44,6 @@ class QueryStringOptions extends QueryOptions
             'fuzzy_prefix_length',
             'fuzzy_transpositions',
             'fuzzy_rewrite',
-            'fuzzy_transpositions',
             'lenient',
             'max_determinized_states',
             'minimum_should_match',

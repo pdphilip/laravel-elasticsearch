@@ -128,10 +128,10 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this searchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
  * @method static $this orSearchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
  *                                                                                    -----------------------------------
- * @method static $this searchQueryString($query, $fields = '*', $options = [])
- * @method static $this orSearchQueryString($query, $fields = '*', $options = [])
- * @method static $this searchNotQueryString($query, $fields = '*', $options = [])
- * @method static $this orSearchNotQueryString($query, $fields = '*', $options = [])
+ * @method static $this searchQueryString($query, $fields = null, $options = [])
+ * @method static $this orSearchQueryString($query, $fields = null, $options = [])
+ * @method static $this searchNotQueryString($query, $fields = null, $options = [])
+ * @method static $this orSearchNotQueryString($query, $fields = null, $options = [])
  *===========================================
  * Speciality methods
  *===========================================

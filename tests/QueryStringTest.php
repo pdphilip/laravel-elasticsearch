@@ -58,6 +58,18 @@ it('tests basic query string', function () {
 
 });
 
+it('tests basic query string combined with normal query operators', function () {
+    $users = User::searchQueryString('age:35')->where('title', 'admin')->get();
+    expect($users)->toHaveCount(2);
+
+    $users = User::searchQueryString('age:>30')->count();
+    expect($users)->toBe(6);
+
+    $users = User::searchQueryString('age:(NOT 35)')->skip(4)->limit(3)->get();
+    expect($users)->toHaveCount(2);
+
+});
+
 it('tests AND query string', function () {
 
     $users = User::searchQueryString('age:35')->searchQueryString('title:admin')->get();
