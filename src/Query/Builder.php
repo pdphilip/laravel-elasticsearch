@@ -1598,45 +1598,11 @@ class Builder extends BaseBuilder
     }
 
     /**
-     *   Add a 'simple_query_string' statement to query
-     *
      * @throws Exception
      */
-    public function searchSimpleQueryString(mixed $query, mixed $columns = null, $options = []): self
+    private function _buildQueryStringWheres($columns, $value, $boolean, $not, $options): self
     {
-        return $this->_buildQueryStringWheres($columns, $query, 'and', false, $options, 'SimpleQueryString');
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function orSearchSimpleQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'or', false, $options, 'SimpleQueryString');
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function searchNotSimpleQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'and', true, $options, 'SimpleQueryString');
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function orSearchNotSimpleQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'or', true, $options, 'SimpleQueryString');
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function _buildQueryStringWheres($columns, $value, $boolean, $not, $options, $type = 'QueryString'): self
-    {
-
+        $type = 'QueryString';
         [$columns, $options] = $this->extractSearch($columns, $options, 'querystring');
         $options = $this->setOptions($options, 'querystring')->toArray();
         $this->wheres[] = compact('columns', 'value', 'type', 'boolean', 'not', 'options');

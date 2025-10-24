@@ -730,15 +730,6 @@ class Grammar extends BaseGrammar
         return DslFactory::queryString($query, $fields, $options);
     }
 
-    private function compileWhereSimpleQueryString(Builder $builder, array $where)
-    {
-        $fields = $where['columns'];
-        $query = $where['value'];
-        $options = $where['options'] ?? [];
-
-        return DslFactory::queryString($query, $fields, $options, 'simple_query_string');
-    }
-
     /**
      * Compile a child clause
      */
