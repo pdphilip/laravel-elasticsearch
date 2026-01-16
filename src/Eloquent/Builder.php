@@ -37,6 +37,8 @@ class Builder extends BaseEloquentBuilder
 
     protected $type;
 
+    protected $asDsl = false;
+
     protected $model;
 
     protected $passthru = [
@@ -113,6 +115,13 @@ class Builder extends BaseEloquentBuilder
         return $this->query;
     }
 
+    public function dslQuery(): QueryBuilder
+    {
+        $this->query->asDsl = true;
+
+        return $this->query;
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -132,8 +141,9 @@ class Builder extends BaseEloquentBuilder
     /**
      * {@inheritdoc}
      */
-    public function get($columns = ['*']): ElasticCollection
+    public function get($columns = ['*']): ElasticCollection|array
     {
+
         if (! is_array($columns)) {
             $columns = [$columns];
         }
@@ -525,9 +535,9 @@ class Builder extends BaseEloquentBuilder
         return $this->hydrateAggregationResult($this->query->stringStats($columns, $options));
     }
 
-    public function agg(array $functions, string $column, array $options = [])
+    public function agg(array $functions, string|array $columns, array $options = [])
     {
-        return $this->hydrateAggregationResult($this->query->agg($functions, $column, $options));
+        return $this->hydrateAggregationResult($this->query->agg($functions, $columns, $options));
     }
 
     protected function hydrateAggregationResult($result)

@@ -495,9 +495,11 @@ class Builder extends BaseBuilder
      *
      * @param  array  $columns
      */
-    public function get($columns = ['*']): ElasticCollection
+    public function get($columns = ['*']): ElasticCollection|array
     {
-
+        if ($this->asDsl) {
+            return $this->toDsl();
+        }
         $original = $this->columns;
 
         if (is_null($original)) {
@@ -620,7 +622,7 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function count($columns = null, array $options = []): int
+    public function count($columns = null, array $options = []): int|array
     {
         // If columns are specified, we will aggregate the count of the specified columns.
         //        if ($columns) {
@@ -628,12 +630,16 @@ class Builder extends BaseBuilder
         //        }
 
         // Otherwise, we will just count the records.
+        if ($this->asDsl) {
+            return $this->grammar->compileCount($this);
+        }
+
         return $this->connection->count($this->grammar->compileCount($this));
     }
 
-    public function agg(array $functions, string $column, array $options = [])
+    public function agg(array $functions, string|array $columns, array $options = [])
     {
-        return $this->aggregateMultiMetric($functions, $column, $options);
+        return $this->aggregateMultiMetric($functions, $columns, $options);
     }
 
     /**
@@ -1851,20 +1857,28 @@ class Builder extends BaseBuilder
                 'options' => $options,
             ];
         }
+        if ($this->asDsl) {
+            return $this->grammar->compileSelect($this);
+        }
 
         return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
     }
 
-    protected function aggregateMultiMetric(array $functions, string $column, $options = [])
+    protected function aggregateMultiMetric(array $functions, string|array $columns, $options = [])
     {
         // Each column we want aggregated
-        foreach ($functions as $function) {
-            $this->metricsAggregations[] = [
-                'key' => $function.'_'.$column,
-                'args' => $column,
-                'type' => $function,
-                'options' => $options,
-            ];
+        if (! is_array($columns)) {
+            $columns = Arr::wrap($columns);
+        }
+        foreach ($columns as $column) {
+            foreach ($functions as $function) {
+                $this->metricsAggregations[] = [
+                    'key' => $function.'_'.$column,
+                    'args' => $column,
+                    'type' => $function,
+                    'options' => $options,
+                ];
+            }
         }
 
         return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
