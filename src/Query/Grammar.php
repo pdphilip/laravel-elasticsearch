@@ -91,8 +91,14 @@ class Grammar extends BaseGrammar
             } else {
                 unset($doc['id'], $doc['_id']);
             }
+            if (! empty($doc['_op_type'])) {
+                $options['op_type'] = $doc['_op_type'];
+                unset($doc['_op_type']);
+            } elseif ($optType = $query->getOption('op_type')) {
+                $options['op_type'] = $optType;
+            }
 
-            // Add the document index operation
+            // Add the document operation
             $index = DslFactory::indexOperation(
                 index: $query->getFrom(),
                 id: $docId,
@@ -223,15 +229,13 @@ class Grammar extends BaseGrammar
             }
 
             $dsl->setBody(['aggs'], $this->compileBucketAggregations($query, $sorts));
-            $dsl->setBody(['size'], 0);
-
-            //            return $dsl->getDsl();
+            $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
         }
 
         // Else if we have metrics aggregations
         elseif ($query->metricsAggregations) {
             $dsl->setBody(['aggs'], $this->compileMetricAggregations($query));
-            $dsl->setBody(['size'], 0);
+            $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
         }
 
         if (! $dsl->getBodyValue(['query'])) {
@@ -717,6 +721,15 @@ class Grammar extends BaseGrammar
 
     }
 
+    private function compileWhereQueryString(Builder $builder, array $where)
+    {
+        $fields = $where['columns'];
+        $query = $where['value'];
+        $options = $where['options'] ?? [];
+
+        return DslFactory::queryString($query, $fields, $options);
+    }
+
     /**
      * Compile a child clause
      */
@@ -800,7 +813,7 @@ class Grammar extends BaseGrammar
                         'order' => $order['direction'] < 0 ? 'desc' : 'asc',
                     ];
 
-                    $allowedOptions = ['missing', 'mode', 'nested'];
+                    $allowedOptions = ['missing', 'mode', 'nested', 'unmapped_type'];
 
                     $options = isset($order['options']) ? array_intersect_key($order['options'], array_flip($allowedOptions)) : [];
 

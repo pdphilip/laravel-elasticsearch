@@ -25,8 +25,22 @@ class Product extends Model
 
         $schema->dropIfExists('products');
         $schema->create('products', function (Blueprint $table) {
+            $table->integer('price');
             $table->date('created_at');
             $table->date('updated_at');
         });
+    }
+
+    public static function buildRecords($limit = 100)
+    {
+        $records = [];
+        while ($limit) {
+            $records[] = [
+                'state' => rand(1, 100),
+            ];
+            $limit--;
+        }
+        Product::insert($records);
+        //        Product::withoutRefresh()->insert($records);
     }
 }

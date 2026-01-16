@@ -448,9 +448,9 @@ class Processor extends BaseProcessor
             foreach ($process['items'] as $item) {
                 if (! empty($item['index']['error'])) {
                     $outcome['errors'][] = [
-                        'id' => $item['index']['_id'],
-                        'type' => $item['index']['error']['type'],
-                        'reason' => $item['index']['error']['reason'],
+                        'id' => $item['index']['_id'] ?? null,
+                        'type' => $item['index']['error']['type'] ?? null,
+                        'reason' => $item['index']['error']['reason'] ?? null,
                     ];
                     $outcome['failed']++;
                 } else {

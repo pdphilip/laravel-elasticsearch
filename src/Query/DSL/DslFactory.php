@@ -267,6 +267,21 @@ class DslFactory
         ];
     }
 
+    public static function queryString(mixed $query, mixed $fields, array $options = [])
+    {
+        $payload['query'] = (string) $query;
+        if ($fields) {
+            $payload['fields'] = is_array($fields) ? $fields : [$fields];
+        }
+
+        return [
+            'query_string' => array_merge(
+                $payload,
+                $options
+            ),
+        ];
+    }
+
     // ----------------------------------------------------------------------
     // Aggregations
     // ----------------------------------------------------------------------

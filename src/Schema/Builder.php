@@ -11,6 +11,7 @@ use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Laravel\Compatibility\Schema\BuilderCompatibility;
@@ -66,6 +67,46 @@ class Builder extends BaseBuilder
         $params = ['index' => $index];
 
         return $this->connection->elastic()->indices()->exists($params)->asBool();
+    }
+
+    public function getColumns($table): array
+    {
+        $index = $this->parseIndexName($table);
+        $params = ['index' => $index, 'fields' => ['*']];
+        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
+        $mappings = $result[$index]['mappings'] ?? [];
+        $columns[] = [
+            'name' => 'id',
+            'type_name' => 'text',
+            'type' => 'text',
+            'collation' => null,
+            'nullable' => false,
+            'default' => null,
+            'auto_increment' => false,
+            'comment' => null,
+            'generation' => null,
+        ];
+        foreach ($mappings as $field => $mapping) {
+
+            if (! Str::startsWith($field, '_')) {
+
+                $mapCollection = collect($mapping)->dot()->toArray();
+                $type = $mapCollection['mapping.'.$field.'.types'] ?? 'text';
+                $columns[] = [
+                    'name' => $field,
+                    'type_name' => $type,
+                    'type' => $type,
+                    'collation' => null,
+                    'nullable' => false,
+                    'default' => null,
+                    'auto_increment' => false,
+                    'comment' => null,
+                    'generation' => null,
+                ];
+            }
+        }
+
+        return $columns;
     }
 
     public function hasColumn($table, $column): bool

@@ -249,8 +249,11 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function morphs($name, $indexName = null): void
+    public function morphs(...$args): void
     {
+
+        [$name] = $args;
+
         $this->keyword("{$name}_type");
         $this->keyword("{$name}_id");
     }
@@ -258,7 +261,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function nullableTimestamps($precision = 0)
+    public function nullableTimestamps($precision = 0): void
     {
         $this->timestamps($precision);
     }
@@ -266,7 +269,7 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function timestamps($precision = 0)
+    public function timestamps($precision = 0): void
     {
         $this->timestamp('created_at');
         $this->timestamp('updated_at');
@@ -390,17 +393,17 @@ trait ManagesDefaultMigrations
     /**
      * {@inheritdoc}
      */
-    public function ulidMorphs($name, $indexName = null): void
+    public function ulidMorphs(...$args): void
     {
-        $this->morphs($name, $indexName);
+        $this->morphs(...$args);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function uuidMorphs($name, $indexName = null): void
+    public function uuidMorphs(...$args): void
     {
-        $this->morphs($name, $indexName);
+        $this->morphs(...$args);
     }
 
     /**

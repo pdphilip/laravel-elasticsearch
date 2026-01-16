@@ -107,8 +107,9 @@ class DslBuilder
 
     /**
      * Set a refresh parameter
+     * Accepts: true, false, or 'wait_for'
      */
-    public function setRefresh(bool $refresh = true): self
+    public function setRefresh(bool|string $refresh = true): self
     {
         return $this->set(['refresh'], $refresh);
     }
@@ -135,6 +136,11 @@ class DslBuilder
     public function setPostFilter(array $filter): self
     {
         return $this->set(['post_filter'], $filter);
+    }
+
+    public function setOpType(string $type): self
+    {
+        return $this->set(['op_type'], $type);
     }
 
     public function setOption(array $keys, $value): self

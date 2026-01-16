@@ -13,6 +13,7 @@ use PDPhilip\Elasticsearch\Query\Options\NestedOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhraseOptions;
 use PDPhilip\Elasticsearch\Query\Options\PhrasePrefixOptions;
 use PDPhilip\Elasticsearch\Query\Options\PrefixOptions;
+use PDPhilip\Elasticsearch\Query\Options\QueryStringOptions;
 use PDPhilip\Elasticsearch\Query\Options\RegexOptions;
 use PDPhilip\Elasticsearch\Query\Options\SearchOptions;
 use PDPhilip\Elasticsearch\Query\Options\TermOptions;
@@ -74,7 +75,7 @@ trait ManagesOptions
         return [$column, $value, $not, $boolean, $options];
     }
 
-    public function extractSearch($columns = null, $options = []): array
+    public function extractSearch($columns = null, $options = [], $as = 'search'): array
     {
         if ($options) {
             return [$columns, $options];
@@ -86,7 +87,7 @@ trait ManagesOptions
             return [$columns, $options];
         }
         if (is_array($columns)) {
-            $isOptions = $this->validatePossibleOptions($columns, 'search');
+            $isOptions = $this->validatePossibleOptions($columns, $as);
             if ($isOptions) {
                 $options = $columns;
                 $columns = null;
@@ -219,6 +220,7 @@ trait ManagesOptions
             'prefix' => PrefixOptions::class,
             'regex' => RegexOptions::class,
             'nested' => NestedOptions::class,
+            'querystring' => QueryStringOptions::class,
             default => null
         };
     }

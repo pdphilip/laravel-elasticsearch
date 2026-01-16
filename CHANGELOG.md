@@ -2,6 +2,143 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.2.0 - 2025-10-24
+
+This release is compatible with Laravel 10, 11 & 12
+
+### New Feature: Query String Queries
+
+This release introduces Query String Queries, bringing full Elasticsearch `query_string` syntax support directly into your Eloquent-style queries.
+
+- Method: `searchQueryString(query, $fields = null, $options = [])` and related methods (`orSearchQueryString`, `searchNotQueryString`, etc.)
+- Supports all `query_string` features — logical operators, wildcards, fuzziness, ranges, regex, boosting, field scoping, and more
+- Includes a dedicated `QueryStringOptions` class for fluent option configuration or array-based parameters
+- [See Tests](https://github.com/pdphilip/laravel-elasticsearch/blob/main/tests/QueryStringTest.php)
+- [Full documentation](https://elasticsearch.pdphilip.com/eloquent/query-string-queries/)
+
+Example:
+
+```php
+Product::searchQueryString('status:(active OR pending) name:(full text search)^2')->get();
+Product::searchQueryString('price:[5 TO 19}')->get();
+
+// vanilla optional, +pizza required, -ice forbidden
+Product::searchQueryString('vanilla +pizza -ice', function (QueryStringOptions $options) {
+    $options->type('cross_fields')->fuzziness(2);
+})->get();
+
+//etc
+
+```
+### Ordering enhancement: unmapped_type
+
+- You can now add an `unmapped_type` flag to your ordering query #88
+
+```php
+Product::query()->orderBy('name', 'desc', ['unmapped_type' => 'keyword'])->get();
+
+```
+### Bugfix
+
+- Fixed issue where limit values were being reset on bucket aggregations #84
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.1.0...v5.2.0
+
+## v5.1.0 - 2025-08-20
+
+This release is compatible with Laravel 10, 11 & 12
+
+#### 1. New feature, `withTrackTotalHits(bool|int|null $val = true)`
+
+Appends the `track_total_hits` parameter to the DSL query, setting value to `true` will count all the hits embedded in the query meta not capping to Elasticsearch default of 10k hits
+
+```php
+$products = Product::limit(5)->withTrackTotalHits(true)->get();
+$totalHits = $products->getQueryMeta()->getTotalHits();
+
+
+```
+This can be set by default for all queries by updating the connection config in `database.php`:
+
+```php
+'elasticsearch' => [
+    'driver' => 'elasticsearch',
+    .....
+    'options' => [
+        'track_total_hits' => env('ES_TRACK_TOTAL_HITS', null),
+        ....
+    ],
+],
+
+
+```
+#### 2. New feature, `createOrFail(array $attributes)`
+
+By default, when using `create($attributes)` where `$attributes `has an `id` that exists, the operation will upsert. `createOrFail` will throw a `BulkInsertQueryException` with status code `409` if the `id` exists
+
+```php
+Product::createOrFail([
+    'id' => 'some-existing-id',
+    'name' => 'Blender',
+    'price' => 30,
+]);
+
+
+```
+#### 3. New feature `withRefresh(bool|string $refresh)`
+
+By default, inserting documents will wait for the shards to refresh, ie: `withRefresh(true)`, you can set the refresh flag with the following (as per ES docs):
+
+- `true` (default)
+  Refresh the relevant primary and replica shards (not the whole index) immediately after the operation occurs, so that the updated document appears in search results immediately.
+- `wait_for`
+  Wait for the changes made by the request to be made visible by a refresh before replying. This doesn’t force an immediate refresh, rather, it waits for a refresh to happen.
+- `false`
+  Take no refresh-related actions. The changes made by this request will be made visible at some point after the request returns.
+
+```php
+Product::withRefresh('wait_for')->create([
+    'name' => 'Blender',
+    'price' => 30,
+]);
+
+
+```
+### PRS
+
+* Add withTrackTotalHits method to Builder class to add track_total_hits by @caufab in https://github.com/pdphilip/laravel-elasticsearch/pull/76
+* feat(query): add op_type=create support and dedupe helpers by @abkrim in https://github.com/pdphilip/laravel-elasticsearch/pull/79
+
+### Bugfix
+
+* Laravel ^12.23 Compatibility - close [#81](https://github.com/pdphilip/laravel-elasticsearch/issues/81)
+
+### New Contributors
+
+* @caufab made their first contribution in https://github.com/pdphilip/laravel-elasticsearch/pull/76
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.7...v5.1.0
+
+## v5.0.7 - 2025-07-13
+
+This release is compatible with Laravel 10, 11 & 12
+
+### What's Changed
+
+* Connection bug fix by @pdphilip in https://github.com/pdphilip/laravel-elasticsearch/pull/75 - close #70
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.6...v5.0.7
+
+## v5.0.6 - 2025-06-04
+
+This release is compatible with Laravel 10, 11 & 12
+
+### What's Changed
+
+* Bug fix: Chunking `$count` value fixed for setting query limit correctly, via #68
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.0.5...v5.0.6
+
 ## v5.0.5 - 2025-05-19
 
 This release is compatible with Laravel 10, 11 & 12
@@ -71,6 +208,10 @@ People::bulkInsert([
 
 
 
+
+
+
+
 ```
 Returns:
 
@@ -91,6 +232,10 @@ Returns:
     }
   ]
 }
+
+
+
+
 
 
 ```
@@ -130,6 +275,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 "pdphilip/elasticsearch": "^5",
 
 
+
+
+
+
 ```
 ### Breaking Changes
 
@@ -159,6 +308,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   }
   
   
+  
+  
+  
+  
   ```
 
 #### 3. Queries
@@ -173,6 +326,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   // New:
   Product::whereMatch('name', 'John')->get(); // match query
   Product::where('name', 'John')->get();      // term query
+  
+  
+  
+  
   
   
   ```
@@ -190,6 +347,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
       $options->boost(2);
         $options->minimumShouldMatch(2);
   })->get();
+  
+  
+  
+  
   
   
   ```
@@ -212,6 +373,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   -   use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
   -   use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
+  
+  
+  
+  
   
   
   ```
@@ -278,6 +443,10 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 ```php
 Connection::on('elasticsearch')->elastic()->{clientMethod}();
+
+
+
+
 
 
 ```

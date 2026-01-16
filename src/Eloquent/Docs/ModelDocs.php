@@ -14,7 +14,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 /**
  * Query Builder Methods ---------------------------------
  *
- * @method static Builder query()
+ * @method static $this query()
  *-----------------------------------
  * @method static $this where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
  * @method static $this whereNot($column, $operator = null, $value = null, $boolean = 'and', $options = [])
@@ -127,6 +127,11 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orSearchFuzzyPrefix($term, $fields = ['*'], $options = [])
  * @method static $this searchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
  * @method static $this orSearchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
+ *                                                                                    -----------------------------------
+ * @method static $this searchQueryString($query, $fields = null, $options = [])
+ * @method static $this orSearchQueryString($query, $fields = null, $options = [])
+ * @method static $this searchNotQueryString($query, $fields = null, $options = [])
+ * @method static $this orSearchNotQueryString($query, $fields = null, $options = [])
  *===========================================
  * Speciality methods
  *===========================================
@@ -181,6 +186,8 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static array getModels($columns = ['*'])
  * @method static ElasticCollection get($columns = ['*'])
  * @method static ElasticCollection insert($values, $returnData = null)
+ * @method static self createOnly()
+ * @method static self createOrFail(array $attributes)
  *-----------------------------------
  * @method static array toDsl($columns = ['*'])
  * @method static array toSql($columns = ['*'])
