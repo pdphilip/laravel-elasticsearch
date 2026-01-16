@@ -941,7 +941,7 @@ class Grammar extends BaseGrammar
         return DslFactory::nestedTermsAggregation(
             fieldName: $currentField,
             field: $field,
-            size: $query->getLimit(),
+            size: $query->getSetLimit() ?? 10, // Default size for terms aggregation
             orders: $termsOrders,
             metricAggs: $metricAggs,
             subAggs: $subAggs
