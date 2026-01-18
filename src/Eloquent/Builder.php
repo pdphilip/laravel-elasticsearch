@@ -463,6 +463,16 @@ class Builder extends BaseEloquentBuilder
         return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
     }
 
+    //    public function bulkDistinct(array $columns = [], bool $includeCount = false)
+    //    {
+    //        $elasticQueryCollection = $this->query->bulkDistinct($columns, $includeCount);
+    //        $eloquentCollection = $this->model->hydrate(
+    //            $elasticQueryCollection->all()
+    //        );
+    //
+    //        return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
+    //    }
+
     public function min($column, array $options = [])
     {
         return $this->hydrateAggregationResult($this->query->min($column, $options));

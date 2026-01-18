@@ -217,9 +217,22 @@ class Grammar extends BaseGrammar
                 // else nothing to aggregate - just a normal query as all records will be distinct anyway
                 $query->distinct = false;
             }
-        }
-        // Else if we have bucket aggregations
-        elseif ($query->bucketAggregations) {
+        } elseif ($query->bulkDistinct) {
+            if ($query->columns && $query->columns !== ['*']) {
+                $fields = Arr::wrap($query->columns);
+
+                $aggs = [];
+                foreach ($fields as $field) {
+                    $aggs = [...$aggs, ...$this->compileNestedTermAggregations([$field], $query)];
+                }
+                $dsl->setBody(['aggs'], $aggs);
+                $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
+                $dsl->unsetBody(['sort']);
+            } else {
+                // else nothing to aggregate - just a normal query as all records will be distinct anyway
+                $query->bulkDistinct = false;
+            }
+        } elseif ($query->bucketAggregations) {
             $sorts = $dsl->getBodyValue(['sort']);
             if ($afterCount = $dsl->getBodyValue(['from'])) {
                 $dsl->unsetBody(['from']);

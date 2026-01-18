@@ -13,8 +13,6 @@ use Generator;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
-use Illuminate\Database\Query\Grammars\Grammar;
-use Illuminate\Database\Query\Processors\Processor;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -22,7 +20,6 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
-use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
@@ -50,7 +47,9 @@ class Builder extends BaseBuilder
 
     public array $bucketAggregations = [];
 
-    public $distinct;
+    public $distinct = false;
+
+    public $bulkDistinct = false;
 
     public $distinctCount = false;
 
@@ -167,6 +166,24 @@ class Builder extends BaseBuilder
         $this->distinct = true;
 
         return $this->get();
+    }
+
+    public function bulkDistinct(mixed $columns = [], bool $includeCount = false)
+    {
+        $original = $this->columns ?? [];
+        $withCount = $includeCount;
+        if (is_bool($columns)) {
+            $withCount = $columns;
+        } elseif ($columns) {
+            $columns = Arr::wrap($columns);
+            $this->columns = array_merge($original, $columns);
+        }
+
+        $this->distinctCount = $withCount;
+        $this->bulkDistinct = true;
+
+        return $this->get();
+
     }
 
     /**

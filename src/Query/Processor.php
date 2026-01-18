@@ -13,6 +13,10 @@ use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 class Processor extends BaseProcessor
 {
+    use Concerns\ProcessesBucketAggregations;
+    use Concerns\ProcessesDistinctAggregations;
+    use Concerns\ProcessesMetricAggregations;
+
     protected $rawResponse;
 
     protected $rawAggregations;
@@ -55,56 +59,6 @@ class Processor extends BaseProcessor
         return $last['index']['_id'] ?? null;
     }
 
-    public function processDistinctAggregations($result, $columns, $withCount): Collection
-    {
-        if (! empty($result['hits']['hits']) && is_array($result['hits']['hits'])) {
-            $last = collect($result['hits']['hits'])->last();
-            if (! empty($last['sort'])) {
-                $this->query->getMetaTransfer()->set('after_key', $last['sort']);
-            }
-        }
-        $keys = [];
-        foreach ($columns as $column) {
-            $keys[] = 'by_'.$column;
-        }
-
-        return collect($this->parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount));
-    }
-
-    protected function parseDistinctBucket($columns, $keys, $response, $index, $includeDocCount, $currentData = []): array
-    {
-        $data = [];
-        if (! empty($response[$keys[$index]]['buckets'])) {
-            foreach ($response[$keys[$index]]['buckets'] as $res) {
-
-                $datum = $currentData;
-
-                $col = $columns[$index];
-
-                $datum['doc_count'] = $res['doc_count'];
-                $datum[$col] = $res['key'];
-
-                if ($includeDocCount) {
-                    $datum[$col.'_count'] = $res['doc_count'];
-                }
-
-                if (isset($columns[$index + 1])) {
-                    $nestedData = $this->parseDistinctBucket($columns, $keys, $res, $index + 1, $includeDocCount, $datum);
-
-                    if (! empty($nestedData)) {
-                        $data = array_merge($data, $nestedData);
-                    } else {
-                        $data[] = $datum;
-                    }
-                } else {
-                    $data[] = $datum;
-                }
-            }
-        }
-
-        return $data;
-    }
-
     public function processAggregations(Builder $query, $result)
     {
         $this->rawResponse = $result;
@@ -115,154 +69,16 @@ class Processor extends BaseProcessor
             $this->query->getMetaTransfer()->set('after_key', $response['aggregations']['group_by']['after_key']);
         }
 
-        $result = [];
         if (! empty($this->query->bucketAggregations)) {
-            foreach ($this->query->bucketAggregations as $bucketAggregation) {
-                // I love me the spread operator...
-                $result = [...$result, ...$this->processBucketAggregation($bucketAggregation)];
-            }
+            $result = $this->processBucketAggregations($this->query->bucketAggregations, $this->rawAggregations);
             $this->aggregations = collect($result);
         } else {
-            // No buckets so it's likely all metrics
+            // No buckets, so it's likely all metrics
             $result = $this->processMetricAggregations($this->rawAggregations);
             $this->aggregations = $result;
         }
 
         return $this->aggregations;
-    }
-
-    public function processBucketAggregation($bucketAggregation)
-    {
-        $key = $bucketAggregation['key'];
-
-        if (! isset($this->rawAggregations[$key]['buckets'])) {
-            return $this->rawAggregations[$key];
-        }
-
-        return collect($this->rawAggregations[$key]['buckets'])->map(function ($bucket) use ($key) {
-
-            $metricAggs = $this->processMetricAggregations($bucket, true);
-            // ES is super annoying with how it does keys. For composite it returns keys as array but in other cases it does not.
-            if (! is_array($bucket['key'])) {
-                $bucket['key'] = [$key => $bucket['key']];
-            }
-
-            return [
-                ...$bucket['key'],
-                ...$metricAggs,
-                '_meta' => $this->metaFromResult(['doc_count' => $bucket['doc_count']]),
-            ];
-
-        })->toArray();
-    }
-
-    public function processMetricAggregations($bucket, $withinBucket = false)
-    {
-        if (! $this->query->metricsAggregations) {
-            return [];
-        }
-        $result = [];
-        foreach ($this->query->metricsAggregations as $metricsAggregation) {
-            $result = [
-                ...$result,
-                ...$this->processMetricAggregation($metricsAggregation, $bucket),
-            ];
-        }
-        // Single metric agg
-        if (! $withinBucket && count($this->query->metricsAggregations) == 1) {
-            $key = array_key_first($result);
-
-            return $result[$key];
-        }
-        if (isset($result['distinct'])) {
-            $result = $result['distinct'];
-        }
-
-        return $result;
-
-    }
-
-    public function processMetricAggregation($metricsAggregation, $bucket)
-    {
-        $key = $metricsAggregation['key'];
-        $type = $metricsAggregation['type'];
-        $cleanKey = str_replace($type.'_', '', $key);
-
-        if ($this->query->distinct) {
-            return ['distinct' => $this->processDistinctAggregation($bucket, $type)];
-        }
-
-        $result = $this->extractAggResult($type, $bucket, $key);
-
-        return ["{$type}_{$cleanKey}" => $result];
-    }
-
-    protected function extractAggResult($type, $bucket, $key)
-    {
-        return match ($type) {
-            'count', 'avg', 'max', 'min', 'sum', 'median_absolute_deviation', 'value_count', 'cardinality' => $bucket[$key]['value'],
-            'percentiles' => $bucket[$key]['values'],
-            'matrix_stats' => $this->extractMatrixResult($bucket, $key),
-            'extended_stats', 'stats', 'string_stats', 'boxplot' => $bucket[$key],
-        };
-    }
-
-    protected function extractMatrixResult($bucket, $key): ?array
-    {
-        $results = collect($bucket[$key]['fields']);
-
-        return $results->where('name', $key)->first();
-    }
-
-    public function processDistinctAggregation($result, $metric)
-    {
-        return collect($this->parseDistinctBucketWithMetrics($result, $metric));
-    }
-
-    protected function parseDistinctBucketWithMetrics($response, $metric, $currentData = []): array
-    {
-        $data = [];
-
-        foreach ($response as $aggKey => $aggData) {
-            if (! isset($aggData['buckets']) || ! is_array($aggData['buckets'])) {
-                continue; // Skip non-bucket fields
-            }
-
-            foreach ($aggData['buckets'] as $res) {
-                $datum = $currentData;
-                $datum['doc_count'] = $res['doc_count'] ?? 0;
-                $datum[$aggKey] = $res['key'] ?? null;
-
-                $hasMetric = false;
-
-                foreach ($res as $key => $value) {
-                    if (is_array($value) && strpos($key, "{$metric}_") === 0) {
-                        $datum[$key] = $this->extractAggResult($metric, $res, $key);
-                        $hasMetric = true;
-                    }
-                }
-
-                $nestedAdded = false;
-                $nestedData = [];
-
-                foreach ($res as $nestedKey => $nestedValue) {
-                    if (is_array($nestedValue) && isset($nestedValue['buckets'])) {
-                        $nestedData = $this->parseDistinctBucketWithMetrics([$nestedKey => $nestedValue], $metric, $datum);
-                        if (! empty($nestedData)) {
-                            $nestedAdded = true;
-                        }
-                    }
-                }
-
-                if ($nestedAdded) {
-                    $data = array_merge($data, $nestedData);
-                } elseif ($hasMetric) {
-                    $data[] = $datum;
-                }
-            }
-        }
-
-        return $data;
     }
 
     /**
@@ -286,15 +102,20 @@ class Processor extends BaseProcessor
         if ($this->query->distinct) {
             $query->getMetaTransfer()->set('query', 'distinct');
             $index = $query->inferIndex();
-            $aggregations = $this->processDistinctAggregations($response, $query->columns, $query->distinctCount ?? false);
-            $documents = $aggregations->map(function ($agg) use ($index) {
-                return $this->liftToMeta($agg, ['_index' => $index], ['doc_count']);
-            });
-
+            $documents = $this->processDistinctAggregations($index, $response, $query->columns, $query->distinctCount ?? false);
             $query->getMetaTransfer()->set('total', $documents->count());
 
             return $documents->all();
         }
+        // @phpstan-ignore-next-line
+        //        if ($this->query->bulkDistinct) {
+        //            $query->getMetaTransfer()->set('query', 'bulkDistinct');
+        //            $index = $query->inferIndex();
+        //            $documents = $this->processDistinctAggregations($index, $response, $query->columns, $query->distinctCount ?? false);
+        //            $query->getMetaTransfer()->set('total', $documents->count());
+        //
+        //            return $documents->all();
+        //        }
 
         $this->aggregations = $response['aggregations'] ?? [];
         if ($this->aggregations) {
