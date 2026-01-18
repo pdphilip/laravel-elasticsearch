@@ -456,22 +456,26 @@ class Builder extends BaseEloquentBuilder
     public function distinct(mixed $columns = [], bool $includeCount = false): ElasticCollection
     {
         $elasticQueryCollection = $this->query->distinct($columns, $includeCount);
+        $builder = $this->applyScopes();
+        $eloquentCollection = $this->model->hydrate(
+            $elasticQueryCollection->all()
+        );
+        $modelsCollection = ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
+        $models = $modelsCollection->all();
+        $models = $this->loadRelations($models, $builder);
+
+        return ElasticCollection::loadCollection($builder->getModel()->newCollection($models))->loadMeta($modelsCollection->getQueryMeta());
+    }
+
+    public function bulkDistinct(array $columns = [], bool $includeCount = false): ElasticCollection
+    {
+        $elasticQueryCollection = $this->query->bulkDistinct($columns, $includeCount);
         $eloquentCollection = $this->model->hydrate(
             $elasticQueryCollection->all()
         );
 
         return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
     }
-
-    //    public function bulkDistinct(array $columns = [], bool $includeCount = false)
-    //    {
-    //        $elasticQueryCollection = $this->query->bulkDistinct($columns, $includeCount);
-    //        $eloquentCollection = $this->model->hydrate(
-    //            $elasticQueryCollection->all()
-    //        );
-    //
-    //        return ElasticCollection::loadCollection($eloquentCollection)->loadMeta($elasticQueryCollection->getQueryMeta());
-    //    }
 
     public function min($column, array $options = [])
     {

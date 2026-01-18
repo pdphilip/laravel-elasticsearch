@@ -203,6 +203,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static bool chunkById($count, $callback, $column = '_id', $alias = null)
  *                                                                                  -----------------------------------
  * @method static ElasticCollection distinct($columns = [], $includeCount = false)
+ * @method static ElasticCollection bulkDistinct($columns = [], $includeCount = false)
  *===========================================
  * Aggregators Methods
  *===========================================
@@ -210,6 +211,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static int|array min($columns)
  * @method static int|array max($columns)
  * @method static int|array avg($columns)
+ * @method static int|array average($columns)
  * @method static mixed agg(array $functions, $column)
  *-----------------------------------
  * @method static mixed boxplot($columns, $options = [])
@@ -219,7 +221,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static mixed medianAbsoluteDeviation($columns, $options = [])
  * @method static mixed percentiles($columns, $options = [])
  * @method static mixed stats($columns, $options = [])
- * @method static mixed stringStats( $columns, $options = [])
+ * @method static mixed stringStats($columns, $options = [])
  *-----------------------------------
  * @method static array getAggregationResults()
  * @method static array getRawAggregationResults()

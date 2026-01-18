@@ -8,18 +8,31 @@ trait ProcessesDistinctAggregations
 {
     public function processDistinctAggregations($index, $result, $columns, $withCount): Collection
     {
-        if (! empty($result['hits']['hits']) && is_array($result['hits']['hits'])) {
-            $last = collect($result['hits']['hits'])->last();
-            if (! empty($last['sort'])) {
-                $this->query->getMetaTransfer()->set('after_key', $last['sort']);
-            }
-        }
+        $this->pullAfterKey($result);
         $keys = [];
         foreach ($columns as $column) {
             $keys[] = 'by_'.$column;
         }
+        $aggregations = $this->parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount);
+        $aggregations = collect($aggregations);
 
-        $aggregations = collect($this->parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount));
+        return $aggregations->map(function ($aggregation) use ($index) {
+            return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count']);
+        });
+    }
+
+    public function processBulkDistinctAggregations($index, $result, $columns, $withCount): Collection
+    {
+        $this->pullAfterKey($result);
+        $aggregations = [];
+        foreach ($columns as $column) {
+            $keys = ['by_'.$column];
+            $aggregations = [
+                ...$aggregations,
+                ...$this->parseDistinctBucket([$column], $keys, $result['aggregations'], 0, $withCount),
+            ];
+        }
+        $aggregations = collect($aggregations);
 
         return $aggregations->map(function ($aggregation) use ($index) {
             return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count']);
@@ -53,5 +66,15 @@ trait ProcessesDistinctAggregations
         }
 
         return $data;
+    }
+
+    protected function pullAfterKey($result)
+    {
+        if (! empty($result['hits']['hits']) && is_array($result['hits']['hits'])) {
+            $last = collect($result['hits']['hits'])->last();
+            if (! empty($last['sort'])) {
+                $this->query->getMetaTransfer()->set('after_key', $last['sort']);
+            }
+        }
     }
 }

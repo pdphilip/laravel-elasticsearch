@@ -111,10 +111,10 @@ class Processor extends BaseProcessor
         if ($this->query->bulkDistinct) {
             $query->getMetaTransfer()->set('query', 'bulkDistinct');
             $index = $query->inferIndex();
-            //                    $documents = $this->processDistinctAggregations($index, $response, $query->columns, $query->distinctCount ?? false);
-            //                    $query->getMetaTransfer()->set('total', $documents->count());
-            //
-            //                    return $documents->all();
+            $documents = $this->processBulkDistinctAggregations($index, $response, $query->columns, $query->distinctCount ?? false);
+            $query->getMetaTransfer()->set('total', $documents->count());
+
+            return $documents->all();
         }
 
         $this->aggregations = $response['aggregations'] ?? [];
