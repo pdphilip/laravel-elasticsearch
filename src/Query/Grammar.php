@@ -1362,6 +1362,14 @@ class Grammar extends BaseGrammar
         return DslFactory::termsAggregation($indexableField, $builder->getLimit(), $options);
     }
 
+    protected function compileRangeAggregation(Builder $builder, array $aggregation): array
+    {
+        $field = $aggregation['args']['field'];
+        $ranges = $aggregation['args']['ranges'];
+
+        return DslFactory::rangeAggregation($field, $ranges);
+    }
+
     /**
      * Apply inner hits options to the clause
      */

@@ -2,6 +2,8 @@
 
 namespace PDPhilip\Elasticsearch\Query\DSL;
 
+use PDPhilip\Elasticsearch\Utils\Helpers;
+
 class DslFactory
 {
     // ----------------------------------------------------------------------
@@ -490,6 +492,18 @@ class DslFactory
                 ],
                 $options
             ),
+        ];
+    }
+
+    public static function rangeAggregation(string $field, array $ranges)
+    {
+        $ranges = Helpers::sanitizeRanges($ranges);
+
+        return [
+            'range' => [
+                'field' => $field,
+                'ranges' => $ranges,
+            ],
         ];
     }
 

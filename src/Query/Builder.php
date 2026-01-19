@@ -1917,6 +1917,17 @@ class Builder extends BaseBuilder
         return $this->bucketAggregation($key, $type, $args, $aggregations);
     }
 
+    public function groupByRanges($column, $ranges = [])
+    {
+        $args = [
+            'field' => $column,
+            'ranges' => $ranges,
+        ];
+        $key = $column.'_ranges';
+
+        return $this->bucketAggregation($key, 'range', $args);
+    }
+
     /**
      * Get the aggregations returned from query
      */

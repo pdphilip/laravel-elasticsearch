@@ -56,4 +56,38 @@ final class Helpers
 
         return $majorVersion;
     }
+
+    public static function sanitizeRanges($input)
+    {
+        $ranges = [];
+        foreach ($input as $value) {
+            $range = [];
+            if (isset($value['from']) || isset($value['to'])) {
+                if (! empty($value['from'])) {
+                    $range['from'] = $value['from'];
+                }
+                if (! empty($value['to'])) {
+                    $range['to'] = $value['to'];
+                }
+
+                if (! empty($value['key'])) {
+                    $range['key'] = $value['key'];
+                }
+                $ranges[] = $range;
+
+                continue;
+            }
+            // assume its an array with values of from and to
+            if ($value[0] !== null) {
+                $range['from'] = $value[0];
+            }
+            if ($value[1] !== null) {
+                $range['to'] = $value[1];
+            }
+            $ranges[] = $range;
+
+        }
+
+        return $ranges;
+    }
 }

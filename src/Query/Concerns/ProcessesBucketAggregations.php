@@ -17,14 +17,18 @@ trait ProcessesBucketAggregations
     protected function parseBucket($bucketAggregation, $rawAggs)
     {
         $key = $bucketAggregation['key'];
+        $type = $bucketAggregation['type'] ?? null;
 
         if (! isset($rawAggs[$key]['buckets'])) {
             return $rawAggs[$key];
         }
-
-        $result = collect($rawAggs[$key]['buckets'])->map(function ($bucket) use ($key) {
+        $result = collect($rawAggs[$key]['buckets'])->map(function ($bucket) use ($key, $type) {
             $metricAggs = $this->appendMetricsToBucket($bucket);
-            // ES is super annoying with how it does keys. For composite, it returns keys as an array but in other cases it does not.
+
+            if ($type === 'range') {
+                return $this->makeRangeBucket($bucket, $metricAggs);
+            }
+
             if (! is_array($bucket['key'])) {
                 $bucket['key'] = [$key => $bucket['key']];
             }
@@ -38,6 +42,24 @@ trait ProcessesBucketAggregations
         });
 
         return $result->toArray();
+    }
+
+    protected function makeRangeBucket($bucket, $metricAggs)
+    {
+        $cleanBucket = [
+            'key' => $bucket['key'],
+            'from' => $bucket['from'] ?? null,
+            'to' => $bucket['to'] ?? null,
+        ];
+        $docCount = $bucket['doc_count'] ?? 0;
+        unset($bucket['doc_count']);
+        $cleanBucket['count'] = $docCount;
+
+        return [
+            ...$cleanBucket,
+            ...$metricAggs,
+            '_meta' => $this->metaFromResult(['doc_count' => $docCount]),
+        ];
     }
 
     protected function appendMetricsToBucket($bucket)
