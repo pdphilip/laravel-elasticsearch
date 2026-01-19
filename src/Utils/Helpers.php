@@ -77,11 +77,11 @@ final class Helpers
 
                 continue;
             }
-            // assume its an array with values of from and to
+            // assume it's an array with values of from and to
             if ($value[0] !== null) {
                 $range['from'] = $value[0];
             }
-            if ($value[1] !== null) {
+            if (isset($value[1])) {
                 $range['to'] = $value[1];
             }
             $ranges[] = $range;
