@@ -2,6 +2,83 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.3.0 - 2026-01-20
+
+This release is compatible with Laravel 10, 11 & 12
+
+### New features
+
+#### Distinct with Relations
+
+`distinct()` queries now return [ElasticCollections](https://elasticsearch.pdphilip.com/eloquent/the-base-model#elastic-collections);
+
+If a model relation exists and the  **aggregation is done on the foreign key**, you can load the related model
+
+```php
+UserLog::where('created_at', '>=', Carbon::now()->subDays(30))
+    ->with('user')
+    ->orderByDesc('_count')
+    ->select('user_id')
+    ->distinct(true);
+
+
+```
+Why: You can now treat distinct aggregations like real Eloquent results, including relationships.
+
+#### Bulk Distinct Queries
+
+New query method `bulkDistinct(array $fields, $includeDocCount = false)` - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#bulk-distinct)
+
+Run multiple distinct aggregations **in parallel** within a single Elasticsearch query.
+
+```php
+$top3 = UserSession::where('created_at', '>=', Carbon::now()->subDays(30))
+    ->limit(3)
+    ->bulkDistinct(['country', 'device', 'browser_name'], true);
+
+```
+Why: Massive performance gains vs running sequential distinct queries.
+
+#### Group By Ranges
+
+`groupByRanges()` performs a [range aggregation](https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-range-aggregation) on the specified field. - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges)
+
+`groupByRanges()->get()`  — return bucketed results - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges)
+
+`groupByRanges()->agg()` -  apply metric aggregations per bucket -[Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges-with-aggregations)
+
+#### Group By Date Ranges
+
+`groupByDateRanges()` performs a [date range aggregation](https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-daterange-aggregation) on the specified field. - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-date-ranges)
+
+`groupByDateRanges()->get()` — bucketed date ranges
+
+`groupByDateRanges()->agg()` — metrics per date bucket
+
+#### Model Meta Accessor
+
+New model method `getMetaValue($key)` -  [Docs](https://elasticsearch.pdphilip.com/eloquent/the-base-model/#get-model-meta-value)
+
+Convenience method to get a specific meta value from the model instance.
+
+```php
+$product = Product::where('color', 'green')->first();
+$score = $product->getMetaValue('score');
+
+```
+#### Bucket Values in Meta
+
+When a bucketed query is executed, the raw bucket data is now stored in model meta. -[Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#raw-bucket-values-from-meta)
+
+```php
+$products = Product::distinct('price');
+$buckets = $products->map(function ($product) {
+    return $product->getMetaValue('bucket');
+});
+
+```
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.2.0...v5.3.0
+
 ## v5.2.0 - 2025-10-24
 
 This release is compatible with Laravel 10, 11 & 12
@@ -29,6 +106,7 @@ Product::searchQueryString('vanilla +pizza -ice', function (QueryStringOptions $
 
 //etc
 
+
 ```
 ### Ordering enhancement: unmapped_type
 
@@ -36,6 +114,7 @@ Product::searchQueryString('vanilla +pizza -ice', function (QueryStringOptions $
 
 ```php
 Product::query()->orderBy('name', 'desc', ['unmapped_type' => 'keyword'])->get();
+
 
 ```
 ### Bugfix
@@ -57,6 +136,7 @@ $products = Product::limit(5)->withTrackTotalHits(true)->get();
 $totalHits = $products->getQueryMeta()->getTotalHits();
 
 
+
 ```
 This can be set by default for all queries by updating the connection config in `database.php`:
 
@@ -71,6 +151,7 @@ This can be set by default for all queries by updating the connection config in 
 ],
 
 
+
 ```
 #### 2. New feature, `createOrFail(array $attributes)`
 
@@ -82,6 +163,7 @@ Product::createOrFail([
     'name' => 'Blender',
     'price' => 30,
 ]);
+
 
 
 ```
@@ -101,6 +183,7 @@ Product::withRefresh('wait_for')->create([
     'name' => 'Blender',
     'price' => 30,
 ]);
+
 
 
 ```
@@ -212,6 +295,7 @@ People::bulkInsert([
 
 
 
+
 ```
 Returns:
 
@@ -232,6 +316,7 @@ Returns:
     }
   ]
 }
+
 
 
 
@@ -279,6 +364,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 
 
+
 ```
 ### Breaking Changes
 
@@ -312,6 +398,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   
   
   
+  
   ```
 
 #### 3. Queries
@@ -326,6 +413,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   // New:
   Product::whereMatch('name', 'John')->get(); // match query
   Product::where('name', 'John')->get();      // term query
+  
   
   
   
@@ -353,6 +441,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   
   
   
+  
   ```
 - Legacy Search Methods Removed
   All `{xx}->search()` methods been removed. Use `{multi_match}->get()` instead.
@@ -373,6 +462,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
   -   use PDPhilip\Elasticsearch\Schema\IndexBlueprint;
   -   use PDPhilip\Elasticsearch\Schema\AnalyzerBlueprint;
   use PDPhilip\Elasticsearch\Schema\Blueprint;
+  
   
   
   
@@ -443,6 +533,7 @@ with Laravel’s Eloquent. It lays a solid, future-proof foundation for everythi
 
 ```php
 Connection::on('elasticsearch')->elastic()->{clientMethod}();
+
 
 
 
