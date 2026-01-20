@@ -718,8 +718,18 @@ class Builder extends BaseBuilder
         return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
     }
 
+    /**
+     * {@inheritdoc}
+     *
+     * @param  string|array  $function
+     * @param  Expression|string|array  $columns
+     */
     public function aggregate($function, $columns = ['*'], $options = [])
     {
+        if (is_array($function)) {
+            return $this->aggregateMultiMetric($function, $columns, $options);
+        }
+
         return $this->aggregateMetric($function, $columns, $options);
     }
 
@@ -1919,6 +1929,9 @@ class Builder extends BaseBuilder
                     'options' => $options,
                 ];
             }
+        }
+        if ($this->asDsl) {
+            return $this->grammar->compileSelect($this);
         }
 
         return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));

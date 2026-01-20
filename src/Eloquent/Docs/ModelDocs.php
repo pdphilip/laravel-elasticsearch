@@ -15,6 +15,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * Query Builder Methods ---------------------------------
  *
  * @method static $this query()
+ * @method static $this dslQuery()
  *-----------------------------------
  * @method static $this where($column, $operator = null, $value = null, $boolean = 'and', $options = [])
  * @method static $this whereNot($column, $operator = null, $value = null, $boolean = 'and', $options = [])
@@ -215,6 +216,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static int|array avg($columns)
  * @method static int|array average($columns)
  * @method static mixed agg(array $functions, $column)
+ * @method static mixed aggregate(array $functions, $column)
  *-----------------------------------
  * @method static mixed boxplot($columns, $options = [])
  * @method static mixed cardinality($columns, $options = [])
