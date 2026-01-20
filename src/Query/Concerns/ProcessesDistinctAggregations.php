@@ -17,7 +17,7 @@ trait ProcessesDistinctAggregations
         $aggregations = collect($aggregations);
 
         return $aggregations->map(function ($aggregation) use ($index) {
-            return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count']);
+            return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count', 'bucket']);
         });
     }
 
@@ -35,7 +35,8 @@ trait ProcessesDistinctAggregations
         $aggregations = collect($aggregations);
 
         return $aggregations->map(function ($aggregation) use ($index) {
-            return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count']);
+
+            return $this->liftToMeta($aggregation, ['_index' => $index], ['doc_count', 'bucket']);
         });
     }
 
@@ -50,6 +51,7 @@ trait ProcessesDistinctAggregations
                 $col = $columns[$index];
 
                 $datum['doc_count'] = $res['doc_count'];
+                $datum['bucket'] = $res;
                 $datum[$col] = $res['key'];
 
                 if ($includeDocCount) {
