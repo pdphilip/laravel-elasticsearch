@@ -169,6 +169,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  *-----------------------------------
  * @method static $this groupBy($groups)
  * @method static $this groupByRanges($column, array $ranges)
+ * @method static $this groupByDateRanges($column, array $ranges, array $options = [])
  *-----------------------------------
  * @method static $this orderByGeo($column, $pin, $direction = 'asc', $options = [])
  * @method static $this orderByGeoDesc($column, $pin, $options = [])

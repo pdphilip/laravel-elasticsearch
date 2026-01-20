@@ -474,6 +474,29 @@ class Builder extends BaseBuilder
         return $this;
     }
 
+    public function groupByRanges($column, $ranges = [])
+    {
+        $args = [
+            'field' => $column,
+            'ranges' => $ranges,
+        ];
+        $key = $column.'_range';
+
+        return $this->bucketAggregation($key, 'range', $args);
+    }
+
+    public function groupByDateRanges($column, $ranges = [], $options = [])
+    {
+        $args = [
+            'field' => $column,
+            'ranges' => $ranges,
+            'options' => $options,
+        ];
+        $key = $column.'_range';
+
+        return $this->bucketAggregation($key, 'date_range', $args);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -1915,17 +1938,6 @@ class Builder extends BaseBuilder
     public function bucket($key, $type = null, $args = null, $aggregations = null): self
     {
         return $this->bucketAggregation($key, $type, $args, $aggregations);
-    }
-
-    public function groupByRanges($column, $ranges = [])
-    {
-        $args = [
-            'field' => $column,
-            'ranges' => $ranges,
-        ];
-        $key = $column.'_ranges';
-
-        return $this->bucketAggregation($key, 'range', $args);
     }
 
     /**

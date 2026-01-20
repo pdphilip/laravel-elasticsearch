@@ -25,8 +25,8 @@ trait ProcessesBucketAggregations
         $result = collect($rawAggs[$key]['buckets'])->map(function ($bucket) use ($key, $type) {
             $metricAggs = $this->appendMetricsToBucket($bucket);
 
-            if ($type === 'range') {
-                return $this->makeRangeBucket($bucket, $metricAggs);
+            if (in_array($type, ['range', 'date_range', 'ip_range'])) {
+                return $this->unpackRangeBucket($key, $bucket, $metricAggs);
             }
 
             if (! is_array($bucket['key'])) {
@@ -36,7 +36,7 @@ trait ProcessesBucketAggregations
             return [
                 ...$bucket['key'],
                 ...$metricAggs,
-                '_meta' => $this->metaFromResult(['doc_count' => $bucket['doc_count']]),
+                '_meta' => $this->metaFromResult(['doc_count' => $bucket['doc_count'], 'bucket' => $bucket]),
             ];
 
         });
@@ -44,21 +44,21 @@ trait ProcessesBucketAggregations
         return $result->toArray();
     }
 
-    protected function makeRangeBucket($bucket, $metricAggs)
+    protected function unpackRangeBucket($key, $bucket, $metricAggs)
     {
-        $cleanBucket = [
-            'key' => $bucket['key'],
-            'from' => $bucket['from'] ?? null,
-            'to' => $bucket['to'] ?? null,
-        ];
+        $recordKey = $key.'_'.$bucket['key'];
+        $aggs['count_'.$recordKey] = $bucket['doc_count'];
+        if ($metricAggs) {
+            foreach ($metricAggs as $metricAgg => $value) {
+                $aggs[$metricAgg.'_'.$recordKey] = $value;
+            }
+        }
+
         $docCount = $bucket['doc_count'] ?? 0;
-        unset($bucket['doc_count']);
-        $cleanBucket['count'] = $docCount;
 
         return [
-            ...$cleanBucket,
-            ...$metricAggs,
-            '_meta' => $this->metaFromResult(['doc_count' => $docCount]),
+            ...$aggs,
+            '_meta' => $this->metaFromResult(['doc_count' => $docCount, 'bucket' => $bucket]),
         ];
     }
 

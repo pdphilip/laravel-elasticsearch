@@ -438,13 +438,15 @@ class DslFactory
         ];
     }
 
-    public static function dateRange(array $args, array $options = []): array
+    public static function dateRange($field, array $ranges, array $options = []): array
     {
+        $payload = [];
+        $payload['field'] = $field;
+        $payload = [...$payload, ...$options];
+        $payload['ranges'] = Helpers::sanitizeRanges($ranges);
+
         return [
-            'date_range' => array_merge(
-                $args,
-                $options
-            ),
+            'date_range' => $payload,
         ];
     }
 

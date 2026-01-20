@@ -243,6 +243,7 @@ class Grammar extends BaseGrammar
 
             $dsl->setBody(['aggs'], $this->compileBucketAggregations($query, $sorts));
             $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
+            //            dd($dsl->getDsl());
         }
 
         // Else if we have metrics aggregations
@@ -1258,9 +1259,11 @@ class Grammar extends BaseGrammar
     protected function compileDateRangeAggregation(Builder $builder, array $aggregation): array
     {
         $args = $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
+        $field = $args['field'];
+        $ranges = $args['ranges'];
+        $options = $args['options'] ?? [];
 
-        return DslFactory::dateRange($args, $options);
+        return DslFactory::dateRange($field, $ranges, $options);
     }
 
     /**

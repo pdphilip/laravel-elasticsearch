@@ -49,6 +49,11 @@ class MetaDTO implements Arrayable
         return Arr::get($this->result, '_index', '');
     }
 
+    public function getBucket(): ?array
+    {
+        return Arr::get($this->result, 'bucket', []);
+    }
+
     // ----------------------------------------------------------------------
     //  Collection Level
     // ----------------------------------------------------------------------

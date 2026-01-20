@@ -74,6 +74,11 @@ trait ElasticsearchModel
         return $this->_meta->toArray();
     }
 
+    public function getMetaValue($key): mixed
+    {
+        return $this->_meta->getValue($key);
+    }
+
     // ----------------------------------------------------------------------
     // Highlights
     // ----------------------------------------------------------------------

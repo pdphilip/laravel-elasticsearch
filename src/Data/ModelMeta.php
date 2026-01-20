@@ -22,6 +22,8 @@ final class ModelMeta
 
     protected array $cursor = [];
 
+    protected array $bucket = [];
+
     protected ?int $docCount = null;
 
     //    public array $_query = []; //TBD
@@ -76,6 +78,11 @@ final class ModelMeta
         return $this->highlights ?? [];
     }
 
+    public function getValue($key): mixed
+    {
+        return $this->{$key} ?? null;
+    }
+
     public function getHighlight($column, $deliminator = ''): ?string
     {
         return implode($deliminator, Arr::get($this->highlights, $column));
@@ -107,6 +114,7 @@ final class ModelMeta
             'sort' => $this->sort,
             'cursor' => $this->cursor,
             'highlights' => $this->highlights,
+            'bucket' => $this->bucket,
         ];
     }
 
@@ -134,6 +142,7 @@ final class ModelMeta
         $this->setCursor($meta->getCursor());
         $this->setSort($meta->getSort());
         $this->docCount = $meta->getDocCount();
+        $this->bucket = $meta->getBucket();
     }
 
     public function setSort(array $sort): void
