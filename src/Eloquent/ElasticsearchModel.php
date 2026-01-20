@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
+use Carbon\CarbonImmutable;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -256,7 +257,7 @@ trait ElasticsearchModel
         return parent::setAttribute($key, $value);
     }
 
-    public function fromDateTime(mixed $value): Carbon
+    public function fromDateTime(mixed $value): Carbon|CarbonImmutable
     {
         return parent::asDateTime($value);
     }
@@ -264,7 +265,7 @@ trait ElasticsearchModel
     /**
      * {@inheritdoc}
      */
-    protected function asDateTime($value): Carbon
+    protected function asDateTime($value): Carbon|CarbonImmutable
     {
         return parent::asDateTime($value);
     }
