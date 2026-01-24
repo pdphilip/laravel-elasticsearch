@@ -34,7 +34,6 @@ use PDPhilip\Elasticsearch\Utils\Sanitizer;
  *
  * Filter methods - apply filters that don't affect scoring.
  * Pass 'postFilter' as final argument for faceted search filtering.
- *
  * @method $this filterWhere(string $column, mixed $operator = null, mixed $value = null)
  * @method $this filterWhereIn(string $column, array $values)
  * @method $this filterWhereNotIn(string $column, array $values)
