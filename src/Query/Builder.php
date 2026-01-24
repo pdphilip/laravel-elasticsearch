@@ -14,15 +14,17 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
-use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
+use PDPhilip\Elasticsearch\Query\Concerns\BuildsAggregations;
+use PDPhilip\Elasticsearch\Query\Concerns\BuildsSearchQueries;
+use PDPhilip\Elasticsearch\Query\Concerns\HandlesScripts;
+use PDPhilip\Elasticsearch\Query\Concerns\ManagesPit;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use PDPhilip\Elasticsearch\Utils\Sanitizer;
@@ -30,14 +32,37 @@ use PDPhilip\Elasticsearch\Utils\Sanitizer;
 /**
  * @method $this save()
  *
+ * Filter methods - apply filters that don't affect scoring.
+ * Pass 'postFilter' as final argument for faceted search filtering.
+ *
+ * @method $this filterWhere(string $column, mixed $operator = null, mixed $value = null)
+ * @method $this filterWhereIn(string $column, array $values)
+ * @method $this filterWhereNotIn(string $column, array $values)
+ * @method $this filterWhereBetween(string $column, array $values)
+ * @method $this filterWhereNull(string $column)
+ * @method $this filterWhereNotNull(string $column)
+ * @method $this filterWhereDate(string $column, mixed $operator, mixed $value = null)
+ * @method $this filterWhereTerm(string $column, mixed $value)
+ * @method $this filterWhereMatch(string $column, mixed $value)
+ * @method $this filterWherePhrase(string $column, mixed $value)
+ * @method $this filterWhereFuzzy(string $column, mixed $value)
+ * @method $this filterWhereRegex(string $column, string $pattern)
+ * @method $this filterWhereGeoDistance(string $field, string $distance, array $location)
+ * @method $this filterWhereGeoBox(string $field, array $topLeft, array $bottomRight)
+ * @method $this filterWhereNestedObject(string $column, callable $query)
+ *
  * @property Connection $connection
  * @property Processor $processor
  * @property Grammar $grammar
  */
 class Builder extends BaseBuilder
 {
+    use BuildsAggregations;
+    use BuildsSearchQueries;
+    use HandlesScripts;
     use HasOptions;
     use ManagesOptions;
+    use ManagesPit;
 
     /** @var string[] */
     public const CONFLICT = [
@@ -459,47 +484,6 @@ class Builder extends BaseBuilder
     /**
      * {@inheritdoc}
      */
-    public function groupBy(...$groups)
-    {
-        $groups = Sanitizer::cleanArrayValues($groups);
-
-        $this->bucketAggregation('group_by', 'composite', function (Builder $query) use ($groups) {
-            $query->from = $this->from;
-
-            return collect($groups)->map(function ($group) use ($query) {
-                return [$group => ['terms' => ['field' => $query->grammar->getIndexableField($group, $query)]]];
-            })->toArray();
-        });
-
-        return $this;
-    }
-
-    public function groupByRanges($column, $ranges = [])
-    {
-        $args = [
-            'field' => $column,
-            'ranges' => $ranges,
-        ];
-        $key = $column.'_range';
-
-        return $this->bucketAggregation($key, 'range', $args);
-    }
-
-    public function groupByDateRanges($column, $ranges = [], $options = [])
-    {
-        $args = [
-            'field' => $column,
-            'ranges' => $ranges,
-            'options' => $options,
-        ];
-        $key = $column.'_range';
-
-        return $this->bucketAggregation($key, 'date_range', $args);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function orderByDesc($column, array $options = [])
     {
         return $this->orderBy($column, 'desc', $options);
@@ -677,62 +661,6 @@ class Builder extends BaseBuilder
         return $this->connection->count($this->grammar->compileCount($this));
     }
 
-    public function agg(array $functions, string|array $columns, array $options = [])
-    {
-        return $this->aggregateMultiMetric($functions, $columns, $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param  Expression|string|array  $column
-     */
-    public function min($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function max($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function sum($column, array $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-
-        return $result ?: 0;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function avg($column, array $options = [])
-    {
-        return $this->aggregate(__FUNCTION__, Arr::wrap($column), $options);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param  string|array  $function
-     * @param  Expression|string|array  $columns
-     */
-    public function aggregate($function, $columns = ['*'], $options = [])
-    {
-        if (is_array($function)) {
-            return $this->aggregateMultiMetric($function, $columns, $options);
-        }
-
-        return $this->aggregateMetric($function, $columns, $options);
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -849,39 +777,6 @@ class Builder extends BaseBuilder
                 return false;
             }
         }
-
-        return true;
-    }
-
-    public function chunkByPit($count, callable $callback, $keepAlive = '1m'): bool
-    {
-
-        $this->keepAlive = $keepAlive;
-        $pitId = $this->openPit();
-
-        $searchAfter = null;
-        $page = 1;
-        do {
-            $clone = clone $this;
-            $clone->viaPit($pitId, $searchAfter);
-            $results = $clone->getPit();
-            $searchAfter = $results->getAfterKey();
-            $countResults = $results->count();
-
-            if ($countResults == 0) {
-                break;
-            }
-
-            if ($callback($results, $page) === false) {
-                return true;
-            }
-
-            unset($results);
-
-            $page++;
-        } while ($countResults == $count);
-
-        $this->closePit($pitId);
 
         return true;
     }
@@ -1404,269 +1299,6 @@ class Builder extends BaseBuilder
     }
 
     // ----------------------------------------------------------------------
-    // Search (Multiple Fields)
-    // ----------------------------------------------------------------------
-
-    /**
-     * Add a text search clause to the query.
-     *
-     * @param  array|Closure  $options
-     */
-    public function search(string $query, string $type = 'best_fields', mixed $columns = null, mixed $options = [], bool $not = false, string $boolean = 'and', array $appendedOptions = []): self
-    {
-        [$columns, $options] = $this->extractSearch($columns, $options);
-        $options = $this->setOptions($options, 'search');
-        $options->asType($type);
-        if ($columns) {
-            $options->fields(Arr::wrap($columns));
-            $options->formatFields();
-        }
-        $options = $options->toArray();
-        if ($appendedOptions) {
-            // prioritize given options
-            $options = array_merge($appendedOptions, $options);
-        }
-
-        $this->wheres[] = [
-            'type' => 'Search',
-            'value' => $query,
-            'boolean' => $boolean,
-            'not' => $not,
-            'options' => $options,
-        ];
-
-        return $this;
-    }
-
-    // Multi Match query with type:best_fields
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-best-fields
-
-    public function searchTerm($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options);
-    }
-
-    public function orSearchTerm($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, false, 'or');
-    }
-
-    public function searchNotTerm($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, true);
-    }
-
-    public function orSearchNotTerm($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, true, 'or');
-    }
-
-    // Multi Match query with type:most_fields
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-most-fields
-
-    public function searchTermMost($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'most_fields', $columns, $options);
-    }
-
-    public function orSearchTermMost($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'most_fields', $columns, $options, false, 'or');
-    }
-
-    public function searchNotTermMost($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'most_fields', $columns, $options, true);
-    }
-
-    public function orSearchNotTermMost($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'most_fields', $columns, $options, true, 'or');
-    }
-
-    // Multi Match query with type:cross_fields
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-cross-fields
-
-    public function searchTermCross($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'cross_fields', $columns, $options);
-    }
-
-    public function orSearchTermCross($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'cross_fields', $columns, $options, false, 'or');
-    }
-
-    public function searchNotTermCross($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'cross_fields', $columns, $options, true);
-    }
-
-    public function orSearchNotTermCross($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'cross_fields', $columns, $options, true, 'or');
-    }
-
-    // Multi Match query with type:phrase
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
-
-    public function searchPhrase($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase', $columns, $options);
-    }
-
-    public function orSearchPhrase($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase', $columns, $options, false, 'or');
-    }
-
-    public function searchNotPhrase($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase', $columns, $options, true);
-    }
-
-    public function orSearchNotPhrase($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase', $columns, $options, true, 'or');
-    }
-
-    // Multi Match query with type:phrase_prefix
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-phrase
-
-    public function searchPhrasePrefix($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase_prefix', $columns, $options);
-    }
-
-    public function orSearchPhrasePrefix($terms, mixed $columns = null, $options = [])
-    {
-        return $this->search($terms, 'phrase_prefix', $columns, $options, false, 'or');
-    }
-
-    public function searchNotPhrasePrefix($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase_prefix', $columns, $options, true);
-    }
-
-    public function orSearchNotPhrasePrefix($phrase, mixed $columns = null, $options = [])
-    {
-        return $this->search($phrase, 'phrase_prefix', $columns, $options, true, 'or');
-    }
-
-    // Multi Match query with type:bool_prefix
-    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-bool-prefix
-
-    public function searchBoolPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options);
-    }
-
-    public function orSearchBoolPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or');
-    }
-
-    public function searchNotBoolPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, true);
-    }
-
-    public function orSearchNotBoolPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or');
-    }
-
-    // Convenience methods for search
-
-    public function searchFuzzy($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, false, 'and', ['fuzziness' => 'AUTO']);
-    }
-
-    public function orSearchFuzzy($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, false, 'or', ['fuzziness' => 'AUTO']);
-    }
-
-    public function searchNotFuzzy($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'best_fields', $columns, $options, true, 'and', ['fuzziness' => 'AUTO']);
-    }
-
-    public function orSearchNotFuzzy($query, mixed $columns = null, $options = [])
-    {
-
-        return $this->search($query, 'best_fields', $columns, $options, true, 'or', ['fuzziness' => 'AUTO']);
-    }
-
-    public function searchFuzzyPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, false, 'and', ['fuzziness' => 'AUTO']);
-    }
-
-    public function orSearchFuzzyPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, false, 'or', ['fuzziness' => 'AUTO']);
-    }
-
-    public function searchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, true, 'and', ['fuzziness' => 'AUTO']);
-    }
-
-    public function orSearchNotFuzzyPrefix($query, mixed $columns = null, $options = [])
-    {
-        return $this->search($query, 'bool_prefix', $columns, $options, true, 'or', ['fuzziness' => 'AUTO']);
-    }
-
-    /**
-     *   Add a 'query_string' statement to query
-     *
-     * @throws Exception
-     */
-    public function searchQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'and', false, $options);
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function orSearchQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'or', false, $options);
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function searchNotQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'and', true, $options);
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function orSearchNotQueryString(mixed $query, mixed $columns = null, $options = []): self
-    {
-        return $this->_buildQueryStringWheres($columns, $query, 'or', true, $options);
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function _buildQueryStringWheres($columns, $value, $boolean, $not, $options): self
-    {
-        $type = 'QueryString';
-        [$columns, $options] = $this->extractSearch($columns, $options, 'querystring');
-        $options = $this->setOptions($options, 'querystring')->toArray();
-        $this->wheres[] = compact('columns', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
-    }
-
-    // ----------------------------------------------------------------------
     // Ordering
     // ----------------------------------------------------------------------
 
@@ -1719,385 +1351,6 @@ class Builder extends BaseBuilder
         $this->sorts[$column] = [$key => $value];
 
         return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    // Aggregations & Stats
-    // ----------------------------------------------------------------------
-
-    /**
-     * A boxplot metrics aggregation that computes boxplot of numeric values extracted from the aggregated documents.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-boxplot-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function boxplot($columns, $options = [])
-    {
-        $result = $this->aggregate('boxplot', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the Cardinality Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function cardinality($columns, $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Build and add increment or decrement scripts for the given columns.
-     *
-     * @param  array  $columns  Associative array of columns and their corresponding increment/decrement amounts.
-     * @param  string  $type  Type of operation, either 'increment' or 'decrement'.
-     * @param  array  $extra  Additional options for the update.
-     * @return mixed The result of the update operation.
-     *
-     * @throws InvalidArgumentException If a non-numeric value is passed as an increment amount
-     *                                  or a non-associative array is passed to the method.
-     */
-    private function buildCrementEach(array $columns, string $type, array $extra = [])
-    {
-        foreach ($columns as $column => $amount) {
-            if (! is_numeric($amount)) {
-                throw new InvalidArgumentException("Non-numeric value passed as increment amount for column: '$column'.");
-            } elseif (! is_string($column)) {
-                throw new InvalidArgumentException('Non-associative array passed to incrementEach method.');
-            }
-
-            $operator = $type == 'increment' ? '+' : '-';
-
-            $script = implode('', [
-                "if (ctx._source.{$column} == null) { ctx._source.{$column} = 0; }",
-                "ctx._source.{$column} $operator= params.{$type}_{$column}_value;",
-            ]);
-
-            $options['params'] = ["{$type}_{$column}_value" => (int) $amount];
-
-            $this->scripts[] = compact('script', 'options');
-        }
-
-        if (empty($this->wheres)) {
-            $this->wheres[] = [
-                'type' => 'MatchAll',
-                'boolean' => 'and',
-            ];
-        }
-
-        return $this->update($extra);
-    }
-
-    /**
-     * Retrieve the extended stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function extendedStats($columns, $options = [])
-    {
-        $result = $this->aggregate('extended_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the String Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function matrix($columns, $options = [])
-    {
-        $result = $this->aggregate('matrix_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the median absolute deviation stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-median-absolute-deviation-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function medianAbsoluteDeviation($columns, $options = [])
-    {
-        $result = $this->aggregate('median_absolute_deviation', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the percentiles of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function percentiles($columns, $options = [])
-    {
-        $result = $this->aggregate('percentiles', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the stats of the values of a given column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function stats($columns, $options = [])
-    {
-        $result = $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * Retrieve the String Stats of the values of a given keyword column.
-     *
-     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
-     *
-     * @param  Expression|string|array  $columns
-     * @param  array  $options
-     */
-    public function stringStats($columns, $options = [])
-    {
-        $result = $this->aggregate('string_stats', Arr::wrap($columns), $options);
-
-        return $result ?: [];
-    }
-
-    /**
-     * @return array|mixed
-     *
-     * @throws BuilderException
-     */
-    protected function aggregateMetric($function, $columns = ['*'], $options = [])
-    {
-        if ($function == 'matrix_stats' && is_array($columns)) {
-            $args = $columns;
-        }
-        // Each column we want aggregated
-        $columns = Arr::wrap($columns);
-        foreach ($columns as $column) {
-            $this->metricsAggregations[] = [
-                'key' => $column,
-                'args' => ! empty($args) ? $args : $column,
-                'type' => $function,
-                'options' => $options,
-            ];
-        }
-        if ($this->asDsl) {
-            return $this->grammar->compileSelect($this);
-        }
-
-        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
-    }
-
-    protected function aggregateMultiMetric(array $functions, string|array $columns, $options = [])
-    {
-        // Each column we want aggregated
-        if (! is_array($columns)) {
-            $columns = Arr::wrap($columns);
-        }
-        foreach ($columns as $column) {
-            foreach ($functions as $function) {
-                $this->metricsAggregations[] = [
-                    'key' => $function.'_'.$column,
-                    'args' => $column,
-                    'type' => $function,
-                    'options' => $options,
-                ];
-            }
-        }
-        if ($this->asDsl) {
-            return $this->grammar->compileSelect($this);
-        }
-
-        return $this->processor->processAggregations($this, $this->connection->select($this->grammar->compileSelect($this), []));
-    }
-
-    /**
-     * Adds a bucket aggregation to the current query.
-     *
-     * @param  string  $key  The key for the bucket.
-     * @param  string|null  $type  The type of aggregation.
-     * @param  mixed|null  $args  The arguments for the aggregation.
-     *                            Can be a callable to generate the arguments using a new query.
-     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
-     *                                    Can be a callable to generate them using a new query.
-     * @return self The current query builder instance.
-     */
-    public function bucket($key, $type = null, $args = null, $aggregations = null): self
-    {
-        return $this->bucketAggregation($key, $type, $args, $aggregations);
-    }
-
-    /**
-     * Get the aggregations returned from query
-     */
-    public function getAggregationResults(): array|Collection
-    {
-        $this->getResultsOnce();
-
-        return $this->processor->getAggregationResults();
-    }
-
-    /**
-     * Get the raw aggregations returned from query
-     */
-    public function getRawAggregationResults(): array
-    {
-        $this->getResultsOnce();
-
-        return $this->processor->getRawAggregationResults();
-    }
-
-    /**
-     * Adds a bucket aggregation to the current query.
-     *
-     * @param  string  $key  The key for the bucket.
-     * @param  string|null  $type  The type of aggregation.
-     * @param  mixed|null  $args  The arguments for the aggregation.
-     *                            Can be a callable to generate the arguments using a new query.
-     * @param  mixed|null  $aggregations  The sub-aggregations or nested aggregations.
-     *                                    Can be a callable to generate them using a new query.
-     * @return self The current query builder instance.
-     */
-    public function bucketAggregation($key, $type = null, $args = null, $aggregations = null): self
-    {
-        if (! is_string($args) && is_callable($args)) {
-            $args = call_user_func($args, $this->newQuery());
-        }
-
-        if (! is_string($aggregations) && is_callable($aggregations)) {
-            $aggregations = call_user_func($aggregations, $this->newQuery());
-        }
-
-        $this->bucketAggregations[] = compact(
-            'key',
-            'type',
-            'args',
-            'aggregations'
-        );
-
-        return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    // Scripting
-    // ----------------------------------------------------------------------
-
-    /**
-     * Add a script query
-     *
-     * @param  string  $boolean
-     */
-    public function whereScript(string $script, array $options = [], $boolean = 'and'): self
-    {
-        $type = 'Script';
-
-        $this->wheres[] = compact('script', 'boolean', 'type', 'options');
-
-        return $this;
-    }
-
-    public function orWhereScript(string $script, array $options = []): self
-    {
-        return $this->whereScript($script, $options, 'or');
-    }
-
-    /**
-     * Remove one or more values from an array.
-     *
-     * @param  string|array  $column
-     * @param  mixed  $value
-     * @return int
-     */
-    public function pull($column, $value = null)
-    {
-        $value = is_array($value) ? $value : [$value];
-
-        // Prepare the script for pulling/removing values.
-        $script = "
-        if (ctx._source.{$column} != null) {
-            ctx._source.{$column}.removeIf(item -> {
-                for (removeItem in params.pull_values) {
-                    if (item == removeItem) {
-                        return true;
-                  }
-                }
-                return false;
-            });
-        }
-    ";
-
-        $options['params'] = ['pull_values' => $value];
-        $this->scripts[] = compact('script', 'options');
-
-        return $this->update([]);
-    }
-
-    /**
-     * Append one or more values to an array.
-     *
-     * @param  string|array  $column
-     * @param  mixed  $value
-     * @param  bool  $unique
-     * @return int
-     */
-    public function push($column, $value = null, $unique = false)
-    {
-        // Check if we are pushing multiple values.
-        $batch = is_array($value) && array_is_list($value);
-
-        $value = $batch ? $value : [$value];
-
-        // Prepare the script for unique or non-unique addition.
-        if ($unique) {
-            $script = "
-            if (ctx._source.{$column} == null) {
-                ctx._source.{$column} = [];
-            }
-            for (item in params.push_values) {
-                if (!ctx._source.{$column}.contains(item)) {
-                    ctx._source.{$column}.add(item);
-                }
-            }
-        ";
-        } else {
-            $script = "
-            if (ctx._source.{$column} == null) {
-                ctx._source.{$column} = [];
-            }
-            ctx._source.{$column}.addAll(params.push_values);
-        ";
-        }
-
-        $options['params'] = ['push_values' => $value];
-        $this->scripts[] = compact('script', 'options');
-
-        return $this->update([]);
     }
 
     // ----------------------------------------------------------------------
@@ -2282,16 +1535,6 @@ class Builder extends BaseBuilder
         return $this->mapping;
     }
 
-    public function getGroupByAfterKey($offset): mixed
-    {
-        $clone = clone $this;
-        $clone->limit = $offset;
-        $clone->offset = 0;
-        $res = collect($clone->getRaw());
-
-        return $res->pull('aggregations.group_by.after_key');
-    }
-
     /**
      * Set the document type the search is targeting.
      *
@@ -2409,112 +1652,6 @@ class Builder extends BaseBuilder
     public function processedRaw($dsl): ?array
     {
         return $this->processor->processRaw($this, $this->connection->raw($dsl));
-    }
-
-    // ----------------------------------------------------------------------
-    // PIT API
-    // ----------------------------------------------------------------------
-
-    public function viaPit($pid, $afterKey): self
-    {
-        if (! $pid) {
-            $pid = $this->openPit();
-        }
-        $this->pitId = $pid;
-        $this->searchAfter = $afterKey;
-
-        return $this;
-    }
-
-    public function searchAfter($afterKey): self
-    {
-        $this->searchAfter = $afterKey;
-
-        return $this;
-    }
-
-    public function withPitId(?string $value): self
-    {
-        $this->pitId = $value;
-
-        return $this;
-    }
-
-    public function keepAlive(string $value): self
-    {
-        $this->keepAlive = $value;
-
-        return $this;
-    }
-
-    public function openPit(): string
-    {
-        $id = $this->connection->openPit($this->grammar->compileOpenPit($this));
-        $this->withPitId($id);
-
-        return $id;
-    }
-
-    /**
-     * Apply PIT and get()
-     */
-    public function getPit($columns = ['*']): ElasticCollection
-    {
-        if (! $this->pitId) {
-            $this->openPit();
-        }
-
-        return $this->get($columns);
-    }
-
-    public function closePit($pidId = null): bool
-    {
-        if ($pidId) {
-            $this->withPitId($pidId);
-        }
-        $didClose = $this->connection->closePit($this->grammar->compileClosePit($this));
-        $this->withPitId(null);
-
-        return $didClose;
-    }
-
-    public function initCursorMeta($cursor): array
-    {
-        $this->cursorMeta = [
-            'pit_id' => null,
-            'page' => 1,
-            'pages' => 0,
-            'records' => 0,
-            'sort_history' => [],
-            'next_sort' => null,
-            'ts' => 0,
-        ];
-
-        if (! empty($cursor)) {
-            $this->cursorMeta = [
-                'pit_id' => $cursor->parameter('pit_id'),
-                'page' => $cursor->parameter('page'),
-                'pages' => $cursor->parameter('pages'),
-                'records' => $cursor->parameter('records'),
-                'sort_history' => $cursor->parameter('sort_history'),
-                'next_sort' => $cursor->parameter('next_sort'),
-                'ts' => $cursor->parameter('ts'),
-            ];
-        }
-
-        return $this->cursorMeta;
-    }
-
-    public function setCursorMeta($cursorPagination)
-    {
-        $this->cursorMeta = $cursorPagination;
-
-        return $this;
-    }
-
-    public function getCursorMeta()
-    {
-        return $this->cursorMeta;
     }
 
     // ----------------------------------------------------------------------
