@@ -494,7 +494,6 @@ class Builder extends BaseBuilder
      * @param  string  $operator
      * @param  string  $value
      * @param  string  $boolean
-     * @param  array  $options
      * @return $this
      */
     protected function addTimeBasedWhere($column, $operator, $value, $boolean = 'and', array $options = [])
