@@ -19,6 +19,16 @@ use PDPhilip\Elasticsearch\Utils\Helpers;
 
 class Grammar extends BaseGrammar
 {
+    // ----------------------------------------------------------------------
+    // Aggregation Types
+    // ----------------------------------------------------------------------
+
+    protected const SIMPLE_METRIC_AGGREGATIONS = [
+        'sum', 'avg', 'min', 'max', 'value_count', 'cardinality',
+        'stats', 'extended_stats', 'percentiles', 'string_stats',
+        'median_absolute_deviation', 'boxplot',
+    ];
+
     // ======================================================================
     // Create
     // ======================================================================
@@ -1013,9 +1023,41 @@ class Grammar extends BaseGrammar
     protected function compileAggregation(Builder $builder, array $aggregation): array
     {
         $key = $aggregation['key'];
+        $type = $aggregation['type'];
+        $args = $aggregation['args'];
+        $options = $aggregation['options'] ?? [];
 
-        $method = 'compile'.ucfirst(Str::camel($aggregation['type'])).'Aggregation';
-        $compiledPayload = $this->$method($builder, $aggregation);
+        // Simple metrics - direct to DslFactory
+        if (in_array($type, self::SIMPLE_METRIC_AGGREGATIONS)) {
+            $compiledPayload = $this->compileMetricAggregation($builder, $aggregation);
+        } else {
+            // Types with specific compilation logic
+            $compiledPayload = match ($type) {
+                // Metrics with custom logic
+                'count' => $this->compileCountAggregation($args),
+                'matrix_stats' => DslFactory::matrixStats($args, $options),
+
+                // Filter
+                'filter' => $this->compileFilterAggregation($args),
+                'terms' => $this->compileTermsAggregation($builder, $aggregation),
+
+                // Bucket aggregations
+                'range' => DslFactory::rangeAggregation($args['field'], $args['ranges']),
+                'date_histogram' => $this->compileDateHistogramAggregation($aggregation),
+                'date_range' => DslFactory::dateRange($args['field'], $args['ranges'], $args['options'] ?? []),
+                'missing' => DslFactory::missingAggregation(is_array($args) ? $args['field'] : $args, $options),
+                'exists' => DslFactory::exists(is_array($args) ? $args['field'] : $args, $options),
+                'nested' => DslFactory::nestedAggregation(is_array($args) ? $args['path'] : $args, $options),
+                'reverse_nested' => DslFactory::reverseNestedAggregation($options),
+                'children' => ['children' => ['type' => is_array($args) ? $args['type'] : $args]],
+                'composite' => DslFactory::composite($args, $builder->getSetLimit() ?? 0, $builder->after ?? null, $options),
+                'categorize_text' => DslFactory::categorizeText($args, $options),
+
+                // Fallback for custom/unknown types
+                default => $this->{$this->getAggregationMethod($type)}($builder, $aggregation),
+            };
+        }
+
         $compiled = [$key => $compiledPayload];
 
         if (isset($aggregation['aggregations']) && $aggregation['aggregations']->metricsAggregations) {
@@ -1025,168 +1067,17 @@ class Grammar extends BaseGrammar
         return $compiled;
     }
 
+    private function getAggregationMethod(string $type): string
+    {
+        return 'compile'.ucfirst(Str::camel($type)).'Aggregation';
+    }
+
     // ----------------------------------------------------------------------
-    // Aggregation compilers
+    // Aggregation Compilers
     // ----------------------------------------------------------------------
 
     /**
-     * Compile sum aggregation
-     */
-    public function compileSumAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Apply a boost option to the clause
-     *
-     * @param  mixed  $value
-     * @param  array  $where
-     */
-    protected function applyBoostOption(array $clause, $value, $where): array
-    {
-        return DslFactory::applyBoost($clause, $value);
-    }
-
-    /**
-     * Compile avg aggregation
-     */
-    protected function compileAvgAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile cardinality aggregation
-     */
-    protected function compileCardinalityAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile children aggregation
-     */
-    protected function compileChildrenAggregation(Builder $builder, array $aggregation): array
-    {
-        $type = is_array($aggregation['args']) ? $aggregation['args']['type'] : $aggregation['args'];
-
-        return [
-            'children' => [
-                'type' => $type,
-            ],
-        ];
-    }
-
-    /**
-     * Compile categorize_text aggregation
-     */
-    protected function compileCategorizeTextAggregation(Builder $builder, array $aggregation): array
-    {
-
-        $args = $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::categorizeText($args, $options);
-    }
-
-    /**
-     * Compile composite aggregation
-     */
-    protected function compileCompositeAggregation(Builder $builder, array $aggregation): array
-    {
-        $sources = $aggregation['args'];
-        $size = $builder->getSetLimit() ?? 0;
-        $afterKey = $builder->after ?? null;
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::composite($sources, $size, $afterKey, $options);
-    }
-
-    /**
-     * Compile count aggregation
-     */
-    protected function compileCountAggregation(Builder $builder, array $aggregation): array
-    {
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
-        $aggregation = [];
-        $aggregation['type'] = 'value_count';
-        $aggregation['args']['field'] = $field;
-        $aggregation['args']['script'] = "doc.containsKey('{$field}') && !doc['{$field}'].empty ? 1 : 0";
-
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile count aggregation
-     */
-    protected function compileValueCountAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile stats aggregation
-     */
-    protected function compileStatsAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile Extended stats aggregation
-     */
-    protected function compileExtendedStatsAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile percentiles aggregation
-     */
-    protected function compilePercentilesAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile string stats aggregation
-     */
-    protected function compileStringStatsAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile string stats aggregation
-     */
-    protected function compileMedianAbsoluteDeviationAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile boxplot aggregation
-     */
-    protected function compileBoxplotAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile matrix_stats aggregation
-     */
-    protected function compileMatrixStatsAggregation(Builder $builder, array $aggregation): array
-    {
-
-        $options = $aggregation['options'] ?? [];
-        $fields = $aggregation['args'];
-
-        return DslFactory::matrixStats($fields, $options);
-    }
-
-    /**
-     * Compile metric aggregation
+     * Compile metric aggregation (handles all SIMPLE_METRIC_AGGREGATIONS)
      */
     protected function compileMetricAggregation(Builder $builder, array $aggregation): array
     {
@@ -1207,142 +1098,21 @@ class Grammar extends BaseGrammar
     }
 
     /**
-     * Compile date histogram aggregation
+     * Count aggregation - transforms to value_count with existence check
      */
-    protected function compileDateHistogramAggregation(Builder $builder, array $aggregation): array
+    protected function compileCountAggregation(mixed $args): array
     {
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
+        $field = is_array($args) ? $args['field'] : $args;
 
-        $fixedInterval = null;
-        $calendarInterval = null;
-        $minDocCount = null;
-        $extendedBounds = null;
-
-        if (is_array($aggregation['args'])) {
-            // Extract interval parameters
-            if (isset($aggregation['args']['fixed_interval'])) {
-                $fixedInterval = $aggregation['args']['fixed_interval'];
-            }
-
-            if (isset($aggregation['args']['calendar_interval'])) {
-                $calendarInterval = $aggregation['args']['calendar_interval'];
-            }
-
-            // Extract min doc count
-            if (isset($aggregation['args']['min_doc_count'])) {
-                $minDocCount = $aggregation['args']['min_doc_count'];
-            }
-
-            // Extract extended bounds
-            if (isset($aggregation['args']['extended_bounds']) && is_array($aggregation['args']['extended_bounds'])) {
-                $extendedBounds = [
-                    'min' => $this->convertDateTime($aggregation['args']['extended_bounds'][0]),
-                    'max' => $this->convertDateTime($aggregation['args']['extended_bounds'][1]),
-                ];
-            }
-        }
-
-        return DslFactory::dateHistogram(
-            field: $field,
-            fixedInterval: $fixedInterval,
-            calendarInterval: $calendarInterval,
-            minDocCount: $minDocCount,
-            extendedBounds: $extendedBounds,
-            options: $options
+        return DslFactory::scriptMetricAggregation(
+            metric: 'value_count',
+            script: "doc.containsKey('{$field}') && !doc['{$field}'].empty ? 1 : 0",
+            options: []
         );
     }
 
     /**
-     * Compile date range aggregation
-     */
-    protected function compileDateRangeAggregation(Builder $builder, array $aggregation): array
-    {
-        $args = $aggregation['args'];
-        $field = $args['field'];
-        $ranges = $args['ranges'];
-        $options = $args['options'] ?? [];
-
-        return DslFactory::dateRange($field, $ranges, $options);
-    }
-
-    /**
-     * Compile exists aggregation
-     */
-    protected function compileExistsAggregation(Builder $builder, array $aggregation): array
-    {
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::exists($field, $options);
-
-    }
-
-    /**
-     * Compile filter aggregation
-     */
-    protected function compileFilterAggregation(Builder $builder, array $aggregation): array
-    {
-        $filter = $this->compileWheres($aggregation['args']);
-
-        $filters = $filter['filter'] ?? [];
-        $query = $filter['query'] ?? [];
-        $allFilters = array_merge($query, $filters);
-
-        // Create the filter aggregation
-        return DslFactory::filterAggregation($allFilters);
-    }
-
-    /**
-     * Compile max aggregation
-     */
-    protected function compileMaxAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile min aggregation
-     */
-    protected function compileMinAggregation(Builder $builder, array $aggregation): array
-    {
-        return $this->compileMetricAggregation($builder, $aggregation);
-    }
-
-    /**
-     * Compile missing aggregation
-     */
-    protected function compileMissingAggregation(Builder $builder, array $aggregation): array
-    {
-        $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::missingAggregation($field, $options);
-    }
-
-    /**
-     * Compile nested aggregation
-     */
-    protected function compileNestedAggregation(Builder $builder, array $aggregation): array
-    {
-        $path = is_array($aggregation['args']) ? $aggregation['args']['path'] : $aggregation['args'];
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::nestedAggregation($path, $options);
-    }
-
-    /**
-     * Compile reverse nested aggregation
-     */
-    protected function compileReverseNestedAggregation(Builder $builder, array $aggregation): array
-    {
-        $options = $aggregation['options'] ?? [];
-
-        return DslFactory::reverseNestedAggregation($options);
-    }
-
-    /**
-     * Compile terms aggregation
+     * Terms aggregation - requires field mapping lookup
      *
      * @throws BuilderException
      */
@@ -1351,27 +1121,52 @@ class Grammar extends BaseGrammar
         $field = is_array($aggregation['args']) ? $aggregation['args']['field'] : $aggregation['key'];
         $indexableField = $this->getIndexableField($field, $builder);
 
-        // Set the base options
-        $options = [
-            'size' => $builder->getLimit(),
-        ];
+        $options = ['size' => $builder->getLimit()];
 
         if (is_array($aggregation['args'])) {
-            $additionalOptions = DslFactory::filterTermsAggregationOptions($aggregation['args']);
-            $options = array_merge($options, $additionalOptions);
+            $options = array_merge($options, DslFactory::filterTermsAggregationOptions($aggregation['args']));
         }
 
-        // Create the terms aggregation
         return DslFactory::termsAggregation($indexableField, $builder->getLimit(), $options);
     }
 
-    protected function compileRangeAggregation(Builder $builder, array $aggregation): array
+    /**
+     * Date histogram - complex interval/bounds handling
+     */
+    protected function compileDateHistogramAggregation(array $aggregation): array
     {
-        $field = $aggregation['args']['field'];
-        $ranges = $aggregation['args']['ranges'];
+        $args = $aggregation['args'];
+        $field = is_array($args) ? $args['field'] : $args;
+        $options = $aggregation['options'] ?? [];
 
-        return DslFactory::rangeAggregation($field, $ranges);
+        $fixedInterval = $args['fixed_interval'] ?? null;
+        $calendarInterval = $args['calendar_interval'] ?? null;
+        $minDocCount = $args['min_doc_count'] ?? null;
+        $extendedBounds = null;
+
+        if (isset($args['extended_bounds']) && is_array($args['extended_bounds'])) {
+            $extendedBounds = [
+                'min' => $this->convertDateTime($args['extended_bounds'][0]),
+                'max' => $this->convertDateTime($args['extended_bounds'][1]),
+            ];
+        }
+
+        return DslFactory::dateHistogram($field, $fixedInterval, $calendarInterval, $minDocCount, $extendedBounds, $options);
     }
+
+    /**
+     * Filter aggregation - requires where compilation
+     */
+    protected function compileFilterAggregation(mixed $args): array
+    {
+        $filter = $this->compileWheres($args);
+
+        return DslFactory::filterAggregation(array_merge($filter['query'] ?? [], $filter['filter'] ?? []));
+    }
+
+    // ----------------------------------------------------------------------
+    // Option Appliers
+    // ----------------------------------------------------------------------
 
     /**
      * Apply inner hits options to the clause
@@ -1382,6 +1177,18 @@ class Grammar extends BaseGrammar
 
         return DslFactory::applyInnerHits($clause, $innerHits);
     }
+
+    /**
+     * Apply a boost option to the clause
+     */
+    protected function applyBoostOption(array $clause, mixed $value, array $where): array
+    {
+        return DslFactory::applyBoost($clause, $value);
+    }
+
+    // ----------------------------------------------------------------------
+    // Value Helpers
+    // ----------------------------------------------------------------------
 
     /**
      * Get value for the where
