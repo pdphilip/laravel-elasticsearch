@@ -258,13 +258,14 @@ it('filters birthdays by year with whereYear', function () {
 });
 
 it('filters birthdays by specific time with whereTime', function () {
+    // Data: 10:53:11, 10:53:12, 10:53:13, 10:53:14, 10:53:15, 10:53:16 (+ 1 null)
     expect(Birthday::whereTime('birthday', '10:53:11')->get())->toHaveCount(1);
-    expect(Birthday::whereTime('birthday', '10:53')->get())->toHaveCount(6);
-    expect(Birthday::whereTime('birthday', '10')->get())->toHaveCount(6);
-    expect(Birthday::whereTime('birthday', '>=', '10:53:14')->get())->toHaveCount(3);
-    expect(Birthday::whereTime('birthday', '!=', '10:53:14')->get())->toHaveCount(6);
-    expect(Birthday::whereTime('birthday', '<', '10:53:12')->get())->toHaveCount(2);
-})->todo('Need to complete this');
+    expect(Birthday::whereTime('birthday', '10:53')->get())->toHaveCount(6);  // All match HH:mm
+    expect(Birthday::whereTime('birthday', '10')->get())->toHaveCount(6);     // All match hour
+    expect(Birthday::whereTime('birthday', '>=', '10:53:14')->get())->toHaveCount(3);  // :14, :15, :16
+    expect(Birthday::whereTime('birthday', '!=', '10:53:14')->get())->toHaveCount(5);  // All except :14
+    expect(Birthday::whereTime('birthday', '<', '10:53:12')->get())->toHaveCount(1);   // Only :11
+});
 
 it('orders users by age', function () {
     $user = User::whereNotNull('age')->orderBy('age', 'asc')->first();

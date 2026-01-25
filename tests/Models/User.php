@@ -17,6 +17,7 @@ use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class User extends Model implements AuthenticatableContract, CanResetPasswordContract
 {
@@ -24,6 +25,7 @@ class User extends Model implements AuthenticatableContract, CanResetPasswordCon
     use CanResetPassword;
     use MassPrunable;
     use Notifiable;
+    use TestsWithIdStrategies;
 
     protected $connection = 'elasticsearch';
 

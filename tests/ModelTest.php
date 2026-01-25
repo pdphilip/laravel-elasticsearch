@@ -36,7 +36,6 @@ it('tests insert', function () {
     $user->name = 'John Doe';
     $user->title = 'admin';
     $user->age = 35;
-
     $user->save();
 
     expect($user->exists)->toBeTrue()

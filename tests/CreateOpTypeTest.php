@@ -24,20 +24,20 @@ it('creates a document with createOnly and rejects duplicates', function () {
         ]);
 
     $found = User::find($id);
-    expect($found)->not()->toBeNull();
-    expect($found->id)->toBe($id);
+    expect($found)->not()->toBeNull()
+        ->and($found->id)->toBe($id)
+        ->and(function () use ($id) {
+            User::query()
+                ->createOnly()
+                ->create([
+                    'id' => $id,
+                    'name' => 'Second Insert',
+                    'title' => 'user',
+                    'age' => 31,
+                ]);
+        })->toThrow(BulkInsertQueryException::class);
 
     // Second create with same _id must fail with 409 (bulk error)
-    expect(function () use ($id) {
-        User::query()
-            ->createOnly()
-            ->create([
-                'id' => $id,
-                'name' => 'Second Insert',
-                'title' => 'user',
-                'age' => 31,
-            ]);
-    })->toThrow(BulkInsertQueryException::class);
 });
 
 it('creates a document with createOrFail and rejects duplicates', function () {
@@ -54,19 +54,19 @@ it('creates a document with createOrFail and rejects duplicates', function () {
         ]);
 
     $found = User::find($id);
-    expect($found)->not()->toBeNull();
-    expect($found->id)->toBe($id);
+    expect($found)->not()->toBeNull()
+        ->and($found->id)->toBe($id)
+        ->and(function () use ($id) {
+            User::query()
+                ->createOrFail([
+                    'id' => $id,
+                    'name' => 'Second Insert',
+                    'title' => 'user',
+                    'age' => 31,
+                ]);
+        })->toThrow(BulkInsertQueryException::class);
 
     // Second create with same _id must fail with 409 (bulk error)
-    expect(function () use ($id) {
-        User::query()
-            ->createOrFail([
-                'id' => $id,
-                'name' => 'Second Insert',
-                'title' => 'user',
-                'age' => 31,
-            ]);
-    })->toThrow(BulkInsertQueryException::class);
 });
 
 it('supports per-document op_type via attribute', function () {
@@ -82,15 +82,15 @@ it('supports per-document op_type via attribute', function () {
     ]);
 
     $found = User::find($id);
-    expect($found)->not()->toBeNull();
-    expect($found->id)->toBe($id);
+    expect($found)->not()->toBeNull()
+        ->and($found->id)->toBe($id)
+        ->and(function () use ($id) {
+            User::create([
+                'id' => $id,
+                '_op_type' => 'create',
+                'name' => 'Doc Create Duplicate',
+            ]);
+        })->toThrow(BulkInsertQueryException::class);
 
     // Duplicate should raise conflict
-    expect(function () use ($id) {
-        User::create([
-            'id' => $id,
-            '_op_type' => 'create',
-            'name' => 'Doc Create Duplicate',
-        ]);
-    })->toThrow(BulkInsertQueryException::class);
 });

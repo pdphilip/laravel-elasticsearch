@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class Book extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $connection = 'elasticsearch';
 
     protected $index = 'books';

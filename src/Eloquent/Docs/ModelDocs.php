@@ -179,6 +179,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orderByNestedDesc($column, $direction = 'asc', $mode = null)
  *-----------------------------------
  * @method static $this withSort($column, $key, $value)
+ * @method static $this withRefresh($type)
  *===========================================
  * Executors
  *===========================================
@@ -189,8 +190,9 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static array getModels($columns = ['*'])
  * @method static ElasticCollection get($columns = ['*'])
  * @method static ElasticCollection insert($values, $returnData = null)
- * @method static self createOnly()
- * @method static self createOrFail(array $attributes)
+ * @method static $this create(array $attributes)
+ * @method static $this createOnly()
+ * @method static $this createOrFail(array $attributes)
  *-----------------------------------
  * @method static array toDsl($columns = ['*'])
  * @method static array toSql($columns = ['*'])

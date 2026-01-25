@@ -66,6 +66,7 @@ class Builder extends BaseEloquentBuilder
         'rawvalue',
         'tosql',
         'torawsql',
+        'tocompiledquery',
 
         // ES
         'todsl',

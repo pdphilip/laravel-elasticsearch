@@ -10,10 +10,13 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Relations\BelongsTo;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 /** @property Carbon $created_at */
 class Item extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $connection = 'elasticsearch';
 
     protected $index = 'items';

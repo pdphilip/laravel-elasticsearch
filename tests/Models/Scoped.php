@@ -8,9 +8,12 @@ use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class Scoped extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $connection = 'elasticsearch';
 
     protected $fillable = ['name', 'favorite'];

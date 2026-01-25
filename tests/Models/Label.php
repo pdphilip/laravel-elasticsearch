@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 /**
  * @property string $title
@@ -16,6 +17,8 @@ use PDPhilip\Elasticsearch\Schema\Schema;
  */
 class Label extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $connection = 'elasticsearch';
 
     protected $index = 'labels';

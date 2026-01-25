@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use PDPhilip\Elasticsearch\Tests\Models\IdGenerated\Product;
+use PDPhilip\Elasticsearch\Tests\Models\Product;
 
 beforeEach(function () {
     Product::executeSchema();

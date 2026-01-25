@@ -5,6 +5,7 @@ namespace PDPhilip\Elasticsearch\Tests\Models;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 /**
  * @property string $name
@@ -13,6 +14,8 @@ use PDPhilip\Elasticsearch\Schema\Schema;
  */
 class HiddenAnimal extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $connection = 'elasticsearch';
 
     protected $keyType = 'string';

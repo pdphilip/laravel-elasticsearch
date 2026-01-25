@@ -8,11 +8,13 @@ use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class Soft extends Model
 {
     use MassPrunable;
     use SoftDeletes;
+    use TestsWithIdStrategies;
 
     protected $connection = 'elasticsearch';
 

@@ -7,9 +7,12 @@ namespace PDPhilip\Elasticsearch\Tests\Models;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class Location extends Model
 {
+    use TestsWithIdStrategies;
+
     protected $keyType = 'string';
 
     protected $connection = 'elasticsearch';

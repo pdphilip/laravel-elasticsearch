@@ -9,10 +9,12 @@ use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
 class Client extends Model
 {
     use HybridRelations;
+    use TestsWithIdStrategies;
 
     protected $connection = 'elasticsearch';
 

@@ -448,6 +448,11 @@ class Builder extends BaseBuilder
      */
     protected function addDateBasedWhere($type, $column, $operator, $value, $boolean = 'and', array $options = [])
     {
+        // Handle Time type specially since it compares multiple components
+        if ($type === 'Time') {
+            return $this->addTimeBasedWhere($column, $operator, $value, $boolean, $options);
+        }
+
         switch ($type) {
             case 'Year':
                 $dateType = 'year';
@@ -474,6 +479,63 @@ class Builder extends BaseBuilder
         $script = "doc.{$column}.size() > 0 && doc.{$column}.value != null && doc.{$column}.value.{$dateType} {$operator} params.value";
 
         $options['params'] = ['value' => (int) $value];
+
+        $this->wheres[] = compact('script', 'options', 'type', 'boolean');
+
+        return $this;
+    }
+
+    /**
+     * Add a time-based where clause (whereTime) to the query.
+     *
+     * Handles time comparisons with various formats: HH:mm:ss, HH:mm, or HH
+     *
+     * @param  string  $column
+     * @param  string  $operator
+     * @param  string  $value
+     * @param  string  $boolean
+     * @param  array  $options
+     * @return $this
+     */
+    protected function addTimeBasedWhere($column, $operator, $value, $boolean = 'and', array $options = [])
+    {
+        $type = 'Script';
+
+        $operator = $operator == '=' ? '==' : $operator;
+        $operator = $operator == '<>' ? '!=' : $operator;
+
+        // Parse time value - can be HH:mm:ss, HH:mm, or just HH
+        $timeParts = explode(':', $value);
+        $hour = (int) ($timeParts[0] ?? 0);
+        $minute = isset($timeParts[1]) ? (int) $timeParts[1] : null;
+        $second = isset($timeParts[2]) ? (int) $timeParts[2] : null;
+
+        // Build time comparison - convert to seconds since midnight for easier comparison
+        $docTimeExpr = "doc.{$column}.value.hour * 3600 + doc.{$column}.value.minute * 60 + doc.{$column}.value.second";
+
+        // Build the target time value in seconds since midnight
+        $targetSeconds = $hour * 3600;
+        if ($minute !== null) {
+            $targetSeconds += $minute * 60;
+            if ($second !== null) {
+                $targetSeconds += $second;
+            }
+        }
+
+        // For partial time matches (HH:mm or just HH), adjust the comparison
+        if ($second === null && $minute === null) {
+            // Just hour specified - compare only the hour part
+            $docTimeExpr = "doc.{$column}.value.hour";
+            $targetSeconds = $hour;
+        } elseif ($second === null) {
+            // Hour and minute specified - compare hour*60+minute
+            $docTimeExpr = "doc.{$column}.value.hour * 60 + doc.{$column}.value.minute";
+            $targetSeconds = $hour * 60 + $minute;
+        }
+
+        $script = "doc.{$column}.size() > 0 && doc.{$column}.value != null && {$docTimeExpr} {$operator} params.value";
+
+        $options['params'] = ['value' => $targetSeconds];
 
         $this->wheres[] = compact('script', 'options', 'type', 'boolean');
 
