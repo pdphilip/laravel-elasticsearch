@@ -25,7 +25,6 @@ use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Laravel\Compatibility\Connection\ConnectionCompatibility;
 use PDPhilip\Elasticsearch\Query\Builder;
-use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
@@ -38,7 +37,7 @@ use function strtolower;
 /**
  * @mixin Client
  *
- * @method Processor getPostProcessor()
+ * @method Query\Processor\Processor getPostProcessor()
  */
 class Connection extends BaseConnection
 {
@@ -55,7 +54,7 @@ class Connection extends BaseConnection
     protected string $connectionName = '';
 
     /**
-     * @var Query\Processor
+     * @var Query\Processor\Processor
      */
     protected $postProcessor;
 
@@ -82,7 +81,7 @@ class Connection extends BaseConnection
 
         $this->connection = $this->createConnection();
 
-        $this->postProcessor = new Query\Processor;
+        $this->postProcessor = new Query\Processor\Processor;
 
         $this->useDefaultSchemaGrammar();
 
@@ -326,9 +325,9 @@ class Connection extends BaseConnection
     }
 
     /** {@inheritdoc} */
-    protected function getDefaultPostProcessor(): Query\Processor
+    protected function getDefaultPostProcessor(): Query\Processor\Processor
     {
-        return new Query\Processor;
+        return new Query\Processor\Processor;
     }
 
     public function getDefaultLimit(): int

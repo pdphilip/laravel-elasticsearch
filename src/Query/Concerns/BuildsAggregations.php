@@ -13,8 +13,8 @@ use PDPhilip\Elasticsearch\Utils\Sanitizer;
  * Builds aggregation queries for Elasticsearch.
  *
  * @property \PDPhilip\Elasticsearch\Connection $connection
- * @property \PDPhilip\Elasticsearch\Query\Grammar $grammar
- * @property \PDPhilip\Elasticsearch\Query\Processor $processor
+ * @property \PDPhilip\Elasticsearch\Query\Grammar\Grammar $grammar
+ * @property \PDPhilip\Elasticsearch\Query\Processor\Processor $processor
  * @property array $bucketAggregations
  * @property array $metricsAggregations
  * @property mixed $asDsl

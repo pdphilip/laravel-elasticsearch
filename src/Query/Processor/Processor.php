@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Query;
+namespace PDPhilip\Elasticsearch\Query\Processor;
 
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
+use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 class Processor extends BaseProcessor

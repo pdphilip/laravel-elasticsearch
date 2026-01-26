@@ -2,18 +2,15 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Query;
+namespace PDPhilip\Elasticsearch\Query\Grammar;
 
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
+use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\DSL\DslBuilder;
 use PDPhilip\Elasticsearch\Query\DSL\DslFactory;
-use PDPhilip\Elasticsearch\Query\Grammar\Concerns\CompilesAggregations;
-use PDPhilip\Elasticsearch\Query\Grammar\Concerns\CompilesOrders;
-use PDPhilip\Elasticsearch\Query\Grammar\Concerns\CompilesWheres;
-use PDPhilip\Elasticsearch\Query\Grammar\Concerns\FieldUtilities;
 
 /**
  * ES Query Grammar
@@ -26,10 +23,10 @@ use PDPhilip\Elasticsearch\Query\Grammar\Concerns\FieldUtilities;
  */
 class Grammar extends BaseGrammar
 {
-    use CompilesAggregations;
-    use CompilesOrders;
-    use CompilesWheres;
-    use FieldUtilities;
+    use Concerns\CompilesAggregations;
+    use Concerns\CompilesOrders;
+    use Concerns\CompilesWheres;
+    use Concerns\FieldUtilities;
 
     // ======================================================================
     // CRUD Entry Points

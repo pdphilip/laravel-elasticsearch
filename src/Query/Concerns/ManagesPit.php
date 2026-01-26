@@ -10,7 +10,7 @@ use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
  * Manages Point In Time (PIT) API operations for Elasticsearch queries.
  *
  * @property \PDPhilip\Elasticsearch\Connection $connection
- * @property \PDPhilip\Elasticsearch\Query\Grammar $grammar
+ * @property \PDPhilip\Elasticsearch\Query\Grammar\Grammar $grammar
  * @property mixed $pitId
  * @property string $keepAlive
  * @property mixed $searchAfter

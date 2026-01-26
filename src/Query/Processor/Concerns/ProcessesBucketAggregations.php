@@ -1,6 +1,8 @@
 <?php
 
-namespace PDPhilip\Elasticsearch\Query\Concerns;
+declare(strict_types=1);
+
+namespace PDPhilip\Elasticsearch\Query\Processor\Concerns;
 
 trait ProcessesBucketAggregations
 {

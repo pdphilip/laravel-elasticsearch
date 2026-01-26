@@ -17,10 +17,10 @@ trait ConnectionCompatibility
     }
 
     /** {@inheritdoc} */
-    protected function getDefaultQueryGrammar(): Query\Grammar
+    protected function getDefaultQueryGrammar(): Query\Grammar\Grammar
     {
         // @phpstan-ignore-next-line
-        return new Query\Grammar;
+        return new Query\Grammar\Grammar;
     }
 
     /** {@inheritdoc} */

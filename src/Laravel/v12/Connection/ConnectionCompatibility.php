@@ -16,9 +16,9 @@ trait ConnectionCompatibility
     }
 
     /** {@inheritdoc} */
-    protected function getDefaultQueryGrammar(): Query\Grammar
+    protected function getDefaultQueryGrammar(): Query\Grammar\Grammar
     {
-        return new Query\Grammar($this);
+        return new Query\Grammar\Grammar($this);
     }
 
     /** {@inheritdoc} */
