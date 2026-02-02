@@ -143,6 +143,22 @@ trait ElasticsearchModel
     /**
      * {@inheritdoc}
      */
+    public function attributesToArray(): array
+    {
+        $attributes = parent::attributesToArray();
+
+        // Ensure 'id' is always present in serialized output
+        // ES stores document ID as '_id', but we want 'id' for consistency
+        if (! isset($attributes['id'])) {
+            $attributes['id'] = $this->id;
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     protected function newBaseQueryBuilder()
     {
         $connection = $this->getConnection();

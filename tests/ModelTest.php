@@ -622,3 +622,52 @@ it('tests meta total hits', function () {
     expect($query->getQueryMeta()->getTotalHits())->toBe(8500)
         ->and(count($query))->toBe(10);
 });
+
+it('tests fetched model serialization includes id', function () {
+    // Create a model without explicitly setting an id (ES generates it)
+    $user = User::create(['name' => 'John Doe', 'title' => 'admin']);
+    $originalId = $user->id;
+
+    // Fetch the model fresh from the database
+    $fetched = User::find($originalId);
+
+    // Verify both id and _id are accessible via accessor
+    expect($fetched->id)->toBe($originalId)
+        ->and($fetched->_id)->toBe($originalId);
+
+    // Verify toArray() includes 'id' key
+    $array = $fetched->toArray();
+    expect($array)->toHaveKey('id')
+        ->and($array['id'])->toBe($originalId);
+
+    // Both 'id' and '_id' should be present for backwards compatibility
+    expect($array)->toHaveKey('_id')
+        ->and($array['_id'])->toBe($originalId);
+
+    // Verify toJson() includes 'id' key
+    $json = json_decode($fetched->toJson(), true);
+    expect($json)->toHaveKey('id')
+        ->and($json['id'])->toBe($originalId);
+
+    // Verify collection serialization also includes 'id'
+    $users = User::where('name', 'John Doe')->get();
+    $collectionArray = $users->toArray();
+    expect($collectionArray[0])->toHaveKey('id')
+        ->and($collectionArray[0]['id'])->toBe($originalId);
+});
+
+it('tests _id is still accessible for backwards compatibility', function () {
+    $user = User::create(['name' => 'Jane Doe']);
+    $originalId = $user->id;
+
+    $fetched = User::find($originalId);
+
+    // _id accessor should still work
+    expect($fetched->_id)->toBe($originalId);
+
+    // Raw attributes should have _id but NOT 'id' (id is only added during serialization)
+    $raw = $fetched->getAttributes();
+    expect($raw)->toHaveKey('_id')
+        ->and($raw['_id'])->toBe($originalId)
+        ->and($raw)->not->toHaveKey('id'); // 'id' should NOT be stored, only added in toArray()
+});
