@@ -3,7 +3,7 @@ src="https://cdn.snipform.io/pdphilip/elasticsearch/laravel-es-banner.png"
 alt="Laravel Elasticsearch"
 />
 
-[![Latest Stable Version](http://img.shields.io/github/release/pdphilip/laravel-elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)
+[![Latest Stable Version](https://img.shields.io/packagist/v/pdphilip/elasticsearch)](https://packagist.org/packages/pdphilip/elasticsearch)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/run-tests.yml?query=branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/pdphilip/laravel-elasticsearch/phpstan.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/pdphilip/laravel-elasticsearch/actions/workflows/phpstan.yml?query=branch%3Amain++)
 [![Total Downloads](http://img.shields.io/packagist/dm/pdphilip/elasticsearch.svg)](https://packagist.org/packages/pdphilip/elasticsearch)

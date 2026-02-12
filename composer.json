@@ -1,6 +1,6 @@
 {
   "name": "pdphilip/elasticsearch",
-  "description": "An Elasticsearch implementation of Laravel's Eloquent ORM",
+  "description": "An Elasticsearch implementation of Laravel's Eloquent ORM (Engine only - no ES client)",
   "keywords": [
     "laravel",
     "eloquent",
@@ -24,40 +24,17 @@
     "illuminate/database": "^10.30|^11|^12",
     "illuminate/events": "^10.0|^11|^12",
     "illuminate/support": "^10.0|^11|^12",
-    "elasticsearch/elasticsearch": "^8.17",
     "spatie/ignition": "^1.15"
-  },
-  "require-dev": {
-    "orchestra/testbench": "^10.1||^9.0.0||^8.22.0",
-    "mockery/mockery": "^1.4.4",
-    "doctrine/coding-standard": "12.0.x-dev",
-    "pestphp/pest": "^3",
-    "pestphp/pest-plugin-laravel": "^3",
-    "laravel/pint": "^1.14",
-    "nunomaduro/collision": "^8.1.1||^7.10.0",
-    "larastan/larastan": "^3",
-    "pestphp/pest-plugin-arch": "^3",
-    "phpstan/extension-installer": "^1.4",
-    "phpstan/phpstan-deprecation-rules": "^2",
-    "phpstan/phpstan-phpunit": "^2"
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "PDPhilip\\Elasticsearch\\Tests\\": "tests/"
-    }
   },
   "autoload": {
     "psr-4": {
       "PDPhilip\\Elasticsearch\\": "src/",
-      "PDPhilip\\Elasticsearch\\Tests\\": "tests"
+      "Elastic\\Elasticsearch\\": "src/Stubs/Elastic/Elasticsearch/"
     }
   },
   "config": {
     "allow-plugins": {
-      "pestphp/pest-plugin": true,
-      "dealerdirect/phpcodesniffer-composer-installer": true,
-      "php-http/discovery": true,
-      "phpstan/extension-installer": true
+      "php-http/discovery": true
     }
   },
   "extra": {
@@ -66,32 +43,5 @@
         "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
       ]
     }
-  },
-  "scripts": {
-    "post-autoload-dump": [
-      "@clear",
-      "@prepare"
-    ],
-    "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
-    "prepare": "@php vendor/bin/testbench package:discover --ansi",
-    "build": "@php vendor/bin/testbench workbench:build --ansi",
-    "serve": [
-      "Composer\\Config::disableProcessTimeout",
-      "@build",
-      "@php vendor/bin/testbench serve"
-    ],
-    "lint": "pint -v",
-    "types": "phpstan analyse --ansi --memory-limit=2G",
-    "pest": "pest --colors=always",
-    "pest-ids": "pest --colors=always  --configuration phpunit.ids.xml",
-    "test:lint": "pint --test -v",
-    "test:types": "phpstan analyse --ansi",
-    "test:unit": "pest --colors=always",
-    "test": [
-      "Composer\\Config::disableProcessTimeout",
-      "@test:lint",
-      "@test:types",
-      "@test:unit"
-    ]
   }
 }
