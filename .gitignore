@@ -1,9 +1,11 @@
 .env
 .env.*
 .cl*
-
+.ELASTICSEARCH_*
 #composer
 vendor
+
+
 
 # Snow-blower
 !secrets/.env*
