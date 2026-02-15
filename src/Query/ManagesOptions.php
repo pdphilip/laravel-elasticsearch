@@ -81,101 +81,92 @@ trait ManagesOptions
             return [$columns, $options];
         }
         if (is_callable($columns) && ! is_string($columns)) {
-            $options = $columns;
-            $columns = null;
-
-            return [$columns, $options];
+            return [null, $columns];
         }
-        if (is_array($columns)) {
-            $isOptions = $this->validatePossibleOptions($columns, $as);
-            if ($isOptions) {
-                $options = $columns;
-                $columns = null;
-
-                return [$columns, $options];
-            }
+        if (is_array($columns) && $this->validatePossibleOptions($columns, $as)) {
+            return [null, $columns];
         }
 
         return [$columns, $options];
     }
 
+    /**
+     * Extract and normalize parameters, detecting when options were passed in place of other arguments.
+     *
+     * Resolution order (first match wins):
+     *   1. $column is a closure → nested query, return as-is
+     *   2. $options is populated → parse and return
+     *   3. $not is not a bool → treat as options (reset $not to false)
+     *   4. $boolean is not a string → treat as options (reset $boolean to 'and')
+     *   5. $value is callable or array of valid option keys → treat as options (set $value to null)
+     *   6. $operator is callable or array of valid option keys → treat as options (set $operator to null)
+     *   7. No options detected → return as-is
+     */
     protected function extractOptionsFull($type, $column, $operator, $value, $boolean, $not, $options = []): array
     {
         if (is_callable($column) && ! is_string($column)) {
-            // The query is a closure, return it as is
             return [$column, $operator, $value, $boolean, $not, $options];
         }
 
-        // If options are passed, then we have them here
         if ($options) {
-            $options = $this->parseOptions($options);
-
-            return [$column, $operator, $value, $boolean, $not, $options];
+            return [$column, $operator, $value, $boolean, $not, $this->parseOptions($options, $type)];
         }
 
-        // If $not is not a boolean, then it's something else, we assume options here
         if (! is_bool($not)) {
-            $options = $this->parseOptions($not);
-            $not = false;
-
-            return [$column, $operator, $value, $boolean, $not, $options];
+            return [$column, $operator, $value, $boolean, false, $this->parseOptions($not, $type)];
         }
 
-        // If boolean is not a string then it's not a boolean, we assume options here
         if (! is_string($boolean)) {
-            $options = $this->parseOptions($boolean);
-            $boolean = 'and';
-
-            return [$column, $operator, $value, $boolean, $not, $options];
+            return [$column, $operator, $value, 'and', $not, $this->parseOptions($boolean, $type)];
         }
-        $allowedOptions = $this->returnAllowedOptions();
+
+        $allowedKeys = $this->getAllowedOptionKeys();
 
         if ($value && ! is_string($value)) {
-            // If either is callable or an array containing valid operators, then we have options
-            if (is_callable($value) || (is_array($value) && count(array_intersect(array_keys($value), $allowedOptions)))) {
-                $options = $this->parseOptions($value);
-                $value = null;
-
-                return [$column, $operator, $value, $boolean, $not, $options];
-
+            if (is_callable($value) || (is_array($value) && count(array_intersect(array_keys($value), $allowedKeys)))) {
+                return [$column, $operator, null, $boolean, $not, $this->parseOptions($value, $type)];
             }
         }
 
-        // Last, let's assess the operator
         if ($operator && ! is_string($operator)) {
-            // If either is callable or an array containing valid operators, then we have options
-            if (is_callable($operator) || (is_array($operator) && count(array_intersect(array_keys($operator), $allowedOptions)))) {
-                $options = $this->parseOptions($operator);
-                $operator = null;
-
-                return [$column, $operator, $value, $boolean, $not, $options];
-
+            if (is_callable($operator) || (is_array($operator) && count(array_intersect(array_keys($operator), $allowedKeys)))) {
+                return [$column, null, $value, $boolean, $not, $this->parseOptions($operator, $type)];
             }
         }
 
-        // Ok, we tried. We have no options, return as is
         return [$column, $operator, $value, $boolean, $not, $options];
     }
 
-    protected function parseOptions($value)
+    /**
+     * Parse a value that may be options: an array is returned as-is,
+     * a closure is invoked with the appropriate typed options class.
+     *
+     * When $type is provided, the option class is resolved directly via getOptionClass().
+     * Falls back to Reflection on the closure's type hint when $type is unavailable.
+     */
+    protected function parseOptions($value, ?string $type = null)
     {
-
         if (is_callable($value)) {
+            // Resolve option class from the query type when available (no Reflection needed)
+            $class = $type ? $this->getOptionClass($type) : null;
 
+            if ($class) {
+                return tap(new $class, $value)->toArray();
+            }
+
+            // Fallback: infer option class from the closure's type hint
             try {
                 $reflection = new ReflectionFunction($value);
-                $parameters = $reflection->getParameters();
-                $type = $parameters[0]->getType();
-                $class = $type->getName();
-                $options = tap(new $class, $value);
+                $paramType = $reflection->getParameters()[0]->getType();
+                $class = $paramType->getName();
 
-                return $options->toArray();
+                return tap(new $class, $value)->toArray();
             } catch (Exception $e) {
                 // Callable didn't match expected option signature — return empty options
                 return [];
             }
-
         }
+
         if (is_array($value)) {
             return $value;
         }
@@ -187,7 +178,6 @@ trait ManagesOptions
     {
         $optionClass = $this->getOptionClass($type);
         if (! $optionClass) {
-            // remove after testing as it's internal and should never happen
             throw new \Exception('Invalid option type: '.$type);
         }
         if (is_callable($options)) {
@@ -200,15 +190,23 @@ trait ManagesOptions
         return new $optionClass;
     }
 
-    protected function returnAllowedOptions(): array
+    protected function getAllowedOptionKeys(): array
     {
         return (new ClauseOptions)->allowedOptions();
     }
 
-    protected function getOptionClass($type)
+    /**
+     * @deprecated Use getAllowedOptionKeys() instead.
+     */
+    protected function returnAllowedOptions(): array
+    {
+        return $this->getAllowedOptionKeys();
+    }
+
+    protected function getOptionClass($type): ?string
     {
         return match (strtolower($type)) {
-            'clause' => ClauseOptions::class,
+            'clause', 'where', 'basic' => ClauseOptions::class,
             'term' => TermOptions::class,
             'terms' => TermsOptions::class,
             'date' => DateOptions::class,
@@ -216,7 +214,7 @@ trait ManagesOptions
             'phraseprefix' => PhrasePrefixOptions::class,
             'search' => SearchOptions::class,
             'match' => MatchOptions::class,
-            'termfuzzy' => FuzzyOptions::class,
+            'fuzzy', 'termfuzzy' => FuzzyOptions::class,
             'prefix' => PrefixOptions::class,
             'regex' => RegexOptions::class,
             'nested' => NestedOptions::class,
@@ -228,20 +226,9 @@ trait ManagesOptions
     protected function validatePossibleOptions(array $data, $type): bool
     {
         $optionClass = $this->getOptionClass($type);
-        $options = (new $optionClass)->allowedOptions();
+        $allowed = (new $optionClass)->allowedOptions();
         $keys = array_keys($data);
-        if ($keys) {
-            $valid = true;
-            foreach ($keys as $key) {
-                if (! in_array($key, $options)) {
-                    $valid = false;
-                }
-            }
 
-            return $valid;
-        }
-
-        return false;
-
+        return ! empty($keys) && empty(array_diff($keys, $allowed));
     }
 }
