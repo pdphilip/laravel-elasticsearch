@@ -22,6 +22,7 @@ secrets.nix
 .phpunit*
 
 
+_ide_helper.php
 .idea
 .phpunit.cache
 build
