@@ -31,3 +31,6 @@ phpunit.xml
 phpstan.neon
 testbench.yaml
 node_modules
+
+# Labs
+labs/
