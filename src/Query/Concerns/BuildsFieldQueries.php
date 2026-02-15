@@ -5,11 +5,32 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Query\Concerns;
 
 /**
- * ES-specific field queries - term, match, phrase, fuzzy, regex, prefix.
- * The full-text search toolkit.
+ * ES-specific field queries: term, match, phrase, fuzzy, regex, prefix.
+ *
+ * Each query type provides four variants:
+ *   where{Type}()         — AND match
+ *   orWhere{Type}()       — OR match
+ *   whereNot{Type}()      — AND NOT match
+ *   orWhereNot{Type}()    — OR NOT match
+ *
+ * Aliases:
+ *   whereExact*  → whereTerm*
+ *   wherePrefix* → whereStartsWith*
  */
 trait BuildsFieldQueries
 {
+    /**
+     * Core dispatcher for all field query types.
+     * Handles option extraction, negation, and where clause registration.
+     */
+    private function addFieldQuery(string $type, $column, $value, $boolean = 'and', $not = false, $options = []): self
+    {
+        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
+        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
+
+        return $this;
+    }
+
     // ----------------------------------------------------------------------
     // Term Query - exact value matching
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-term-query.html
@@ -17,11 +38,7 @@ trait BuildsFieldQueries
 
     public function whereTerm($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
-        $type = 'Term';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Term', $column, $value, $boolean, $not, $options);
     }
 
     public function orWhereTerm(string $column, $value, $options = []): self
@@ -39,31 +56,35 @@ trait BuildsFieldQueries
         return $this->whereTerm($column, $value, 'or', true, $options);
     }
 
-    // Aliases for whereTerm
+    /** @see whereTerm() */
     public function whereExact($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
         return $this->whereTerm($column, $value, $boolean, $not, $options);
     }
 
+    /** @see orWhereTerm() */
     public function orWhereExact($column, $value, $options = []): self
     {
-        return $this->whereTerm($column, $value, 'or', false, $options);
+        return $this->orWhereTerm($column, $value, $options);
     }
 
+    /** @see whereNotTerm() */
     public function whereNotExact($column, $value, $options = []): self
     {
-        return $this->whereTerm($column, $value, 'and', true, $options);
+        return $this->whereNotTerm($column, $value, $options);
     }
 
+    /** @see orWhereNotTerm() */
     public function orWhereNotExact($column, $value, $options = []): self
     {
-        return $this->whereTerm($column, $value, 'or', true, $options);
+        return $this->orWhereNotTerm($column, $value, $options);
     }
 
-    /**
-     * Check if a field exists (has indexed value).
-     * https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-exists-query.html
-     */
+    // ----------------------------------------------------------------------
+    // Term Exists Query - check if a field has an indexed value
+    // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-exists-query.html
+    // ----------------------------------------------------------------------
+
     public function whereTermExists($column, $boolean = 'and', $not = false): self
     {
         $this->wheres[] = [
@@ -100,11 +121,7 @@ trait BuildsFieldQueries
 
     public function whereMatch($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
-        $type = 'Match';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Match', $column, $value, $boolean, $not, $options);
     }
 
     public function orWhereMatch(string $column, $value, $options = []): self
@@ -129,11 +146,7 @@ trait BuildsFieldQueries
 
     public function wherePhrase($column, $value, $boolean = 'and', $not = false, $options = [])
     {
-        $type = 'Phrase';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Phrase', $column, $value, $boolean, $not, $options);
     }
 
     public function orWherePhrase($column, $value, $options = [])
@@ -158,11 +171,7 @@ trait BuildsFieldQueries
 
     public function wherePhrasePrefix($column, $value, $boolean = 'and', $not = false, $options = [])
     {
-        $type = 'PhrasePrefix';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('PhrasePrefix', $column, $value, $boolean, $not, $options);
     }
 
     public function orWherePhrasePrefix($column, $value, $options = [])
@@ -187,11 +196,7 @@ trait BuildsFieldQueries
 
     public function whereFuzzy($column, $value, $boolean = 'and', $not = false, $options = []): self
     {
-        $type = 'Fuzzy';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Fuzzy', $column, $value, $boolean, $not, $options);
     }
 
     public function orWhereFuzzy(string $column, $value, array $options = []): self
@@ -216,11 +221,7 @@ trait BuildsFieldQueries
 
     public function whereStartsWith($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
-        $type = 'Prefix';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Prefix', $column, $value, $boolean, $not, $options);
     }
 
     public function orWhereStartsWith($column, string $value, $options = []): self
@@ -238,25 +239,28 @@ trait BuildsFieldQueries
         return $this->whereStartsWith($column, $value, 'or', true, $options);
     }
 
-    // Aliases for whereStartsWith
+    /** @see whereStartsWith() */
     public function wherePrefix($column, string $value, $boolean = 'and', $not = false, $options = []): self
     {
         return $this->whereStartsWith($column, $value, $boolean, $not, $options);
     }
 
+    /** @see orWhereStartsWith() */
     public function orWherePrefix($column, string $value, $options = []): self
     {
-        return $this->whereStartsWith($column, $value, 'or', false, $options);
+        return $this->orWhereStartsWith($column, $value, $options);
     }
 
+    /** @see whereNotStartsWith() */
     public function whereNotPrefix($column, string $value, $options = []): self
     {
-        return $this->whereStartsWith($column, $value, 'and', true, $options);
+        return $this->whereNotStartsWith($column, $value, $options);
     }
 
+    /** @see orWhereNotStartsWith() */
     public function orWhereNotPrefix($column, string $value, $options = []): self
     {
-        return $this->whereStartsWith($column, $value, 'or', true, $options);
+        return $this->orWhereNotStartsWith($column, $value, $options);
     }
 
     // ----------------------------------------------------------------------
@@ -266,11 +270,7 @@ trait BuildsFieldQueries
 
     public function whereRegex($column, string $value, $boolean = 'and', bool $not = false, array $options = []): self
     {
-        $type = 'Regex';
-        [$column, $value, $not, $boolean, $options] = $this->extractOptionsWithNot($type, $column, $value, $boolean, $not, $options);
-        $this->wheres[] = compact('column', 'value', 'type', 'boolean', 'not', 'options');
-
-        return $this;
+        return $this->addFieldQuery('Regex', $column, $value, $boolean, $not, $options);
     }
 
     public function orWhereRegex($column, string $value, array $options = []): self

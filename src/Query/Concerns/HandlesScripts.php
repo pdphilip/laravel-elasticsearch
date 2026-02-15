@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Query\Concerns;
 
 use InvalidArgumentException;
+use PDPhilip\Elasticsearch\Query\Builder;
 
 /**
  * Handles script-based operations for Elasticsearch queries.
@@ -12,7 +13,7 @@ use InvalidArgumentException;
  * @property array $scripts
  * @property array $wheres
  *
- * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ * @mixin Builder
  */
 trait HandlesScripts
 {

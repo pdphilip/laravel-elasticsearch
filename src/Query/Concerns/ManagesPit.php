@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query\Concerns;
 
+use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
+use PDPhilip\Elasticsearch\Query\Builder;
+use PDPhilip\Elasticsearch\Query\Grammar\Grammar;
 
 /**
  * Manages Point In Time (PIT) API operations for Elasticsearch queries.
  *
- * @property \PDPhilip\Elasticsearch\Connection $connection
- * @property \PDPhilip\Elasticsearch\Query\Grammar\Grammar $grammar
+ * @property Connection $connection
+ * @property Grammar $grammar
  * @property mixed $pitId
  * @property string $keepAlive
  * @property mixed $searchAfter
  * @property array $cursorMeta
  *
- * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ * @mixin Builder
  */
 trait ManagesPit
 {

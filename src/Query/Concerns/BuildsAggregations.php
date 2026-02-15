@@ -6,15 +6,18 @@ namespace PDPhilip\Elasticsearch\Query\Concerns;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
+use PDPhilip\Elasticsearch\Query\Grammar\Grammar;
+use PDPhilip\Elasticsearch\Query\Processor\Processor;
 use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 /**
  * Builds aggregation queries for Elasticsearch.
  *
- * @property \PDPhilip\Elasticsearch\Connection $connection
- * @property \PDPhilip\Elasticsearch\Query\Grammar\Grammar $grammar
- * @property \PDPhilip\Elasticsearch\Query\Processor\Processor $processor
+ * @property Connection $connection
+ * @property Grammar $grammar
+ * @property Processor $processor
  * @property array $bucketAggregations
  * @property array $metricsAggregations
  * @property mixed $asDsl
