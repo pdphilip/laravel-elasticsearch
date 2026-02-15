@@ -12,8 +12,6 @@ use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
-use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
-use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Exception;
 use Generator;
@@ -279,7 +277,7 @@ class Connection extends BaseConnection
      */
     public function getClientInfo(): array
     {
-        return $this->elastic()->info()->asArray();
+        return $this->connection->info();
     }
 
     /**
@@ -288,7 +286,7 @@ class Connection extends BaseConnection
      */
     public function getLicenseInfo(): array
     {
-        $license = $this->elastic()->license()->get()->asArray();
+        $license = $this->connection->getLicense();
         if (! empty($license['license'])) {
             return $license['license'];
         }
@@ -416,9 +414,55 @@ class Connection extends BaseConnection
         return $this->connection->getFieldMapping($index, $fields);
     }
 
-    public function getMappings($index): array
+    public function getMappings(string|array $index): array
     {
         return $this->connection->getMappings($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function catIndices(array $params): array
+    {
+        return $this->connection->catIndices($params);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function indexExists(string $index): bool
+    {
+        return $this->connection->indexExists($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getIndex(string|array $index): array
+    {
+        return $this->connection->getIndex($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getIndexSettings(string|array $index): array
+    {
+        return $this->connection->getIndexSettings($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function reindex(array $params): array
+    {
+        return $this->connection->reindex($params);
     }
 
     public function indices(): Indices
@@ -468,7 +512,7 @@ class Connection extends BaseConnection
             'body' => $query['body'],
         ];
 
-        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $pages = $this->connection->createSearchResponseIterator($scrollParams);
         foreach ($pages as $page) {
             yield $page;
         }
@@ -497,8 +541,8 @@ class Connection extends BaseConnection
         ];
 
         $count = 0;
-        $pages = new SearchResponseIterator($this->elastic(), $scrollParams);
-        $hits = new SearchHitIterator($pages);
+        $pages = $this->connection->createSearchResponseIterator($scrollParams);
+        $hits = $this->connection->createSearchHitIterator($pages);
 
         foreach ($hits as $hit) {
             $count++;

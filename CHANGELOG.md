@@ -2,6 +2,23 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.4.0 - 2026-02-15
+
+### Added
+- `TimeOrderedUUIDGenerator` — sortable 20-character IDs where lexicographic order matches chronological order across processes (millisecond granularity)
+- `GeneratesTimeOrderedIds` trait with `getRecordTimestamp()` and `getRecordDate()` helpers — safe for mixed datasets (returns null for pre-existing non-time-ordered IDs)
+- New test coverage: advanced aggregations, filter context queries, DSL output inspection, point-in-time pagination, multi-match search, time-ordered IDs
+
+### Changed
+- Refactored Query Builder into focused concerns: `BuildsAggregations`, `BuildsSearchQueries`, `BuildsFieldQueries`, `BuildsGeoQueries`, `BuildsNestedQueries`, `HandlesScripts`, `ManagesPit`
+- Refactored Grammar into concerns: `CompilesAggregations`, `CompilesOrders`, `CompilesWheres`, `FieldUtilities`
+- Added `declare(strict_types=1)` to all ID generation classes and traits
+- Consolidated test ID strategy into `TestsWithIdStrategies` trait (removed duplicate `WithIds/` and `IdGenerated/` directories)
+
+### Fixed
+- `id` is now always present in serialized model output
+- Removed dead debug code from Connection.php
+
 ## v5.3.0 - 2026-01-20
 
 This release is compatible with Laravel 10, 11 & 12
