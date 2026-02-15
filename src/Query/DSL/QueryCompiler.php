@@ -35,12 +35,14 @@ class QueryCompiler
         $this->_attachMustNot($clause);
     }
 
-    public function setResult($clause, $isOr, $isNot)
+    public function setResult($clause, $isOr, $isNot): void
     {
-        $type = $isOr ? 'Or' : 'And';
-        $suffix = $isNot ? 'Not' : '';
-        $method = 'set'.$type.$suffix;
-        $this->$method($clause);
+        match (true) {
+            $isOr && $isNot => $this->setOrNot($clause),
+            $isOr => $this->setOr($clause),
+            $isNot => $this->setAndNot($clause),
+            default => $this->setAnd($clause),
+        };
     }
 
     public function compileQuery()

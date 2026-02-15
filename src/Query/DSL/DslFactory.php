@@ -134,18 +134,6 @@ class DslFactory
         ];
     }
 
-    //    public static function term(string $field, $value, array $options = []): array
-    //    {
-    //        return [
-    //            'term' => [
-    //                $field => array_merge(
-    //                    ['value' => (string) $value],
-    //                    $options
-    //                ),
-    //            ],
-    //        ];
-    //    }
-
     public static function multiMatch(string $value, array $options = []): array
     {
         return [

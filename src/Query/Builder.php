@@ -88,11 +88,6 @@ class Builder extends BaseBuilder
     /** @var bool */
     public $includeInnerHits;
 
-    /**
-     * {@inheritdoc}
-     */
-    //    public $limit = ;
-
     public array $sorts = [];
 
     public array $bodyParameters = [];
@@ -712,12 +707,7 @@ class Builder extends BaseBuilder
      */
     public function count($columns = null, array $options = []): int|array
     {
-        // If columns are specified, we will aggregate the count of the specified columns.
-        //        if ($columns) {
-        //            return $this->aggregate(__FUNCTION__, Arr::wrap($columns), $options);
-        //        }
-
-        // Otherwise, we will just count the records.
+        // Count all matching records.
         if ($this->asDsl) {
             return $this->grammar->compileCount($this);
         }
@@ -1269,7 +1259,7 @@ class Builder extends BaseBuilder
         try {
             return (string) Carbon::parse($value)->timestamp;
         } catch (Exception $e) {
-
+            // Fall through to throw LogicException below
         }
         throw new LogicException('Invalid date or timestamp');
     }

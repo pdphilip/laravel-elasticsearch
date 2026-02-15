@@ -171,7 +171,7 @@ trait ManagesOptions
 
                 return $options->toArray();
             } catch (Exception $e) {
-                // ignore and return empty array
+                // Callable didn't match expected option signature — return empty options
                 return [];
             }
 

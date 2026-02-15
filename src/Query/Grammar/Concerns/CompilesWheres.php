@@ -78,6 +78,9 @@ trait CompilesWheres
 
             // Route to the appropriate compiler
             $method = 'compileWhere'.$where['type'];
+            if (! method_exists($this, $method)) {
+                throw new BuilderException("Unsupported where type: {$where['type']}");
+            }
             $result = $this->{$method}($builder, $where);
             $dslCompiler->setResult($result, $isOr, $isNot);
         }

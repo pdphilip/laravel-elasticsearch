@@ -184,6 +184,7 @@ class Builder extends BaseBuilder
                 $this->drop($table);
             }
         } catch (Exception $e) {
+            // Silently ignore — the intent is "drop if it exists, otherwise do nothing"
         }
     }
 
@@ -301,33 +302,48 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
 
     /**
-     * Run a reindex statement against the database.
+     * @deprecated v5.0.0 Use table() instead.
      */
     public function modify($index, Closure $callback): void
     {
         $this->table($index, $callback);
     }
 
+    /**
+     * @deprecated v5.0.0 Use drop() instead.
+     */
     public function delete($index): void
     {
         $this->drop($index);
     }
 
+    /**
+     * @deprecated v5.0.0 Use dropIfExists() instead.
+     */
     public function deleteIfExists($index): void
     {
         $this->dropIfExists($index);
     }
 
+    /**
+     * @deprecated v5.0.0 Use table() instead.
+     */
     public function setAnalyser($index, Closure $callback): void
     {
         $this->table($index, $callback);
     }
 
+    /**
+     * @deprecated v5.0.0 Use hasColumn() instead.
+     */
     public function hasField($index, $field): bool
     {
         return $this->hasColumn($index, $field);
     }
 
+    /**
+     * @deprecated v5.0.0 Use hasColumns() instead.
+     */
     public function hasFields($index, $fields): bool
     {
         return $this->hasColumns($index, $fields);

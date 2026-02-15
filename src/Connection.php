@@ -124,7 +124,7 @@ class Connection extends BaseConnection
                     'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
                     'logging' => false,
                     'ssl_verification' => true,
-                    'retires' => null,
+                    'retries' => null,
                     'meta_header' => null,
                     'default_limit' => null,
                     'allow_id_sort' => false,
@@ -168,8 +168,9 @@ class Connection extends BaseConnection
             $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
 
-        if (! empty($this->config['options']['retires'])) {
-            $this->options()->add('retires', (int) $this->config['options']['retires']);
+        $retries = $this->config['options']['retries'] ?? $this->config['options']['retires'] ?? null;
+        if (! empty($retries)) {
+            $this->options()->add('retries', (int) $retries);
         }
 
         if (isset($this->config['options']['meta_header'])) {
@@ -230,7 +231,7 @@ class Connection extends BaseConnection
             $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
         }
 
-        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retires', 3));
+        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retries', 3));
 
         if ($this->config['options']['logging']) {
             $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
