@@ -1076,7 +1076,7 @@ class Builder extends BaseBuilder
 
     public function getDefaultLimit(): ?int
     {
-        return $this->options()->get('default_limit', $this->limit) ?? null;
+        return $this->options()->get(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_DEFAULT_LIMIT, $this->limit) ?? null;
     }
 
     protected function hasProcessedSelect(): bool

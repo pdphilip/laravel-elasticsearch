@@ -79,7 +79,7 @@ class Grammar extends BaseGrammar
             }
 
             // ID handling - don't store in doc unless explicitly configured
-            if ($query->getOption('store_ids_in_document', false)) {
+            if ($query->getOption(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_STORE_IDS, false)) {
                 $doc['id'] = $docId;
                 unset($doc['_id']);
             } else {

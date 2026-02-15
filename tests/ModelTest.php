@@ -671,3 +671,18 @@ it('tests _id is still accessible for backwards compatibility', function () {
         ->and($raw['_id'])->toBe($originalId)
         ->and($raw)->not->toHaveKey('id'); // 'id' should NOT be stored, only added in toArray()
 });
+
+it('propagates queryFieldMap to query builder', function () {
+    $user = new User;
+
+    // Verify queryFieldMap is passed to query builder as OPTION_MAPPING_MAP
+    $query = $user->newQuery()->getQuery();
+    $map = $query->options()->get(Model::OPTION_MAPPING_MAP);
+    expect($map)->toBe(['title' => 'title.keyword']);
+
+    // Verify it also works on instances created via newInstance (firstOrCreate, replicate, etc.)
+    $clone = $user->newInstance(['name' => 'Clone']);
+    $cloneQuery = $clone->newQuery()->getQuery();
+    $cloneMap = $cloneQuery->options()->get(Model::OPTION_MAPPING_MAP);
+    expect($cloneMap)->toBe(['title' => 'title.keyword']);
+});

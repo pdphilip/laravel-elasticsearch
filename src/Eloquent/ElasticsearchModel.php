@@ -27,7 +27,7 @@ use PDPhilip\Elasticsearch\Traits\HasOptions;
  */
 trait ElasticsearchModel
 {
-    use HasOptions, HybridRelations, ModelDocs;
+    use HasHighlights, HasOptions, HybridRelations, ModelDocs;
 
     protected ?ModelMeta $_meta;
 
@@ -81,48 +81,6 @@ trait ElasticsearchModel
     }
 
     // ----------------------------------------------------------------------
-    // Highlights
-    // ----------------------------------------------------------------------
-
-    public function getHighlights()
-    {
-        return $this->getMeta()->getHighlights();
-    }
-
-    public function getHighlight($column, $deliminator = '')
-    {
-        return $this->getMeta()->getHighlight($column);
-    }
-
-    public function getSearchHighlightsAttribute(): ?object
-    {
-        return $this->getMeta()->parseHighlights();
-    }
-
-    public function getSearchHighlightsAsArrayAttribute(): array
-    {
-        return $this->getHighlights();
-    }
-
-    public function getWithHighlightsAttribute(): object
-    {
-        $data = $this->attributes;
-        $mutators = array_values(array_diff($this->getMutatedAttributes(), [
-            'id',
-            'search_highlights',
-            'search_highlights_as_array',
-            'with_highlights',
-        ]));
-        if ($mutators) {
-            foreach ($mutators as $mutator) {
-                $data[$mutator] = $this->{$mutator};
-            }
-        }
-
-        return (object) $this->getMeta()->parseHighlights($data);
-    }
-
-    // ----------------------------------------------------------------------
     // Elastic Model Extensions
     // ----------------------------------------------------------------------
     /**
@@ -166,7 +124,11 @@ trait ElasticsearchModel
 
         // Since newBaseQueryBuilder is used whenever a new Query builder is needed
         // we hook in to it to pass options we have set at the model level to the query builder.
-        $query->options()->merge($this->options()->all(), ['mapping_map' => $this->queryFieldMap, 'default_limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
+        $query->options()->merge($this->options()->all(), [
+            Model::OPTION_MAPPING_MAP => $this->queryFieldMap,
+            Model::OPTION_DEFAULT_LIMIT => $this->defaultLimit,
+            Model::OPTION_STORE_IDS => $this->storeIdInDocument,
+        ]);
 
         return $query;
     }
@@ -177,7 +139,11 @@ trait ElasticsearchModel
     public function newInstance($attributes = [], $exists = false)
     {
         $model = parent::newInstance($attributes, $exists);
-        $model->options()->merge($this->options()->all(), ['mappings' => $this->queryFieldMap, 'default_limit' => $this->defaultLimit, 'store_ids_in_document' => $this->storeIdInDocument]);
+        $model->options()->merge($this->options()->all(), [
+            Model::OPTION_MAPPING_MAP => $this->queryFieldMap,
+            Model::OPTION_DEFAULT_LIMIT => $this->defaultLimit,
+            Model::OPTION_STORE_IDS => $this->storeIdInDocument,
+        ]);
 
         return $model;
     }
@@ -433,6 +399,9 @@ trait ElasticsearchModel
     /**
      * Get the database connection instance.
      *
+     * Clones the shared connection to isolate per-model state (e.g. index prefix
+     * overrides via overridePrefix()). Without the clone, mutations to the connection
+     * would leak across all models sharing the same connection name.
      *
      * @throws RuntimeException
      */
@@ -502,43 +471,49 @@ trait ElasticsearchModel
      */
     protected function performInsert(Builder $query): bool
     {
-        // via @inheritDoc
         if ($this->usesUniqueIds()) {
             $this->setUniqueIds();
         }
 
-        // via @inheritDoc
         if ($this->fireModelEvent('creating') === false) {
             return false;
         }
 
-        // via @inheritDoc
         if ($this->usesTimestamps()) {
             $this->updateTimestamps();
         }
 
-        $attributes = $this->getAttributesForInsert();
-        // If the model doesn't have an id, get from ES
-        if (empty($attributes['id'])) {
-            $this->insertAndSetId($query, $attributes);
-        }
+        $this->executeInsert($query);
 
-        // Else insert with all attributes
-        else {
-            // @phpstan-ignore-next-line
-            if (empty($attributes)) {
-                return true;
-            }
-            $query->insert($attributes);
-        }
-
-        // via @inheritDoc
         $this->exists = true;
-
         $this->wasRecentlyCreated = true;
 
         $this->fireModelEvent('created', false);
 
         return true;
+    }
+
+    /**
+     * Execute the insert against Elasticsearch.
+     *
+     * If the model has no ID, lets ES generate one via insertAndSetId.
+     * Otherwise, inserts the full attribute set including the provided ID.
+     */
+    protected function executeInsert(Builder $query): void
+    {
+        $attributes = $this->getAttributesForInsert();
+
+        if (empty($attributes['id'])) {
+            $this->insertAndSetId($query, $attributes);
+
+            return;
+        }
+
+        // @phpstan-ignore-next-line
+        if (empty($attributes)) {
+            return;
+        }
+
+        $query->insert($attributes);
     }
 }

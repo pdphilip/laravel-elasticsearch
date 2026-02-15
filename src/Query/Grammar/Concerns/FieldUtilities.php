@@ -91,7 +91,7 @@ trait FieldUtilities
         }
 
         // Check for explicit field mapping override
-        if (! empty($queryFieldMap = $builder->options()->get('mapping_map')) && ! empty($queryFieldMap[$textField])) {
+        if (! empty($queryFieldMap = $builder->options()->get(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_MAPPING_MAP)) && ! empty($queryFieldMap[$textField])) {
             return $queryFieldMap[$textField];
         }
 

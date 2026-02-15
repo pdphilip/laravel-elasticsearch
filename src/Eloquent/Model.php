@@ -16,6 +16,13 @@ abstract class Model extends BaseModel
 {
     use ElasticsearchModel;
 
+    /** @internal Option keys passed to the query builder */
+    const OPTION_MAPPING_MAP = 'mapping_map';
+
+    const OPTION_DEFAULT_LIMIT = 'default_limit';
+
+    const OPTION_STORE_IDS = 'store_ids_in_document';
+
     protected $keyType = 'string';
 
     private static array $documentModelClasses = [];
