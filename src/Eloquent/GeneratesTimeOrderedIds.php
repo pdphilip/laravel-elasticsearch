@@ -42,6 +42,10 @@ trait GeneratesTimeOrderedIds
 
     public function getRecordTimestamp(): ?int
     {
+        if (empty($this->id)) {
+            return null;
+        }
+
         return TimeOrderedUUIDGenerator::extractTimestamp($this->id);
     }
 

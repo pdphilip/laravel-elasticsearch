@@ -1,5 +1,8 @@
 {
     "preset": "laravel",
+    "exclude": [
+        "labs"
+    ],
     "rules": {
     }
 }
