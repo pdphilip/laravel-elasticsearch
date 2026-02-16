@@ -27,28 +27,38 @@ class MorphToMany extends EloquentMorphToMany
             $ids = $this->getKeys($models, $this->table);
             $ids = $this->extractIds($ids[0] ?? []);
             $this->query->whereIn($this->relatedKey, $ids);
-        } else {
-            parent::addEagerConstraints($models);
-            $this->query->where($this->qualifyPivotColumn($this->morphType), $this->morphClass);
+
+            return;
         }
+
+        // Non-inverse: standard eager constraints with morph type filter
+        parent::addEagerConstraints($models);
+        $this->query->where($this->qualifyPivotColumn($this->morphType), $this->morphClass);
     }
 
     protected function setWhere()
     {
-        if ($this->getInverse()) {
-            if ($this->isElasticParent()) {
-                $ids = $this->extractIds((array) $this->parent->{$this->table});
-                $this->query->whereIn($this->relatedKey, $ids);
-            } else {
-                $this->query->whereIn($this->foreignPivotKey, (array) $this->parent->{$this->parentKey});
-            }
-        } else {
-            if ($this->isElasticParent()) {
-                $this->query->whereIn($this->relatedKey, (array) $this->parent->{$this->relatedPivotKey});
-            } else {
-                $this->query->whereIn($this->getQualifiedForeignPivotKeyName(), (array) $this->parent->{$this->parentKey});
-            }
+        if ($this->getInverse() && $this->isElasticParent()) {
+            $ids = $this->extractIds((array) $this->parent->{$this->table});
+            $this->query->whereIn($this->relatedKey, $ids);
+
+            return $this;
         }
+
+        if ($this->getInverse()) {
+            $this->query->whereIn($this->foreignPivotKey, (array) $this->parent->{$this->parentKey});
+
+            return $this;
+        }
+
+        if ($this->isElasticParent()) {
+            $this->query->whereIn($this->relatedKey, (array) $this->parent->{$this->relatedPivotKey});
+
+            return $this;
+        }
+
+        // SQL parent, non-inverse
+        $this->query->whereIn($this->getQualifiedForeignPivotKeyName(), (array) $this->parent->{$this->parentKey});
 
         return $this;
     }
@@ -153,47 +163,47 @@ class MorphToMany extends EloquentMorphToMany
      */
     private function attachIdsToParent(array $ids): void
     {
-        if ($this->getInverse()) {
-            $morphClass = $this->related instanceof Model ? $this->related->getMorphClass() : null;
+        if (! $this->isElasticParent()) {
+            foreach ($ids as $id) {
+                $this->addIdToParentRelationData($id);
+            }
 
-            if ($this->isElasticParent()) {
-                foreach ($ids as $id) {
-                    $this->parent->push($this->table, [
-                        $this->buildMorphEntry($this->relatedPivotKey, $id, $morphClass),
-                    ], true);
-                }
-            } else {
-                foreach ($ids as $id) {
-                    $this->addIdToParentRelationData($id);
-                }
-            }
-        } else {
-            if ($this->isElasticParent()) {
-                $this->parent->push($this->relatedPivotKey, $ids, true);
-            } else {
-                foreach ($ids as $id) {
-                    $this->addIdToParentRelationData($id);
-                }
-            }
+            return;
+        }
+
+        if (! $this->getInverse()) {
+            $this->parent->push($this->relatedPivotKey, $ids, true);
+
+            return;
+        }
+
+        $morphClass = $this->related instanceof Model ? $this->related->getMorphClass() : null;
+        foreach ($ids as $id) {
+            $this->parent->push($this->table, [
+                $this->buildMorphEntry($this->relatedPivotKey, $id, $morphClass),
+            ], true);
         }
     }
 
     /**
      * Push parent reference onto a single related model instance.
      *
-     * Inverse:     related stores flat parent IDs in foreignPivotKey
+     * Inverse: related stores flat parent IDs in foreignPivotKey
      * Non-inverse: related stores morph entries in $this->table
      */
     private function attachParentToRelatedModel(Model $model): void
     {
         if ($this->getInverse()) {
             $model->push($this->foreignPivotKey, (array) $this->parent->{$this->parentKey}, true);
-        } else {
-            $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
-            $model->push($this->table, [
-                $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
-            ], true);
+
+            return;
         }
+
+        // Non-inverse: store morph entry on related
+        $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
+        $model->push($this->table, [
+            $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
+        ], true);
     }
 
     /**
@@ -205,12 +215,15 @@ class MorphToMany extends EloquentMorphToMany
     {
         if ($this->getInverse()) {
             $query->push($this->foreignPivotKey, $this->parent->{$this->parentKey});
-        } else {
-            $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
-            $query->push($this->table, [
-                $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
-            ], true);
+
+            return;
         }
+
+        // Non-inverse: store morph entry on related
+        $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
+        $query->push($this->table, [
+            $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
+        ], true);
     }
 
     // ------------------------------------------------------------------
@@ -220,47 +233,51 @@ class MorphToMany extends EloquentMorphToMany
     /**
      * Remove related IDs from the parent model.
      *
-     * Inverse:     removes morph entries from $this->table
+     * Inverse: removes morph entries from $this->table
      * Non-inverse: removes flat IDs from $this->relatedPivotKey
      */
     private function detachIdsFromParent(array $ids): void
     {
-        if ($this->getInverse()) {
-            $data = array_map(fn ($item) => $this->buildMorphEntry(
-                $this->relatedPivotKey, $item, $this->related->getMorphClass()
-            ), $ids);
+        if (! $this->getInverse()) {
+            $this->isElasticParent()
+                ? $this->parent->pull($this->relatedPivotKey, $ids)
+                : $this->removeIdsFromParentRelationData($ids);
 
-            if ($this->isElasticParent()) {
-                $this->parent->pull($this->table, $data);
-            } else {
-                $this->removeIdsFromParentRelationData($this->extractIds($data));
-            }
-        } else {
-            if ($this->isElasticParent()) {
-                $this->parent->pull($this->relatedPivotKey, $ids);
-            } else {
-                $this->removeIdsFromParentRelationData($ids);
-            }
+            return;
         }
+
+        $morphEntries = [];
+        foreach ($ids as $id) {
+            $morphEntries[] = $this->buildMorphEntry(
+                $this->relatedPivotKey, $id, $this->related->getMorphClass()
+            );
+        }
+
+        $this->isElasticParent()
+            ? $this->parent->pull($this->table, $morphEntries)
+            : $this->removeIdsFromParentRelationData($this->extractIds($morphEntries));
     }
 
     /**
      * Remove parent reference from the related models.
      *
-     * Inverse:     removes flat parent ID from foreignPivotKey
+     * Inverse: removes flat parent ID from foreignPivotKey
      * Non-inverse: removes morph entry from $this->table
      */
     private function detachParentFromRelated($query): void
     {
         if ($this->getInverse()) {
             $query->pull($this->foreignPivotKey, $this->parent->{$this->parentKey});
-        } else {
-            $query->pull($this->table, [
-                $this->buildMorphEntry(
-                    $this->foreignPivotKey, $this->parent->{$this->parentKey}, $this->parent->getMorphClass()
-                ),
-            ]);
+
+            return;
         }
+
+        // Non-inverse: remove morph entry from related
+        $query->pull($this->table, [
+            $this->buildMorphEntry(
+                $this->foreignPivotKey, $this->parent->{$this->parentKey}, $this->parent->getMorphClass()
+            ),
+        ]);
     }
 
     // ------------------------------------------------------------------
@@ -291,15 +308,12 @@ class MorphToMany extends EloquentMorphToMany
         $dictionary = [];
 
         foreach ($results as $result) {
-            if ($this->getInverse()) {
-                foreach ($result->$foreign as $item) {
-                    $dictionary[$item][] = $result;
-                }
-            } else {
-                $items = $this->extractIds($result->{$this->table} ?? [], $foreign);
-                foreach ($items as $item) {
-                    $dictionary[$item][] = $result;
-                }
+            $items = $this->getInverse()
+                ? $result->$foreign
+                : $this->extractIds($result->{$this->table} ?? [], $foreign);
+
+            foreach ($items as $item) {
+                $dictionary[$item][] = $result;
             }
         }
 
@@ -308,14 +322,15 @@ class MorphToMany extends EloquentMorphToMany
 
     public function extractIds(array $data, ?string $relatedPivotKey = null)
     {
-        $relatedPivotKey = $relatedPivotKey ?: $this->relatedPivotKey;
+        $key = $relatedPivotKey ?: $this->relatedPivotKey;
+        $ids = [];
 
-        return array_reduce($data, function ($carry, $item) use ($relatedPivotKey) {
-            if (is_array($item) && array_key_exists($relatedPivotKey, $item)) {
-                $carry[] = $item[$relatedPivotKey];
+        foreach ($data as $item) {
+            if (is_array($item) && array_key_exists($key, $item)) {
+                $ids[] = $item[$key];
             }
+        }
 
-            return $carry;
-        }, []);
+        return $ids;
     }
 }

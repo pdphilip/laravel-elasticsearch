@@ -71,11 +71,9 @@ class BelongsToMany extends EloquentBelongsToMany
             $query->push($this->foreignPivotKey, $this->parent->{$this->parentKey}, true);
         }
 
-        if ($this->isElasticParent()) {
-            $this->parent->push($this->relatedPivotKey, (array) $id, true);
-        } else {
-            $this->addIdToParentRelationData($id);
-        }
+        $this->isElasticParent()
+            ? $this->parent->push($this->relatedPivotKey, (array) $id, true)
+            : $this->addIdToParentRelationData($id);
 
         if ($touch) {
             $this->touchIfTouching();
@@ -90,11 +88,9 @@ class BelongsToMany extends EloquentBelongsToMany
 
         $ids = (array) $ids;
 
-        if ($this->isElasticParent()) {
-            $this->parent->pull($this->relatedPivotKey, $ids);
-        } else {
-            $this->removeIdsFromParentRelationData($ids);
-        }
+        $this->isElasticParent()
+            ? $this->parent->pull($this->relatedPivotKey, $ids)
+            : $this->removeIdsFromParentRelationData($ids);
 
         $query = $this->newRelatedQuery();
         if (count($ids) > 0) {

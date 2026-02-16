@@ -89,15 +89,20 @@ trait QueriesRelationships
         }
 
         $relations = match (true) {
-            $relation instanceof MorphToMany => $relation->getInverse() ?
-                $this->handleMorphedByMany($hasQuery, $relation) :
-                $this->handleMorphToMany($hasQuery, $relation),
-            default => $this->handleDefaultForeignIdsLookup($hasQuery, $relation)
+            $relation instanceof MorphToMany => $this->handleMorphMany($hasQuery, $relation),
+            default => $this->handleDefaultForeignIdsLookup($hasQuery, $relation),
         };
 
         $relatedIds = $this->getConstrainedRelatedIds($relations, $operator, $count);
 
         return $this->whereIn($this->getRelatedConstraintKey($relation), $relatedIds, $boolean, $not);
+    }
+
+    private function handleMorphMany($hasQuery, MorphToMany $relation)
+    {
+        return $relation->getInverse()
+            ? $this->handleMorphedByMany($hasQuery, $relation)
+            : $this->handleMorphToMany($hasQuery, $relation);
     }
 
     private function handleDefaultForeignIdsLookup($query, $relation)
@@ -142,35 +147,38 @@ trait QueriesRelationships
             return $relation->getHasCompareKey();
         }
 
-        return $relation instanceof HasOneOrMany ? $relation->getForeignKeyName() : $relation->getOwnerKeyName();
+        if ($relation instanceof HasOneOrMany) {
+            return $relation->getForeignKeyName();
+        }
+
+        return $relation->getOwnerKeyName();
     }
 
     protected function getConstrainedRelatedIds($relations, $operator, $count): array
     {
-        $relationCount = array_count_values(array_map(function ($id) {
-            return (string) $id; // Convert Back ObjectIds to Strings
-        }, is_array($relations) ? $relations : $relations->flatten()->toArray()));
-        // Remove unwanted related objects based on the operator and count.
-        $relationCount = array_filter($relationCount, function ($counted) use ($count, $operator) {
-            // If we are comparing to 0, we always need all results.
-            if ($count == 0) {
-                return true;
-            }
-            switch ($operator) {
-                case '>=':
-                case '<':
-                    return $counted >= $count;
-                case '>':
-                case '<=':
-                    return $counted > $count;
-                case '=':
-                case '!=':
-                    return $counted == $count;
-            }
-        });
+        $ids = is_array($relations) ? $relations : $relations->flatten()->toArray();
 
-        // All related ids.
-        return array_keys($relationCount);
+        $countById = [];
+        foreach ($ids as $id) {
+            $id = (string) $id;
+            $countById[$id] = ($countById[$id] ?? 0) + 1;
+        }
+
+        if ($count > 0) {
+            $countById = array_filter($countById, fn ($counted) => $this->meetsCountConstraint($counted, $operator, $count));
+        }
+
+        return array_keys($countById);
+    }
+
+    private function meetsCountConstraint(int $counted, string $operator, int $count): bool
+    {
+        return match ($operator) {
+            '>=', '<' => $counted >= $count,
+            '>', '<=' => $counted > $count,
+            '=', '!=' => $counted == $count,
+            default => false,
+        };
     }
 
     /**
