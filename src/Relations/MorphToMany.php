@@ -4,295 +4,112 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Relations;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany as EloquentMorphToMany;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Relations\Traits\InteractsWithPivotTable;
-
-use function array_diff;
-use function array_key_exists;
-use function array_keys;
-use function array_map;
-use function array_merge;
-use function array_reduce;
-use function array_values;
-use function collect;
-use function count;
-use function in_array;
-use function is_array;
-use function is_numeric;
+use PDPhilip\Elasticsearch\Relations\Traits\ManagesManyToMany;
 
 class MorphToMany extends EloquentMorphToMany
 {
     use InteractsWithPivotTable;
+    use ManagesManyToMany;
     use ManagesRefresh;
 
-    /** {@inheritdoc} */
-    public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])
-    {
-        return $query;
-    }
+    // ------------------------------------------------------------------
+    // Constraint & sync hooks
+    // ------------------------------------------------------------------
 
-    /** {@inheritdoc} */
-    protected function hydratePivotRelation(array $models)
-    {
-        // Do nothing.
-    }
-
-    /** {@inheritdoc} */
-    protected function shouldSelect(array $columns = ['*'])
-    {
-        return $columns;
-    }
-
-    /** {@inheritdoc} */
-    public function addConstraints()
-    {
-        if (static::$constraints) {
-            $this->setWhere();
-        }
-    }
-
-    /** {@inheritdoc} */
     public function addEagerConstraints(array $models)
     {
-        // To load relation's data, we act normally on MorphToMany relation,
-        // But on MorphedByMany relation, we collect related ids from pivot column
-        // and add to a whereIn condition
         if ($this->getInverse()) {
             $ids = $this->getKeys($models, $this->table);
             $ids = $this->extractIds($ids[0] ?? []);
             $this->query->whereIn($this->relatedKey, $ids);
         } else {
             parent::addEagerConstraints($models);
-
             $this->query->where($this->qualifyPivotColumn($this->morphType), $this->morphClass);
         }
     }
 
-    /**
-     * Set the where clause for the relation query.
-     *
-     * @return $this
-     */
     protected function setWhere()
     {
         if ($this->getInverse()) {
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
+            if ($this->isElasticParent()) {
                 $ids = $this->extractIds((array) $this->parent->{$this->table});
-
                 $this->query->whereIn($this->relatedKey, $ids);
             } else {
-                $this->query
-                    ->whereIn($this->foreignPivotKey, (array) $this->parent->{$this->parentKey});
+                $this->query->whereIn($this->foreignPivotKey, (array) $this->parent->{$this->parentKey});
             }
         } else {
-            match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                true => $this->query->whereIn($this->relatedKey, (array) $this->parent->{$this->relatedPivotKey}),
-                false => $this->query
-                    ->whereIn($this->getQualifiedForeignPivotKeyName(), (array) $this->parent->{$this->parentKey}),
-            };
+            if ($this->isElasticParent()) {
+                $this->query->whereIn($this->relatedKey, (array) $this->parent->{$this->relatedPivotKey});
+            } else {
+                $this->query->whereIn($this->getQualifiedForeignPivotKeyName(), (array) $this->parent->{$this->parentKey});
+            }
         }
 
         return $this;
     }
 
-    /** {@inheritdoc} */
-    public function save(Model $model, array $pivotAttributes = [], $touch = true)
+    protected function getCurrentSyncIds(): array
     {
-        $model->save(['touch' => false]);
-
-        $this->attach($model, $pivotAttributes, $touch);
-
-        return $model;
-    }
-
-    /** {@inheritdoc} */
-    public function create(array $attributes = [], array $joining = [], $touch = true)
-    {
-        $instance = $this->related->newInstance($attributes);
-
-        // Once we save the related model, we need to attach it to the base model via
-        // through intermediate table so we'll use the existing "attach" method to
-        // accomplish this which will insert the record and any more attributes.
-        $instance->save(['touch' => false]);
-
-        $this->attach($instance, $joining, $touch);
-
-        return $instance;
-    }
-
-    /** {@inheritdoc} */
-    public function sync($ids, $detaching = true)
-    {
-        $changes = [
-            'attached' => [],
-            'detached' => [],
-            'updated' => [],
-        ];
-
-        if ($ids instanceof Collection) {
-            $ids = $this->parseIds($ids);
-        } elseif ($ids instanceof Model) {
-            $ids = $this->parseIds($ids);
-        }
-
-        // First we need to attach any of the associated models that are not currently
-        // in this joining table. We'll spin through the given IDs, checking to see
-        // if they exist in the array of current ones, and if not we will insert.
         if ($this->getInverse()) {
-            $current = match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                true => $this->parent->{$this->table} ?: [],
-                false => $this->parent->{$this->relationName} ?: [],
-            };
+            $current = $this->isElasticParent()
+                ? ($this->parent->{$this->table} ?: [])
+                : ($this->parent->{$this->relationName} ?: []);
 
             if ($current instanceof Collection) {
-                $current = collect($this->parseIds($current))->flatten()->toArray();
-            } else {
-                $current = $this->extractIds($current);
+                return collect($this->parseIds($current))->flatten()->toArray();
             }
-        } else {
-            $current = match (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                true => $this->parent->{$this->relatedPivotKey} ?: [],
-                false => $this->parent->{$this->relationName} ?: [],
-            };
 
-            if ($current instanceof Collection) {
-                $current = $this->parseIds($current);
-            }
+            return $this->extractIds($current);
         }
 
-        $records = $this->formatRecordsList($ids);
+        $current = $this->isElasticParent()
+            ? ($this->parent->{$this->relatedPivotKey} ?: [])
+            : ($this->parent->{$this->relationName} ?: []);
 
-        // We need to make sure that all keys are processed and saved as strings since we store them as keywords a 13 != '13' this fixes that.
-        $current = array_map(fn ($key) => (string) $key, Arr::wrap($current));
-        $detach = array_diff($current, array_map(fn ($key) => (string) $key, array_keys($records)));
-
-        // We need to make sure we pass a clean array, so that it is not interpreted
-        // as an associative array.
-        $detach = array_values($detach);
-
-        // Next, we will take the differences of the currents and given IDs and detach
-        // all of the entities that exist in the "current" array but are not in the
-        // the array of the IDs given to the method which will complete the sync.
-        if ($detaching && count($detach) > 0) {
-            $this->detach($detach);
-
-            $changes['detached'] = array_map(function ($v) {
-                return is_numeric($v) ? (int) $v : (string) $v;
-            }, $detach);
+        if ($current instanceof Collection) {
+            return $this->parseIds($current);
         }
 
-        // Now we are finally ready to attach the new records. Note that we'll disable
-        // touching until after the entire operation is complete so we don't fire a
-        // ton of touch operations until we are totally done syncing the records.
-        $changes = array_merge(
-            $changes,
-            $this->attachNew($records, $current, false),
-        );
-
-        if (count($changes['attached']) || count($changes['updated'])) {
-            $this->touchIfTouching();
-        }
-
-        return $changes;
+        return $current;
     }
 
-    /** {@inheritdoc} */
-    public function updateExistingPivot($id, array $attributes, $touch = true): void
-    {
-        // Do nothing, we have no pivot table.
-    }
+    // ------------------------------------------------------------------
+    // Attach / Detach
+    //
+    // Each operation has two sides:
+    //   1. Update the parent  — push/pull IDs or morph entries
+    //   2. Update the related — push/pull parent reference
+    //
+    // The inverse flag flips which side stores flat IDs vs morph entries:
+    //   morphToMany:   related stores morph entries, parent stores flat IDs
+    //   morphedByMany: parent stores morph entries, related stores flat IDs
+    // ------------------------------------------------------------------
 
-    /** {@inheritdoc} */
     public function attach($id, array $attributes = [], $touch = true)
     {
         if ($id instanceof Model) {
             $model = $id;
-
             $id = $this->parseId($model);
 
-            if ($this->getInverse()) {
-                // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                    $this->parent->push($this->table, [
-                        [
-                            $this->relatedPivotKey => $model->{$this->relatedKey},
-                            $this->morphType => $model->getMorphClass(),
-                        ],
-                    ], true);
-                } else {
-                    $this->addIdToParentRelationData($id);
-                }
-
-                // Attach the new parent id to the related model.
-                $model->push($this->foreignPivotKey, (array) $this->parent->{$this->parentKey}, true);
-            } else {
-                // Attach the new parent id to the related model.
-                $model->push($this->table, [
-                    [
-                        $this->foreignPivotKey => $this->parent->{$this->parentKey},
-                        $this->morphType => $this->parent instanceof Model ? $this->parent->getMorphClass() : null,
-                    ],
-                ], true);
-
-                // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                    $this->parent->push($this->relatedPivotKey, (array) $id, true);
-                } else {
-                    $this->addIdToParentRelationData($id);
-                }
-            }
+            $this->attachIdsToParent([(string) $id]);
+            $this->attachParentToRelatedModel($model);
         } else {
             if ($id instanceof Collection) {
                 $id = $this->parseIds($id);
             }
 
-            // ID Must always be a string val
             $id = array_map(fn ($item) => (string) $item, Arr::wrap($id));
 
             $query = $this->newRelatedQuery();
             $query->whereIn($this->relatedKey, $id);
 
-            if ($this->getInverse()) {
-                // Attach the new parent id to the related model.
-                $query->push($this->foreignPivotKey, $this->parent->{$this->parentKey});
-
-                // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                    foreach ($id as $item) {
-                        $this->parent->push($this->table, [
-                            [
-                                $this->relatedPivotKey => $item,
-                                $this->morphType => $this->related instanceof Model ? $this->related->getMorphClass() : null,
-                            ],
-                        ], true);
-                    }
-                } else {
-                    foreach ($id as $item) {
-                        $this->addIdToParentRelationData($item);
-                    }
-                }
-            } else {
-                // Attach the new parent id to the related model.
-                $query->push($this->table, [
-                    [
-                        $this->foreignPivotKey => $this->parent->{$this->parentKey},
-                        $this->morphType => $this->parent instanceof Model ? $this->parent->getMorphClass() : null,
-                    ],
-                ], true);
-
-                // Attach the new ids to the parent model.
-                if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                    $this->parent->push($this->relatedPivotKey, $id, true);
-                } else {
-                    foreach ($id as $item) {
-                        $this->addIdToParentRelationData($item);
-                    }
-                }
-            }
+            $this->attachIdsToParent($id);
+            $this->attachParentToRelatedQuery($query);
         }
 
         if ($touch) {
@@ -300,72 +117,22 @@ class MorphToMany extends EloquentMorphToMany
         }
     }
 
-    /** {@inheritdoc} */
     public function detach($ids = [], $touch = true)
     {
         if ($ids instanceof Model) {
             $ids = $this->parseIds($ids);
         }
 
-        $query = $this->newRelatedQuery();
-
-        // If associated IDs were passed to the method we will only delete those
-        // associations, otherwise all the association ties will be broken.
-        // We'll return the numbers of affected rows when we do the deletes.
         $ids = (array) $ids;
 
-        // Detach all ids from the parent model.
-        if ($this->getInverse()) {
-            // Remove the relation from the parent.
-            $data = [];
-            foreach ($ids as $item) {
-                $data = [
-                    ...$data,
-                    [
-                        $this->relatedPivotKey => $item,
-                        $this->morphType => $this->related->getMorphClass(),
-                    ],
-                ];
-            }
+        $this->detachIdsFromParent($ids);
 
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                $this->parent->pull($this->table, $data);
-            } else {
-                $value = $this->parent->{$this->relationName}
-                    ->filter(fn ($rel) => ! in_array($rel->{$this->relatedKey}, $this->extractIds($data)));
-                $this->parent->setRelation($this->relationName, $value);
-            }
-
-            // Prepare the query to select all related objects.
-            if (count($ids) > 0) {
-                $query->whereIn($this->relatedKey, $ids);
-            }
-
-            // Remove the relation from the related.
-            $query->pull($this->foreignPivotKey, $this->parent->{$this->parentKey});
-        } else {
-            // Remove the relation from the parent.
-            if (\PDPhilip\Elasticsearch\Eloquent\Model::isElasticsearchModel($this->parent)) {
-                $this->parent->pull($this->relatedPivotKey, $ids);
-            } else {
-                $value = $this->parent->{$this->relationName}
-                    ->filter(fn ($rel) => ! in_array($rel->{$this->relatedKey}, $ids));
-                $this->parent->setRelation($this->relationName, $value);
-            }
-
-            // Prepare the query to select all related objects.
-            if (count($ids) > 0) {
-                $query->whereIn($this->relatedKey, $ids);
-            }
-
-            // Remove the relation to the related.
-            $query->pull($this->table, [
-                [
-                    $this->foreignPivotKey => $this->parent->{$this->parentKey},
-                    $this->morphType => $this->parent->getMorphClass(),
-                ],
-            ]);
+        $query = $this->newRelatedQuery();
+        if (count($ids) > 0) {
+            $query->whereIn($this->relatedKey, $ids);
         }
+
+        $this->detachParentFromRelated($query);
 
         if ($touch) {
             $this->touchIfTouching();
@@ -374,14 +141,153 @@ class MorphToMany extends EloquentMorphToMany
         return count($ids);
     }
 
-    /** {@inheritdoc} */
+    // ------------------------------------------------------------------
+    // Attach helpers — encapsulate inverse × ES/SQL branching
+    // ------------------------------------------------------------------
+
+    /**
+     * Push related IDs onto the parent model.
+     *
+     * Inverse:     parent stores morph entries in $this->table
+     * Non-inverse: parent stores flat IDs in $this->relatedPivotKey
+     */
+    private function attachIdsToParent(array $ids): void
+    {
+        if ($this->getInverse()) {
+            $morphClass = $this->related instanceof Model ? $this->related->getMorphClass() : null;
+
+            if ($this->isElasticParent()) {
+                foreach ($ids as $id) {
+                    $this->parent->push($this->table, [
+                        $this->buildMorphEntry($this->relatedPivotKey, $id, $morphClass),
+                    ], true);
+                }
+            } else {
+                foreach ($ids as $id) {
+                    $this->addIdToParentRelationData($id);
+                }
+            }
+        } else {
+            if ($this->isElasticParent()) {
+                $this->parent->push($this->relatedPivotKey, $ids, true);
+            } else {
+                foreach ($ids as $id) {
+                    $this->addIdToParentRelationData($id);
+                }
+            }
+        }
+    }
+
+    /**
+     * Push parent reference onto a single related model instance.
+     *
+     * Inverse:     related stores flat parent IDs in foreignPivotKey
+     * Non-inverse: related stores morph entries in $this->table
+     */
+    private function attachParentToRelatedModel(Model $model): void
+    {
+        if ($this->getInverse()) {
+            $model->push($this->foreignPivotKey, (array) $this->parent->{$this->parentKey}, true);
+        } else {
+            $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
+            $model->push($this->table, [
+                $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
+            ], true);
+        }
+    }
+
+    /**
+     * Push parent reference onto related models matched by query.
+     *
+     * Same logic as attachParentToRelatedModel but operates via bulk query.
+     */
+    private function attachParentToRelatedQuery($query): void
+    {
+        if ($this->getInverse()) {
+            $query->push($this->foreignPivotKey, $this->parent->{$this->parentKey});
+        } else {
+            $morphClass = $this->parent instanceof Model ? $this->parent->getMorphClass() : null;
+            $query->push($this->table, [
+                $this->buildMorphEntry($this->foreignPivotKey, $this->parent->{$this->parentKey}, $morphClass),
+            ], true);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Detach helpers
+    // ------------------------------------------------------------------
+
+    /**
+     * Remove related IDs from the parent model.
+     *
+     * Inverse:     removes morph entries from $this->table
+     * Non-inverse: removes flat IDs from $this->relatedPivotKey
+     */
+    private function detachIdsFromParent(array $ids): void
+    {
+        if ($this->getInverse()) {
+            $data = array_map(fn ($item) => $this->buildMorphEntry(
+                $this->relatedPivotKey, $item, $this->related->getMorphClass()
+            ), $ids);
+
+            if ($this->isElasticParent()) {
+                $this->parent->pull($this->table, $data);
+            } else {
+                $this->removeIdsFromParentRelationData($this->extractIds($data));
+            }
+        } else {
+            if ($this->isElasticParent()) {
+                $this->parent->pull($this->relatedPivotKey, $ids);
+            } else {
+                $this->removeIdsFromParentRelationData($ids);
+            }
+        }
+    }
+
+    /**
+     * Remove parent reference from the related models.
+     *
+     * Inverse:     removes flat parent ID from foreignPivotKey
+     * Non-inverse: removes morph entry from $this->table
+     */
+    private function detachParentFromRelated($query): void
+    {
+        if ($this->getInverse()) {
+            $query->pull($this->foreignPivotKey, $this->parent->{$this->parentKey});
+        } else {
+            $query->pull($this->table, [
+                $this->buildMorphEntry(
+                    $this->foreignPivotKey, $this->parent->{$this->parentKey}, $this->parent->getMorphClass()
+                ),
+            ]);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Morph entry builder
+    // ------------------------------------------------------------------
+
+    /**
+     * Build a morph entry: [idKey => idValue, morphType => morphClass].
+     *
+     * These entries are stored on documents to track polymorphic relationships,
+     * combining the foreign ID with the model type for disambiguation.
+     */
+    private function buildMorphEntry(string $idKey, $idValue, ?string $morphClass): array
+    {
+        return [
+            $idKey => $idValue,
+            $this->morphType => $morphClass,
+        ];
+    }
+
+    // ------------------------------------------------------------------
+    // Dictionary & helpers
+    // ------------------------------------------------------------------
+
     protected function buildDictionary(Collection $results)
     {
         $foreign = $this->foreignPivotKey;
-
-        // First we will build a dictionary of child models keyed by the foreign key
-        // of the relation so that we will easily and quickly match them to their
-        // parents without having a possibly slow inner loops for every models.
         $dictionary = [];
 
         foreach ($results as $result) {
@@ -390,7 +296,6 @@ class MorphToMany extends EloquentMorphToMany
                     $dictionary[$item][] = $result;
                 }
             } else {
-                // Collect $foreign value from pivot column of result model
                 $items = $this->extractIds($result->{$this->table} ?? [], $foreign);
                 foreach ($items as $item) {
                     $dictionary[$item][] = $result;
@@ -401,45 +306,6 @@ class MorphToMany extends EloquentMorphToMany
         return $dictionary;
     }
 
-    /** {@inheritdoc} */
-    public function newPivotQuery()
-    {
-        return $this->newRelatedQuery();
-    }
-
-    /**
-     * Create a new query builder for the related model.
-     *
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function newRelatedQuery()
-    {
-        return $this->related->newQuery();
-    }
-
-    /** {@inheritdoc} */
-    public function getQualifiedRelatedPivotKeyName()
-    {
-        return $this->relatedPivotKey;
-    }
-
-    /**
-     * Get the name of the "where in" method for eager loading.
-     *
-     * @param  string  $key
-     * @return string
-     */
-    protected function whereInMethod(Model $model, $key)
-    {
-        return 'whereIn';
-    }
-
-    /**
-     * Extract ids from given pivot table data
-     *
-     *
-     * @return mixed
-     */
     public function extractIds(array $data, ?string $relatedPivotKey = null)
     {
         $relatedPivotKey = $relatedPivotKey ?: $this->relatedPivotKey;
@@ -451,20 +317,5 @@ class MorphToMany extends EloquentMorphToMany
 
             return $carry;
         }, []);
-    }
-
-    /**
-     * Add the given id to the relation's data of the current parent instance.
-     * It helps to keep up-to-date the sql model instances in hybrid relationships.
-     *
-     * @param  string|int  $id
-     * @return void
-     */
-    private function addIdToParentRelationData($id)
-    {
-        $instance = new $this->related;
-        $instance->forceFill([$this->relatedKey => $id]);
-        $relationData = $this->parent->{$this->relationName}->push($instance)->unique($this->relatedKey);
-        $this->parent->setRelation($this->relationName, $relationData);
     }
 }
