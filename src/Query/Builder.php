@@ -810,16 +810,9 @@ class Builder extends BaseBuilder
      */
     private function findExistingIds(array $uniqueBy, array $lookupValues): array
     {
-        // Build a fresh query against the same index
-        $query = $this->newQuery();
+        try {
+            $query = $this->newQuery($this->from);
 
-        if (count($uniqueBy) === 1) {
-            // Single field: simple whereIn
-            $field = $uniqueBy[0];
-            $fieldValues = array_unique(array_map(fn ($key) => explode('|', $key)[0], $lookupValues));
-            $results = $query->whereIn($field, $fieldValues)->get();
-        } else {
-            // Multi-field: use bool should with exact match per combination
             foreach (array_unique($lookupValues) as $key) {
                 $parts = explode('|', $key);
                 $query->orWhere(function ($q) use ($uniqueBy, $parts) {
@@ -829,9 +822,11 @@ class Builder extends BaseBuilder
                 });
             }
             $results = $query->get();
+        } catch (\Throwable) {
+            // Index doesn't exist yet or field has no keyword mapping
+            return [];
         }
 
-        // Map lookup_key => _id
         $map = [];
         foreach ($results as $result) {
             $key = $this->buildUpsertKey((array) $result, $uniqueBy);

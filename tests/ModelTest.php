@@ -109,6 +109,78 @@ it('tests upsert', function () {
         ->and(User::where('email', 'foo')->first()->name)->toBe('bar3');
 });
 
+it('upsert preserves fields not in update list', function () {
+    User::upsert([
+        ['email' => 'alice', 'name' => 'Alice', 'age' => 30, 'title' => 'admin'],
+    ], 'email');
+
+    // Update only name — age and title should remain
+    User::upsert([
+        ['email' => 'alice', 'name' => 'Alice Updated', 'age' => 99, 'title' => 'guest'],
+    ], 'email', ['name']);
+
+    $user = User::where('email', 'alice')->first();
+    expect($user->name)->toBe('Alice Updated')
+        ->and($user->age)->toBe(30)
+        ->and($user->title)->toBe('admin');
+});
+
+it('upsert mixed insert and update in one batch', function () {
+    User::create(['email' => 'bob', 'name' => 'Bob', 'age' => 25]);
+    User::create(['email' => 'charlie', 'name' => 'Charlie', 'age' => 40]);
+
+    // 2 existing + 1 new in one call
+    $result = User::upsert([
+        ['email' => 'bob', 'name' => 'Robert', 'age' => 26],
+        ['email' => 'charlie', 'name' => 'Charles', 'age' => 41],
+        ['email' => 'diana', 'name' => 'Diana', 'age' => 35],
+    ], 'email', ['name', 'age']);
+
+    expect($result)->toBe(3)
+        ->and(User::count())->toBe(3);
+
+    expect(User::where('email', 'bob')->first()->name)->toBe('Robert')
+        ->and(User::where('email', 'charlie')->first()->name)->toBe('Charles')
+        ->and(User::where('email', 'diana')->first()->name)->toBe('Diana');
+});
+
+it('upsert with multiple unique fields', function () {
+    User::upsert([
+        ['name' => 'Dave', 'title' => 'admin', 'age' => 50],
+        ['name' => 'Dave', 'title' => 'user', 'age' => 30],
+    ], ['name', 'title']);
+
+    expect(User::count())->toBe(2);
+
+    // Update age for one combo, insert a new combo
+    $result = User::upsert([
+        ['name' => 'Dave', 'title' => 'admin', 'age' => 55],
+        ['name' => 'Dave', 'title' => 'editor', 'age' => 40],
+    ], ['name', 'title'], ['age']);
+
+    expect($result)->toBe(2)
+        ->and(User::count())->toBe(3);
+
+    expect(User::where('title', 'admin')->first()->age)->toBe(55)
+        ->and(User::where('title', 'user')->first()->age)->toBe(30)
+        ->and(User::where('title', 'editor')->first()->age)->toBe(40);
+});
+
+it('upsert with null update updates all fields', function () {
+    User::upsert([
+        ['email' => 'eve', 'name' => 'Eve', 'age' => 20],
+    ], 'email');
+
+    // null update = update all columns
+    User::upsert([
+        ['email' => 'eve', 'name' => 'Eve Updated', 'age' => 21],
+    ], 'email', null);
+
+    $user = User::where('email', 'eve')->first();
+    expect($user->name)->toBe('Eve Updated')
+        ->and($user->age)->toBe(21);
+});
+
 it('tests manual string id', function () {
     $user = new User;
     $user->id = '4af9f23d8ead0e1d32000000';
