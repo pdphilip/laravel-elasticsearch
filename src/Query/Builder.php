@@ -749,6 +749,99 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Insert or update records matching the unique key.
+     *
+     * ES has no unique column constraints, so this queries for existing
+     * documents first, then issues a single bulk request mixing index
+     * (for new docs) and update (for existing docs) actions.
+     */
+    public function upsert(array $values, $uniqueBy, $update = null): int
+    {
+        // Normalize to batch format
+        if (! array_is_list($values)) {
+            $values = [$values];
+        }
+
+        $uniqueBy = (array) $uniqueBy;
+
+        // Empty update means plain insert
+        if ($update === []) {
+            $this->insert($values);
+
+            return count($values);
+        }
+
+        // Collect the unique field values from the input
+        $lookupValues = [];
+        foreach ($values as &$doc) {
+            $key = $this->buildUpsertKey($doc, $uniqueBy);
+            $doc['_upsert_key'] = $key;
+            $lookupValues[] = $key;
+        }
+        unset($doc);
+
+        // Query ES for existing documents matching the unique fields
+        $existingIds = $this->findExistingIds($uniqueBy, $lookupValues);
+
+        // Compile and execute the bulk request
+        $dsl = $this->grammar->compileUpsert($this, $values, $existingIds, $update);
+        $result = $this->connection->insert($dsl);
+
+        return $this->processor->processUpsert($this, $result);
+    }
+
+    /**
+     * Build a lookup key from the document's unique field values.
+     */
+    private function buildUpsertKey(array $doc, array $uniqueBy): string
+    {
+        $parts = [];
+        foreach ($uniqueBy as $field) {
+            $parts[] = (string) ($doc[$field] ?? '');
+        }
+
+        return implode('|', $parts);
+    }
+
+    /**
+     * Find existing document IDs by unique field values.
+     *
+     * Returns a map of lookup_key => _id.
+     */
+    private function findExistingIds(array $uniqueBy, array $lookupValues): array
+    {
+        // Build a fresh query against the same index
+        $query = $this->newQuery();
+
+        if (count($uniqueBy) === 1) {
+            // Single field: simple whereIn
+            $field = $uniqueBy[0];
+            $fieldValues = array_unique(array_map(fn ($key) => explode('|', $key)[0], $lookupValues));
+            $results = $query->whereIn($field, $fieldValues)->get();
+        } else {
+            // Multi-field: use bool should with exact match per combination
+            foreach (array_unique($lookupValues) as $key) {
+                $parts = explode('|', $key);
+                $query->orWhere(function ($q) use ($uniqueBy, $parts) {
+                    foreach ($uniqueBy as $i => $field) {
+                        $q->where($field, $parts[$i] ?? '');
+                    }
+                });
+            }
+            $results = $query->get();
+        }
+
+        // Map lookup_key => _id
+        $map = [];
+        foreach ($results as $result) {
+            $key = $this->buildUpsertKey((array) $result, $uniqueBy);
+            $map[$key] = $result['_id'];
+        }
+
+        return $map;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function update(array $values)

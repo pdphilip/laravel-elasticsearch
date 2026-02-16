@@ -21,6 +21,11 @@ class DslFactory
         return ['index' => $operation];
     }
 
+    public static function updateOperation(string $index, string $id, array $options = []): array
+    {
+        return ['update' => array_merge(['_index' => $index, '_id' => $id], $options)];
+    }
+
     // ----------------------------------------------------------------------
     // Query
     // ----------------------------------------------------------------------

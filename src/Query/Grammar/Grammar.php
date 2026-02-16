@@ -113,6 +113,56 @@ class Grammar extends BaseGrammar
     }
 
     /**
+     * Compile an upsert bulk request.
+     *
+     * Existing docs (with _id) use the update action with doc_as_upsert.
+     * New docs use the index action.
+     */
+    public function compileUpsert($query, array $values, array $existingIds, ?array $updateColumns): array
+    {
+        $dsl = new DslBuilder;
+        $index = $query->getFrom();
+
+        foreach ($values as $doc) {
+            // Convert DateTime values
+            foreach ($doc as &$property) {
+                $property = $this->getStringValue($property);
+            }
+            unset($property);
+
+            // Clean internal fields from the doc body
+            $cleanDoc = $doc;
+            unset($cleanDoc['id'], $cleanDoc['_id']);
+
+            $lookupKey = $doc['_upsert_key'] ?? null;
+            unset($cleanDoc['_upsert_key']);
+
+            $existingId = $lookupKey !== null ? ($existingIds[$lookupKey] ?? null) : null;
+
+            if ($existingId) {
+                // Existing doc: update action with partial doc
+                $updateDoc = $updateColumns
+                    ? array_intersect_key($cleanDoc, array_flip($updateColumns))
+                    : $cleanDoc;
+
+                $dsl->appendBody(DslFactory::updateOperation($index, $existingId));
+                $dsl->appendBody([
+                    'doc' => $updateDoc,
+                    'upsert' => $cleanDoc,
+                ]);
+            } else {
+                // New doc: index action
+                $dsl->appendBody(DslFactory::indexOperation($index));
+                $dsl->appendBody($cleanDoc);
+            }
+        }
+
+        $dsl->setRefresh($query->getOption('refresh', true));
+
+        return $dsl->getDsl();
+    }
+
+    /**
      * @param  Builder  $query
      *
      * @throws BuilderException

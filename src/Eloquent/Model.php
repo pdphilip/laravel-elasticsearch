@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model as BaseModel;
 use PDPhilip\Elasticsearch\Data\ModelMeta;
 
 /**
- * @method bool|int push(string $column = null, mixed $values = null, bool $unique = false)
- *
  * @property object $searchHighlights
  * @property array $searchHighlightsAsArray
  * @property object $withHighlights

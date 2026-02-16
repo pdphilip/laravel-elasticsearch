@@ -75,6 +75,7 @@ class Builder extends BaseEloquentBuilder
         'openpit',
         'bulkinsert',
         'createonly',
+        'upsert',
     ];
 
     /**

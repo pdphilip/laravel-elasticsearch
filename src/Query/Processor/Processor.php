@@ -289,6 +289,26 @@ class Processor extends BaseProcessor
         return $outcome;
     }
 
+    public function processUpsert(Builder $query, Elasticsearch $result): int
+    {
+        $this->rawResponse = $result;
+        $this->query = $query;
+
+        $process = $result->asArray();
+        $count = 0;
+
+        foreach ($process['items'] ?? [] as $item) {
+            // Bulk response items are keyed by action type (index or update)
+            $action = $item['index'] ?? $item['update'] ?? null;
+
+            if ($action && empty($action['error'])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public function processRaw($query, $response)
     {
         $this->rawResponse = $response;

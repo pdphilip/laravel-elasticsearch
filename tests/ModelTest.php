@@ -107,7 +107,7 @@ it('tests upsert', function () {
     expect($result)->toBe(1)
         ->and(User::count())->toBe(2)
         ->and(User::where('email', 'foo')->first()->name)->toBe('bar3');
-})->todo();
+});
 
 it('tests manual string id', function () {
     $user = new User;
