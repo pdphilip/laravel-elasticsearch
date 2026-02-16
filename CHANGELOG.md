@@ -5,13 +5,21 @@ All notable changes to this `laravel-elasticsearch` package will be documented i
 ## v5.4.0 - 2026-02-15
 
 ### Added
+- **`upsert()`** — Insert or update records by unique key in a single bulk operation, matching Laravel's native `upsert()` signature. Supports single and batch documents, specific update columns, and composite unique keys
 - `TimeOrderedUUIDGenerator` — sortable 20-character IDs where lexicographic order matches chronological order across processes (millisecond granularity)
 - `GeneratesTimeOrderedIds` trait with `getRecordTimestamp()` and `getRecordDate()` helpers — safe for mixed datasets (returns null for pre-existing non-time-ordered IDs)
-- New test coverage: advanced aggregations, filter context queries, DSL output inspection, point-in-time pagination, multi-match search, time-ordered IDs
+- New test coverage: upsert variations, advanced aggregations, filter context queries, DSL output inspection, point-in-time pagination, multi-match search, time-ordered IDs
 
 ### Changed
 - Refactored Query Builder into focused concerns: `BuildsAggregations`, `BuildsSearchQueries`, `BuildsFieldQueries`, `BuildsGeoQueries`, `BuildsNestedQueries`, `HandlesScripts`, `ManagesPit`
 - Refactored Grammar into concerns: `CompilesAggregations`, `CompilesOrders`, `CompilesWheres`, `FieldUtilities`
+- Decomposed `ElasticsearchModel` trait into focused traits for clarity
+- Consolidated ES PHP client usage into `ElasticClient` wrapper
+- Consolidated metadata handling into single `MetaDTO`
+- Simplified `ManagesOptions` parameter inference
+- Extracted `addFieldQuery()` dispatcher in `BuildsFieldQueries` to deduplicate field query methods
+- Refactored Relations for readability: early returns, named variables, simplified loops across `MorphToMany`, `BelongsToMany`, `QueriesRelationships`, `InteractsWithPivotTable`, `ManagesManyToMany`
+- Updated `ModelDocs` with comprehensive audit: corrected signatures, added missing methods, removed stale entries
 - Added `declare(strict_types=1)` to all ID generation classes and traits
 - Consolidated test ID strategy into `TestsWithIdStrategies` trait (removed duplicate `WithIds/` and `IdGenerated/` directories)
 
