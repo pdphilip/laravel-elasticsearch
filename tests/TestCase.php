@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests;
 
+use OmniTerm\OmniTermServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use PDPhilip\Elasticsearch\ElasticServiceProvider;
 
@@ -13,6 +14,7 @@ class TestCase extends Orchestra
     {
         return [
             ElasticServiceProvider::class,
+            OmniTermServiceProvider::class,
         ];
     }
 

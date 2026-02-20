@@ -25,7 +25,8 @@
     "illuminate/events": "^10.0|^11|^12",
     "illuminate/support": "^10.0|^11|^12",
     "elasticsearch/elasticsearch": "^8.17",
-    "spatie/ignition": "^1.15"
+    "spatie/ignition": "^1.15",
+    "pdphilip/omniterm": "^2"
   },
   "require-dev": {
     "orchestra/testbench": "^10.1||^9.0.0||^8.22.0",

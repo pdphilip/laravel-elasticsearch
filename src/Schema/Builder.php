@@ -100,6 +100,38 @@ class Builder extends BaseBuilder
         return $columns;
     }
 
+    public function getIndexes($table): array
+    {
+        $index = $this->parseIndexName($table);
+        $result = $this->connection->getFieldMapping($index, '*');
+        $mappings = $result[$index]['mappings'] ?? [];
+
+        $indexes = [];
+        foreach ($mappings as $field => $mapping) {
+            if (! Str::startsWith($field, '_')) {
+                $indexes[] = [
+                    'name' => $field,
+                    'columns' => [$field],
+                    'type' => 'elasticsearch',
+                    'unique' => false,
+                    'primary' => $field === '_id',
+                ];
+            }
+        }
+
+        return $indexes;
+    }
+
+    public function getForeignKeys($table): array
+    {
+        return [];
+    }
+
+    public function getViews($schema = null): array
+    {
+        return [];
+    }
+
     public function hasColumn($table, $column): bool
     {
         $index = $this->parseIndexName($table);
