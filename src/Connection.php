@@ -128,6 +128,7 @@ class Connection extends BaseConnection
                     'meta_header' => null,
                     'default_limit' => null,
                     'allow_id_sort' => false,
+                    'auto_create_index' => true,
                 ],
             ],
             $this->config
@@ -711,12 +712,44 @@ class Connection extends BaseConnection
     protected function runQueryCallback($query, $bindings, Closure $callback)
     {
         try {
-            $result = $callback($query, $bindings);
+            return $callback($query, $bindings);
+        } catch (ClientResponseException $e) {
+            if ($this->shouldAutoCreateIndex($e, $query)) {
+                return $callback($query, $bindings);
+            }
+            throw new QueryException($e, $query);
         } catch (Exception $e) {
             throw new QueryException($e, $query);
         }
+    }
 
-        return $result;
+    private function shouldAutoCreateIndex(ClientResponseException $e, mixed $query): bool
+    {
+        if (! ($this->config['options']['auto_create_index'] ?? true)) {
+            return false;
+        }
+
+        if ($e->getCode() !== 404) {
+            return false;
+        }
+
+        $body = json_decode((string) $e->getResponse()->getBody(), true);
+        if (($body['error']['type'] ?? '') !== 'index_not_found_exception') {
+            return false;
+        }
+
+        $index = is_array($query) ? ($query['index'] ?? null) : null;
+        if (! $index) {
+            return false;
+        }
+
+        try {
+            $this->connection->createIndex($index, []);
+
+            return true;
+        } catch (Exception) {
+            return false;
+        }
     }
 
     /**

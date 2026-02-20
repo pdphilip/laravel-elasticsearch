@@ -24,7 +24,7 @@ class IndicesCommand extends Command
         $showAll = $this->option('all');
 
         $this->newLine();
-        $this->omni->roundedBox('Elasticsearch Indices', 'text-cyan-500', 'text-cyan-500');
+        $this->omni->titleBar('Elasticsearch Indices', 'teal');
         $this->newLine();
 
         try {

@@ -25,7 +25,7 @@ class ShowCommand extends Command
         $connectionName = $this->option('connection');
 
         $this->newLine();
-        $this->omni->roundedBox('Index: '.$indexName, 'text-cyan-500', 'text-cyan-500');
+        $this->omni->titleBar('Index: '.$indexName, 'sky');
         $this->newLine();
 
         try {

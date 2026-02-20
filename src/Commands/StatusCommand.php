@@ -23,7 +23,7 @@ class StatusCommand extends Command
         $connectionName = $this->option('connection');
 
         $this->newLine();
-        $this->omni->roundedBox('Elasticsearch Status', 'text-cyan-500', 'text-cyan-500');
+        $this->omni->titleBar('Elasticsearch Status', 'cyan');
         $this->newLine();
 
         try {
@@ -58,8 +58,7 @@ class StatusCommand extends Command
         $this->omni->tableRow('Index Prefix', $prefix);
         $this->newLine();
 
-        $this->omni->newLoader('dots');
-        $result = $this->omni->runTask('Connecting to Elasticsearch', function () use ($connection) {
+        $result = $this->omni->task('Connecting to Elasticsearch', function () use ($connection) {
             try {
                 $info = $connection->getClientInfo();
 
@@ -84,11 +83,11 @@ class StatusCommand extends Command
             }
         });
 
-        if (empty($result['data'])) {
+        if (! $result || $result->isError()) {
             $this->newLine();
             $this->omni->statusError(
                 'CONNECTION FAILED',
-                $result['details'] ?? 'Unable to connect',
+                $result ? $result->details : 'Unable to connect',
                 [
                     'Check that Elasticsearch is running',
                     'Verify hosts, credentials, and auth_type in config/database.php',
@@ -99,8 +98,8 @@ class StatusCommand extends Command
             return self::FAILURE;
         }
 
-        $info = $result['data']['info'];
-        $license = $result['data']['license'];
+        $info = $result->data['info'];
+        $license = $result->data['license'];
 
         $this->newLine();
         $this->omni->tableHeader('Cluster', 'Value');
