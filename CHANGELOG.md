@@ -2,13 +2,16 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
-## v5.4.0 - 2026-02-15
+## v5.4.0 - 2026-02-21
 
 ### Added
+- **Auto-create index on first query** — When a model queries an index that doesn't exist yet, the index is created automatically instead of throwing `index_not_found_exception`. Matches Elasticsearch's own auto-create behavior for writes, extended to reads. Controlled via `options.auto_create_index` config (default: `true`)
+- **Artisan commands** — `elastic:status`, `elastic:indices`, `elastic:show {index}` for connection health checks, index listing, and index inspection
 - **`upsert()`** — Insert or update records by unique key in a single bulk operation, matching Laravel's native `upsert()` signature. Supports single and batch documents, specific update columns, and composite unique keys
 - `TimeOrderedUUIDGenerator` — sortable 20-character IDs where lexicographic order matches chronological order across processes (millisecond granularity)
 - `GeneratesTimeOrderedIds` trait with `getRecordTimestamp()` and `getRecordDate()` helpers — safe for mixed datasets (returns null for pre-existing non-time-ordered IDs)
-- New test coverage: upsert variations, advanced aggregations, filter context queries, DSL output inspection, point-in-time pagination, multi-match search, time-ordered IDs
+- Schema Builder: `getIndexes()`, `getForeignKeys()`, `getViews()` for Laravel compatibility
+- Test suite expanded from 379 to 422 tests (2,548 assertions), all passing. New coverage: upsert variations, advanced aggregations, filter context queries, DSL output inspection, point-in-time pagination, multi-match search, time-ordered IDs
 
 ### Changed
 - Refactored Query Builder into focused concerns: `BuildsAggregations`, `BuildsSearchQueries`, `BuildsFieldQueries`, `BuildsGeoQueries`, `BuildsNestedQueries`, `HandlesScripts`, `ManagesPit`
@@ -22,6 +25,7 @@ All notable changes to this `laravel-elasticsearch` package will be documented i
 - Updated `ModelDocs` with comprehensive audit: corrected signatures, added missing methods, removed stale entries
 - Added `declare(strict_types=1)` to all ID generation classes and traits
 - Consolidated test ID strategy into `TestsWithIdStrategies` trait (removed duplicate `WithIds/` and `IdGenerated/` directories)
+- CI updated to Elasticsearch 8.18.0
 
 ### Fixed
 - `id` is now always present in serialized model output
