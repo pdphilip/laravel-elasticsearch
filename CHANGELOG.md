@@ -4,6 +4,8 @@ All notable changes to this `laravel-elasticsearch` package will be documented i
 
 ## v5.4.0 - 2026-02-21
 
+This release is compatible with Laravel 10, 11 & 12
+
 ### Added
 - **Auto-create index on first query** — When a model queries an index that doesn't exist yet, the index is created automatically instead of throwing `index_not_found_exception`. Matches Elasticsearch's own auto-create behavior for writes, extended to reads. Controlled via `options.auto_create_index` config (default: `true`)
 - **Artisan commands** — `elastic:status`, `elastic:indices`, `elastic:show {index}` for connection health checks, index listing, and index inspection
