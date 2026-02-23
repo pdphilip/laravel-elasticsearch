@@ -707,25 +707,24 @@ it('tests fetched model serialization includes id', function () {
     expect($fetched->id)->toBe($originalId)
         ->and($fetched->_id)->toBe($originalId);
 
-    // Verify toArray() includes 'id' key
+    // Verify toArray() includes 'id' but not '_id'
     $array = $fetched->toArray();
     expect($array)->toHaveKey('id')
-        ->and($array['id'])->toBe($originalId);
+        ->and($array['id'])->toBe($originalId)
+        ->and($array)->not->toHaveKey('_id');
 
-    // Both 'id' and '_id' should be present for backwards compatibility
-    expect($array)->toHaveKey('_id')
-        ->and($array['_id'])->toBe($originalId);
-
-    // Verify toJson() includes 'id' key
+    // Verify toJson() includes 'id' but not '_id'
     $json = json_decode($fetched->toJson(), true);
     expect($json)->toHaveKey('id')
-        ->and($json['id'])->toBe($originalId);
+        ->and($json['id'])->toBe($originalId)
+        ->and($json)->not->toHaveKey('_id');
 
     // Verify collection serialization also includes 'id'
     $users = User::where('name', 'John Doe')->get();
     $collectionArray = $users->toArray();
     expect($collectionArray[0])->toHaveKey('id')
-        ->and($collectionArray[0]['id'])->toBe($originalId);
+        ->and($collectionArray[0]['id'])->toBe($originalId)
+        ->and($collectionArray[0])->not->toHaveKey('_id');
 });
 
 it('tests _id is still accessible for backwards compatibility', function () {

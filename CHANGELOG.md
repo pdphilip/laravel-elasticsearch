@@ -2,6 +2,12 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.4.1 - 2026-02-23
+
+### Fixed
+
+- `_id` no longer leaks into serialized output (`toArray()`, `toJson()`). The internal `_id` metadata field was being exposed alongside `id`, resulting in duplicate ID fields in model serialization.
+
 ## v5.4.0 - 2026-02-21
 
 This release is compatible with Laravel 10, 11 & 12
@@ -95,7 +101,8 @@ Why: When you need IDs that sort chronologically across multiple processes/worke
 - Test suite expanded from 379 to 422 tests (2,548 assertions), all passing
 
 ### Fixed
-- `id` is now always present in serialized model output
+- `id` is now always present in serialized model output (`toArray()`, `toJson()`)
+- `_id` is no longer exposed in serialized output (internal metadata stays internal)
 - Removed dead debug code from Connection.php
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.3.0...v5.4.0

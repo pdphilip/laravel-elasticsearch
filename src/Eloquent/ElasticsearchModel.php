@@ -105,11 +105,11 @@ trait ElasticsearchModel
     {
         $attributes = parent::attributesToArray();
 
-        // Ensure 'id' is always present in serialized output
-        // ES stores document ID as '_id', but we want 'id' for consistency
+        // ES stores document ID as '_id' metadata, but we want 'id' for consistency
         if (! isset($attributes['id'])) {
             $attributes['id'] = $this->id;
         }
+        unset($attributes['_id']);
 
         return $attributes;
     }
