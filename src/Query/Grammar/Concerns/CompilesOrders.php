@@ -112,7 +112,7 @@ trait CompilesOrders
             'boundary_scanner_locale',
             'encoder',
             'fragmenter',
-            'force_source',
+            'force_source', // @deprecated Removed in Elasticsearch 9.x. Only works with ES 8.x (deprecated since 8.11)
             'fragment_offset',
             'fragment_size',
             'highlight_query',

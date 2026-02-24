@@ -2,6 +2,19 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.4.2 - 2026-02-24
+
+### Elasticsearch 9.x Compatibility
+
+- **PHP client constraint:** Updated to `^8.17|^9.0` to support both Elasticsearch 8.x and 9.x PHP clients
+- **CI matrix:** GitHub Actions now tests against both ES 8.18.0 and 9.0.0 (using official `docker.elastic.co` images)
+- **Docker:** Local development uses ES 9.0.0 with official `docker.elastic.co` images
+- **Verified compatibility:** Full test suite passes against ES 9.0.0 without code changes
+
+### Deprecation Notice
+
+- `force_source` highlighting parameter is deprecated since ES 8.11 and removed in ES 9.x. The parameter is still accepted for backward compatibility with ES 8.x, but will be ignored by ES 9.x servers
+
 ## v5.4.1 - 2026-02-23
 
 ### Fixed

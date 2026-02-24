@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        elasticsearch: ['8.18.0', '9.0.0']
     env:
       BROADCAST_DRIVER: log
       CACHE_DRIVER: redis
@@ -23,7 +26,7 @@ jobs:
     # Docs: https://docs.github.com/en/actions/using-containerized-services
     services:
       elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:8.18.0
+        image: docker.elastic.co/elasticsearch/elasticsearch:${{ matrix.elasticsearch }}
         env:
           discovery.type: single-node
           xpack.security.enabled: 'false'
