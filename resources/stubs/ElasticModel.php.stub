@@ -1,0 +1,29 @@
+<?php
+
+namespace {{ namespace }};
+
+use Carbon\Carbon;
+use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
+use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
+
+/**
+ * {{ namespace }}\{{ class }}
+ *
+ ******Fields*******
+ * @property string $id
+ * @property Carbon $updated_at
+ * @property Carbon $created_at
+ */
+class {{ class }} extends Eloquent implements HasMappingDefinition
+{
+    protected $connection = 'elasticsearch';
+
+    public $timestamps = true;
+
+    public static function mappingDefinition(Blueprint $index): void
+    {
+        $index->date('updated_at');
+        $index->date('created_at');
+    }
+}

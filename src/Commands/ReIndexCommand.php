@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use OmniTerm\HasOmniTerm;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
@@ -170,15 +171,21 @@ class ReIndexCommand extends Command
             return null;
         }
 
-        if (! method_exists($class, 'mappingDefinition')) {
+        if (! is_subclass_of($class, HasMappingDefinition::class)) {
             $this->newLine();
             $this->omni->statusError('Missing mapping definition', $class, [
-                'Add a public mappingDefinition() method to your model:',
+                'Your model must implement HasMappingDefinition:',
                 '',
-                'public function mappingDefinition(Blueprint $index): void',
+                'use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;',
+                'use PDPhilip\Elasticsearch\Schema\Blueprint;',
+                '',
+                'class YourModel extends Eloquent implements HasMappingDefinition',
                 '{',
-                '    $index->keyword(\'status\');',
-                '    $index->geoPoint(\'location\');',
+                '    public static function mappingDefinition(Blueprint $index): void',
+                '    {',
+                '        $index->keyword(\'status\');',
+                '        $index->geoPoint(\'location\');',
+                '    }',
                 '}',
             ]);
             $this->newLine();
@@ -244,7 +251,7 @@ class ReIndexCommand extends Command
         $connection = DB::connection($this->connectionName);
         $this->schema = $connection->getSchemaBuilder();
 
-        $this->mappingDefinition = fn (Blueprint $index) => $model->mappingDefinition($index);
+        $this->mappingDefinition = fn (Blueprint $index) => $model::mappingDefinition($index);
     }
 
     // ======================================================================
