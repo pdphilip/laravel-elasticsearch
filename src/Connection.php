@@ -62,6 +62,8 @@ class Connection extends BaseConnection
 
     public $defaultQueryLimit = 1000;
 
+    private array $indexMappingDefinitions = [];
+
     /** {@inheritdoc}
      * @throws AuthenticationException
      */
@@ -359,6 +361,17 @@ class Connection extends BaseConnection
     // ----------------------------------------------------------------------
     // Schema Management
     // ----------------------------------------------------------------------
+
+    /**
+     * Register a mapping definition for auto-index creation.
+     *
+     * When a query targets a non-existent index and auto_create_index is enabled,
+     * this mapping will be used instead of creating an empty index.
+     */
+    public function registerMappingDefinition(string $index, Closure $definition): void
+    {
+        $this->indexMappingDefinitions[$index] = $definition;
+    }
 
     /**
      * @throws ClientResponseException
@@ -744,7 +757,13 @@ class Connection extends BaseConnection
         }
 
         try {
-            $this->connection->createIndex($index, []);
+            $mappingDefinition = $this->indexMappingDefinitions[$index] ?? null;
+
+            if ($mappingDefinition) {
+                $this->getSchemaBuilder()->create($index, $mappingDefinition);
+            } else {
+                $this->connection->createIndex($index, []);
+            }
 
             return true;
         } catch (Exception) {

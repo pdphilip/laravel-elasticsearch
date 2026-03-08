@@ -22,6 +22,7 @@ class ElasticServiceProvider extends ServiceProvider
                 Commands\StatusCommand::class,
                 Commands\IndicesCommand::class,
                 Commands\ShowCommand::class,
+                Commands\ReIndexCommand::class,
             ]);
         }
     }

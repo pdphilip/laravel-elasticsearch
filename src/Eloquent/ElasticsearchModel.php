@@ -130,6 +130,13 @@ trait ElasticsearchModel
             Model::OPTION_STORE_IDS => $this->storeIdInDocument,
         ]);
 
+        if (method_exists($this, 'mappingDefinition')) {
+            $connection->registerMappingDefinition(
+                $connection->getTablePrefix().$this->getTable(),
+                fn ($index) => $this->mappingDefinition($index)
+            );
+        }
+
         return $query;
     }
 
