@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests\Models;
 
-use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
-class ReIndexTarget extends Model implements HasMappingDefinition
+class ReIndexTarget extends Model
 {
     use TestsWithIdStrategies;
 

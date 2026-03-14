@@ -68,7 +68,7 @@ it('includes the mapping definition from the stub', function () {
 
     $content = File::get(app_path('Models/Event.php'));
     expect($content)
-        ->toContain('implements HasMappingDefinition')
+        ->not->toContain('implements HasMappingDefinition')
         ->toContain('public static function mappingDefinition(Blueprint $index): void')
         ->toContain("\$index->date('created_at');")
         ->toContain("\$index->date('updated_at');");

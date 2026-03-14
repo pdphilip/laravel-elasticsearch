@@ -128,7 +128,14 @@ it('Nested Queries', function () {
 });
 
 it('counts nested queries', function () {
-    $count = Post::where('status',2)->whereNestedObject('comments', function (Builder $query) {
+    // Only "Getting Started with Laravel" has status=2 AND a USA comment
+    $count = Post::where('status', 2)->whereNestedObject('comments', function (Builder $query) {
+        $query->where('country', 'USA');
+    })->count();
+    expect($count)->toBe(1);
+
+    // Both USA-comment posts (status 1 and 2)
+    $count = Post::whereNestedObject('comments', function (Builder $query) {
         $query->where('country', 'USA');
     })->count();
     expect($count)->toBe(2);

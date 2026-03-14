@@ -28,9 +28,11 @@ trait BuildsNestedQueries
         }
         $options = $options->toArray();
 
-        $this->options()->add('parentField', $column);
         if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery($from));
+            $callback = $query;
+            $query = $this->newQuery($from);
+            $query->options()->add('parentField', $column);
+            call_user_func($callback, $query);
         }
 
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
@@ -72,9 +74,11 @@ trait BuildsNestedQueries
         $options = $this->setOptions($options, 'nested');
         $options = $options->toArray();
 
-        $this->options()->add('parentField', $column);
         if (! is_string($query) && is_callable($query)) {
-            call_user_func($query, $query = $this->newQuery($from));
+            $callback = $query;
+            $query = $this->newQuery($from);
+            $query->options()->add('parentField', $column);
+            call_user_func($callback, $query);
         }
 
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');

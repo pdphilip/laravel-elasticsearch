@@ -10,7 +10,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use OmniTerm\HasOmniTerm;
 use PDPhilip\Elasticsearch\Connection;
-use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
@@ -174,21 +173,17 @@ class ReIndexCommand extends Command
             return null;
         }
 
-        if (! is_subclass_of($class, HasMappingDefinition::class)) {
+        if (! $class::hasMappingDefinition()) {
             $this->newLine();
             $this->omni->statusError('Missing mapping definition', $class, [
-                'Your model must implement HasMappingDefinition:',
+                'Your model must override mappingDefinition():',
                 '',
-                'use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;',
                 'use PDPhilip\Elasticsearch\Schema\Blueprint;',
                 '',
-                'class YourModel extends Eloquent implements HasMappingDefinition',
+                'public static function mappingDefinition(Blueprint $index): void',
                 '{',
-                '    public static function mappingDefinition(Blueprint $index): void',
-                '    {',
-                '        $index->keyword(\'status\');',
-                '        $index->geoPoint(\'location\');',
-                '    }',
+                '    $index->keyword(\'status\');',
+                '    $index->geoPoint(\'location\');',
                 '}',
             ]);
             $this->newLine();
@@ -250,7 +245,6 @@ class ReIndexCommand extends Command
         $this->tempIndexName = $this->indexName.'_temp';
         $this->connectionName = $model->getConnectionName();
 
-        /** @var Connection $connection */
         $this->connection = DB::connection($this->connectionName);
         $this->schema = $this->connection->getSchemaBuilder();
 
@@ -603,14 +597,14 @@ class ReIndexCommand extends Command
     {
         $duration = round(microtime(true) - $this->startTime, 2);
 
-        $this->omni->hr();
-        $this->omni->titleBar('Re-Index Complete', 'emerald');
-        $this->omni->tableHeader('Metric', 'Value');
-        $this->omni->tableRow('Index', $this->indexName);
-        $this->omni->tableRow('Original count', number_format($this->originalCount));
-        $this->omni->tableRow('Final count', number_format($this->finalCount));
-        $this->omni->tableRow('Duration', $duration.'s');
-        $this->omni->hr();
+        $data = [
+            'Index' => $this->indexName,
+            'Original count' => number_format($this->originalCount),
+            'Final count' => number_format($this->finalCount),
+            'Duration' => $duration.'s',
+
+        ];
+        $this->omni->dataList($data, 'Re-Index Complete', 'text-emerald-500');
         $this->newLine();
     }
 
@@ -671,7 +665,7 @@ class ReIndexCommand extends Command
 
         $blueprint = Helpers::getLaravelCompatabilityVersion() >= 12
             ? new Blueprint($this->connection, $this->indexName)
-            : new Blueprint($this->indexName);
+            : new Blueprint($this->indexName); // @phpstan-ignore arguments.count
         ($this->mappingDefinition)($blueprint);
 
         $mismatches = [];

@@ -130,7 +130,7 @@ trait ElasticsearchModel
             Model::OPTION_STORE_IDS => $this->storeIdInDocument,
         ]);
 
-        if ($this instanceof HasMappingDefinition) {
+        if (static::hasMappingDefinition()) {
             $connection->registerMappingDefinition(
                 $connection->getTablePrefix().$this->getTable(),
                 fn ($index) => static::mappingDefinition($index)

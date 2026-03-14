@@ -55,7 +55,7 @@ it('fails when model class does not exist', function () {
     ])->assertFailed();
 });
 
-it('fails when model lacks HasMappingDefinition', function () {
+it('fails when model lacks mappingDefinition override', function () {
     $this->artisan('elastic:re-index', [
         'model' => \PDPhilip\Elasticsearch\Tests\Models\Product::class,
         '--force' => true,

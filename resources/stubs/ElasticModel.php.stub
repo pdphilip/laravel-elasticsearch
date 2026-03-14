@@ -3,7 +3,6 @@
 namespace {{ namespace }};
 
 use Carbon\Carbon;
-use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
 use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 
@@ -15,7 +14,7 @@ use PDPhilip\Elasticsearch\Schema\Blueprint;
  * @property Carbon $updated_at
  * @property Carbon $created_at
  */
-class {{ class }} extends Eloquent implements HasMappingDefinition
+class {{ class }} extends Eloquent
 {
     protected $connection = 'elasticsearch';
 
