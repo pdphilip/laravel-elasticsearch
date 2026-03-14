@@ -127,6 +127,13 @@ it('Nested Queries', function () {
 
 });
 
+it('counts nested queries', function () {
+    $count = Post::where('status',2)->whereNestedObject('comments', function (Builder $query) {
+        $query->where('country', 'USA');
+    })->count();
+    expect($count)->toBe(2);
+});
+
 it('can search with field boosting', function () {
     $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)

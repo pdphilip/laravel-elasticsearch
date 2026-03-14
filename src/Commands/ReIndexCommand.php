@@ -14,6 +14,7 @@ use PDPhilip\Elasticsearch\Eloquent\HasMappingDefinition;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
+use PDPhilip\Elasticsearch\Utils\Helpers;
 
 class ReIndexCommand extends Command
 {
@@ -28,6 +29,8 @@ class ReIndexCommand extends Command
     private string $tempIndexName;
 
     private string $connectionName;
+
+    private Connection $connection;
 
     private SchemaBuilder $schema;
 
@@ -248,8 +251,8 @@ class ReIndexCommand extends Command
         $this->connectionName = $model->getConnectionName();
 
         /** @var Connection $connection */
-        $connection = DB::connection($this->connectionName);
-        $this->schema = $connection->getSchemaBuilder();
+        $this->connection = DB::connection($this->connectionName);
+        $this->schema = $this->connection->getSchemaBuilder();
 
         $this->mappingDefinition = fn (Blueprint $index) => $model::mappingDefinition($index);
     }
@@ -406,7 +409,8 @@ class ReIndexCommand extends Command
                 return false;
             }
 
-            $this->omni->success('Copy complete — '.($result['created'] ?? 0).' docs created');
+            $this->tempCount = (int) ($result['created'] ?? 0);
+            $this->omni->success('Copy complete — '.$this->tempCount.' docs created');
 
             return true;
         } catch (Exception $e) {
@@ -424,8 +428,6 @@ class ReIndexCommand extends Command
     private function verifyTemp(): bool
     {
         $this->omni->divider('Phase 4: Verify Temp');
-
-        $this->tempCount = $this->countDocs($this->tempIndexName);
 
         $this->omni->tableHeader('Metric', 'Value');
         $this->omni->tableRow('Original count', number_format($this->originalCount));
@@ -516,7 +518,8 @@ class ReIndexCommand extends Command
 
                 $failures = $result['failures'] ?? [];
                 if (empty($failures)) {
-                    $this->omni->success('Copy back complete — '.($result['created'] ?? 0).' docs');
+                    $this->finalCount = (int) ($result['created'] ?? 0);
+                    $this->omni->success('Copy back complete — '.$this->finalCount.' docs');
 
                     return true;
                 }
@@ -544,8 +547,6 @@ class ReIndexCommand extends Command
     {
         $this->omni->divider('Phase 8: Verify Final');
 
-        $this->finalCount = $this->countDocs($this->indexName);
-
         $this->omni->tableHeader('Metric', 'Value');
         $this->omni->tableRow('Original snapshot', number_format($this->originalCount));
         $this->omni->tableRow('Temp count', number_format($this->tempCount));
@@ -561,8 +562,8 @@ class ReIndexCommand extends Command
         $this->omni->warning('Final count mismatch ('.$this->finalCount.' vs '.$this->tempCount.') — running catch-up');
 
         try {
-            $this->schema->reindex($this->tempIndexName, $this->indexName);
-            $this->finalCount = $this->countDocs($this->indexName);
+            $result = $this->schema->reindex($this->tempIndexName, $this->indexName);
+            $this->finalCount = (int) ($result['created'] ?? 0) + (int) ($result['updated'] ?? 0);
 
             if ($this->countsMatch($this->tempCount, $this->finalCount)) {
                 $this->omni->success('Catch-up resolved the mismatch');
@@ -668,7 +669,9 @@ class ReIndexCommand extends Command
     {
         $currentMapping = $this->schema->getFieldsMapping($this->indexName);
 
-        $blueprint = new Blueprint($this->indexName);
+        $blueprint = Helpers::getLaravelCompatabilityVersion() >= 12
+            ? new Blueprint($this->connection, $this->indexName)
+            : new Blueprint($this->indexName);
         ($this->mappingDefinition)($blueprint);
 
         $mismatches = [];

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Commands;
 
-use Illuminate\Console\GeneratorCommand;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use OmniTerm\HasOmniTerm;
 
-class MakeCommand extends GeneratorCommand
+class MakeCommand extends Command
 {
     use HasOmniTerm;
 
@@ -16,18 +17,15 @@ class MakeCommand extends GeneratorCommand
 
     protected $description = 'Create a new Elasticsearch model';
 
-    protected $type = 'Model';
-
     public function handle(): int
     {
         $name = Str::studly($this->argument('name'));
-
         $namespace = $this->resolveNamespace($name);
         $class = class_basename(str_replace('/', '\\', $name));
         $fullClass = $namespace.'\\'.$class;
         $path = $this->getModelPath($name);
 
-        if (file_exists($path)) {
+        if (File::exists($path)) {
             $this->newLine();
             $this->omni->statusError('Model already exists', $fullClass);
             $this->newLine();
@@ -35,10 +33,12 @@ class MakeCommand extends GeneratorCommand
             return self::FAILURE;
         }
 
-        $this->makeDirectory($path);
+        $directory = dirname($path);
+        if (! File::isDirectory($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
 
-        $stub = $this->buildStub($namespace, $class);
-        $this->files->put($path, $stub);
+        File::put($path, $this->buildFromStub($namespace, $class));
 
         $this->newLine();
         $this->omni->statusSuccess('Model created', $fullClass);
@@ -48,10 +48,24 @@ class MakeCommand extends GeneratorCommand
         return self::SUCCESS;
     }
 
-    protected function getStub(): string
+    // ======================================================================
+    // Code Generation
+    // ======================================================================
+
+    private function buildFromStub(string $namespace, string $class): string
     {
-        return __DIR__.'/../../resources/stubs/ElasticModel.php.stub';
+        $stub = File::get(__DIR__.'/../../resources/stubs/ElasticModel.php.stub');
+
+        return str_replace(
+            ['{{ namespace }}', '{{ class }}'],
+            [$namespace, $class],
+            $stub
+        );
     }
+
+    // ======================================================================
+    // Helpers
+    // ======================================================================
 
     private function resolveNamespace(string $name): string
     {
@@ -70,16 +84,5 @@ class MakeCommand extends GeneratorCommand
         $name = str_replace('\\', '/', $name);
 
         return app_path('Models/'.$name.'.php');
-    }
-
-    private function buildStub(string $namespace, string $class): string
-    {
-        $stub = $this->files->get($this->getStub());
-
-        return str_replace(
-            ['{{ namespace }}', '{{ class }}'],
-            [$namespace, $class],
-            $stub
-        );
     }
 }
