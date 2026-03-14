@@ -128,7 +128,7 @@ it('Nested Queries', function () {
 });
 
 it('counts nested queries', function () {
-    $count = Post::where('status',2)->whereNestedObject('comments', function (Builder $query) {
+    $count = Post::where('status', 2)->whereNestedObject('comments', function (Builder $query) {
         $query->where('country', 'USA');
     })->count();
     expect($count)->toBe(2);
