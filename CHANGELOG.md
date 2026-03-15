@@ -2,6 +2,61 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.5.0 - 2026-03-15
+
+This release is compatible with Laravel 10, 11 & 12
+
+[What's new in v5.5](https://elasticsearch.pdphilip.com/whats-new/#55-new-features)
+
+### New features
+
+#### Automated Re-indexing Command
+
+New `elastic:re-index` command that automates the entire re-indexing process when your field mappings change. Pass a model name and the command handles the rest — creating a temp index, copying data, verifying counts, swapping, and cleaning up across 9 interactive phases with confirmation prompts between each step. - [Docs](https://elasticsearch.pdphilip.com/schema/artisan-commands/#elasticre-index)
+
+```bash
+php artisan elastic:re-index UserLog
+php artisan elastic:re-index "App\Models\ES\UserLog"
+```
+
+Features include:
+- Smart mapping analysis that detects type mismatches and sub-field changes (e.g., adding `hasKeyword: true`)
+- Resume capability — interrupted runs pick up where they left off
+- Configurable tolerance and retry settings
+- `--force` flag to skip all confirmation prompts
+
+#### Model Scaffolding Command
+
+New `elastic:make` command to scaffold Elasticsearch models with the correct base class, connection, and a starter `mappingDefinition()`. - [Docs](https://elasticsearch.pdphilip.com/schema/artisan-commands/#elasticmake)
+
+```bash
+php artisan elastic:make UserLog
+php artisan elastic:make ES/UserLog
+```
+
+#### Mapping Definition on Models
+
+Define your index field mappings directly on the model by overriding `mappingDefinition()`. Uses the same Blueprint syntax as migrations. Powers the `elastic:re-index` command's mapping analysis. - [Docs](https://elasticsearch.pdphilip.com/eloquent/the-base-model/#mapping-definition)
+
+```php
+public static function mappingDefinition(Blueprint $index): void
+{
+    $index->keyword('status');
+    $index->text('title', hasKeyword: true);
+    $index->geoPoint('location');
+}
+```
+
+#### Artisan Commands Reference
+
+All five Artisan commands (`elastic:status`, `elastic:indices`, `elastic:show`, `elastic:make`, `elastic:re-index`) are now documented on a dedicated page. - [Docs](https://elasticsearch.pdphilip.com/schema/artisan-commands)
+
+### Fixed
+
+- `whereNestedObject()` and `filterNested()` no longer leak `parentField` into the parent query builder. The nested path was being set on `$this` instead of the sub-query, causing it to persist across subsequent queries on the same builder.
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.4.1...v5.5.0
+
 ## v5.4.1 - 2026-02-23
 
 ### Fixed
