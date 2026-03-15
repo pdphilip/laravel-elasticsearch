@@ -7,6 +7,11 @@ use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Models\ReIndexTarget;
 
+function refreshIndex(string $index): void
+{
+    DB::connection('elasticsearch')->getClient()->indices()->refresh(['index' => $index]);
+}
+
 beforeEach(function () {
     $schema = Schema::connection('elasticsearch');
     $schema->dropIfExists('re_index_targets');
@@ -32,14 +37,12 @@ it('re-indexes with updated mappings', function () {
         ['name' => 'Charlie', 'status' => 'active'],
     ]);
 
-    sleep(1);
-
     $this->artisan('elastic:re-index', [
         'model' => ReIndexTarget::class,
         '--force' => true,
     ])->assertSuccessful();
 
-    sleep(1);
+    refreshIndex('re_index_targets');
 
     $count = DB::connection('elasticsearch')->table('re_index_targets')->count();
     expect($count)->toBe(3);
@@ -88,8 +91,6 @@ it('skips re-index when mapping already matches', function () {
         ['name' => 'Alpha', 'status' => 'active'],
     ]);
 
-    sleep(1);
-
     // Mapping matches — exits early (no re-index needed)
     $this->artisan('elastic:re-index', [
         'model' => ReIndexTarget::class,
@@ -103,8 +104,6 @@ it('cleans up temp index after successful re-index', function () {
     ReIndexTarget::insert([
         ['name' => 'Alpha', 'status' => 'active'],
     ]);
-
-    sleep(1);
 
     $this->artisan('elastic:re-index', [
         'model' => ReIndexTarget::class,
@@ -121,8 +120,6 @@ it('preserves all documents after re-index', function () {
     }
     ReIndexTarget::insert($records);
 
-    sleep(1);
-
     $countBefore = DB::connection('elasticsearch')->table('re_index_targets')->count();
 
     $this->artisan('elastic:re-index', [
@@ -130,7 +127,7 @@ it('preserves all documents after re-index', function () {
         '--force' => true,
     ])->assertSuccessful();
 
-    sleep(1);
+    refreshIndex('re_index_targets');
 
     $countAfter = DB::connection('elasticsearch')->table('re_index_targets')->count();
     expect($countAfter)->toBe($countBefore);
@@ -142,8 +139,6 @@ it('resumes when leftover temp index exists with matching data', function () {
         ['name' => 'Bravo', 'status' => 'inactive'],
     ]);
 
-    sleep(1);
-
     $schema = Schema::connection('elasticsearch');
     $schema->create('re_index_targets_temp', function (Blueprint $index) {
         $index->keyword('status');
@@ -153,14 +148,12 @@ it('resumes when leftover temp index exists with matching data', function () {
     });
     $schema->reindex('re_index_targets', 're_index_targets_temp');
 
-    sleep(1);
-
     $this->artisan('elastic:re-index', [
         'model' => ReIndexTarget::class,
         '--force' => true,
     ])->assertSuccessful();
 
-    sleep(1);
+    refreshIndex('re_index_targets');
 
     $count = DB::connection('elasticsearch')->table('re_index_targets')->count();
     expect($count)->toBe(2);
@@ -173,8 +166,6 @@ it('drops empty leftover temp and starts fresh', function () {
         ['name' => 'Alpha', 'status' => 'active'],
     ]);
 
-    sleep(1);
-
     $schema = Schema::connection('elasticsearch');
     $schema->create('re_index_targets_temp', function (Blueprint $index) {
         $index->keyword('status');
@@ -186,7 +177,7 @@ it('drops empty leftover temp and starts fresh', function () {
         '--force' => true,
     ])->assertSuccessful();
 
-    sleep(1);
+    refreshIndex('re_index_targets');
 
     $count = DB::connection('elasticsearch')->table('re_index_targets')->count();
     expect($count)->toBe(1);

@@ -77,11 +77,20 @@ class ReIndexCommand extends Command
 
         // Safe zone: create temp, copy, verify
         if ($resumeAt === 'CREATE_TEMP') {
+            if (! $this->confirmContinue('Phase 2: Create Temp Index')) {
+                return self::SUCCESS;
+            }
             if (! $this->createTempIndex()) {
                 return self::FAILURE;
             }
+            if (! $this->confirmContinue('Phase 3: Copy to Temp')) {
+                return self::SUCCESS;
+            }
             if (! $this->copyToTemp()) {
                 return self::FAILURE;
+            }
+            if (! $this->confirmContinue('Phase 4: Verify Temp')) {
+                return self::SUCCESS;
             }
             if (! $this->verifyTemp()) {
                 return self::FAILURE;
@@ -114,18 +123,30 @@ class ReIndexCommand extends Command
             $this->omni->warning('Resuming in danger zone — original already gone, temp is source of truth');
         }
 
+        if (! $this->confirmContinue('Phase 6: Create Original (New Mapping)')) {
+            return self::SUCCESS;
+        }
         if (! $this->createOriginal()) {
             return self::FAILURE;
         }
 
+        if (! $this->confirmContinue('Phase 7: Copy Back')) {
+            return self::SUCCESS;
+        }
         if (! $this->copyBack()) {
             return self::FAILURE;
         }
 
+        if (! $this->confirmContinue('Phase 8: Verify Final')) {
+            return self::SUCCESS;
+        }
         if (! $this->verifyFinal()) {
             return self::FAILURE;
         }
 
+        if (! $this->confirmContinue('Phase 9: Cleanup')) {
+            return self::SUCCESS;
+        }
         $this->cleanup();
         $this->summary();
 
@@ -177,15 +198,18 @@ class ReIndexCommand extends Command
             $this->newLine();
             $this->omni->statusError('Missing mapping definition', $class, [
                 'Your model must override mappingDefinition():',
-                '',
-                'use PDPhilip\Elasticsearch\Schema\Blueprint;',
-                '',
-                'public static function mappingDefinition(Blueprint $index): void',
-                '{',
-                '    $index->keyword(\'status\');',
-                '    $index->geoPoint(\'location\');',
-                '}',
             ]);
+            $this->omni->render(<<<'HTML'
+<code line="3" start-line="1">
+use PDPhilip\Elasticsearch\Schema\Blueprint;
+
+public static function mappingDefinition(Blueprint $index): void
+{
+    $index->keyword('status');
+    $index->geoPoint('location');
+}
+</code>
+HTML);
             $this->newLine();
 
             return null;
@@ -286,24 +310,23 @@ class ReIndexCommand extends Command
             return $this->handleEmptyIndex();
         }
 
-        $this->omni->tableHeader('Check', 'Status');
-        $this->omni->tableRowSuccess('Index exists', $this->indexName);
-        $this->omni->tableRowSuccess('Record count', number_format($this->originalCount));
-        $this->omni->tableRowSuccess('No leftover temp');
+        $analysis = $this->mappingAnalysis();
 
-        $this->showMappings($this->indexName);
-
-        $mismatches = $this->mappingMismatches();
-        if (empty($mismatches)) {
+        if (empty($analysis['mismatches'])) {
             $this->omni->success('Mapping already matches — nothing to re-index');
             $this->newLine();
 
             return false;
         }
 
-        $this->omni->divider('Fields to update');
-        foreach ($mismatches as $field => $info) {
-            $this->omni->tableRowWarning($field, $info['current'].' → '.$info['desired']);
+        $fieldsToUpdate = [];
+        foreach ($analysis['mismatches'] as $field => $info) {
+            $fieldsToUpdate[$field] = $info['current'].' → '.$info['desired'];
+        }
+        $this->omni->dataList($fieldsToUpdate, 'Fields to Update', 'text-emerald-500');
+
+        if (! empty($analysis['unmapped'])) {
+            $this->omni->dataList($analysis['unmapped'], 'Unmapped Fields', 'text-rose-500');
         }
 
         return 'CREATE_TEMP';
@@ -659,7 +682,7 @@ class ReIndexCommand extends Command
         $this->omni->dataList($mapping, $index.' mapping');
     }
 
-    private function mappingMismatches(): array
+    private function mappingAnalysis(): array
     {
         $currentMapping = $this->schema->getFieldsMapping($this->indexName);
 
@@ -668,23 +691,110 @@ class ReIndexCommand extends Command
             : new Blueprint($this->indexName); // @phpstan-ignore arguments.count
         ($this->mappingDefinition)($blueprint);
 
+        $definedFields = [];
         $mismatches = [];
         foreach ($blueprint->getAddedColumns() as $column) {
             $field = $column->name;
             $desiredType = $column->type;
+            $definedFields[] = $field;
             $currentType = $currentMapping[$field] ?? null;
 
-            if ($currentType === $desiredType) {
+            if ($currentType !== $desiredType) {
+                $mismatches[$field] = [
+                    'current' => $currentType ?? 'missing',
+                    'desired' => $desiredType,
+                ];
+
                 continue;
             }
 
-            $mismatches[$field] = [
-                'current' => $currentType ?? 'missing',
-                'desired' => $desiredType,
-            ];
+            $subMismatch = $this->detectSubFieldMismatch($column, $field, $currentMapping);
+            if ($subMismatch) {
+                $mismatches[$field] = $subMismatch;
+            }
         }
 
-        return $mismatches;
+        $unmapped = [];
+        foreach ($currentMapping as $field => $type) {
+            if (in_array($field, $definedFields)) {
+                continue;
+            }
+            if ($this->isSubFieldOfDefined($field, $definedFields)) {
+                continue;
+            }
+            $unmapped[$field] = $type;
+        }
+
+        return [
+            'mismatches' => $mismatches,
+            'unmapped' => $unmapped,
+        ];
+    }
+
+    private function detectSubFieldMismatch($column, string $field, array $currentMapping): ?array
+    {
+        $expectedSubs = $this->getExpectedSubFields($column);
+        $currentSubs = $this->getCurrentSubFields($field, $currentMapping);
+
+        if ($expectedSubs === $currentSubs) {
+            return null;
+        }
+
+        $format = fn (array $subs) => empty($subs)
+            ? $column->type
+            : $column->type.' [+'.implode(', ', array_keys($subs)).']';
+
+        return [
+            'current' => $format($currentSubs),
+            'desired' => $format($expectedSubs),
+        ];
+    }
+
+    private function getExpectedSubFields($column): array
+    {
+        if (! ($column->fields instanceof Closure)) {
+            return [];
+        }
+
+        $subBlueprint = Helpers::getLaravelCompatabilityVersion() >= 12
+            ? new Blueprint($this->connection, '_sub')
+            : new Blueprint('_sub'); // @phpstan-ignore arguments.count
+        ($column->fields)($subBlueprint);
+
+        $subs = [];
+        foreach ($subBlueprint->getAddedColumns() as $subCol) {
+            $subs[$subCol->name] = $subCol->type;
+        }
+
+        return $subs;
+    }
+
+    private function getCurrentSubFields(string $field, array $mapping): array
+    {
+        $prefix = $field.'.';
+        $subs = [];
+        foreach ($mapping as $key => $type) {
+            if (! str_starts_with($key, $prefix)) {
+                continue;
+            }
+            $subName = substr($key, strlen($prefix));
+            if (! str_contains($subName, '.')) {
+                $subs[$subName] = $type;
+            }
+        }
+
+        return $subs;
+    }
+
+    private function isSubFieldOfDefined(string $field, array $definedFields): bool
+    {
+        foreach ($definedFields as $defined) {
+            if (str_starts_with($field, $defined.'.')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function confirmSettings(): bool
@@ -701,7 +811,7 @@ class ReIndexCommand extends Command
         $valid = ['yes', 'y', 'edit', 'e', 'cancel', 'c', 'no', 'n'];
 
         while (! in_array(strtolower($answer), $valid)) {
-            $answer = $this->omni->ask('Continue with these settings?', ['Yes', 'Edit', 'Cancel']);
+            $answer = $this->omni->ask('Continue with these settings?', ['yes', 'edit', 'cancel']);
         }
 
         $answer = strtolower($answer);
@@ -735,13 +845,22 @@ class ReIndexCommand extends Command
         $this->omni->success('Settings updated — tolerance: '.($this->tolerance * 100).'%, retries: '.$this->maxRetries);
     }
 
+    private function confirmContinue(string $nextPhase): bool
+    {
+        if ($this->option('force')) {
+            return true;
+        }
+
+        return $this->promptYesNo('Continue to '.$nextPhase.'?');
+    }
+
     private function promptYesNo(string $question): bool
     {
         $answer = '';
         $valid = ['yes', 'y', 'n', 'no'];
 
         while (! in_array(strtolower($answer), $valid)) {
-            $answer = $this->omni->ask($question, ['Yes', 'No']);
+            $answer = $this->omni->ask($question, ['yes', 'no']);
         }
 
         return in_array(strtolower($answer), ['yes', 'y']);

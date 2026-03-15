@@ -7,7 +7,7 @@ use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Factories\ProductFactory;
 use PDPhilip\Elasticsearch\Tests\Models\Product;
 
-it('re-indexs data', function () {
+it('re-indexes data', function () {
     // Drop the Schema
     Schema::deleteIfExists('products');
     Schema::deleteIfExists('holding_products');
