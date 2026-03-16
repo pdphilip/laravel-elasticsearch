@@ -72,7 +72,7 @@ class Grammar extends BaseGrammar
 
     public function compileMapping(Blueprint $blueprint): array
     {
-        return $this->getColumns($blueprint);
+        return $this->buildBody($blueprint);
     }
 
     protected function buildBody(Blueprint $blueprint): array

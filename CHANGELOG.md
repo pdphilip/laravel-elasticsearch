@@ -2,6 +2,14 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.5.2 - 2026-03-16
+
+### Improved
+
+- `elastic:re-index` mapping analysis now includes settings for analyzers, tokenizers, char filters, filters, and normalizers.
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.1...v5.5.2
+
 ## v5.5.1 - 2026-03-16
 
 ### Added

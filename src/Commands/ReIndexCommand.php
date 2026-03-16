@@ -682,16 +682,28 @@ HTML);
 
     private function mappingAnalysis(): array
     {
-        $currentMapping = $this->schema->getMappings($this->indexName);
-        $desiredMapping = Sanitizer::flattenMappingProperties([
-            'properties' => $this->schema->compileMapping($this->mappingDefinition),
-        ]);
+        $desired = $this->schema->compileMapping($this->mappingDefinition);
 
-        $currentFlat = collect($currentMapping)->dot();
-        $desiredFlat = collect($desiredMapping)->dot();
+        $currentMappings = $this->schema->getMappings($this->indexName);
+        $desiredMappings = Sanitizer::flattenMappingProperties($desired['mappings'] ?? []);
 
-        $changedMappings = $currentFlat->diffAssoc($desiredFlat);
-        $newMappings = $desiredFlat->diffAssoc($currentFlat);
+        $currentSettings = $this->schema->getSettings($this->indexName);
+        $currentAnalysis = $currentSettings[$this->connection->getIndexPrefix().$this->indexName]['settings']['index']['analysis'] ?? [];
+        $desiredAnalysis = $desired['settings']['analysis'] ?? [];
+
+        $currentBody = ['properties' => $currentMappings];
+        $desiredBody = ['properties' => $desiredMappings];
+
+        if (! empty($currentAnalysis) || ! empty($desiredAnalysis)) {
+            $currentBody['settings']['analysis'] = $currentAnalysis;
+            $desiredBody['settings']['analysis'] = $desiredAnalysis;
+        }
+
+        $current = collect($currentBody)->dot();
+        $desired = collect($desiredBody)->dot();
+
+        $changedMappings = $current->diffAssoc($desired);
+        $newMappings = $desired->diffAssoc($current);
         $hasChanges = $changedMappings->count() || $newMappings->count();
 
         return [
