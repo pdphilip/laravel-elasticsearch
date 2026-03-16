@@ -89,6 +89,10 @@ it('skips re-index when mapping already matches', function () {
     $schema->create('re_index_targets', function (Blueprint $index) {
         $index->keyword('status');
         $index->text('name');
+        $index->nested('tags')->properties(function (Blueprint $nested) {
+            $nested->text('key', hasKeyword: true);
+            $nested->text('value', hasKeyword: true);
+        });
         $index->date('created_at');
         $index->date('updated_at');
     });

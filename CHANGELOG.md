@@ -2,6 +2,24 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.5.1 - 2026-03-16
+
+### Added
+
+- `Schema::compileMapping()` — compile a Blueprint callback into its resulting ES mapping structure without creating the index. Useful for debugging and previewing what `mappingDefinition()` will produce.
+- `Grammar::compileMapping()` — public access to the Blueprint-to-properties compilation pipeline.
+
+### Improved
+
+- `elastic:re-index` mapping analysis now uses `getMappings()` + `compileMapping()` for a proper apples-to-apples comparison, replacing the manual tree-building approach. Correctly handles nested types with properties, multi-field types with sub-fields, and any combination at any depth.
+- `elastic:re-index` output uses `dataList` depth rendering for both "Fields to Update" and "Unmapped Fields", showing nested structures with proper indentation.
+
+### Fixed
+
+- `elastic:re-index` now correctly detects nested field mappings (e.g., `nested('tags')->properties(...)`) including their sub-fields and keyword sub-field changes.
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.0...v5.5.1
+
 ## v5.5.0 - 2026-03-15
 
 This release is compatible with Laravel 10, 11 & 12
