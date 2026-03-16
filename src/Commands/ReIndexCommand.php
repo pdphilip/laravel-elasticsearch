@@ -13,7 +13,7 @@ use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Builder as SchemaBuilder;
-use PDPhilip\Elasticsearch\Utils\Helpers;
+use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 class ReIndexCommand extends Command
 {
@@ -104,7 +104,7 @@ class ReIndexCommand extends Command
         // Confirmation gate before danger zone
         if ($resumeAt !== 'CREATE_ORIGINAL') {
             $this->omni->hr();
-            $this->omni->warning('About to enter the danger zone — original index will be dropped');
+            $this->omni->warning('About to enter the danger zone - original index will be dropped');
             $this->omni->tableRow('Original', $this->indexName.' ('.$this->originalCount.' docs)');
             $this->omni->tableRow('Temp', $this->tempIndexName.' ('.$this->tempCount.' docs)');
             $this->omni->hr();
@@ -120,7 +120,7 @@ class ReIndexCommand extends Command
                 return self::FAILURE;
             }
         } else {
-            $this->omni->warning('Resuming in danger zone — original already gone, temp is source of truth');
+            $this->omni->warning('Resuming in danger zone - original already gone, temp is source of truth');
         }
 
         if (! $this->confirmContinue('Phase 6: Create Original (New Mapping)')) {
@@ -287,7 +287,7 @@ HTML);
         $tempExists = $this->schema->hasTable($this->tempIndexName);
 
         if (! $originalExists && ! $tempExists) {
-            $this->omni->error('Both indices missing — catastrophic state, manual recovery needed');
+            $this->omni->error('Both indices missing - catastrophic state, manual recovery needed');
             $this->newLine();
 
             return false;
@@ -313,20 +313,17 @@ HTML);
         $analysis = $this->mappingAnalysis();
 
         if (empty($analysis['mismatches'])) {
-            $this->omni->success('Mapping already matches — nothing to re-index');
+            $this->omni->success('Mapping already matches - nothing to re-index');
             $this->newLine();
 
             return false;
         }
 
-        $fieldsToUpdate = [];
-        foreach ($analysis['mismatches'] as $field => $info) {
-            $fieldsToUpdate[$field] = $info['current'].' → '.$info['desired'];
-        }
+        $fieldsToUpdate = $this->formatMismatchesForDisplay($analysis['mismatches']);
         $this->omni->dataList($fieldsToUpdate, 'Fields to Update', 'text-emerald-500');
 
         if (! empty($analysis['unmapped'])) {
-            $this->omni->dataList($analysis['unmapped'], 'Unmapped Fields', 'text-rose-500');
+            $this->omni->dataList($this->nestDotNotation($analysis['unmapped']), 'Unmapped Fields', 'text-rose-500');
         }
 
         return 'CREATE_TEMP';
@@ -338,7 +335,7 @@ HTML);
 
         if (! $originalExists) {
             $this->omni->warning('Original missing, temp has '.$this->tempCount.' docs');
-            $this->omni->info('Resuming from danger zone — temp is source of truth');
+            $this->omni->info('Resuming from danger zone - temp is source of truth');
             $this->originalCount = $this->tempCount;
 
             return 'CREATE_ORIGINAL';
@@ -347,19 +344,19 @@ HTML);
         $this->originalCount = $this->countDocs($this->indexName);
 
         if ($this->tempCount === 0) {
-            $this->omni->info('Empty temp from previous run — dropping, starting fresh');
+            $this->omni->info('Empty temp from previous run - dropping, starting fresh');
             $this->schema->dropIfExists($this->tempIndexName);
 
             return 'CREATE_TEMP';
         }
 
         if ($this->countsMatch($this->originalCount, $this->tempCount)) {
-            $this->omni->info('Temp has matching data ('.$this->tempCount.' docs) — resuming at verify');
+            $this->omni->info('Temp has matching data ('.$this->tempCount.' docs) - resuming at verify');
 
             return 'VERIFY_TEMP';
         }
 
-        $this->omni->info('Partial temp ('.$this->tempCount.'/'.$this->originalCount.') — dropping, starting fresh');
+        $this->omni->info('Partial temp ('.$this->tempCount.'/'.$this->originalCount.') - dropping, starting fresh');
         $this->schema->dropIfExists($this->tempIndexName);
 
         return 'CREATE_TEMP';
@@ -367,7 +364,7 @@ HTML);
 
     private function handleEmptyIndex(): string|false
     {
-        $this->omni->warning('Index has 0 records — just drop and recreate');
+        $this->omni->warning('Index has 0 records - just drop and recreate');
 
         if (! $this->option('force') && ! $this->promptYesNo('Drop and recreate with new mapping?')) {
             $this->newLine();
@@ -427,7 +424,7 @@ HTML);
             }
 
             $this->tempCount = (int) ($result['created'] ?? 0);
-            $this->omni->success('Copy complete — '.$this->tempCount.' docs created');
+            $this->omni->success('Copy complete - '.$this->tempCount.' docs created');
 
             return true;
         } catch (Exception $e) {
@@ -480,7 +477,7 @@ HTML);
             return true;
         } catch (Exception $e) {
             $this->omni->statusError('Failed to drop original', $e->getMessage());
-            $this->omni->info('Safe state — original still exists. Drop temp manually if needed.');
+            $this->omni->info('Safe state - original still exists. Drop temp manually if needed.');
             $this->newLine();
 
             return false;
@@ -496,7 +493,7 @@ HTML);
         $this->omni->divider('Phase 6: Create Original (New Mapping)');
 
         if ($this->schema->hasTable($this->indexName)) {
-            $this->omni->info('Partial original exists — dropping before recreate');
+            $this->omni->info('Partial original exists - dropping before recreate');
             try {
                 $this->schema->drop($this->indexName);
                 sleep(1);
@@ -536,7 +533,7 @@ HTML);
                 $failures = $result['failures'] ?? [];
                 if (empty($failures)) {
                     $this->finalCount = (int) ($result['created'] ?? 0);
-                    $this->omni->success('Copy back complete — '.$this->finalCount.' docs');
+                    $this->omni->success('Copy back complete - '.$this->finalCount.' docs');
 
                     return true;
                 }
@@ -576,7 +573,7 @@ HTML);
             return true;
         }
 
-        $this->omni->warning('Final count mismatch ('.$this->finalCount.' vs '.$this->tempCount.') — running catch-up');
+        $this->omni->warning('Final count mismatch ('.$this->finalCount.' vs '.$this->tempCount.') - running catch-up');
 
         try {
             $result = $this->schema->reindex($this->tempIndexName, $this->indexName);
@@ -591,7 +588,7 @@ HTML);
             $this->omni->warning('Catch-up failed: '.$e->getMessage());
         }
 
-        $this->critical('Final verification failed — '.$this->finalCount.' vs '.$this->tempCount);
+        $this->critical('Final verification failed - '.$this->finalCount.' vs '.$this->tempCount);
 
         return false;
     }
@@ -651,7 +648,7 @@ HTML);
 
     private function rollbackTemp(string $reason): void
     {
-        $this->omni->warning('Rolling back — dropping temp index');
+        $this->omni->warning('Rolling back - dropping temp index');
         $this->omni->info('Reason: '.$reason);
 
         try {
@@ -667,7 +664,7 @@ HTML);
         $this->omni->hrError();
         $this->omni->error('CRITICAL: '.$message);
         $this->omni->error('Data lives in temp index: '.$this->tempIndexName);
-        $this->omni->error('DO NOT drop '.$this->tempIndexName.' — it is the only complete copy');
+        $this->omni->error('DO NOT drop '.$this->tempIndexName.' - it is the only complete copy');
         $this->omni->hrError();
         $this->newLine();
     }
@@ -678,51 +675,38 @@ HTML);
             return;
         }
 
-        $mapping = $this->schema->getFieldsMapping($index);
+        $mapping = $this->schema->getMappings($index);
         $this->omni->dataList($mapping, $index.' mapping');
     }
 
     private function mappingAnalysis(): array
     {
-        $currentMapping = $this->schema->getFieldsMapping($this->indexName);
+        $currentMapping = $this->schema->getMappings($this->indexName);
+        $desiredMapping = Sanitizer::flattenMappingProperties([
+            'properties' => $this->schema->compileMapping($this->mappingDefinition),
+        ]);
 
-        $blueprint = Helpers::getLaravelCompatabilityVersion() >= 12
-            ? new Blueprint($this->connection, $this->indexName)
-            : new Blueprint($this->indexName); // @phpstan-ignore arguments.count
-        ($this->mappingDefinition)($blueprint);
-
-        $definedFields = [];
+        $desiredFields = array_keys($desiredMapping);
         $mismatches = [];
-        foreach ($blueprint->getAddedColumns() as $column) {
-            $field = $column->name;
-            $desiredType = $column->type;
-            $definedFields[] = $field;
-            $currentType = $currentMapping[$field] ?? null;
 
-            if ($currentType !== $desiredType) {
-                $mismatches[$field] = [
-                    'current' => $currentType ?? 'missing',
-                    'desired' => $desiredType,
-                ];
-
+        foreach ($desiredMapping as $field => $desired) {
+            $current = $currentMapping[$field] ?? null;
+            if ($current === $desired) {
                 continue;
             }
 
-            $subMismatch = $this->detectSubFieldMismatch($column, $field, $currentMapping);
-            if ($subMismatch) {
-                $mismatches[$field] = $subMismatch;
-            }
+            $mismatches[$field] = [
+                'current' => ($current['type'] ?? null) ?? 'missing',
+                'desired' => $desired['type'] ?? 'unknown',
+            ];
         }
 
         $unmapped = [];
-        foreach ($currentMapping as $field => $type) {
-            if (in_array($field, $definedFields)) {
+        foreach ($currentMapping as $field => $details) {
+            if (isset($desiredMapping[$field])) {
                 continue;
             }
-            if ($this->isSubFieldOfDefined($field, $definedFields)) {
-                continue;
-            }
-            $unmapped[$field] = $type;
+            $unmapped[$field] = $details['type'] ?? 'object';
         }
 
         return [
@@ -731,70 +715,37 @@ HTML);
         ];
     }
 
-    private function detectSubFieldMismatch($column, string $field, array $currentMapping): ?array
+    private function formatMismatchesForDisplay(array $mismatches): array
     {
-        $expectedSubs = $this->getExpectedSubFields($column);
-        $currentSubs = $this->getCurrentSubFields($field, $currentMapping);
+        $display = [];
+        foreach ($mismatches as $field => $info) {
+            $label = $info['current'].' → '.$info['desired'];
+            if (empty($info['details'])) {
+                $display[$field] = $label;
 
-        if ($expectedSubs === $currentSubs) {
-            return null;
-        }
-
-        $format = fn (array $subs) => empty($subs)
-            ? $column->type
-            : $column->type.' [+'.implode(', ', array_keys($subs)).']';
-
-        return [
-            'current' => $format($currentSubs),
-            'desired' => $format($expectedSubs),
-        ];
-    }
-
-    private function getExpectedSubFields($column): array
-    {
-        if (! ($column->fields instanceof Closure)) {
-            return [];
-        }
-
-        $subBlueprint = Helpers::getLaravelCompatabilityVersion() >= 12
-            ? new Blueprint($this->connection, '_sub')
-            : new Blueprint('_sub'); // @phpstan-ignore arguments.count
-        ($column->fields)($subBlueprint);
-
-        $subs = [];
-        foreach ($subBlueprint->getAddedColumns() as $subCol) {
-            $subs[$subCol->name] = $subCol->type;
-        }
-
-        return $subs;
-    }
-
-    private function getCurrentSubFields(string $field, array $mapping): array
-    {
-        $prefix = $field.'.';
-        $subs = [];
-        foreach ($mapping as $key => $type) {
-            if (! str_starts_with($key, $prefix)) {
                 continue;
             }
-            $subName = substr($key, strlen($prefix));
-            if (! str_contains($subName, '.')) {
-                $subs[$subName] = $type;
-            }
+            $display[$field] = [$label => $info['details']];
         }
 
-        return $subs;
+        return $display;
     }
 
-    private function isSubFieldOfDefined(string $field, array $definedFields): bool
+    private function nestDotNotation(array $flat): array
     {
-        foreach ($definedFields as $defined) {
-            if (str_starts_with($field, $defined.'.')) {
-                return true;
+        $nested = [];
+        foreach ($flat as $key => $value) {
+            $parts = explode('.', $key);
+            if (count($parts) === 1) {
+                $nested[$key] = $value;
+
+                continue;
             }
+            $parent = array_shift($parts);
+            $nested[$parent][implode('.', $parts)] = $value;
         }
 
-        return false;
+        return $nested;
     }
 
     private function confirmSettings(): bool
@@ -842,7 +793,7 @@ HTML);
             $this->maxRetries = (int) $retries;
         }
 
-        $this->omni->success('Settings updated — tolerance: '.($this->tolerance * 100).'%, retries: '.$this->maxRetries);
+        $this->omni->success('Settings updated - tolerance: '.($this->tolerance * 100).'%, retries: '.$this->maxRetries);
     }
 
     private function confirmContinue(string $nextPhase): bool

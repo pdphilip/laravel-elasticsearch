@@ -289,6 +289,17 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Compile a Blueprint callback into its resulting ES mapping structure without creating the index.
+     */
+    public function compileMapping(Closure $callback): array
+    {
+        $blueprint = $this->createBlueprint('_compile');
+        $callback($blueprint);
+
+        return $this->connection->getSchemaGrammar()->compileMapping($blueprint);
+    }
+
+    /**
      * Shows you the currently configured settings for one or more indices
      */
     public function getSettings(string|array $table): array

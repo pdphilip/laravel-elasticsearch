@@ -22,6 +22,10 @@ class ReIndexTarget extends Model
     {
         $index->keyword('status');
         $index->text('name');
+        $index->nested('tags')->properties(function (Blueprint $nested) {
+            $nested->text('key', hasKeyword: true);
+            $nested->text('value', hasKeyword: true);
+        });
         $index->date('created_at');
         $index->date('updated_at');
     }

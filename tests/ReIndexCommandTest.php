@@ -32,8 +32,8 @@ afterEach(function () {
 
 it('re-indexes with updated mappings', function () {
     ReIndexTarget::insert([
-        ['name' => 'Alpha', 'status' => 'active'],
-        ['name' => 'Bravo', 'status' => 'inactive'],
+        ['name' => 'Alpha', 'status' => 'active', 'tags' => [['key' => 'color', 'value' => 'red']]],
+        ['name' => 'Bravo', 'status' => 'inactive', 'tags' => [['key' => 'size', 'value' => 'large']]],
         ['name' => 'Charlie', 'status' => 'active'],
     ]);
 
@@ -47,8 +47,14 @@ it('re-indexes with updated mappings', function () {
     $count = DB::connection('elasticsearch')->table('re_index_targets')->count();
     expect($count)->toBe(3);
 
-    $mapping = Schema::connection('elasticsearch')->getFieldsMapping('re_index_targets');
-    expect($mapping)->toHaveKey('status', 'keyword');
+    $mapping = Schema::connection('elasticsearch')->getMappings('re_index_targets');
+    expect($mapping)->toHaveKey('status');
+    expect($mapping['status']['type'])->toBe('keyword');
+    expect($mapping['tags']['type'])->toBe('nested');
+    expect($mapping['tags.key']['type'])->toBe('text');
+    expect($mapping['tags.key.keyword']['type'])->toBe('keyword');
+    expect($mapping['tags.value']['type'])->toBe('text');
+    expect($mapping['tags.value.keyword']['type'])->toBe('keyword');
 });
 
 it('fails when model class does not exist', function () {
