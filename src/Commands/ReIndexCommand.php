@@ -312,18 +312,19 @@ HTML);
 
         $analysis = $this->mappingAnalysis();
 
-        if (empty($analysis['mismatches'])) {
+        if (! $analysis['hasChanges']) {
             $this->omni->success('Mapping already matches - nothing to re-index');
             $this->newLine();
 
             return false;
         }
 
-        $fieldsToUpdate = $this->formatMismatchesForDisplay($analysis['mismatches']);
-        $this->omni->dataList($fieldsToUpdate, 'Fields to Update', 'text-emerald-500');
+        if (! empty($analysis['newMappings'])) {
+            $this->omni->dataList($analysis['newMappings'], 'New Mappings', 'text-emerald-500');
+        }
 
-        if (! empty($analysis['unmapped'])) {
-            $this->omni->dataList($this->nestDotNotation($analysis['unmapped']), 'Unmapped Fields', 'text-rose-500');
+        if (! empty($analysis['changedMappings'])) {
+            $this->omni->dataList($analysis['changedMappings'], 'Changed/Removed Mappings', 'text-rose-500');
         }
 
         return 'CREATE_TEMP';
@@ -686,66 +687,18 @@ HTML);
             'properties' => $this->schema->compileMapping($this->mappingDefinition),
         ]);
 
-        $desiredFields = array_keys($desiredMapping);
-        $mismatches = [];
+        $currentFlat = collect($currentMapping)->dot();
+        $desiredFlat = collect($desiredMapping)->dot();
 
-        foreach ($desiredMapping as $field => $desired) {
-            $current = $currentMapping[$field] ?? null;
-            if ($current === $desired) {
-                continue;
-            }
-
-            $mismatches[$field] = [
-                'current' => ($current['type'] ?? null) ?? 'missing',
-                'desired' => $desired['type'] ?? 'unknown',
-            ];
-        }
-
-        $unmapped = [];
-        foreach ($currentMapping as $field => $details) {
-            if (isset($desiredMapping[$field])) {
-                continue;
-            }
-            $unmapped[$field] = $details['type'] ?? 'object';
-        }
+        $changedMappings = $currentFlat->diffAssoc($desiredFlat);
+        $newMappings = $desiredFlat->diffAssoc($currentFlat);
+        $hasChanges = $changedMappings->count() || $newMappings->count();
 
         return [
-            'mismatches' => $mismatches,
-            'unmapped' => $unmapped,
+            'changedMappings' => $changedMappings->undot()->toArray(),
+            'newMappings' => $newMappings->undot()->toArray(),
+            'hasChanges' => $hasChanges,
         ];
-    }
-
-    private function formatMismatchesForDisplay(array $mismatches): array
-    {
-        $display = [];
-        foreach ($mismatches as $field => $info) {
-            $label = $info['current'].' → '.$info['desired'];
-            if (empty($info['details'])) {
-                $display[$field] = $label;
-
-                continue;
-            }
-            $display[$field] = [$label => $info['details']];
-        }
-
-        return $display;
-    }
-
-    private function nestDotNotation(array $flat): array
-    {
-        $nested = [];
-        foreach ($flat as $key => $value) {
-            $parts = explode('.', $key);
-            if (count($parts) === 1) {
-                $nested[$key] = $value;
-
-                continue;
-            }
-            $parent = array_shift($parts);
-            $nested[$parent][implode('.', $parts)] = $value;
-        }
-
-        return $nested;
     }
 
     private function confirmSettings(): bool
