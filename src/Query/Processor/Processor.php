@@ -66,8 +66,11 @@ class Processor extends BaseProcessor
         $this->query = $query;
         $response = $this->getRawResponse();
         $this->rawAggregations = $response['aggregations'] ?? [];
-        if (! empty($response['aggregations']['group_by']['after_key'])) {
-            $this->query->getMetaTransfer()->set('after_key', $response['aggregations']['group_by']['after_key']);
+
+        // Extract after_key — may be inside a nested agg wrapper
+        $groupByAggs = $this->unwrapNestedAggregation($this->rawAggregations, 'group_by');
+        if (! empty($groupByAggs['group_by']['after_key'])) {
+            $this->query->getMetaTransfer()->set('after_key', $groupByAggs['group_by']['after_key']);
         }
 
         if (! empty($this->query->bucketAggregations)) {
@@ -318,5 +321,37 @@ class Processor extends BaseProcessor
         }
 
         return $documents->all();
+    }
+
+    /**
+     * Drill into nested/filter agg wrappers to find the expected aggregation key.
+     * Returns the aggregation array containing $expectedKey at the top level.
+     * Handles: nested_* → filtered → expected_key (up to 3 levels deep).
+     */
+    protected function unwrapNestedAggregation(array $aggregations, string $expectedKey, int $depth = 0): array
+    {
+        if (isset($aggregations[$expectedKey]) || $depth > 3) {
+            return $aggregations;
+        }
+
+        foreach ($aggregations as $key => $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value[$expectedKey])) {
+                return $value;
+            }
+
+            // Drill into nested/filter wrappers (they always have doc_count)
+            if (isset($value['doc_count'])) {
+                $inner = $this->unwrapNestedAggregation($value, $expectedKey, $depth + 1);
+                if (isset($inner[$expectedKey])) {
+                    return $inner;
+                }
+            }
+        }
+
+        return $aggregations;
     }
 }

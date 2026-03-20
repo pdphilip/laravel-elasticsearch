@@ -91,6 +91,13 @@ trait CompilesAggregations
             }
 
             $result = $this->compileAggregation($builder, $aggregation);
+
+            // Wrap in nested agg if bucket targets nested fields
+            $nestedPath = $this->detectNestedPathFromBucketAgg($builder, $aggregation);
+            if ($nestedPath) {
+                $result = $this->wrapInNestedAgg($result, $nestedPath, $builder);
+            }
+
             $aggregations = $aggregations->mergeRecursive($result);
         }
 
@@ -263,5 +270,131 @@ trait CompilesAggregations
         $filter = $this->compileWheres($args);
 
         return DslFactory::filterAggregation(array_merge($filter['query'] ?? [], $filter['filter'] ?? []));
+    }
+
+    // ----------------------------------------------------------------------
+    // Nested field aggregation support
+    // ES requires aggregations on nested fields to be wrapped in a nested agg context.
+    // ----------------------------------------------------------------------
+
+    /**
+     * Wrap compiled aggregations in a nested agg when targeting nested fields.
+     * If a whereNestedObject filter exists on the same path, injects it as a
+     * filter agg inside the nested wrapper for accurate sub-document filtering.
+     */
+    protected function wrapInNestedAgg(array $aggs, ?string $nestedPath, ?Builder $builder = null): array
+    {
+        if (! $nestedPath) {
+            return $aggs;
+        }
+
+        $key = 'nested_'.str_replace('.', '_', $nestedPath);
+
+        // Check for a whereNestedObject filter on the same path
+        $nestedFilter = $builder ? $this->extractNestedFilter($nestedPath, $builder) : null;
+
+        if ($nestedFilter) {
+            return [
+                $key => [
+                    'nested' => ['path' => $nestedPath],
+                    'aggs' => [
+                        'filtered' => [
+                            'filter' => $nestedFilter,
+                            'aggs' => $aggs,
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        return [
+            $key => [
+                'nested' => ['path' => $nestedPath],
+                'aggs' => $aggs,
+            ],
+        ];
+    }
+
+    /**
+     * Find the common nested path shared by all fields.
+     * Returns null if any field is non-nested or paths differ.
+     */
+    protected function resolveCommonNestedPath(array $fields, Builder $builder): ?string
+    {
+        $nestedPath = null;
+
+        foreach ($fields as $field) {
+            $fieldPath = $this->getNestedPath($field, $builder);
+
+            if ($fieldPath === null) {
+                return null;
+            }
+
+            if ($nestedPath === null) {
+                $nestedPath = $fieldPath;
+            } elseif ($nestedPath !== $fieldPath) {
+                return null;
+            }
+        }
+
+        return $nestedPath;
+    }
+
+    /**
+     * Detect the nested path from a bucket aggregation's arguments.
+     * Inspects composite sources and terms field references.
+     */
+    protected function detectNestedPathFromBucketAgg(Builder $builder, array $aggregation): ?string
+    {
+        $type = $aggregation['type'];
+        $args = $aggregation['args'];
+
+        if ($type === 'composite' && is_array($args)) {
+            foreach ($args as $source) {
+                if (! is_array($source)) {
+                    continue;
+                }
+                foreach (array_keys($source) as $field) {
+                    $path = $this->getNestedPath($field, $builder);
+                    if ($path) {
+                        return $path;
+                    }
+                }
+            }
+        }
+
+        if ($type === 'terms') {
+            $field = is_array($args) ? ($args['field'] ?? $aggregation['key']) : $aggregation['key'];
+
+            return $this->getNestedPath($field, $builder);
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract the filter condition from a whereNestedObject on the same path.
+     * Returns a compiled ES filter body, or null if no matching filter exists.
+     */
+    protected function extractNestedFilter(string $nestedPath, Builder $builder): ?array
+    {
+        if (empty($builder->wheres)) {
+            return null;
+        }
+
+        foreach ($builder->wheres as $where) {
+            if (($where['type'] ?? null) !== 'NestedObject' || ($where['column'] ?? null) !== $nestedPath) {
+                continue;
+            }
+
+            $compiled = $this->compileWheres($where['query']);
+            $filter = array_merge($compiled['query'] ?? [], $compiled['filter'] ?? []);
+
+            if (! empty($filter)) {
+                return $filter;
+            }
+        }
+
+        return null;
     }
 }

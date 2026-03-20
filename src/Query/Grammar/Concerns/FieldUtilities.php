@@ -9,6 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Query\Builder;
+use PDPhilip\Elasticsearch\Schema\Schema;
 
 /**
  * Field mapping, value conversion, and other utility methods.
@@ -118,6 +119,63 @@ trait FieldUtilities
         }
 
         throw new BuilderException("{$textField} does not have a keyword field.");
+    }
+
+    /**
+     * Get the nested mapping path for a dotted field.
+     * For 'tags.key', returns 'tags' if tags is mapped as nested.
+     * Supports multi-level nesting: 'a.b.c' checks 'a' then 'a.b'.
+     *
+     * Uses the index mapping API (getMappings) rather than the field mapping API,
+     * because the field mapping API doesn't return nested parent entries.
+     */
+    public function getNestedPath(string $field, Builder $builder): ?string
+    {
+        if (! str_contains($field, '.')) {
+            return null;
+        }
+
+        $nestedPaths = $this->resolveNestedPaths($builder);
+
+        $segments = explode('.', $field);
+        $path = '';
+        for ($i = 0; $i < count($segments) - 1; $i++) {
+            $path = $path ? $path.'.'.$segments[$i] : $segments[$i];
+            if (in_array($path, $nestedPaths)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve all nested field paths for the builder's index.
+     * Cached per index to avoid repeated API calls.
+     */
+    protected function resolveNestedPaths(Builder $builder): array
+    {
+        $cacheKey = $builder->from.'_nested_paths';
+        $cached = $builder->options()->get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $nestedPaths = [];
+        try {
+            $mapping = Schema::connection($builder->connection->getName())->getMappings($builder->getFrom());
+            foreach ($mapping as $field => $details) {
+                if (is_array($details) && ($details['type'] ?? null) === 'nested') {
+                    $nestedPaths[] = $field;
+                }
+            }
+        } catch (\Exception) {
+            // Index may not exist yet — no nested paths to detect
+        }
+
+        $builder->options()->add($cacheKey, $nestedPaths);
+
+        return $nestedPaths;
     }
 
     /**

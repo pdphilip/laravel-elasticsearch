@@ -21,8 +21,13 @@ trait ProcessesBucketAggregations
         $key = $bucketAggregation['key'];
         $type = $bucketAggregation['type'] ?? null;
 
+        // Unwrap nested/filter agg wrappers if the bucket key isn't at the top level
+        if (! isset($rawAggs[$key])) {
+            $rawAggs = $this->unwrapNestedAggregation($rawAggs, $key);
+        }
+
         if (! isset($rawAggs[$key]['buckets'])) {
-            return $rawAggs[$key];
+            return $rawAggs[$key] ?? [];
         }
         $result = collect($rawAggs[$key]['buckets'])->map(function ($bucket) use ($key, $type) {
             $metricAggs = $this->appendMetricsToBucket($bucket);

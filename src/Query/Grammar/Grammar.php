@@ -268,7 +268,15 @@ class Grammar extends BaseGrammar
                     $aggs[$aggregation['key']]['key'] = $aggregation['type'].'_'.$aggregation['key'];
                 }
 
-                $dsl->setBody(['aggs'], $this->compileNestedTermAggregations($fields, $query, $aggs));
+                $compiledAggs = $this->compileNestedTermAggregations($fields, $query, $aggs);
+
+                // Wrap in nested agg if all fields share a nested path
+                $nestedPath = $this->resolveCommonNestedPath($fields, $query);
+                if ($nestedPath) {
+                    $compiledAggs = $this->wrapInNestedAgg($compiledAggs, $nestedPath, $query);
+                }
+
+                $dsl->setBody(['aggs'], $compiledAggs);
                 $dsl->setBody(['size'], $query->getSetLimit() ?? 0);
                 $dsl->unsetBody(['sort']);
             } else {
@@ -279,8 +287,28 @@ class Grammar extends BaseGrammar
                 $fields = Arr::wrap($query->columns);
                 $aggs = [];
 
+                // Group fields by nested path to share one wrapper per path
+                $nestedGroups = [];
+                $plainFields = [];
                 foreach ($fields as $field) {
+                    $nestedPath = $this->getNestedPath($field, $query);
+                    if ($nestedPath) {
+                        $nestedGroups[$nestedPath][] = $field;
+                    } else {
+                        $plainFields[] = $field;
+                    }
+                }
+
+                foreach ($plainFields as $field) {
                     $aggs = [...$aggs, ...$this->compileNestedTermAggregations([$field], $query)];
+                }
+
+                foreach ($nestedGroups as $nestedPath => $groupFields) {
+                    $innerAggs = [];
+                    foreach ($groupFields as $field) {
+                        $innerAggs = [...$innerAggs, ...$this->compileNestedTermAggregations([$field], $query)];
+                    }
+                    $aggs = [...$aggs, ...$this->wrapInNestedAgg($innerAggs, $nestedPath, $query)];
                 }
 
                 $dsl->setBody(['aggs'], $aggs);
