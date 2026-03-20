@@ -2,6 +2,15 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.5.3 - 2026-03-20
+
+### Fixed
+
+- `distinct()`, `bulkDistinct()`, and `groupBy()` now work on nested fields (e.g., `distinct('tags.key', true)`). Previously these returned empty results because the compiled DSL lacked the required `nested` aggregation wrapper. The package now auto-detects nested mappings and wraps aggregations accordingly — no changes needed in userland code.
+- When `whereNestedObject()` is combined with `distinct()` on the same nested path, the nested filter is injected inside the aggregation context so that only matching sub-documents are aggregated.
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.2...v5.5.3
+
 ## v5.5.2 - 2026-03-16
 
 ### Improved
