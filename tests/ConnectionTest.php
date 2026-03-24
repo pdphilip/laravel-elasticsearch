@@ -19,7 +19,7 @@ function getLaravelVersion(): int
 
 test('Laravel Compatability for v'.getLaravelVersion().' loaded', function () {
     expect(getLaravelVersion())->toBeGreaterThan(10)
-        ->and(getLaravelVersion())->toBeLessThan(13);
+        ->and(getLaravelVersion())->toBeLessThan(14);
 });
 
 test('Connection', function () {

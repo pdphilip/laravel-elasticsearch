@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query\Grammar\Concerns;
 
+use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\DSL\DslFactory;
@@ -175,7 +176,7 @@ trait CompilesAggregations
 
     private function getAggregationMethod(string $type): string
     {
-        return 'compile'.ucfirst(\Illuminate\Support\Str::camel($type)).'Aggregation';
+        return 'compile'.ucfirst(Str::camel($type)).'Aggregation';
     }
 
     // ----------------------------------------------------------------------

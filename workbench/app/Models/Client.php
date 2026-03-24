@@ -4,6 +4,7 @@ namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\HybridRelations;
 use Workbench\Database\Factories\ClientFactory;
 
@@ -16,8 +17,8 @@ use Workbench\Database\Factories\ClientFactory;
  * @property string $company_id
  * @property string $name
  * @property int $status
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  *
  ******Relationships*******
  * @property-read Company $company

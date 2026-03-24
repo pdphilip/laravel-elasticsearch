@@ -3,6 +3,7 @@
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
 use Workbench\Database\Factories\ClientLogFactory;
 
@@ -16,8 +17,8 @@ use Workbench\Database\Factories\ClientLogFactory;
  * @property string $title
  * @property string $desc
  * @property int $status
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  *
  ******Relationships*******
  * @property-read Client $client

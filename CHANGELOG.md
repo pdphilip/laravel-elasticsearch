@@ -2,6 +2,27 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.6.0 - 2026-03-24
+
+This release is compatible with Laravel 11, 12 & 13
+
+### Added
+
+- **Laravel 13 support**
+- Symfony 8 support (via Laravel 13)
+- Composer test scripts for per-version testing: `composer test:l11`, `composer test:l12`, `composer test:l13`, `composer test:all`
+
+### Changed
+
+- Dropped Laravel 10 support (EOL)
+- `pdphilip/omniterm` bumped to `^3.0`
+- `Connection::select()` signature updated with `$fetchUsing` parameter (Laravel 13 compatibility)
+- Laravel compatibility layer dispatchers use `>= 12` (L13 shares L12's connection/schema patterns)
+- Version gate updated: `Helpers::getLaravelCompatabilityVersion()` now accepts 11, 12, 13
+- CI matrix updated: PHP 8.3/8.4, Laravel 11/12/13
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.3...v5.6.0
+
 ## v5.5.3 - 2026-03-20
 
 ### Fixed

@@ -8,7 +8,7 @@ use PDPhilip\Elasticsearch\Utils\Helpers;
 
 $laravelVersion = Helpers::getLaravelCompatabilityVersion();
 
-if ($laravelVersion == 12) {
+if ($laravelVersion >= 12) {
     trait BuilderCompatibility
     {
         use BuilderCompatibility12;

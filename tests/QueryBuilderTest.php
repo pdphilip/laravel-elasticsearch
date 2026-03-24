@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
+use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Tests\Models\Item;
 use PDPhilip\Elasticsearch\Tests\Models\User;
 
@@ -41,7 +42,7 @@ it('deletes document by id', function () {
 });
 
 it('returns query builder instance from model', function () {
-    expect(User::query())->toBeInstanceOf(\PDPhilip\Elasticsearch\Eloquent\Builder::class);
+    expect(User::query())->toBeInstanceOf(Builder::class);
 });
 
 it('retrieves empty collection when no documents exist', function () {

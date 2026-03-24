@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Eloquent\SoftDeletes;
+use PDPhilip\Elasticsearch\Relations\BelongsTo;
 use Workbench\Database\Factories\ProductFactory;
 
 /**
@@ -27,8 +29,8 @@ use Workbench\Database\Factories\ProductFactory;
  * @property bool $is_active
  * @property array $manufacturer
  * @property string $datetime
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  *
  ******Relationships*******
  * @property-read User $user
@@ -90,7 +92,7 @@ class Product extends Model
 
     // Relationships  =====================================
 
-    public function user(): \PDPhilip\Elasticsearch\Relations\BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }

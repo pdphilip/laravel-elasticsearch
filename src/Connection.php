@@ -667,7 +667,7 @@ class Connection extends BaseConnection
      * @param  array  $params
      * @param  array  $bindings
      */
-    public function select($params, $bindings = [], $useReadPdo = true): Elasticsearch
+    public function select($params, $bindings = [], $useReadPdo = true, $fetchUsing = null): Elasticsearch
     {
         return $this->run(
             $this->addClientParams($params),

@@ -5,9 +5,26 @@ on:
     branches:
       - main
       - dev-main
+
 jobs:
   test:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [ 8.3, 8.4 ]
+        laravel: [ 13.*, 12.*, 11.* ]
+        include:
+          - laravel: 13.*
+            testbench: 11.*
+          - laravel: 12.*
+            testbench: 10.*
+          - laravel: 11.*
+            testbench: 9.*
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }}
+
     env:
       BROADCAST_DRIVER: log
       CACHE_DRIVER: redis
@@ -20,7 +37,6 @@ jobs:
       MAIL_MAILER: array
       TELESCOPE_ENABLED: false
 
-    # Docs: https://docs.github.com/en/actions/using-containerized-services
     services:
       elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:8.18.0
@@ -43,32 +59,31 @@ jobs:
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-      - name: Checkout 🛎
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - name: Verify Elasticsearch connection 🧩
+      - name: Verify Elasticsearch connection
         run: |
           curl -X GET "localhost:${{ job.services.elasticsearch.ports['9200'] }}/_cluster/health?pretty=true"
 
-      - name: Setup PHP 🏗
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
+          php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: xdebug
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, mysql
 
-      - name: Install Project Dependencies 💻
+      - name: Install dependencies
         run: |
-          composer install --no-interaction --prefer-dist --optimize-autoloader
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --prefer-stable --prefer-dist --no-interaction
 
-      - name: List Installed Dependencies 📦
+      - name: List Installed Dependencies
         run: composer show -D
 
-      - name: Run tests 🧪
-        run: |
-          ./vendor/bin/pest  --version
-          ./vendor/bin/pest
+      - name: Run tests
+        run: vendor/bin/pest --ci
         env:
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
           ELASTICSEARCH_PORT: ${{ job.services.elasticsearch.ports['9200'] }}

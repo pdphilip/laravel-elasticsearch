@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Tests\Models\Product;
 
 beforeEach(function () {
@@ -45,7 +46,7 @@ it('sets pit id explicitly', function () {
 
     $query = Product::query()->withPitId($pitId);
     // The query should have the PIT ID set
-    expect($query)->toBeInstanceOf(\PDPhilip\Elasticsearch\Eloquent\Builder::class);
+    expect($query)->toBeInstanceOf(Builder::class);
 
     Product::query()->toBase()->closePit($pitId);
 });

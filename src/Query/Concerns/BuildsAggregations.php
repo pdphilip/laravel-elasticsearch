@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Query\Concerns;
 
+use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
+use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\Grammar\Grammar;
 use PDPhilip\Elasticsearch\Query\Processor\Processor;
 use PDPhilip\Elasticsearch\Utils\Sanitizer;
@@ -23,7 +25,7 @@ use PDPhilip\Elasticsearch\Utils\Sanitizer;
  * @property mixed $asDsl
  * @property string|null $from
  *
- * @mixin \PDPhilip\Elasticsearch\Query\Builder
+ * @mixin Builder
  */
 trait BuildsAggregations
 {
@@ -132,7 +134,7 @@ trait BuildsAggregations
      * {@inheritdoc}
      *
      * @param  string|array  $function
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      */
     public function aggregate($function, $columns = ['*'], $options = [])
     {
@@ -146,7 +148,7 @@ trait BuildsAggregations
     /**
      * {@inheritdoc}
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $column
+     * @param  Expression|string|array  $column
      */
     public function min($column, array $options = [])
     {
@@ -184,7 +186,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-boxplot-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function boxplot($columns, $options = [])
@@ -199,7 +201,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function cardinality($columns, $options = [])
@@ -214,7 +216,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-extendedstats-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function extendedStats($columns, $options = [])
@@ -229,7 +231,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function matrix($columns, $options = [])
@@ -244,7 +246,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-median-absolute-deviation-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function medianAbsoluteDeviation($columns, $options = [])
@@ -259,7 +261,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function percentiles($columns, $options = [])
@@ -274,7 +276,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-stats-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function stats($columns, $options = [])
@@ -289,7 +291,7 @@ trait BuildsAggregations
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-string-stats-aggregation.html
      *
-     * @param  \Illuminate\Database\Query\Expression|string|array  $columns
+     * @param  Expression|string|array  $columns
      * @param  array  $options
      */
     public function stringStats($columns, $options = [])

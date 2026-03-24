@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
+use PDPhilip\Elasticsearch\Data\ModelMeta;
 use PDPhilip\Elasticsearch\Eloquent\Model;
+use PDPhilip\Elasticsearch\Exceptions\DynamicIndexException;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Models\Book;
 use PDPhilip\Elasticsearch\Tests\Models\Guarded;
@@ -647,7 +649,7 @@ it('should throw an error if suffix is applied to a non dynamic index', function
     $user->name = 'one';
     $user->withSuffix('_test');
     $user->save();
-})->throws(\PDPhilip\Elasticsearch\Exceptions\DynamicIndexException::class);
+})->throws(DynamicIndexException::class);
 
 it('gets the query meta', function () {
 
@@ -656,7 +658,7 @@ it('gets the query meta', function () {
     $user->save();
 
     $check = User::first();
-    expect($check->getMeta())->toBeInstanceOf(\PDPhilip\Elasticsearch\Data\ModelMeta::class)
+    expect($check->getMeta())->toBeInstanceOf(ModelMeta::class)
         ->and($check->getMeta()->toArray())->toHaveKeys(['score', 'index']);
 });
 

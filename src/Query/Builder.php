@@ -18,6 +18,7 @@ use InvalidArgumentException;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 use PDPhilip\Elasticsearch\Query\Concerns\BuildsAggregations;
 use PDPhilip\Elasticsearch\Query\Concerns\BuildsFieldQueries;
@@ -1053,7 +1054,7 @@ class Builder extends BaseBuilder
      *
      * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html#docs-delete-by-query-api-query-params
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function onConflicts(string $option = self::CONFLICT['PROCEED']): self
     {
@@ -1063,7 +1064,7 @@ class Builder extends BaseBuilder
             return $this;
         }
 
-        throw new \Exception(
+        throw new Exception(
             "$option is an invalid conflict option, valid options are: ".implode(', ', self::CONFLICT)
         );
     }
@@ -1164,7 +1165,7 @@ class Builder extends BaseBuilder
 
     public function getDefaultLimit(): ?int
     {
-        return $this->options()->get(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_DEFAULT_LIMIT, $this->limit) ?? null;
+        return $this->options()->get(Model::OPTION_DEFAULT_LIMIT, $this->limit) ?? null;
     }
 
     protected function hasProcessedSelect(): bool

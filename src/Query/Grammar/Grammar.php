@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Query\Grammar;
 use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Query\DSL\DslBuilder;
@@ -79,7 +80,7 @@ class Grammar extends BaseGrammar
             }
 
             // ID handling - don't store in doc unless explicitly configured
-            if ($query->getOption(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_STORE_IDS, false)) {
+            if ($query->getOption(Model::OPTION_STORE_IDS, false)) {
                 $doc['id'] = $docId;
                 unset($doc['_id']);
             } else {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
+use PDPhilip\Elasticsearch\Tests\Models\Product;
 use PDPhilip\Elasticsearch\Tests\Models\ReIndexTarget;
 
 function refreshIndex(string $index): void
@@ -66,7 +67,7 @@ it('fails when model class does not exist', function () {
 
 it('fails when model lacks mappingDefinition override', function () {
     $this->artisan('elastic:re-index', [
-        'model' => \PDPhilip\Elasticsearch\Tests\Models\Product::class,
+        'model' => Product::class,
         '--force' => true,
     ])->assertFailed();
 });

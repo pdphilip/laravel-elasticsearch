@@ -3,6 +3,7 @@
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use Workbench\Database\Factories\AvatarFactory;
 
@@ -15,8 +16,8 @@ use Workbench\Database\Factories\AvatarFactory;
  * @property string $url
  * @property string $imageable_id
  * @property string $imageable_type
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  *
  ******Relationships*******
  * @property-read User $user

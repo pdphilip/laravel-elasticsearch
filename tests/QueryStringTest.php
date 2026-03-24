@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Query\Options\QueryStringOptions;
 use PDPhilip\Elasticsearch\Tests\Models\Product;
 use PDPhilip\Elasticsearch\Tests\Models\User;
@@ -221,7 +222,7 @@ it('tests searching with options: Leading Wildcard', function () {
         Product::searchQueryString('*assic', function (QueryStringOptions $options) {
             $options->allowLeadingWildcard(false);
         })->get();
-    })->toThrow(PDPhilip\Elasticsearch\Exceptions\QueryException::class);
+    })->toThrow(QueryException::class);
 
     $products = Product::searchQueryString('*assic', function (QueryStringOptions $options) {
         $options->allowLeadingWildcard(true); // Same as default
@@ -232,7 +233,7 @@ it('tests searching with options: Leading Wildcard', function () {
 it('tests searching with options: Lenient', function () {
     expect(function () {
         Product::searchQueryString('ABC', 'price')->get();
-    })->toThrow(PDPhilip\Elasticsearch\Exceptions\QueryException::class);
+    })->toThrow(QueryException::class);
 
     // lenient numeric parsing: invalid numeric query should not error, returns 0
     $products = Product::searchQueryString('ABC', 'price', function (QueryStringOptions $options) {

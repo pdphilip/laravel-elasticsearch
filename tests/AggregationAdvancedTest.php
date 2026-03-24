@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Collection;
+use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
 use PDPhilip\Elasticsearch\Tests\Models\Product;
 
 beforeEach(function () {
@@ -253,7 +255,7 @@ it('groups by field with bucket aggregation', function () {
 
     $results = Product::groupBy('category')->getAggregationResults();
 
-    expect($results)->toBeInstanceOf(\Illuminate\Support\Collection::class)
+    expect($results)->toBeInstanceOf(Collection::class)
         ->and($results)->toHaveCount(2);
 });
 
@@ -266,7 +268,7 @@ it('groups by multiple fields', function () {
 
     $results = Product::groupBy('category', 'status')->getAggregationResults();
 
-    expect($results)->toBeInstanceOf(\Illuminate\Support\Collection::class);
+    expect($results)->toBeInstanceOf(Collection::class);
 });
 
 // ----------------------------------------------------------------------
@@ -329,7 +331,7 @@ it('creates custom bucket aggregation', function () {
     $results = Product::bucket('categories', 'terms', ['field' => 'category'])
         ->getAggregationResults();
 
-    expect($results)->toBeInstanceOf(\Illuminate\Support\Collection::class)
+    expect($results)->toBeInstanceOf(Collection::class)
         ->and($results)->toHaveCount(2);
 });
 
@@ -359,7 +361,7 @@ it('gets processed aggregation results', function () {
 
     $results = Product::groupBy('category')->getAggregationResults();
 
-    expect($results)->toBeInstanceOf(\PDPhilip\Elasticsearch\Eloquent\ElasticCollection::class);
+    expect($results)->toBeInstanceOf(ElasticCollection::class);
 });
 
 it('gets raw aggregation results', function () {

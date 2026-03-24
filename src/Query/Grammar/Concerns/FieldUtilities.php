@@ -7,6 +7,7 @@ namespace PDPhilip\Elasticsearch\Query\Grammar\Concerns;
 use DateTime;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
+use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Schema\Schema;
@@ -92,7 +93,7 @@ trait FieldUtilities
         }
 
         // Check for explicit field mapping override
-        if (! empty($queryFieldMap = $builder->options()->get(\PDPhilip\Elasticsearch\Eloquent\Model::OPTION_MAPPING_MAP)) && ! empty($queryFieldMap[$textField])) {
+        if (! empty($queryFieldMap = $builder->options()->get(Model::OPTION_MAPPING_MAP)) && ! empty($queryFieldMap[$textField])) {
             return $queryFieldMap[$textField];
         }
 

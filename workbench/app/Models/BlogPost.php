@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Workbench\App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Model as Eloquent;
 use Workbench\Database\Factories\BlogPostFactory;
 
@@ -17,8 +18,8 @@ use Workbench\Database\Factories\BlogPostFactory;
  * @property string $title
  * @property string $content
  * @property array $comments
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  *
  * @mixin \Eloquent
  */
