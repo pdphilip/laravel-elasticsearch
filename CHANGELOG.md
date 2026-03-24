@@ -17,9 +17,11 @@ This release is compatible with Laravel 11, 12 & 13
 - Dropped Laravel 10 support (EOL)
 - `pdphilip/omniterm` bumped to `^3.0`
 - `Connection::select()` signature updated with `$fetchUsing` parameter (Laravel 13 compatibility)
-- Laravel compatibility layer dispatchers use `>= 12` (L13 shares L12's connection/schema patterns)
-- Version gate updated: `Helpers::getLaravelCompatabilityVersion()` now accepts 11, 12, 13
 - CI matrix updated: PHP 8.3/8.4, Laravel 11/12/13
+
+### Refactored
+
+- Collapsed Laravel version compatibility layer from 12 files (4 dispatchers + 4 v11 traits + 4 v12 traits) into 4 self-contained traits. Version checks now happen inside each method with spread operators for different constructor signatures — no more file-level conditional trait loading. Removed phpstan bootstrap `class_alias` hacks that were needed for the old pattern.
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.3...v5.6.0
 
