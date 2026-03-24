@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  PHP_VERSION: "8.2"
+  PHP_VERSION: "8.3"
 
 jobs:
   phplint:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: "Checkout"
-        uses: "actions/checkout@v4"
+        uses: "actions/checkout@v6"
 
       - name: "Install PHP"
         uses: "shivammathur/setup-php@v2"
