@@ -28,3 +28,9 @@ phpunit.xml
 phpstan.neon
 testbench.yaml
 node_modules
+
+labs*
+
+.ELASTIC*
+
+_ide*
