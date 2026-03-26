@@ -6,6 +6,8 @@ namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use PDPhilip\Elasticsearch\Data\ModelMeta;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
+use ReflectionMethod;
 
 /**
  * @property object $searchHighlights
@@ -15,6 +17,13 @@ use PDPhilip\Elasticsearch\Data\ModelMeta;
 abstract class Model extends BaseModel
 {
     use ElasticsearchModel;
+
+    /** @internal Option keys passed to the query builder */
+    const OPTION_MAPPING_MAP = 'mapping_map';
+
+    const OPTION_DEFAULT_LIMIT = 'default_limit';
+
+    const OPTION_STORE_IDS = 'store_ids_in_document';
 
     protected $keyType = 'string';
 
@@ -74,5 +83,24 @@ abstract class Model extends BaseModel
 
         // Document models must use the DocumentModel trait.
         return self::$documentModelClasses[$class] = array_key_exists(ElasticsearchModel::class, class_uses_recursive($class));
+    }
+
+    /**
+     * Define the index mapping for this model.
+     * Override this method to specify field types for your Elasticsearch index.
+     */
+    public static function mappingDefinition(Blueprint $index): void
+    {
+        //
+    }
+
+    /**
+     * Check if this model has a mapping definition (i.e. overrides the base method).
+     */
+    final public static function hasMappingDefinition(): bool
+    {
+        $ref = new ReflectionMethod(static::class, 'mappingDefinition');
+
+        return $ref->getDeclaringClass()->getName() !== self::class;
     }
 }

@@ -2,20 +2,29 @@
 
 namespace PDPhilip\Elasticsearch\Laravel\Compatibility\Schema;
 
-use PDPhilip\Elasticsearch\Laravel\v11\Schema\BuilderCompatibility as BuilderCompatibility11;
-use PDPhilip\Elasticsearch\Laravel\v12\Schema\BuilderCompatibility as BuilderCompatibility12;
+use Closure;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Utils\Helpers;
 
-$laravelVersion = Helpers::getLaravelCompatabilityVersion();
-
-if ($laravelVersion == 12) {
-    trait BuilderCompatibility
+trait BuilderCompatibility
+{
+    /** {@inheritDoc} */
+    protected function createBlueprint($table, ?Closure $callback = null): Blueprint
     {
-        use BuilderCompatibility12;
+        return new Blueprint(...$this->blueprintArgs($table, $callback));
     }
-} else {
-    trait BuilderCompatibility
+
+    public function getTableListing($schema = null, $schemaQualified = true)
     {
-        use BuilderCompatibility11;
+        return array_column($this->getTables(), 'name');
+    }
+
+    private function blueprintArgs(string $table, ?Closure $callback): array
+    {
+        if (Helpers::getLaravelCompatabilityVersion() >= 12) {
+            return [$this->connection, $table, $callback];
+        }
+
+        return [$table, $callback];
     }
 }

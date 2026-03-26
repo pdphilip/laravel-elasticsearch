@@ -21,6 +21,11 @@ class DslFactory
         return ['index' => $operation];
     }
 
+    public static function updateOperation(string $index, string $id, array $options = []): array
+    {
+        return ['update' => array_merge(['_index' => $index, '_id' => $id], $options)];
+    }
+
     // ----------------------------------------------------------------------
     // Query
     // ----------------------------------------------------------------------
@@ -133,18 +138,6 @@ class DslFactory
             ],
         ];
     }
-
-    //    public static function term(string $field, $value, array $options = []): array
-    //    {
-    //        return [
-    //            'term' => [
-    //                $field => array_merge(
-    //                    ['value' => (string) $value],
-    //                    $options
-    //                ),
-    //            ],
-    //        ];
-    //    }
 
     public static function multiMatch(string $value, array $options = []): array
     {

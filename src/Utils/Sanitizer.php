@@ -47,11 +47,11 @@ final class Sanitizer
                 $sanitized[$fullKey] = $details;
 
                 if (isset($details['properties']) && is_array($details['properties'])) {
-                    $sanitized = array_merge($sanitized, self::flattenMappingProperties(['properties' => $details['properties']], $fullKey));
+                    $sanitized = [...$sanitized, ...self::flattenMappingProperties(['properties' => $details['properties']], $fullKey)];
                     unset($sanitized[$fullKey]['properties']);
                 }
                 if (isset($details['fields']) && is_array($details['fields'])) {
-                    $sanitized = array_merge($sanitized, self::flattenMappingProperties(['properties' => $details['fields']], $fullKey));
+                    $sanitized = [...$sanitized, ...self::flattenMappingProperties(['properties' => $details['fields']], $fullKey)];
                     unset($sanitized[$fullKey]['fields']);
                 }
             }
@@ -71,12 +71,10 @@ final class Sanitizer
     public static function cleanArrayValues($input): array
     {
         $groups = [];
-        if ($input) {
-            foreach ($input as $val) {
-                $groups = array_merge(
-                    (array) $groups,
-                    Arr::wrap($val)
-                );
+
+        foreach ((array) $input as $val) {
+            foreach (Arr::wrap($val) as $v) {
+                $groups[] = $v;
             }
         }
 

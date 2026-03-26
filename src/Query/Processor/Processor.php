@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace PDPhilip\Elasticsearch\Query;
+namespace PDPhilip\Elasticsearch\Query\Processor;
 
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Database\Query\Builder as BaseBuilder;
 use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
 use Illuminate\Support\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
+use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Utils\Sanitizer;
 
 class Processor extends BaseProcessor
@@ -65,8 +66,11 @@ class Processor extends BaseProcessor
         $this->query = $query;
         $response = $this->getRawResponse();
         $this->rawAggregations = $response['aggregations'] ?? [];
-        if (! empty($response['aggregations']['group_by']['after_key'])) {
-            $this->query->getMetaTransfer()->set('after_key', $response['aggregations']['group_by']['after_key']);
+
+        // Extract after_key — may be inside a nested agg wrapper
+        $groupByAggs = $this->unwrapNestedAggregation($this->rawAggregations, 'group_by');
+        if (! empty($groupByAggs['group_by']['after_key'])) {
+            $this->query->getMetaTransfer()->set('after_key', $groupByAggs['group_by']['after_key']);
         }
 
         if (! empty($this->query->bucketAggregations)) {
@@ -288,6 +292,26 @@ class Processor extends BaseProcessor
         return $outcome;
     }
 
+    public function processUpsert(Builder $query, Elasticsearch $result): int
+    {
+        $this->rawResponse = $result;
+        $this->query = $query;
+
+        $process = $result->asArray();
+        $count = 0;
+
+        foreach ($process['items'] ?? [] as $item) {
+            // Bulk response items are keyed by action type (index or update)
+            $action = $item['index'] ?? $item['update'] ?? null;
+
+            if ($action && empty($action['error'])) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public function processRaw($query, $response)
     {
         $this->rawResponse = $response;
@@ -297,5 +321,37 @@ class Processor extends BaseProcessor
         }
 
         return $documents->all();
+    }
+
+    /**
+     * Drill into nested/filter agg wrappers to find the expected aggregation key.
+     * Returns the aggregation array containing $expectedKey at the top level.
+     * Handles: nested_* → filtered → expected_key (up to 3 levels deep).
+     */
+    protected function unwrapNestedAggregation(array $aggregations, string $expectedKey, int $depth = 0): array
+    {
+        if (isset($aggregations[$expectedKey]) || $depth > 3) {
+            return $aggregations;
+        }
+
+        foreach ($aggregations as $key => $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value[$expectedKey])) {
+                return $value;
+            }
+
+            // Drill into nested/filter wrappers (they always have doc_count)
+            if (isset($value['doc_count'])) {
+                $inner = $this->unwrapNestedAggregation($value, $expectedKey, $depth + 1);
+                if (isset($inner[$expectedKey])) {
+                    return $inner;
+                }
+            }
+        }
+
+        return $aggregations;
     }
 }

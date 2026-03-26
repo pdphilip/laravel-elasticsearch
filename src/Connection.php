@@ -12,8 +12,6 @@ use Elastic\Elasticsearch\Exception\AuthenticationException;
 use Elastic\Elasticsearch\Exception\ClientResponseException;
 use Elastic\Elasticsearch\Exception\MissingParameterException;
 use Elastic\Elasticsearch\Exception\ServerResponseException;
-use Elastic\Elasticsearch\Helper\Iterators\SearchHitIterator;
-use Elastic\Elasticsearch\Helper\Iterators\SearchResponseIterator;
 use Elastic\Elasticsearch\Response\Elasticsearch;
 use Exception;
 use Generator;
@@ -25,7 +23,6 @@ use PDPhilip\Elasticsearch\Exceptions\BulkInsertQueryException;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Laravel\Compatibility\Connection\ConnectionCompatibility;
 use PDPhilip\Elasticsearch\Query\Builder;
-use PDPhilip\Elasticsearch\Query\Processor;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Traits\HasOptions;
 use RuntimeException;
@@ -38,7 +35,7 @@ use function strtolower;
 /**
  * @mixin Client
  *
- * @method Processor getPostProcessor()
+ * @method Query\Processor\Processor getPostProcessor()
  */
 class Connection extends BaseConnection
 {
@@ -55,7 +52,7 @@ class Connection extends BaseConnection
     protected string $connectionName = '';
 
     /**
-     * @var Query\Processor
+     * @var Query\Processor\Processor
      */
     protected $postProcessor;
 
@@ -64,6 +61,8 @@ class Connection extends BaseConnection
     public $allowIdSort = false;
 
     public $defaultQueryLimit = 1000;
+
+    private array $indexMappingDefinitions = [];
 
     /** {@inheritdoc}
      * @throws AuthenticationException
@@ -82,7 +81,7 @@ class Connection extends BaseConnection
 
         $this->connection = $this->createConnection();
 
-        $this->postProcessor = new Query\Processor;
+        $this->postProcessor = new Query\Processor\Processor;
 
         $this->useDefaultSchemaGrammar();
 
@@ -127,10 +126,11 @@ class Connection extends BaseConnection
                     'bypass_map_validation' => false, // This skips the safety checks for Elastic Specific queries.
                     'logging' => false,
                     'ssl_verification' => true,
-                    'retires' => null,
+                    'retries' => null,
                     'meta_header' => null,
                     'default_limit' => null,
                     'allow_id_sort' => false,
+                    'auto_create_index' => true,
                 ],
             ],
             $this->config
@@ -171,8 +171,9 @@ class Connection extends BaseConnection
             $this->options()->add('ssl_verification', $this->config['options']['ssl_verification']);
         }
 
-        if (! empty($this->config['options']['retires'])) {
-            $this->options()->add('retires', (int) $this->config['options']['retires']);
+        $retries = $this->config['options']['retries'] ?? $this->config['options']['retires'] ?? null;
+        if (! empty($retries)) {
+            $this->options()->add('retries', (int) $retries);
         }
 
         if (isset($this->config['options']['meta_header'])) {
@@ -233,7 +234,7 @@ class Connection extends BaseConnection
             $clientBuilder = $clientBuilder->setElasticMetaHeader($this->options()->get('meta_header'));
         }
 
-        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retires', 3));
+        $clientBuilder = $clientBuilder->setRetries($this->options()->get('retries', 3));
 
         if ($this->config['options']['logging']) {
             $clientBuilder = $clientBuilder->setLogger(Log::getLogger());
@@ -280,7 +281,7 @@ class Connection extends BaseConnection
      */
     public function getClientInfo(): array
     {
-        return $this->elastic()->info()->asArray();
+        return $this->connection->info();
     }
 
     /**
@@ -289,7 +290,7 @@ class Connection extends BaseConnection
      */
     public function getLicenseInfo(): array
     {
-        $license = $this->elastic()->license()->get()->asArray();
+        $license = $this->connection->getLicense();
         if (! empty($license['license'])) {
             return $license['license'];
         }
@@ -326,9 +327,9 @@ class Connection extends BaseConnection
     }
 
     /** {@inheritdoc} */
-    protected function getDefaultPostProcessor(): Query\Processor
+    protected function getDefaultPostProcessor(): Query\Processor\Processor
     {
-        return new Query\Processor;
+        return new Query\Processor\Processor;
     }
 
     public function getDefaultLimit(): int
@@ -360,6 +361,17 @@ class Connection extends BaseConnection
     // ----------------------------------------------------------------------
     // Schema Management
     // ----------------------------------------------------------------------
+
+    /**
+     * Register a mapping definition for auto-index creation.
+     *
+     * When a query targets a non-existent index and auto_create_index is enabled,
+     * this mapping will be used instead of creating an empty index.
+     */
+    public function registerMappingDefinition(string $index, Closure $definition): void
+    {
+        $this->indexMappingDefinitions[$index] = $definition;
+    }
 
     /**
      * @throws ClientResponseException
@@ -417,9 +429,55 @@ class Connection extends BaseConnection
         return $this->connection->getFieldMapping($index, $fields);
     }
 
-    public function getMappings($index): array
+    public function getMappings(string|array $index): array
     {
         return $this->connection->getMappings($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function catIndices(array $params): array
+    {
+        return $this->connection->catIndices($params);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     * @throws MissingParameterException
+     */
+    public function indexExists(string $index): bool
+    {
+        return $this->connection->indexExists($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getIndex(string|array $index): array
+    {
+        return $this->connection->getIndex($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function getIndexSettings(string|array $index): array
+    {
+        return $this->connection->getIndexSettings($index);
+    }
+
+    /**
+     * @throws ClientResponseException
+     * @throws ServerResponseException
+     */
+    public function reindex(array $params): array
+    {
+        return $this->connection->reindex($params);
     }
 
     public function indices(): Indices
@@ -469,7 +527,7 @@ class Connection extends BaseConnection
             'body' => $query['body'],
         ];
 
-        $pages = new SearchResponseIterator($this->connection, $scrollParams);
+        $pages = $this->connection->createSearchResponseIterator($scrollParams);
         foreach ($pages as $page) {
             yield $page;
         }
@@ -498,8 +556,8 @@ class Connection extends BaseConnection
         ];
 
         $count = 0;
-        $pages = new SearchResponseIterator($this->elastic(), $scrollParams);
-        $hits = new SearchHitIterator($pages);
+        $pages = $this->connection->createSearchResponseIterator($scrollParams);
+        $hits = $this->connection->createSearchHitIterator($pages);
 
         foreach ($hits as $hit) {
             $count++;
@@ -609,7 +667,7 @@ class Connection extends BaseConnection
      * @param  array  $params
      * @param  array  $bindings
      */
-    public function select($params, $bindings = [], $useReadPdo = true): Elasticsearch
+    public function select($params, $bindings = [], $useReadPdo = true, $fetchUsing = null): Elasticsearch
     {
         return $this->run(
             $this->addClientParams($params),
@@ -667,12 +725,50 @@ class Connection extends BaseConnection
     protected function runQueryCallback($query, $bindings, Closure $callback)
     {
         try {
-            $result = $callback($query, $bindings);
+            return $callback($query, $bindings);
+        } catch (ClientResponseException $e) {
+            if ($this->shouldAutoCreateIndex($e, $query)) {
+                return $callback($query, $bindings);
+            }
+            throw new QueryException($e, $query);
         } catch (Exception $e) {
             throw new QueryException($e, $query);
         }
+    }
 
-        return $result;
+    private function shouldAutoCreateIndex(ClientResponseException $e, mixed $query): bool
+    {
+        if (! ($this->config['options']['auto_create_index'] ?? true)) {
+            return false;
+        }
+
+        if ($e->getCode() !== 404) {
+            return false;
+        }
+
+        $body = json_decode((string) $e->getResponse()->getBody(), true);
+        if (($body['error']['type'] ?? '') !== 'index_not_found_exception') {
+            return false;
+        }
+
+        $index = is_array($query) ? ($query['index'] ?? null) : null;
+        if (! $index) {
+            return false;
+        }
+
+        try {
+            $mappingDefinition = $this->indexMappingDefinitions[$index] ?? null;
+
+            if ($mappingDefinition) {
+                $this->getSchemaBuilder()->create($index, $mappingDefinition);
+            } else {
+                $this->connection->createIndex($index, []);
+            }
+
+            return true;
+        } catch (Exception) {
+            return false;
+        }
     }
 
     /**
@@ -733,37 +829,4 @@ class Connection extends BaseConnection
     // Call Catch
     // ----------------------------------------------------------------------
 
-    /**
-     * Dynamically pass methods to the connection.
-     *
-     * @param  string  $method
-     * @param  array  $parameters
-     * @return mixed
-     */
-    //    public function __call($method, $parameters)
-    //    {
-    //        dd($method);
-    //
-    //        return call_user_func_array([$this->connection, $method], $parameters);
-    //    }
-
-    // ----------------------------------------------------------------------
-    // Later/Maybe
-    // ----------------------------------------------------------------------
-
-    //    /**
-    //     * Run a reindex statement against the database.
-    //     *
-    //     * @param  string|array  $query
-    //     * @param  array  $bindings
-    //     * @return array
-    //     */
-    //    public function reindex($query, $bindings = [])
-    //    {
-    //        return $this->run(
-    //            $query,
-    //            $bindings,
-    //            $this->connection->reindex(...)
-    //        )->asArray();
-    //    }
 }

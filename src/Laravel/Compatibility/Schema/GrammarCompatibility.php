@@ -2,20 +2,17 @@
 
 namespace PDPhilip\Elasticsearch\Laravel\Compatibility\Schema;
 
-use PDPhilip\Elasticsearch\Laravel\v11\Schema\GrammarCompatibility as GrammarCompatibility11;
-use PDPhilip\Elasticsearch\Laravel\v12\Schema\GrammarCompatibility as GrammarCompatibility12;
+use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Utils\Helpers;
 
-$laravelVersion = Helpers::getLaravelCompatabilityVersion();
+trait GrammarCompatibility
+{
+    private function createBlueprint(Blueprint $blueprint): Blueprint
+    {
+        if (Helpers::getLaravelCompatabilityVersion() >= 12) {
+            return new Blueprint($blueprint->getConnection(), '');
+        }
 
-if ($laravelVersion == 12) {
-    trait GrammarCompatibility
-    {
-        use GrammarCompatibility12;
-    }
-} else {
-    trait GrammarCompatibility
-    {
-        use GrammarCompatibility11;
+        return new Blueprint(''); // @phpstan-ignore arguments.count
     }
 }

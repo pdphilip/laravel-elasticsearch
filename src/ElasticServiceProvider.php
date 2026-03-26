@@ -16,6 +16,16 @@ class ElasticServiceProvider extends ServiceProvider
     {
         Model::setConnectionResolver($this->app['db']);
         Model::setEventDispatcher($this->app['events']);
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Commands\StatusCommand::class,
+                Commands\IndicesCommand::class,
+                Commands\ShowCommand::class,
+                Commands\ReIndexCommand::class,
+                Commands\MakeCommand::class,
+            ]);
+        }
     }
 
     /**

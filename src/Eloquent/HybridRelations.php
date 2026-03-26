@@ -23,7 +23,7 @@ trait HybridRelations
     public function hasOne($related, $foreignKey = null, $localKey = null)
     {
 
-        if ($this->nonElasticModel($related, true)) {
+        if ($this->neitherModelIsElastic($related)) {
             return parent::hasOne($related, $foreignKey, $localKey);
         }
 
@@ -41,7 +41,7 @@ trait HybridRelations
      */
     public function morphOne($related, $name, $type = null, $id = null, $localKey = null)
     {
-        if ($this->nonElasticModel($related, true)) {
+        if ($this->neitherModelIsElastic($related)) {
             return parent::morphOne($related, $name, $type, $id, $localKey);
         }
 
@@ -59,7 +59,7 @@ trait HybridRelations
      */
     public function hasMany($related, $foreignKey = null, $localKey = null)
     {
-        if ($this->nonElasticModel($related, true)) {
+        if ($this->neitherModelIsElastic($related)) {
             return parent::hasMany($related, $foreignKey, $localKey);
         }
 
@@ -78,7 +78,7 @@ trait HybridRelations
     public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
     {
 
-        if ($this->nonElasticModel($related, true)) {
+        if ($this->neitherModelIsElastic($related)) {
             return parent::morphMany($related, $name, $type, $id, $localKey);
         }
 
@@ -109,7 +109,7 @@ trait HybridRelations
             $relation = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'];
         }
 
-        if ($this->nonElasticModel($related, true)) {
+        if ($this->neitherModelIsElastic($related)) {
             return parent::belongsTo($related, $foreignKey, $otherKey, $relation);
         }
 
@@ -154,7 +154,7 @@ trait HybridRelations
 
         $ownerKey = $ownerKey ?? $instance->getKeyName();
 
-        if ($this->nonElasticModel($instance)) {
+        if ($this->neitherModelIsElastic($instance)) {
             return parent::morphTo($name, $type, $id, $ownerKey);
         }
 
@@ -191,7 +191,7 @@ trait HybridRelations
             $relation = $this->guessBelongsToManyRelation();
         }
 
-        if ($this->nonElasticModel($related)) {
+        if ($this->relatedModelIsNotElastic($related)) {
             return parent::belongsToMany(
                 $related,
                 $table,
@@ -254,7 +254,7 @@ trait HybridRelations
             $relation = $this->guessBelongsToManyRelation();
         }
 
-        if ($this->nonElasticModel($related)) {
+        if ($this->relatedModelIsNotElastic($related)) {
             return parent::morphToMany(
                 $related,
                 $name,
@@ -352,12 +352,30 @@ trait HybridRelations
         return new EloquentBuilder($query);
     }
 
+    /**
+     * True when neither this model nor the related model is Elasticsearch-backed.
+     * In that case, the parent (SQL) relation implementation should be used.
+     */
+    protected function neitherModelIsElastic($related): bool
+    {
+        return ! Model::isElasticsearchModel($related) && ! Model::isElasticsearchModel($this);
+    }
+
+    /**
+     * True when the related model is not Elasticsearch-backed.
+     */
+    protected function relatedModelIsNotElastic($related): bool
+    {
+        return ! Model::isElasticsearchModel($related);
+    }
+
+    /**
+     * @deprecated Use neitherModelIsElastic() or relatedModelIsNotElastic() instead.
+     */
     protected function nonElasticModel($related, $includingSelf = false): bool
     {
-        if ($includingSelf) {
-            return ! Model::isElasticsearchModel($related) && ! Model::isElasticsearchModel($this);
-        }
-
-        return ! Model::isElasticsearchModel($related);
+        return $includingSelf
+            ? $this->neitherModelIsElastic($related)
+            : $this->relatedModelIsNotElastic($related);
     }
 }

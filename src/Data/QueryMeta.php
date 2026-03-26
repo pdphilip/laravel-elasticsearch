@@ -2,347 +2,133 @@
 
 namespace PDPhilip\Elasticsearch\Data;
 
+/**
+ * Collection-level query metadata.
+ *
+ * Wraps a MetaDTO (the raw ES response transfer object) and provides
+ * typed getters for collection-level properties. Used by ElasticCollection.
+ *
+ * Data flow: ES response -> Processor -> MetaDTO -> QueryMeta -> ElasticCollection
+ */
 final class QueryMeta
 {
-    protected string $index = '';
-
-    protected string $query = '';
-
-    protected bool $success = false;
-
-    protected bool $timed_out = false;
-
-    protected int $took = -1;
-
-    protected int $total = -1;
-
-    protected int $hits = -1;
-
-    protected mixed $maxScore = '';
-
-    protected mixed $_id = '';
-
-    protected mixed $shards = [];
-
-    protected array $dsl = [];
-
-    protected array $results = [];
-
-    protected array $_meta = [];
-
-    protected array $error = [];
-
-    protected string $errorMessage = '';
-
-    protected array $sort = [];
-
-    protected array $cursor = [];
-
-    protected ?string $pitId = null;
-
-    protected ?array $afterKey = null;
+    protected ?MetaDTO $meta;
 
     public function __construct(?MetaDTO $meta = null)
     {
-        if (! $meta) {
-            return;
-        }
-        $this->index = $meta->getIndex();
-        $this->timed_out = $meta->timed_out ?? false;
-        $this->took = $meta->getTook();
-        $this->hits = $meta->getHits();
-        $this->total = $meta->getTotal();
-        $this->maxScore = $meta->getMaxScore();
-        $this->shards = $meta->getShards();
-        $this->query = $meta->getQuery();
-        $this->dsl = $meta->getDsl();
-        $this->pitId = $meta->getPitId();
-        $this->afterKey = $meta->getAfterKey();
-        $this->sort = $meta->getSort();
-        $this->cursor = $meta->getCursor();
-        $this->_meta = $meta->toArray();
+        $this->meta = $meta;
     }
 
     // ----------------------------------------------------------------------
-    // Getters
+    // Getters — delegate to MetaDTO
     // ----------------------------------------------------------------------
 
-    public function getIndex(): mixed
+    public function getIndex(): string
     {
-        return $this->index ?? null;
-    }
-
-    public function getId(): mixed
-    {
-        return $this->_id ?? null;
-    }
-
-    public function getModified(): int
-    {
-        return $this->getResults('modified') ?? 0;
-    }
-
-    public function getDeleted(): int
-    {
-        return $this->getResults('deleted') ?? 0;
-    }
-
-    public function getCreated(): int
-    {
-        return $this->getResults('created') ?? 0;
-    }
-
-    public function isSuccessful(): bool
-    {
-        return $this->success;
-    }
-
-    public function getSort(): ?array
-    {
-        return $this->sort;
-    }
-
-    public function getCursor(): ?array
-    {
-        return $this->cursor;
-    }
-
-    public function getQuery(): string
-    {
-        return $this->query;
-    }
-
-    public function getDsl(): array
-    {
-        return $this->dsl;
+        return $this->meta?->getIndex() ?? '';
     }
 
     public function getTook(): int
     {
-        return $this->took;
+        return $this->meta?->getTook() ?? -1;
     }
 
     public function getTotal(): int
     {
-        return $this->total;
-    }
-
-    public function getMaxScore(): string
-    {
-        return $this->maxScore;
-    }
-
-    public function getShards(): mixed
-    {
-        return $this->shards;
-    }
-
-    public function getErrorMessage(): string
-    {
-        return $this->errorMessage;
-    }
-
-    public function getError(): array
-    {
-        return $this->error;
+        return $this->meta?->getTotal() ?? -1;
     }
 
     public function getTotalHits(): int
     {
-        return $this->hits;
+        return $this->meta?->getHits() ?? -1;
+    }
+
+    public function getMaxScore(): string
+    {
+        return (string) ($this->meta?->getMaxScore() ?? '');
+    }
+
+    public function getShards(): mixed
+    {
+        return $this->meta?->getShards() ?? [];
+    }
+
+    public function getQuery(): mixed
+    {
+        return $this->meta?->getQuery() ?? '';
+    }
+
+    public function getDsl(): array
+    {
+        return $this->meta?->getDsl() ?? [];
+    }
+
+    public function getSort(): ?array
+    {
+        return $this->meta?->getSort() ?? [];
+    }
+
+    public function getCursor(): ?array
+    {
+        return $this->meta?->getCursor() ?? [];
+    }
+
+    public function getPitId(): mixed
+    {
+        return $this->meta?->getPitId();
+    }
+
+    public function getAfterKey(): mixed
+    {
+        return $this->meta?->getAfterKey() ?? [];
+    }
+
+    public function getResults($key = null): mixed
+    {
+        if ($key) {
+            return null;
+        }
+
+        return [];
     }
 
     public function toArray(): array
     {
+        if (! $this->meta) {
+            return [];
+        }
+
         $return = [
-            'index' => $this->index,
-            'query' => $this->query,
-            'success' => $this->success,
-            'timed_out' => $this->timed_out,
-            'took' => $this->took,
-            'total' => $this->total,
-            'hits' => $this->hits,
+            'index' => $this->getIndex(),
+            'query' => $this->getQuery(),
+            'took' => $this->getTook(),
+            'total' => $this->getTotal(),
+            'hits' => $this->getTotalHits(),
         ];
-        if ($this->maxScore) {
-            $return['max_score'] = $this->maxScore;
+
+        $maxScore = $this->getMaxScore();
+        if ($maxScore !== '') {
+            $return['max_score'] = $maxScore;
         }
-        if ($this->shards) {
-            $return['shards'] = $this->shards;
+        $shards = $this->getShards();
+        if ($shards) {
+            $return['shards'] = $shards;
         }
-        if ($this->dsl) {
-            $return['dsl'] = $this->dsl;
+        $dsl = $this->getDsl();
+        if ($dsl) {
+            $return['dsl'] = $dsl;
         }
-        if ($this->_id) {
-            $return['_id'] = $this->_id;
+        $sort = $this->getSort();
+        if ($sort) {
+            $return['sort'] = $sort;
         }
-        if ($this->results) {
-            foreach ($this->results as $key => $value) {
-                $return[$key] = $value;
-            }
+        $cursor = $this->getCursor();
+        if ($cursor) {
+            $return['cursor'] = $cursor;
         }
-        if ($this->error) {
-            $return['error'] = $this->error;
-            $return['errorMessage'] = $this->errorMessage;
-        }
-        if ($this->sort) {
-            $return['sort'] = $this->sort;
-        }
-        if ($this->cursor) {
-            $return['cursor'] = $this->cursor;
-        }
-        if ($this->_meta) {
-            $return['_meta'] = $this->_meta;
-        }
+
+        $return['_meta'] = $this->meta->toArray();
 
         return $return;
-    }
-
-    public function getResults($key = null)
-    {
-        if ($key) {
-            return $this->results[$key] ?? null;
-        }
-
-        return $this->results;
-    }
-
-    public function getPitId()
-    {
-        return $this->pitId;
-    }
-
-    public function getAfterKey()
-    {
-        return $this->afterKey;
-    }
-
-    // ----------------------------------------------------------------------
-    // Setters
-    // ----------------------------------------------------------------------
-    public function setIndex($index): void
-    {
-        $this->index = $index;
-    }
-
-    public function setId($id): void
-    {
-        $this->_id = $id;
-    }
-
-    public function setTook(int $took): void
-    {
-        $this->took = $took;
-    }
-
-    public function setTotal(int $total): void
-    {
-        $this->total = $total;
-    }
-
-    public function setQuery($query): void
-    {
-        $this->query = $query;
-    }
-
-    public function setSuccess(): void
-    {
-        $this->success = true;
-    }
-
-    public function setResult($key, $value): void
-    {
-        $this->results[$key] = $value;
-    }
-
-    public function setModified(int $count): void
-    {
-        $this->setResult('modified', $count);
-    }
-
-    public function setCreated(int $count): void
-    {
-        $this->setResult('created', $count);
-    }
-
-    public function setDeleted(int $count): void
-    {
-        $this->setResult('deleted', $count);
-    }
-
-    public function setFailed(int $count): void
-    {
-        $this->setResult('failed', $count);
-    }
-
-    public function setSort(array $sort): void
-    {
-        $this->sort = $sort;
-    }
-
-    public function setCursor(array $cursor): void
-    {
-        $this->cursor = $cursor;
-    }
-
-    public function setDsl($params)
-    {
-        $this->dsl = $params;
-    }
-
-    public function setError(array $error, string $errorMessage = ''): void
-    {
-        $this->success = false;
-        $this->error = $error;
-        $this->errorMessage = $errorMessage;
-    }
-
-    public function parseAndSetError($error, $errorCode)
-    {
-        $errorMessage = $error;
-        $this->success = false;
-        $details = $this->_decodeError($errorMessage);
-        $error = [
-            'msg' => $details['msg'],
-            'data' => $details['data'],
-            'code' => $errorCode,
-        ];
-        $this->error = $error;
-        $this->errorMessage = $errorMessage;
-    }
-
-    private function _decodeError($error): array
-    {
-        $return['msg'] = $error;
-        $return['data'] = [];
-        $jsonStartPos = strpos($error, ': ') + 2;
-        $response = ($error);
-        $title = substr($response, 0, $jsonStartPos);
-        $jsonString = substr($response, $jsonStartPos);
-        if ($this->_isJson($jsonString)) {
-            $errorArray = json_decode($jsonString, true);
-        } else {
-            $errorArray = [$jsonString];
-        }
-
-        if (json_last_error() === JSON_ERROR_NONE) {
-            $errorReason = $errorArray['error']['reason'] ?? null;
-            if (! $errorReason) {
-                return $return;
-            }
-            $return['msg'] = $title.$errorReason;
-            $cause = $errorArray['error']['root_cause'][0]['reason'] ?? null;
-            if ($cause) {
-                $return['msg'] .= ' - '.$cause;
-            }
-
-            $return['data'] = $errorArray;
-        }
-
-        return $return;
-    }
-
-    private function _isJson($string): bool
-    {
-        return json_validate($string);
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
-namespace PDPhilip\Elasticsearch\Query\Concerns;
+declare(strict_types=1);
+
+namespace PDPhilip\Elasticsearch\Query\Processor\Concerns;
 
 use Illuminate\Support\Collection;
 
@@ -13,7 +15,14 @@ trait ProcessesDistinctAggregations
         foreach ($columns as $column) {
             $keys[] = 'by_'.$column;
         }
-        $aggregations = $this->parseDistinctBucket($columns, $keys, $result['aggregations'], 0, $withCount);
+
+        // Unwrap nested/filter agg wrappers if the expected key isn't at the top level
+        $aggs = $result['aggregations'];
+        if (! empty($keys[0]) && ! isset($aggs[$keys[0]])) {
+            $aggs = $this->unwrapNestedAggregation($aggs, $keys[0]);
+        }
+
+        $aggregations = $this->parseDistinctBucket($columns, $keys, $aggs, 0, $withCount);
         $aggregations = collect($aggregations);
 
         return $aggregations->map(function ($aggregation) use ($index) {
@@ -27,9 +36,16 @@ trait ProcessesDistinctAggregations
         $aggregations = [];
         foreach ($columns as $column) {
             $keys = ['by_'.$column];
+
+            // Each column's agg may be inside its own nested wrapper
+            $aggs = $result['aggregations'];
+            if (! isset($aggs[$keys[0]])) {
+                $aggs = $this->unwrapNestedAggregation($aggs, $keys[0]);
+            }
+
             $aggregations = [
                 ...$aggregations,
-                ...$this->parseDistinctBucket([$column], $keys, $result['aggregations'], 0, $withCount),
+                ...$this->parseDistinctBucket([$column], $keys, $aggs, 0, $withCount),
             ];
         }
         $aggregations = collect($aggregations);

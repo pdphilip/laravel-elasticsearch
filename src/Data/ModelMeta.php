@@ -4,6 +4,15 @@ namespace PDPhilip\Elasticsearch\Data;
 
 use Illuminate\Support\Arr;
 
+/**
+ * Per-model metadata.
+ *
+ * Manages two concerns:
+ * - Document metadata from ES responses (score, highlights, sort, cursor, index, docCount, bucket)
+ * - Table/index identity (table name, prefix, suffix for dynamic indices)
+ *
+ * Data flow: ES response → Processor → MetaDTO → ModelMeta (via setMeta)
+ */
 final class ModelMeta
 {
     protected string $recordIndex = '';
@@ -25,8 +34,6 @@ final class ModelMeta
     protected array $bucket = [];
 
     protected ?int $docCount = null;
-
-    //    public array $_query = []; //TBD
 
     public function __construct($table, $tablePrefix)
     {
@@ -121,10 +128,6 @@ final class ModelMeta
     // ----------------------------------------------------------------------
     // Setters
     // ----------------------------------------------------------------------
-    //    public function setId($id): void
-    //    {
-    //        $this->_id = $id;
-    //    }
 
     public function setTable($table): void
     {

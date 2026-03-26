@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Schema;
 
 use Closure;
-use Elastic\Elasticsearch\Endpoints\Indices;
-use Elastic\Elasticsearch\Exception\ClientResponseException;
-use Elastic\Elasticsearch\Exception\MissingParameterException;
-use Elastic\Elasticsearch\Exception\ServerResponseException;
+use Exception;
 use Illuminate\Database\Schema\Builder as BaseBuilder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -40,40 +37,34 @@ class Builder extends BaseBuilder
     public function getTables($schema = null): array
     {
         return $this->connection->getPostProcessor()->processTables(
-            $this->connection->elastic()->cat()->indices(
-                [
-                    'index' => $this->connection->getTablePrefix().'*',
-                    'format' => 'json',
-                ]
-            )
+            $this->connection->catIndices([
+                'index' => $this->connection->getTablePrefix().'*',
+                'format' => 'json',
+            ])
         );
     }
 
     public function getTable($name): array
     {
         return $this->connection->getPostProcessor()->processTables(
-            $this->connection->elastic()->cat()->indices(
-                [
-                    'index' => $this->connection->getTablePrefix().$name,
-                    'format' => 'json',
-                ]
-            )
+            $this->connection->catIndices([
+                'index' => $this->connection->getTablePrefix().$name,
+                'format' => 'json',
+            ])
         );
     }
 
     public function hasTable($table): bool
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => $index];
 
-        return $this->connection->elastic()->indices()->exists($params)->asBool();
+        return $this->connection->indexExists($index);
     }
 
     public function getColumns($table): array
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => $index, 'fields' => ['*']];
-        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
+        $result = $this->connection->getFieldMapping($index, '*');
         $mappings = $result[$index]['mappings'] ?? [];
         $columns[] = [
             'name' => 'id',
@@ -109,11 +100,42 @@ class Builder extends BaseBuilder
         return $columns;
     }
 
+    public function getIndexes($table): array
+    {
+        $index = $this->parseIndexName($table);
+        $result = $this->connection->getFieldMapping($index, '*');
+        $mappings = $result[$index]['mappings'] ?? [];
+
+        $indexes = [];
+        foreach ($mappings as $field => $mapping) {
+            if (! Str::startsWith($field, '_')) {
+                $indexes[] = [
+                    'name' => $field,
+                    'columns' => [$field],
+                    'type' => 'elasticsearch',
+                    'unique' => false,
+                    'primary' => $field === '_id',
+                ];
+            }
+        }
+
+        return $indexes;
+    }
+
+    public function getForeignKeys($table): array
+    {
+        return [];
+    }
+
+    public function getViews($schema = null): array
+    {
+        return [];
+    }
+
     public function hasColumn($table, $column): bool
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => $index, 'fields' => $column];
-        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
+        $result = $this->connection->getFieldMapping($index, $column);
 
         return ! empty($result[$index]['mappings'][$column]);
     }
@@ -121,8 +143,7 @@ class Builder extends BaseBuilder
     public function hasColumns($table, $columns): bool
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => $index, 'fields' => implode(',', $columns)];
-        $result = $this->connection->elastic()->indices()->getFieldMapping($params)->asArray();
+        $result = $this->connection->getFieldMapping($index, implode(',', $columns));
 
         foreach ($columns as $value) {
             if (empty($result[$index]['mappings'][$value])) {
@@ -194,7 +215,8 @@ class Builder extends BaseBuilder
             if ($this->hasTable($table)) {
                 $this->drop($table);
             }
-        } catch (ClientResponseException|MissingParameterException|ServerResponseException $e) {
+        } catch (Exception $e) {
+            // Silently ignore — the intent is "drop if it exists, otherwise do nothing"
         }
     }
 
@@ -212,9 +234,7 @@ class Builder extends BaseBuilder
      */
     public function getIndex(string|array $indices = '*'): array
     {
-        $params = ['index' => $this->parseIndexName($indices)];
-
-        return $this->connection->elastic()->indices()->get($params)->asArray();
+        return $this->connection->getIndex($this->parseIndexName($indices));
     }
 
     /**
@@ -258,9 +278,7 @@ class Builder extends BaseBuilder
     public function getMappings(string|array $table, $raw = false): array
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => Arr::wrap($index)];
-
-        $mappings = $this->connection->elastic()->indices()->getMapping($params)->asArray();
+        $mappings = $this->connection->getMappings($index);
         if ($raw) {
             return $mappings;
         }
@@ -271,14 +289,24 @@ class Builder extends BaseBuilder
     }
 
     /**
+     * Compile a Blueprint callback into its resulting ES mapping structure without creating the index.
+     */
+    public function compileMapping(Closure $callback): array
+    {
+        $blueprint = $this->createBlueprint('_compile');
+        $callback($blueprint);
+
+        return $this->connection->getSchemaGrammar()->compileMapping($blueprint);
+    }
+
+    /**
      * Shows you the currently configured settings for one or more indices
      */
     public function getSettings(string|array $table): array
     {
         $index = $this->parseIndexName($table);
-        $params = ['index' => Arr::wrap($index)];
 
-        return $this->connection->elastic()->indices()->getSettings($params)->asArray();
+        return $this->connection->getIndexSettings($index);
     }
 
     /**
@@ -304,10 +332,10 @@ class Builder extends BaseBuilder
         ];
         $params = [...$params, ...$options];
 
-        return $this->connection->elastic()->reindex($params)->asArray();
+        return $this->connection->reindex($params);
     }
 
-    public function indices(): Indices
+    public function indices()
     {
         return $this->connection->indices();
     }
@@ -317,33 +345,48 @@ class Builder extends BaseBuilder
     // ----------------------------------------------------------------------
 
     /**
-     * Run a reindex statement against the database.
+     * @deprecated v5.0.0 Use table() instead.
      */
     public function modify($index, Closure $callback): void
     {
         $this->table($index, $callback);
     }
 
+    /**
+     * @deprecated v5.0.0 Use drop() instead.
+     */
     public function delete($index): void
     {
         $this->drop($index);
     }
 
+    /**
+     * @deprecated v5.0.0 Use dropIfExists() instead.
+     */
     public function deleteIfExists($index): void
     {
         $this->dropIfExists($index);
     }
 
+    /**
+     * @deprecated v5.0.0 Use table() instead.
+     */
     public function setAnalyser($index, Closure $callback): void
     {
         $this->table($index, $callback);
     }
 
+    /**
+     * @deprecated v5.0.0 Use hasColumn() instead.
+     */
     public function hasField($index, $field): bool
     {
         return $this->hasColumn($index, $field);
     }
 
+    /**
+     * @deprecated v5.0.0 Use hasColumns() instead.
+     */
     public function hasFields($index, $fields): bool
     {
         return $this->hasColumns($index, $fields);

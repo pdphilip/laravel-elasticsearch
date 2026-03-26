@@ -128,7 +128,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orSearchFuzzyPrefix($term, $fields = ['*'], $options = [])
  * @method static $this searchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
  * @method static $this orSearchNotFuzzyPrefix($term, $fields = ['*'], $options = [])
- *                                                                                    -----------------------------------
+ *-----------------------------------
  * @method static $this searchQueryString($query, $fields = null, $options = [])
  * @method static $this orSearchQueryString($query, $fields = null, $options = [])
  * @method static $this searchNotQueryString($query, $fields = null, $options = [])
@@ -179,6 +179,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orderByNestedDesc($column, $direction = 'asc', $mode = null)
  *-----------------------------------
  * @method static $this withSort($column, $key, $value)
+ * @method static $this withRefresh($type)
  *===========================================
  * Executors
  *===========================================
@@ -189,8 +190,9 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static array getModels($columns = ['*'])
  * @method static ElasticCollection get($columns = ['*'])
  * @method static ElasticCollection insert($values, $returnData = null)
- * @method static self createOnly()
- * @method static self createOrFail(array $attributes)
+ * @method static $this create(array $attributes)
+ * @method static $this createOnly()
+ * @method static $this createOrFail(array $attributes)
  *-----------------------------------
  * @method static array toDsl($columns = ['*'])
  * @method static array toSql($columns = ['*'])
@@ -204,7 +206,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  *-----------------------------------
  * @method static bool chunk($count, $callback)
  * @method static bool chunkById($count, $callback, $column = '_id', $alias = null)
- *                                                                                  -----------------------------------
+ *-----------------------------------
  * @method static ElasticCollection distinct($columns = [], $includeCount = false)
  * @method static ElasticCollection bulkDistinct($columns = [], $includeCount = false)
  *===========================================

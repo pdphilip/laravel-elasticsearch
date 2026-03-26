@@ -8,29 +8,44 @@ use BackedEnum;
 
 trait InteractsWithPivotTable
 {
-    /** {@inheritdoc} */
+    /**
+     * Coerce all record keys to strings for ES consistency.
+     *
+     * {@inheritdoc}
+     */
     protected function formatRecordsList(array $records)
     {
-        return collect($records)->mapWithKeys(function ($attributes, $id) {
+        $formatted = [];
+
+        foreach ($records as $id => $attributes) {
             if (! is_array($attributes)) {
-                [$id, $attributes] = [$attributes, []];
+                $id = $attributes;
+                $attributes = [];
             }
 
             if ($id instanceof BackedEnum) {
                 $id = $id->value;
             }
 
-            // We have to convert all Key Ids to string values to keep it consistent in Elastic.
-            return [(string) $id => $attributes];
-        })->all();
+            $formatted[(string) $id] = $attributes;
+        }
+
+        return $formatted;
     }
 
-    /** {@inheritdoc} */
+    /**
+     * Coerce all parsed IDs to strings for ES consistency.
+     *
+     * {@inheritdoc}
+     */
     protected function parseIds($value)
     {
-        // We have to convert all Key Ids to string values to keep it consistent in Elastic.
-        return collect(parent::parseIds($value))->mapWithKeys(function ($value, $key) {
-            return [(string) $key => $value];
-        })->all();
+        $parsed = [];
+
+        foreach (parent::parseIds($value) as $key => $val) {
+            $parsed[(string) $key] = $val;
+        }
+
+        return $parsed;
     }
 }

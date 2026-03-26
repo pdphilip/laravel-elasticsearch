@@ -2,20 +2,35 @@
 
 namespace PDPhilip\Elasticsearch\Laravel\Compatibility\Connection;
 
-use PDPhilip\Elasticsearch\Laravel\v11\Connection\ConnectionCompatibility as ConnectionCompatibility11;
-use PDPhilip\Elasticsearch\Laravel\v12\Connection\ConnectionCompatibility as ConnectionCompatibility12;
+use PDPhilip\Elasticsearch\Query;
+use PDPhilip\Elasticsearch\Schema;
 use PDPhilip\Elasticsearch\Utils\Helpers;
 
-$laravelVersion = Helpers::getLaravelCompatabilityVersion();
-
-if ($laravelVersion == 12) {
-    trait ConnectionCompatibility
+trait ConnectionCompatibility
+{
+    /**
+     * @return Schema\Grammars\Grammar
+     */
+    public function getSchemaGrammar()
     {
-        use ConnectionCompatibility12;
+        return new Schema\Grammars\Grammar(...$this->grammarArgs());
     }
-} else {
-    trait ConnectionCompatibility
+
+    /** {@inheritdoc} */
+    protected function getDefaultQueryGrammar(): Query\Grammar\Grammar
     {
-        use ConnectionCompatibility11;
+        return new Query\Grammar\Grammar(...$this->grammarArgs());
+    }
+
+    /** {@inheritdoc} */
+    protected function getDefaultSchemaGrammar(): Schema\Grammars\Grammar
+    {
+        return new Schema\Grammars\Grammar(...$this->grammarArgs());
+    }
+
+    /** @phpstan-ignore return.type */
+    private function grammarArgs(): array
+    {
+        return Helpers::getLaravelCompatabilityVersion() >= 12 ? [$this] : [];
     }
 }

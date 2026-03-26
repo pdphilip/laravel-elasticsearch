@@ -12,7 +12,7 @@ use PDPhilip\Elasticsearch\Eloquent\Model as TModel;
  * @template TKey of array-key
  * @template TModel of \PDPhilip\Elasticsearch\Eloquent\Model
  *
- * @extends \Illuminate\Database\Eloquent\Collection<int, TModel>
+ * @extends Collection<int, TModel>
  */
 class ElasticCollection extends Collection
 {

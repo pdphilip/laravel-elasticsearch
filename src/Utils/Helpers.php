@@ -47,11 +47,8 @@ final class Helpers
     public static function getLaravelCompatabilityVersion(): int
     {
         $majorVersion = (int) Str::before(Application::VERSION, '.');
-        if ($majorVersion === 10) {
-            $majorVersion = 11;
-        }
-        if (! in_array($majorVersion, [11, 12], true)) {
-            throw new RuntimeException('Laravel version not supported [found: '.Application::VERSION.']. Supported Major versions are 10/11 and 12.');
+        if (! in_array($majorVersion, [11, 12, 13], true)) {
+            throw new RuntimeException('Laravel version not supported [found: '.Application::VERSION.']. Supported Major versions are 11, 12 and 13.');
         }
 
         return $majorVersion;

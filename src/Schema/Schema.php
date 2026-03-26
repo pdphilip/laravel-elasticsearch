@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Schema;
 
-use Elastic\Elasticsearch\Endpoints\Indices;
 use Illuminate\Support\Facades\Facade;
 use PDPhilip\Elasticsearch\Exceptions\LogicException;
 
@@ -30,7 +29,7 @@ use PDPhilip\Elasticsearch\Exceptions\LogicException;
  * @method static array getSettings($table)
  * @method static bool indexExists($table)
  * @method static array reindex($from, $to, $options = [])
- * @method static Indices indices()
+ * @method static mixed indices()
  * @method static void modify($index, $callback)
  * @method static void delete($index)
  * @method static void deleteIfExists($index)

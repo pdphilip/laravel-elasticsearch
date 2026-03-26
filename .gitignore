@@ -1,8 +1,11 @@
 .env
 .env.*
-
+.cl*
+.ELASTICSEARCH_*
 #composer
 vendor
+
+
 
 # Snow-blower
 !secrets/.env*
@@ -21,6 +24,7 @@ secrets.nix
 workbench*
 tests*
 
+_ide_helper.php
 .idea
 .phpunit.cache
 build

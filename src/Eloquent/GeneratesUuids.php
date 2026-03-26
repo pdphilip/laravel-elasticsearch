@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace PDPhilip\Elasticsearch\Eloquent;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -9,7 +11,7 @@ trait GeneratesUuids
 {
     use HasUuids;
 
-    public function initializeGeneratesUuids()
+    public function initializeGeneratesUuids(): void
     {
         $this->generatesUniqueIds = true;
     }

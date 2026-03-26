@@ -66,6 +66,7 @@ class Builder extends BaseEloquentBuilder
         'rawvalue',
         'tosql',
         'torawsql',
+        'tocompiledquery',
 
         // ES
         'todsl',
@@ -74,6 +75,7 @@ class Builder extends BaseEloquentBuilder
         'openpit',
         'bulkinsert',
         'createonly',
+        'upsert',
     ];
 
     /**
@@ -182,7 +184,6 @@ class Builder extends BaseEloquentBuilder
         $builder = $this->applyScopes();
 
         return $builder->query->count($columns);
-        //        return $this->toBase()->getCountForPagination($columns);
     }
 
     /**
@@ -579,20 +580,6 @@ class Builder extends BaseEloquentBuilder
     // ----------------------------------------------------------------------
     // Schema operations
     // ----------------------------------------------------------------------
-
-    /**
-     * {@inheritdoc}
-     */
-    //    public function truncate(): int
-    //    {
-    //        $result = $this->connection->deleteAll([]);
-    //
-    //        if ($result->isSuccessful()) {
-    //            return $result->getDeletedCount();
-    //        }
-    //
-    //        return 0;
-    //    }
 
     public function deleteIndex(): void
     {

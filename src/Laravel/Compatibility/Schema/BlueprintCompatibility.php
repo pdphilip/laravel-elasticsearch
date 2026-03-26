@@ -2,20 +2,29 @@
 
 namespace PDPhilip\Elasticsearch\Laravel\Compatibility\Schema;
 
-use PDPhilip\Elasticsearch\Laravel\v11\Schema\BlueprintCompatibility as BlueprintCompatibility11;
-use PDPhilip\Elasticsearch\Laravel\v12\Schema\BlueprintCompatibility as BlueprintCompatibility12;
 use PDPhilip\Elasticsearch\Utils\Helpers;
 
-$laravelVersion = Helpers::getLaravelCompatabilityVersion();
-
-if ($laravelVersion == 12) {
-    trait BlueprintCompatibility
+trait BlueprintCompatibility
+{
+    public function getConnection()
     {
-        use BlueprintCompatibility12;
+        return $this->connection ?? null;
     }
-} else {
-    trait BlueprintCompatibility
+
+    /** @phpstan-ignore method.childParameterType */
+    public function build($connection = null, $grammar = null): void
     {
-        use BlueprintCompatibility11;
+        if (Helpers::getLaravelCompatabilityVersion() >= 12) {
+            $connection = $this->connection;
+            $grammar = $this->grammar;
+        }
+
+        foreach ($this->toDSL($connection, $grammar) as $statement) {
+            if ($connection->pretending()) {
+                return;
+            }
+
+            $statement($this, $connection);
+        }
     }
 }

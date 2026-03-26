@@ -87,18 +87,19 @@ UserLog::where('status', 1)->orderByDesc('created_at')->with('user')->get();
 
 ### Maintained versions (Elasticsearch 8.x):
 
-**Laravel 10.x, 11.x & 12.x (main):**
+**Laravel 11.x, 12.x & 13.x (main):**
 
 ```bash
 composer require pdphilip/elasticsearch
 ```
 
-| Laravel Version    | Command                                        | Maintained |
-|--------------------|------------------------------------------------|------------|
-| Laravel 10/11/12   | `composer require pdphilip/elasticsearch:~5 `  | ✅ Active   |
-| Laravel 10/11 (v4) | `composer require pdphilip/elasticsearch:~4`   | 🛠️ LTS    |
-| Laravel 9          | `composer require pdphilip/elasticsearch:~3.9` | 🛠️ LTS    |
-| Laravel 8          | `composer require pdphilip/elasticsearch:~3.8` | 🛠️ LTS    |
+| Laravel Version    | Command                                          | Maintained |
+|--------------------|--------------------------------------------------|------------|
+| Laravel 11/12/13   | `composer require pdphilip/elasticsearch:~5.6`   | ✅ Active   |
+| Laravel 10/11/12   | `composer require pdphilip/elasticsearch:~5.5`   | 🛠️ LTS    |
+| Laravel 10/11 (v4) | `composer require pdphilip/elasticsearch:~4`     | 🛠️ LTS    |
+| Laravel 9          | `composer require pdphilip/elasticsearch:~3.9`   | 🛠️ LTS    |
+| Laravel 8          | `composer require pdphilip/elasticsearch:~3.8`   | 🛠️ LTS    |
 
 ### Unmaintained versions (Elasticsearch 8.x):
 

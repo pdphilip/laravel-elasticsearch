@@ -8,6 +8,15 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
 use PDPhilip\Elasticsearch\Traits\Makeable;
 
+/**
+ * Raw ES response transfer object.
+ *
+ * Created by the Processor from ES response arrays. Carries response data
+ * to QueryMeta (collection-level) and ModelMeta (per-model) via their setters.
+ *
+ * The set() method allows the Processor to add computed values (query, dsl, total, after_key)
+ * after construction.
+ */
 class MetaDTO implements Arrayable
 {
     use Makeable;
