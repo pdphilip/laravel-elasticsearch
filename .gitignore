@@ -18,6 +18,8 @@ secrets.nix
 
 .phpunit*
 
+workbench*
+tests*
 
 .idea
 .phpunit.cache
