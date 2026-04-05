@@ -26,8 +26,6 @@ namespace PDPhilip\Elasticsearch\Utils;
  *   - Zero collisions: timestamp + sequence + random process ID
  *   - ~16M IDs per ms per process before sequence wraps
  *   - Timestamp extractable for analytics (bytes 0-5)
- *
- * @internal
  */
 class TimeOrderedUUIDGenerator
 {

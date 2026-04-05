@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace PDPhilip\Elasticsearch\Utils;
 
 /**
- * @internal
- *
  * @see https://github.com/elastic/elasticsearch/blob/6b7751d65f7b32be38020688b8867f406a0f608a/server/src/main/java/org/elasticsearch/common/TimeBasedUUIDGenerator.java
  *
  * - Same 15-byte ID structure (timestamp, sequence, MAC).
