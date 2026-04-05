@@ -60,6 +60,10 @@ final class QueryException extends Exception
             return $this->formatAsConflictException($error);
         }
 
+        if (! isset($error['error']['type'])) {
+            return $result->getMessage();
+        }
+
         return match ($error['error']['type']) {
             'search_phase_execution_exception' => $this->formatSearchPhaseExecutionException($error),
             'script_exception' => $this->formatScriptException($error),
