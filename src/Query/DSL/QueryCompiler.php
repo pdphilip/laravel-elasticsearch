@@ -2,7 +2,6 @@
 
 namespace PDPhilip\Elasticsearch\Query\DSL;
 
-// @internal
 class QueryCompiler
 {
     protected array $query = [];
