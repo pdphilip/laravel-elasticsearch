@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Elastic\Elasticsearch\Exception\ClientResponseException;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\DB;
 use PDPhilip\Elasticsearch\Exceptions\QueryException;
 use PDPhilip\Elasticsearch\Tests\Models\PageHit;
@@ -22,8 +24,8 @@ Root Cause Reason: Unknown key for a START_ARRAY in [query]');
 
 it('handles error responses without error.type structure', function () {
     $body = json_encode(['status' => 400, 'message' => 'Something went wrong']);
-    $response = new \GuzzleHttp\Psr7\Response(400, [], $body);
-    $previous = new \Elastic\Elasticsearch\Exception\ClientResponseException($body, 400);
+    $response = new Response(400, [], $body);
+    $previous = new ClientResponseException($body, 400);
     $previous->setResponse($response);
 
     $exception = new QueryException($previous);
@@ -33,8 +35,8 @@ it('handles error responses without error.type structure', function () {
 });
 
 it('handles error responses with null json body', function () {
-    $response = new \GuzzleHttp\Psr7\Response(400, [], 'not json at all');
-    $previous = new \Elastic\Elasticsearch\Exception\ClientResponseException('not json at all', 400);
+    $response = new Response(400, [], 'not json at all');
+    $previous = new ClientResponseException('not json at all', 400);
     $previous->setResponse($response);
 
     $exception = new QueryException($previous);
