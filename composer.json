@@ -30,12 +30,5 @@
     "allow-plugins": {
       "php-http/discovery": true
     }
-  },
-  "extra": {
-    "laravel": {
-      "providers": [
-        "PDPhilip\\Elasticsearch\\ElasticServiceProvider"
-      ]
-    }
   }
 }
