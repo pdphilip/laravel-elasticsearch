@@ -2,6 +2,25 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.6.1 - 2026-04-06
+
+> **Future-proofing note:** After GitHub incorrectly shadow-banned my account (since reinstated with no
+> explanation beyond "it shouldn't happen again"), all packages are now mirrored to GitLab. GitHub
+> remains the home for issues, PRs, and community collaboration, but **Packagist downloads exclusively
+from GitLab** to ensure uninterrupted access to releases regardless of GitHub's actions.
+
+This release is compatible with Laravel 11, 12 & 13
+
+### Fixed
+
+- **Laravel 13.3 compatibility** — `newCollection()` override on base Model to prevent `HasCollection`
+  trait from attempting to instantiate the abstract parent class (`Cannot instantiate abstract class`
+  error introduced in Laravel 13.3's new `resolveCollectionFromAttribute` grandchild resolution)
+- **QueryException** crash on `Undefined array key "error"` when Elasticsearch returns responses
+  without the expected `error.type` structure (e.g. malformed or non-standard error payloads)
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.6.0...v5.6.1
+
 ## v5.6.0 - 2026-03-24
 
 This release is compatible with Laravel 11, 12 & 13
@@ -21,7 +40,8 @@ This release is compatible with Laravel 11, 12 & 13
 
 ### Refactored
 
-- Collapsed Laravel version compatibility layer from 12 files (4 dispatchers + 4 v11 traits + 4 v12 traits) into 4 self-contained traits. Version checks now happen inside each method with spread operators for different constructor signatures — no more file-level conditional trait loading. Removed phpstan bootstrap `class_alias` hacks that were needed for the old pattern.
+- Collapsed Laravel version compatibility layer from 12 files (4 dispatchers + 4 v11 traits + 4 v12 traits) into 4 self-contained traits. Version checks now happen inside each method with spread operators for different constructor
+  signatures — no more file-level conditional trait loading. Removed phpstan bootstrap `class_alias` hacks that were needed for the old pattern.
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.3...v5.6.0
 
@@ -29,7 +49,8 @@ This release is compatible with Laravel 11, 12 & 13
 
 ### Fixed
 
-- `distinct()`, `bulkDistinct()`, and `groupBy()` now work on nested fields (e.g., `distinct('tags.key', true)`). Previously these returned empty results because the compiled DSL lacked the required `nested` aggregation wrapper. The package now auto-detects nested mappings and wraps aggregations accordingly — no changes needed in userland code.
+- `distinct()`, `bulkDistinct()`, and `groupBy()` now work on nested fields (e.g., `distinct('tags.key', true)`). Previously these returned empty results because the compiled DSL lacked the required `nested` aggregation wrapper. The package
+  now auto-detects nested mappings and wraps aggregations accordingly — no changes needed in userland code.
 - When `whereNestedObject()` is combined with `distinct()` on the same nested path, the nested filter is injected inside the aggregation context so that only matching sub-documents are aggregated.
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.2...v5.5.3
