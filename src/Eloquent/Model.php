@@ -43,6 +43,12 @@ abstract class Model extends BaseModel
 
     }
 
+    /** {@inheritdoc} */
+    public function newCollection(array $models = [])
+    {
+        return new ElasticCollection($models);
+    }
+
     public function getTable()
     {
         if (! empty($this->index)) {
