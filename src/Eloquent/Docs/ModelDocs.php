@@ -82,6 +82,10 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this whereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this orWhereNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this orWhereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
+ * @method static $this whereNestedFieldExists(string $path, string $boolean = 'and', bool $not = false)
+ * @method static $this whereNestedFieldDoesntExist(string $path)
+ * @method static $this orWhereNestedFieldExists(string $path)
+ * @method static $this orWhereNestedFieldDoesntExist(string $path)
  *-----------------------------------
  * @method static $this whereFieldExists($column, $boolean = 'and', $not = false)
  * @method static $this whereFieldDoesntExist($column)

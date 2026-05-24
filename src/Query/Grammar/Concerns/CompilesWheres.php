@@ -288,6 +288,18 @@ trait CompilesWheres
     }
 
     /**
+     * Nested field exists - "this nested path has at least one document".
+     * No mapping lookup; the path is whatever the caller passed.
+     */
+    protected function compileWhereNestedFieldExists(Builder $builder, array $where): array
+    {
+        $path = $where['path'];
+        $query = DslFactory::nested($path, ['query' => DslFactory::exists($path)]);
+
+        return $this->applyOptionsToClause($query, $where);
+    }
+
+    /**
      * Nested object query - query nested document type
      */
     protected function compileWhereNestedObject(Builder $builder, $where): array

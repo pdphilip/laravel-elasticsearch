@@ -253,6 +253,35 @@ it('whereNull on a nested field wraps nested inside must_not', function () {
         ->and($mustNot['nested']['query'])->toBe(['exists' => ['field' => 'comments.country']]);
 });
 
+it('whereNestedFieldExists emits nested+exists for the path itself', function () {
+    $dsl = Post::whereNestedFieldExists('comments')->toDsl();
+
+    $clause = $dsl['body']['query'];
+    expect($clause)->toHaveKey('nested')
+        ->and($clause['nested']['path'])->toBe('comments')
+        ->and($clause['nested']['query'])->toBe(['exists' => ['field' => 'comments']]);
+});
+
+it('whereNestedFieldExists matches posts that have nested entries', function () {
+    expect(Post::whereNestedFieldExists('comments')->count())->toBe(4);
+});
+
+it('whereNestedFieldDoesntExist wraps nested inside must_not', function () {
+    $dsl = Post::whereNestedFieldDoesntExist('comments')->toDsl();
+
+    $mustNot = $dsl['body']['query']['bool']['must_not'][0];
+    expect($mustNot)->toHaveKey('nested')
+        ->and($mustNot['nested']['path'])->toBe('comments')
+        ->and($mustNot['nested']['query'])->toBe(['exists' => ['field' => 'comments']]);
+});
+
+it('orWhereNestedFieldExists composes with other clauses', function () {
+    $dsl = Post::where('status', 99)->orWhereNestedFieldExists('comments')->toDsl();
+
+    $should = $dsl['body']['query']['bool']['should'] ?? null;
+    expect($should)->not->toBeNull();
+});
+
 it('can search with field boosting', function () {
     $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)

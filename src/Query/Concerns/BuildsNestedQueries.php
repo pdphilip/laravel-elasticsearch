@@ -130,6 +130,43 @@ trait BuildsNestedQueries
         return $this;
     }
 
+    // ----------------------------------------------------------------------
+    // Nested Field Exists
+    // Use when you want "this nested path has at least one document" without
+    // any inner conditions. Explicit, no mapping lookup, no detection cost.
+    // ----------------------------------------------------------------------
+
+    public function whereNestedFieldExists(string $path, string $boolean = 'and', bool $not = false): self
+    {
+        // Stored as 'path' (not 'column') to bypass the where-loop's automatic
+        // parent-field prepending — the path here is the nested path itself,
+        // not a field inside a nested context.
+        $this->wheres[] = [
+            'type' => 'NestedFieldExists',
+            'path' => $path,
+            'boolean' => $boolean,
+            'not' => $not,
+            'options' => [],
+        ];
+
+        return $this;
+    }
+
+    public function whereNestedFieldDoesntExist(string $path): self
+    {
+        return $this->whereNestedFieldExists($path, 'and', true);
+    }
+
+    public function orWhereNestedFieldExists(string $path): self
+    {
+        return $this->whereNestedFieldExists($path, 'or', false);
+    }
+
+    public function orWhereNestedFieldDoesntExist(string $path): self
+    {
+        return $this->whereNestedFieldExists($path, 'or', true);
+    }
+
     /**
      * Order by a field within nested objects.
      */
