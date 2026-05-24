@@ -6,7 +6,9 @@ namespace PDPhilip\Elasticsearch\Query\Concerns;
 
 use Closure;
 use Illuminate\Support\Str;
+use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
+use PDPhilip\Elasticsearch\Query\Builder;
 
 /**
  * Nested object and parent/child relationship queries.
@@ -15,8 +17,32 @@ use PDPhilip\Elasticsearch\Exceptions\RuntimeException;
 trait BuildsNestedQueries
 {
     /**
+     * Return a Builder pre-configured for a nested path.
+     *
+     * Use this when you need to build the inner nested query programmatically
+     * (across functions, conditionals, loops) rather than inside a closure.
+     * The returned Builder can be passed straight to whereNestedObject():
+     *
+     *     $inner = BlogPost::nestedQuery('comments');
+     *     $inner->where('country', 'Peru');
+     *     if ($minLikes) $inner->where('likes', '>=', $minLikes);
+     *
+     *     BlogPost::whereNestedObject('comments', $inner)->get();
+     */
+    public function nestedQuery(string $column): Builder
+    {
+        $query = $this->newQuery($this->from);
+        $query->options()->add('parentField', $column);
+
+        return $query;
+    }
+
+    /**
      * Query nested objects within a document.
      * https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-nested-query.html
+     *
+     * The $query argument may be a Closure (most common), a pre-built Builder
+     * returned by nestedQuery(), or a raw DSL string.
      */
     public function whereNestedObject($column, $query, $filterInnerHits = false, $options = [], $boolean = 'and', $not = false): self
     {
@@ -28,16 +54,39 @@ trait BuildsNestedQueries
         }
         $options = $options->toArray();
 
-        if (! is_string($query) && is_callable($query)) {
-            $callback = $query;
-            $query = $this->newQuery($from);
-            $query->options()->add('parentField', $column);
-            call_user_func($callback, $query);
-        }
+        $query = $this->resolveNestedQuery($column, $query);
 
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
 
         return $this;
+    }
+
+    /**
+     * Normalize the $query argument accepted by whereNestedObject / filterNested.
+     * Accepts a Closure, a pre-built Builder, or a raw DSL string.
+     */
+    protected function resolveNestedQuery(string $column, mixed $query): mixed
+    {
+        if ($query instanceof Builder) {
+            return $query;
+        }
+
+        if (is_string($query)) {
+            return $query;
+        }
+
+        if (is_callable($query)) {
+            $callback = $query;
+            $query = $this->newQuery($this->from);
+            $query->options()->add('parentField', $column);
+            call_user_func($callback, $query);
+
+            return $query;
+        }
+
+        throw new BuilderException(
+            'Nested query must be a Closure, a Builder from nestedQuery(), or a raw DSL string. Got '.get_debug_type($query).'.'
+        );
     }
 
     public function orWhereNestedObject($column, $query, $filterInnerHits = false, $options = []): self
@@ -74,12 +123,7 @@ trait BuildsNestedQueries
         $options = $this->setOptions($options, 'nested');
         $options = $options->toArray();
 
-        if (! is_string($query) && is_callable($query)) {
-            $callback = $query;
-            $query = $this->newQuery($from);
-            $query->options()->add('parentField', $column);
-            call_user_func($callback, $query);
-        }
+        $query = $this->resolveNestedQuery($column, $query);
 
         $this->wheres[] = compact('column', 'query', 'type', 'boolean', 'not', 'options');
 

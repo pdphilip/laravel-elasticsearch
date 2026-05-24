@@ -77,6 +77,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orWhereGeoDistance($field, $distance, $location, $distanceType = null, $validationMethod = null)
  * @method static $this orWhereNotGeoDistance($field, $distance, $location, $distanceType = null, $validationMethod = null)
  *-----------------------------------
+ * @method static \PDPhilip\Elasticsearch\Query\Builder nestedQuery(string $column)
  * @method static $this whereNestedObject($column, $query, $filterInnerHits = false, $options = [], $boolean = 'and', $not = false)
  * @method static $this whereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this orWhereNestedObject($column, $query, $filterInnerHits = false, $options = [])

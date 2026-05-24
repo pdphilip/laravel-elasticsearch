@@ -72,6 +72,7 @@ class Builder extends BaseEloquentBuilder
         'todsl',
         'bucket',
         'bucketaggregation',
+        'nestedquery',
         'openpit',
         'bulkinsert',
         'createonly',

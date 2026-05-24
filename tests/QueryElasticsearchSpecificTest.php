@@ -141,6 +141,57 @@ it('counts nested queries', function () {
     expect($count)->toBe(2);
 });
 
+it('accepts a pre-built Builder from nestedQuery()', function () {
+    $inner = Post::nestedQuery('comments');
+    expect($inner)->toBeInstanceOf(Builder::class);
+
+    $inner->where('country', 'USA')->where('likes', '>=', 15);
+
+    $posts = Post::whereNestedObject('comments', $inner)->get();
+    expect($posts)->toHaveCount(1)
+        ->and($posts[0]['title'])->toBe('Getting Started with Laravel');
+});
+
+it('produces identical results for closure and pre-built Builder forms', function () {
+    $closureForm = Post::whereNestedObject('comments', function (Builder $q) {
+        $q->where('country', 'USA');
+    })->get()->pluck('title')->sort()->values()->all();
+
+    $inner = Post::nestedQuery('comments')->where('country', 'USA');
+    $builderForm = Post::whereNestedObject('comments', $inner)->get()->pluck('title')->sort()->values()->all();
+
+    expect($builderForm)->toBe($closureForm);
+});
+
+it('builds nested query programmatically across conditionals', function () {
+    $filters = ['country' => 'USA'];
+    $minLikes = 15;
+
+    $inner = Post::nestedQuery('comments');
+    foreach ($filters as $field => $value) {
+        $inner->where($field, $value);
+    }
+    if ($minLikes) {
+        $inner->where('likes', '>=', $minLikes);
+    }
+
+    $count = Post::whereNestedObject('comments', $inner)->count();
+    expect($count)->toBe(1);
+});
+
+it('supports pre-built Builder with filterInnerHits', function () {
+    $inner = Post::nestedQuery('comments')->where('country', 'USA');
+
+    $posts = Post::whereNestedObject('comments', $inner, true)->get();
+    expect($posts)->toHaveCount(2)
+        ->and($posts[0]['comments'])->toHaveCount(1)
+        ->and($posts[1]['comments'])->toHaveCount(1);
+});
+
+it('throws BuilderException for invalid nested query argument', function () {
+    Post::whereNestedObject('comments', 12345);
+})->throws(\PDPhilip\Elasticsearch\Exceptions\BuilderException::class);
+
 it('can search with field boosting', function () {
     $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)
