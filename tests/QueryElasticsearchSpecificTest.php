@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PDPhilip\Elasticsearch\Exceptions\BuilderException;
 use PDPhilip\Elasticsearch\Query\Builder;
 use PDPhilip\Elasticsearch\Tests\Models\Post;
 use PDPhilip\Elasticsearch\Tests\Models\User;
@@ -190,7 +191,7 @@ it('supports pre-built Builder with filterInnerHits', function () {
 
 it('throws BuilderException for invalid nested query argument', function () {
     Post::whereNestedObject('comments', 12345);
-})->throws(\PDPhilip\Elasticsearch\Exceptions\BuilderException::class);
+})->throws(BuilderException::class);
 
 it('whereFieldExists matches users with the field set', function () {
     expect(User::whereFieldExists('title')->count())->toBe(8);
