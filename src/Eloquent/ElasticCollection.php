@@ -6,13 +6,12 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Data\QueryMeta;
-use PDPhilip\Elasticsearch\Eloquent\Model as TModel;
 
 /**
  * @template TKey of array-key
  * @template TModel of \PDPhilip\Elasticsearch\Eloquent\Model
  *
- * @extends Collection<int, TModel>
+ * @extends \Illuminate\Database\Eloquent\Collection<TKey, TModel>
  */
 class ElasticCollection extends Collection
 {

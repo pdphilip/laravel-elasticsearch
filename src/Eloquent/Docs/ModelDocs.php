@@ -8,7 +8,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Cursor;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Eloquent\ElasticCollection;
-use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
 
 /**
@@ -192,12 +191,12 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  *===========================================
  * Executors
  *===========================================
- * @method static Model|null find($id)
- * @method static Model|null first($columns = ['*'])
- * @method static Model firstOrCreate($attributes, $values = [])
+ * @method static static|null find($id)
+ * @method static static|null first($columns = ['*'])
+ * @method static static firstOrCreate($attributes, $values = [])
  *-----------------------------------
  * @method static array getModels($columns = ['*'])
- * @method static ElasticCollection get($columns = ['*'])
+ * @method static ElasticCollection|array<int, static> get($columns = ['*'])
  * @method static ElasticCollection insert($values, $returnData = null)
  * @method static $this create(array $attributes)
  * @method static $this createOnly()
@@ -207,7 +206,7 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static array toSql($columns = ['*'])
  *-----------------------------------
  * @method static mixed rawDsl($bodyParams)
- * @method static ElasticCollection rawSearch($bodyParams)
+ * @method static array<int, static> rawSearch($bodyParams)
  * @method static array rawAggregation($bodyParams)
  *-----------------------------------
  * @method static LengthAwarePaginator paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null,  $total = null)
@@ -216,8 +215,8 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static bool chunk($count, $callback)
  * @method static bool chunkById($count, $callback, $column = '_id', $alias = null)
  *-----------------------------------
- * @method static ElasticCollection distinct($columns = [], $includeCount = false)
- * @method static ElasticCollection bulkDistinct($columns = [], $includeCount = false)
+ * @method static array<int, static> distinct($columns = [], $includeCount = false)
+ * @method static array<int, static> bulkDistinct($columns = [], $includeCount = false)
  *===========================================
  * Aggregators Methods
  *===========================================

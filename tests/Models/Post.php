@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace PDPhilip\Elasticsearch\Tests\Models;
 
+use Carbon\Carbon;
 use PDPhilip\Elasticsearch\Eloquent\Model;
 use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
+/**
+ * @property string $id
+ * @property string $title
+ * @property int $status
+ * @property array $comments
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class Post extends Model
 {
     use TestsWithIdStrategies;

@@ -12,7 +12,12 @@ use PDPhilip\Elasticsearch\Schema\Blueprint;
 use PDPhilip\Elasticsearch\Schema\Schema;
 use PDPhilip\Elasticsearch\Tests\Concerns\TestsWithIdStrategies;
 
-/** @property Carbon $created_at */
+/**
+ * @property string $id
+ * @property string $name
+ * @property string $user_id
+ * @property Carbon $created_at
+ */
 class Item extends Model
 {
     use TestsWithIdStrategies;
