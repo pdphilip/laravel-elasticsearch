@@ -8,8 +8,8 @@ This release is compatible with Laravel 11, 12 & 13
 
 ### Added
 
-- **`whereNestedFieldExists($path)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/nested-queries#where-nested-field-exists)) - explicit, zero-overhead check for "this nested path has at least one document." Emits the idiomatic `nested + exists` form directly, no closure required. Variants: `whereNestedFieldDoesntExist`, `orWhereNestedFieldExists`, `orWhereNestedFieldDoesntExist`.
-- **`whereFieldExists($field)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/eloquent-queries#wherefieldexists)) - properly named alias for the Elasticsearch `exists` query. Variants: `whereFieldDoesntExist`, `orWhereFieldExists`, `orWhereFieldDoesntExist`.
+- **`whereNestedFieldExists($path)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/nested-queries#where-nested-field-exists)) - explicit, zero-overhead check for "this nested path has at least one document." Emits the idiomatic `nested + exists` form directly, no closure required. Variants: `whereNotNestedFieldExists`, `orWhereNestedFieldExists`, `orWhereNotNestedFieldExists`.
+- **`whereFieldExists($field)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/eloquent-queries#wherefieldexists)) - properly named alias for the Elasticsearch `exists` query. Variants: `whereNotFieldExists`, `orWhereFieldExists`, `orWhereNotFieldExists`.
 - **`nestedQuery($column)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/nested-queries#building-the-inner-query-programmatically)) - returns a pre-configured Builder you can build up across conditionals and functions, then pass straight to `whereNestedObject()`. The closure form still works for simple cases; this is the escape hatch for programmatic composition.
 - `whereNestedObject()` now accepts a pre-built Builder (from `nestedQuery()`) in addition to a Closure or raw DSL string. Invalid input now throws `BuilderException` instead of silently being stored.
 
@@ -22,9 +22,9 @@ This release is compatible with Laravel 11, 12 & 13
 
 - **`whereTermExists` family** - replaced by `whereFieldExists`. The `Term` prefix was historical (the underlying ES query isn't term-related) and the old name avoided collision with Laravel's base `whereExists(Closure)`. Old methods still work; will be removed in v6:
     - `whereTermExists` → `whereFieldExists`
-    - `whereNotTermExists` → `whereFieldDoesntExist`
+    - `whereNotTermExists` → `whereNotFieldExists`
     - `orWhereTermExists` → `orWhereFieldExists`
-    - `orWhereNotTermsExists` → `orWhereFieldDoesntExist` (also fixes the typo'd plural "Terms")
+    - `orWhereNotTermsExists` → `orWhereNotFieldExists` (also fixes the typo'd plural "Terms")
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.6.1...v5.7.0
 

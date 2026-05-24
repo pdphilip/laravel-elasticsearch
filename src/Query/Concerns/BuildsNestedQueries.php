@@ -152,7 +152,7 @@ trait BuildsNestedQueries
         return $this;
     }
 
-    public function whereNestedFieldDoesntExist(string $path): self
+    public function whereNotNestedFieldExists(string $path): self
     {
         return $this->whereNestedFieldExists($path, 'and', true);
     }
@@ -162,7 +162,7 @@ trait BuildsNestedQueries
         return $this->whereNestedFieldExists($path, 'or', false);
     }
 
-    public function orWhereNestedFieldDoesntExist(string $path): self
+    public function orWhereNotNestedFieldExists(string $path): self
     {
         return $this->whereNestedFieldExists($path, 'or', true);
     }

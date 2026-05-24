@@ -82,18 +82,18 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orWhereNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this orWhereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this whereNestedFieldExists(string $path, string $boolean = 'and', bool $not = false)
- * @method static $this whereNestedFieldDoesntExist(string $path)
+ * @method static $this whereNotNestedFieldExists(string $path)
  * @method static $this orWhereNestedFieldExists(string $path)
- * @method static $this orWhereNestedFieldDoesntExist(string $path)
+ * @method static $this orWhereNotNestedFieldExists(string $path)
  *-----------------------------------
  * @method static $this whereFieldExists($column, $boolean = 'and', $not = false)
- * @method static $this whereFieldDoesntExist($column)
+ * @method static $this whereNotFieldExists($column)
  * @method static $this orWhereFieldExists($column)
- * @method static $this orWhereFieldDoesntExist($column)
+ * @method static $this orWhereNotFieldExists($column)
  * @method static $this whereTermExists($column, $boolean = 'and', $not = false) @deprecated use whereFieldExists
- * @method static $this whereNotTermExists($column) @deprecated use whereFieldDoesntExist
+ * @method static $this whereNotTermExists($column) @deprecated use whereNotFieldExists
  * @method static $this orWhereTermExists($column) @deprecated use orWhereFieldExists
- * @method static $this orWhereNotTermsExists($column) @deprecated use orWhereFieldDoesntExist
+ * @method static $this orWhereNotTermsExists($column) @deprecated use orWhereNotFieldExists
  *-----------------------------------
  * @method static $this whereRaw($dsl, $bindings = [], $boolean = 'and', $options = [])
  *===========================================

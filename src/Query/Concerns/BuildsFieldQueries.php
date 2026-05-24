@@ -107,7 +107,7 @@ trait BuildsFieldQueries
         return $this;
     }
 
-    public function whereFieldDoesntExist($column): self
+    public function whereNotFieldExists($column): self
     {
         return $this->whereFieldExists($column, 'and', true);
     }
@@ -117,7 +117,7 @@ trait BuildsFieldQueries
         return $this->whereFieldExists($column, 'or', false);
     }
 
-    public function orWhereFieldDoesntExist($column): self
+    public function orWhereNotFieldExists($column): self
     {
         return $this->whereFieldExists($column, 'or', true);
     }
@@ -131,7 +131,7 @@ trait BuildsFieldQueries
     }
 
     /**
-     * @deprecated Use whereFieldDoesntExist() instead. Will be removed in v6.
+     * @deprecated Use whereNotFieldExists() instead. Will be removed in v6.
      */
     public function whereNotTermExists($column): self
     {
@@ -147,7 +147,7 @@ trait BuildsFieldQueries
     }
 
     /**
-     * @deprecated Use orWhereFieldDoesntExist() instead. Will be removed in v6.
+     * @deprecated Use orWhereNotFieldExists() instead. Will be removed in v6.
      *             Note: the original method name had a typo ("Terms" plural).
      */
     public function orWhereNotTermsExists($column): self

@@ -197,8 +197,8 @@ it('whereFieldExists matches users with the field set', function () {
     expect(User::whereFieldExists('title')->count())->toBe(8);
 });
 
-it('whereFieldDoesntExist matches users with the field missing', function () {
-    expect(User::whereFieldDoesntExist('title')->count())->toBe(1);
+it('whereNotFieldExists matches users with the field missing', function () {
+    expect(User::whereNotFieldExists('title')->count())->toBe(1);
 });
 
 it('whereFieldExists is parity with deprecated whereTermExists', function () {
@@ -266,8 +266,8 @@ it('whereNestedFieldExists matches posts that have nested entries', function () 
     expect(Post::whereNestedFieldExists('comments')->count())->toBe(4);
 });
 
-it('whereNestedFieldDoesntExist wraps nested inside must_not', function () {
-    $dsl = Post::whereNestedFieldDoesntExist('comments')->toDsl();
+it('whereNotNestedFieldExists wraps nested inside must_not', function () {
+    $dsl = Post::whereNotNestedFieldExists('comments')->toDsl();
 
     $mustNot = $dsl['body']['query']['bool']['must_not'][0];
     expect($mustNot)->toHaveKey('nested')
