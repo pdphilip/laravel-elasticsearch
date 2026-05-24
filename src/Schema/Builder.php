@@ -216,7 +216,7 @@ class Builder extends BaseBuilder
                 $this->drop($table);
             }
         } catch (Exception $e) {
-            // Silently ignore — the intent is "drop if it exists, otherwise do nothing"
+            // Silently ignore - the intent is "drop if it exists, otherwise do nothing"
         }
     }
 

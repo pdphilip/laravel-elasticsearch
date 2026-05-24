@@ -92,8 +92,8 @@ class MorphToMany extends EloquentMorphToMany
     // Attach / Detach
     //
     // Each operation has two sides:
-    //   1. Update the parent  — push/pull IDs or morph entries
-    //   2. Update the related — push/pull parent reference
+    //   1. Update the parent  - push/pull IDs or morph entries
+    //   2. Update the related - push/pull parent reference
     //
     // The inverse flag flips which side stores flat IDs vs morph entries:
     //   morphToMany:   related stores morph entries, parent stores flat IDs
@@ -152,7 +152,7 @@ class MorphToMany extends EloquentMorphToMany
     }
 
     // ------------------------------------------------------------------
-    // Attach helpers — encapsulate inverse × ES/SQL branching
+    // Attach helpers - encapsulate inverse × ES/SQL branching
     // ------------------------------------------------------------------
 
     /**

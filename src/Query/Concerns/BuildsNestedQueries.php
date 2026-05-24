@@ -139,7 +139,7 @@ trait BuildsNestedQueries
     public function whereNestedFieldExists(string $path, string $boolean = 'and', bool $not = false): self
     {
         // Stored as 'path' (not 'column') to bypass the where-loop's automatic
-        // parent-field prepending — the path here is the nested path itself,
+        // parent-field prepending - the path here is the nested path itself,
         // not a field inside a nested context.
         $this->wheres[] = [
             'type' => 'NestedFieldExists',

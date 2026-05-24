@@ -8,7 +8,7 @@ namespace PDPhilip\Elasticsearch\Utils;
  * Generates time-ordered, sortable 20-character IDs for Elasticsearch.
  *
  * Produces 15-byte IDs encoded with a sortable base64 alphabet where
- * lexicographic string comparison matches chronological order — both
+ * lexicographic string comparison matches chronological order - both
  * within a single process and across multiple concurrent processes
  * at millisecond granularity.
  *

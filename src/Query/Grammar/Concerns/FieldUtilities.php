@@ -171,7 +171,7 @@ trait FieldUtilities
                 }
             }
         } catch (\Exception) {
-            // Index may not exist yet — no nested paths to detect
+            // Index may not exist yet - no nested paths to detect
         }
 
         $builder->options()->add($cacheKey, $nestedPaths);

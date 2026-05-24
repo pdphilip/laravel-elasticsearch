@@ -116,7 +116,7 @@ it('upsert preserves fields not in update list', function () {
         ['email' => 'alice', 'name' => 'Alice', 'age' => 30, 'title' => 'admin'],
     ], 'email');
 
-    // Update only name — age and title should remain
+    // Update only name - age and title should remain
     User::upsert([
         ['email' => 'alice', 'name' => 'Alice Updated', 'age' => 99, 'title' => 'guest'],
     ], 'email', ['name']);

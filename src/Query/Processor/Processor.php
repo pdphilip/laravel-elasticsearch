@@ -67,7 +67,7 @@ class Processor extends BaseProcessor
         $response = $this->getRawResponse();
         $this->rawAggregations = $response['aggregations'] ?? [];
 
-        // Extract after_key — may be inside a nested agg wrapper
+        // Extract after_key - may be inside a nested agg wrapper
         $groupByAggs = $this->unwrapNestedAggregation($this->rawAggregations, 'group_by');
         if (! empty($groupByAggs['group_by']['after_key'])) {
             $this->query->getMetaTransfer()->set('after_key', $groupByAggs['group_by']['after_key']);

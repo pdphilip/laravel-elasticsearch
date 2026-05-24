@@ -2,6 +2,32 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.7.0 - 2026-05-24
+
+This release is compatible with Laravel 11, 12 & 13
+
+### Added
+
+- **`whereNestedFieldExists($path)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/nested-queries#where-nested-field-exists)) - explicit, zero-overhead check for "this nested path has at least one document." Emits the idiomatic `nested + exists` form directly, no closure required. Variants: `whereNestedFieldDoesntExist`, `orWhereNestedFieldExists`, `orWhereNestedFieldDoesntExist`.
+- **`whereFieldExists($field)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/eloquent-queries#wherefieldexists)) - properly named alias for the Elasticsearch `exists` query. Variants: `whereFieldDoesntExist`, `orWhereFieldExists`, `orWhereFieldDoesntExist`.
+- **`nestedQuery($column)`** ([docs](https://elasticsearch.pdphilip.com/eloquent/nested-queries#building-the-inner-query-programmatically)) - returns a pre-configured Builder you can build up across conditionals and functions, then pass straight to `whereNestedObject()`. The closure form still works for simple cases; this is the escape hatch for programmatic composition.
+- `whereNestedObject()` now accepts a pre-built Builder (from `nestedQuery()`) in addition to a Closure or raw DSL string. Invalid input now throws `BuilderException` instead of silently being stored.
+
+### Changed
+
+- **Exists queries on nested-mapped fields auto-wrap in `nested`** ([docs](https://elasticsearch.pdphilip.com/eloquent/eloquent-queries#wherenotnull)) - `whereFieldExists('comments.country')`, `whereNotNull('comments.country')`, and `whereNull('comments.country')` now emit the idiomatic `nested { path: comments, query: { exists: ... } }` form when the target field lives under a nested path. Detection only fires for dotted field names - bare-field calls (`whereNotNull('title')`) pay no overhead.
+- **IDE/PHPDoc improvements** - `find`, `first`, `firstOrCreate` now return `static` (not the abstract base `Model`), so subclass property hints resolve correctly. Collection-returning methods (`get`, `rawSearch`, `distinct`, `bulkDistinct`) annotated as `array<int, static>` so `foreach` typing works in PhpStorm. `ElasticCollection` template hygiene tightened (FQN parent in `@extends`, dropped name-colliding `use Model as TModel` alias).
+
+### Deprecated
+
+- **`whereTermExists` family** - replaced by `whereFieldExists`. The `Term` prefix was historical (the underlying ES query isn't term-related) and the old name avoided collision with Laravel's base `whereExists(Closure)`. Old methods still work; will be removed in v6:
+    - `whereTermExists` → `whereFieldExists`
+    - `whereNotTermExists` → `whereFieldDoesntExist`
+    - `orWhereTermExists` → `orWhereFieldExists`
+    - `orWhereNotTermsExists` → `orWhereFieldDoesntExist` (also fixes the typo'd plural "Terms")
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.6.1...v5.7.0
+
 ## v5.6.1 - 2026-04-06
 
 > **Future-proofing note:** After GitHub incorrectly shadow-banned my account (since reinstated with no
@@ -13,7 +39,7 @@ This release is compatible with Laravel 11, 12 & 13
 
 ### Fixed
 
-- **Laravel 13.3 compatibility** — `newCollection()` override on base Model to prevent `HasCollection`
+- **Laravel 13.3 compatibility** - `newCollection()` override on base Model to prevent `HasCollection`
   trait from attempting to instantiate the abstract parent class (`Cannot instantiate abstract class`
   error introduced in Laravel 13.3's new `resolveCollectionFromAttribute` grandchild resolution)
 - **QueryException** crash on `Undefined array key "error"` when Elasticsearch returns responses
@@ -41,7 +67,7 @@ This release is compatible with Laravel 11, 12 & 13
 ### Refactored
 
 - Collapsed Laravel version compatibility layer from 12 files (4 dispatchers + 4 v11 traits + 4 v12 traits) into 4 self-contained traits. Version checks now happen inside each method with spread operators for different constructor
-  signatures — no more file-level conditional trait loading. Removed phpstan bootstrap `class_alias` hacks that were needed for the old pattern.
+  signatures - no more file-level conditional trait loading. Removed phpstan bootstrap `class_alias` hacks that were needed for the old pattern.
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.3...v5.6.0
 
@@ -50,7 +76,7 @@ This release is compatible with Laravel 11, 12 & 13
 ### Fixed
 
 - `distinct()`, `bulkDistinct()`, and `groupBy()` now work on nested fields (e.g., `distinct('tags.key', true)`). Previously these returned empty results because the compiled DSL lacked the required `nested` aggregation wrapper. The package
-  now auto-detects nested mappings and wraps aggregations accordingly — no changes needed in userland code.
+  now auto-detects nested mappings and wraps aggregations accordingly - no changes needed in userland code.
 - When `whereNestedObject()` is combined with `distinct()` on the same nested path, the nested filter is injected inside the aggregation context so that only matching sub-documents are aggregated.
 
 **Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.5.2...v5.5.3
@@ -67,8 +93,8 @@ This release is compatible with Laravel 11, 12 & 13
 
 ### Added
 
-- `Schema::compileMapping()` — compile a Blueprint callback into its resulting ES mapping structure without creating the index. Useful for debugging and previewing what `mappingDefinition()` will produce.
-- `Grammar::compileMapping()` — public access to the Blueprint-to-properties compilation pipeline.
+- `Schema::compileMapping()` - compile a Blueprint callback into its resulting ES mapping structure without creating the index. Useful for debugging and previewing what `mappingDefinition()` will produce.
+- `Grammar::compileMapping()` - public access to the Blueprint-to-properties compilation pipeline.
 
 ### Fixed
 
@@ -86,7 +112,7 @@ This release is compatible with Laravel 10, 11 & 12
 
 #### Automated Re-indexing Command
 
-New `elastic:re-index` command that automates the entire re-indexing process when your field mappings change. Pass a model name and the command handles the rest — creating a temp index, copying data, verifying counts, swapping, and cleaning
+New `elastic:re-index` command that automates the entire re-indexing process when your field mappings change. Pass a model name and the command handles the rest - creating a temp index, copying data, verifying counts, swapping, and cleaning
 up across 9 interactive phases with confirmation prompts between each step. - [Docs](https://elasticsearch.pdphilip.com/schema/artisan-commands/#elasticre-index)
 
 ```bash
@@ -97,7 +123,7 @@ php artisan elastic:re-index "App\Models\ES\UserLog"
 Features include:
 
 - Smart mapping analysis that detects type mismatches and sub-field changes (e.g., adding `hasKeyword: true`)
-- Resume capability — interrupted runs pick up where they left off
+- Resume capability - interrupted runs pick up where they left off
 - Configurable tolerance and retry settings
 - `--force` flag to skip all confirmation prompts
 
@@ -286,7 +312,7 @@ Why: Massive performance gains vs running sequential distinct queries.
 `groupByRanges()` performs a [range aggregation](https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-range-aggregation) on the specified
 field. - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges)
 
-`groupByRanges()->get()`  — return bucketed results - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges)
+`groupByRanges()->get()`  - return bucketed results - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges)
 
 `groupByRanges()->agg()` - apply metric aggregations per bucket -[Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ranges-with-aggregations)
 
@@ -295,9 +321,9 @@ field. - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-ra
 `groupByDateRanges()` performs a [date range aggregation](https://www.elastic.co/docs/reference/aggregations/search-aggregations-bucket-daterange-aggregation) on the specified
 field. - [Docs](https://elasticsearch.pdphilip.com/eloquent/distinct/#groupby-date-ranges)
 
-`groupByDateRanges()->get()` — bucketed date ranges
+`groupByDateRanges()->get()` - bucketed date ranges
 
-`groupByDateRanges()->agg()` — metrics per date bucket
+`groupByDateRanges()->agg()` - metrics per date bucket
 
 #### Model Meta Accessor
 
@@ -334,7 +360,7 @@ This release is compatible with Laravel 10, 11 & 12
 This release introduces Query String Queries, bringing full Elasticsearch `query_string` syntax support directly into your Eloquent-style queries.
 
 - Method: `searchQueryString(query, $fields = null, $options = [])` and related methods (`orSearchQueryString`, `searchNotQueryString`, etc.)
-- Supports all `query_string` features — logical operators, wildcards, fuzziness, ranges, regex, boosting, field scoping, and more
+- Supports all `query_string` features - logical operators, wildcards, fuzziness, ranges, regex, boosting, field scoping, and more
 - Includes a dedicated `QueryStringOptions` class for fluent option configuration or array-based parameters
 - [See Tests](https://github.com/pdphilip/laravel-elasticsearch/blob/main/tests/QueryStringTest.php)
 - [Full documentation](https://elasticsearch.pdphilip.com/eloquent/query-string-queries/)

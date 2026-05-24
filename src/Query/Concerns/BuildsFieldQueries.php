@@ -8,10 +8,10 @@ namespace PDPhilip\Elasticsearch\Query\Concerns;
  * ES-specific field queries: term, match, phrase, fuzzy, regex, prefix.
  *
  * Each query type provides four variants:
- *   where{Type}()         — AND match
- *   orWhere{Type}()       — OR match
- *   whereNot{Type}()      — AND NOT match
- *   orWhereNot{Type}()    — OR NOT match
+ *   where{Type}()         - AND match
+ *   orWhere{Type}()       - OR match
+ *   whereNot{Type}()      - AND NOT match
+ *   orWhereNot{Type}()    - OR NOT match
  *
  * Aliases:
  *   whereExact*  → whereTerm*
@@ -85,7 +85,7 @@ trait BuildsFieldQueries
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-exists-query.html
     //
     // Named whereFieldExists (not whereExists) to avoid colliding with
-    // Laravel's base Builder::whereExists(Closure $callback) — the SQL
+    // Laravel's base Builder::whereExists(Closure $callback) - the SQL
     // EXISTS subquery clause, which has entirely different semantics.
     //
     // Works on top-level fields and on nested-mapped fields: the compiler

@@ -29,7 +29,7 @@ trait ManagesManyToMany
     }
 
     // ------------------------------------------------------------------
-    // Abstract hooks — implemented by each concrete class
+    // Abstract hooks - implemented by each concrete class
     // ------------------------------------------------------------------
 
     /**
@@ -44,7 +44,7 @@ trait ManagesManyToMany
     abstract protected function getCurrentSyncIds(): array;
 
     // ------------------------------------------------------------------
-    // Laravel overrides — ES has no pivot table
+    // Laravel overrides - ES has no pivot table
     // ------------------------------------------------------------------
 
     public function getRelationExistenceQuery(Builder $query, Builder $parentQuery, $columns = ['*'])

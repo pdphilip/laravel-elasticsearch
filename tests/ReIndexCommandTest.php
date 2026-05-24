@@ -102,7 +102,7 @@ it('skips re-index when mapping already matches', function () {
         ['name' => 'Alpha', 'status' => 'active'],
     ]);
 
-    // Mapping matches — exits early (no re-index needed)
+    // Mapping matches - exits early (no re-index needed)
     $this->artisan('elastic:re-index', [
         'model' => ReIndexTarget::class,
         '--force' => true,

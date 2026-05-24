@@ -12,15 +12,15 @@ use PDPhilip\Elasticsearch\Query\Builder;
  * Multi-field search queries for Elasticsearch (multi_match + query_string).
  *
  * All convenience methods delegate to search() with different multi_match types:
- *   searchTerm*          — best_fields   (highest score from best-matching field)
- *   searchTermMost*      — most_fields   (combined score from all matching fields)
- *   searchTermCross*     — cross_fields  (treats fields as one combined field)
- *   searchPhrase*        — phrase        (exact phrase match)
- *   searchPhrasePrefix*  — phrase_prefix (phrase + prefix on last term)
- *   searchBoolPrefix*    — bool_prefix   (search-as-you-type)
- *   searchFuzzy*         — best_fields + fuzziness:AUTO
- *   searchFuzzyPrefix*   — bool_prefix  + fuzziness:AUTO
- *   searchQueryString*   — query_string  (Lucene query syntax)
+ *   searchTerm*          - best_fields   (highest score from best-matching field)
+ *   searchTermMost*      - most_fields   (combined score from all matching fields)
+ *   searchTermCross*     - cross_fields  (treats fields as one combined field)
+ *   searchPhrase*        - phrase        (exact phrase match)
+ *   searchPhrasePrefix*  - phrase_prefix (phrase + prefix on last term)
+ *   searchBoolPrefix*    - bool_prefix   (search-as-you-type)
+ *   searchFuzzy*         - best_fields + fuzziness:AUTO
+ *   searchFuzzyPrefix*   - bool_prefix  + fuzziness:AUTO
+ *   searchQueryString*   - query_string  (Lucene query syntax)
  *
  * Each type has four variants: search{Type}, orSearch{Type}, searchNot{Type}, orSearchNot{Type}
  *

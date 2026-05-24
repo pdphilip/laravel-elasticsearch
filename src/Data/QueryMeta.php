@@ -20,7 +20,7 @@ final class QueryMeta
     }
 
     // ----------------------------------------------------------------------
-    // Getters — delegate to MetaDTO
+    // Getters - delegate to MetaDTO
     // ----------------------------------------------------------------------
 
     public function getIndex(): string

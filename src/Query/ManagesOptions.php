@@ -162,7 +162,7 @@ trait ManagesOptions
 
                 return tap(new $class, $value)->toArray();
             } catch (Exception $e) {
-                // Callable didn't match expected option signature — return empty options
+                // Callable didn't match expected option signature - return empty options
                 return [];
             }
         }

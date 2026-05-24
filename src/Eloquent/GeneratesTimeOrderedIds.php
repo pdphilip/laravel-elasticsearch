@@ -12,7 +12,7 @@ use PDPhilip\Elasticsearch\Utils\TimeOrderedUUIDGenerator;
  * Generates time-ordered, sortable IDs for Elasticsearch models.
  *
  * Use this trait when you need IDs that sort chronologically across
- * multiple processes/workers — ideal for high-volume APIs where
+ * multiple processes/workers - ideal for high-volume APIs where
  * time-sequenced analytics matter.
  *
  * IDs are 20 characters, URL-safe, and sort lexicographically in

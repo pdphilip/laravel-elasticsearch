@@ -11,7 +11,7 @@ use PDPhilip\Elasticsearch\Data\QueryMeta;
  * @template TKey of array-key
  * @template TModel of \PDPhilip\Elasticsearch\Eloquent\Model
  *
- * @extends \Illuminate\Database\Eloquent\Collection<TKey, TModel>
+ * @extends Collection<TKey, TModel>
  */
 class ElasticCollection extends Collection
 {
