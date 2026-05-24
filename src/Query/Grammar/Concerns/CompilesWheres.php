@@ -118,6 +118,16 @@ trait CompilesWheres
 
         if (is_null($value) || $where['operator'] == 'exists') {
             $query = DslFactory::exists($field, $options);
+
+            // Auto-wrap in nested when the field lives under a nested path
+            // and we're not already inside a parent-field (nested closure) context.
+            $insideNestedContext = ! empty($builder->options()->get('parentField'));
+            if (! $insideNestedContext) {
+                $nestedPath = $this->getNestedPath($field, $builder);
+                if ($nestedPath) {
+                    $query = DslFactory::nested($nestedPath, ['query' => $query]);
+                }
+            }
         } elseif (in_array($where['operator'], ['like', 'not like'])) {
             $field = $this->getIndexableField($field, $builder);
             $wildcardValue = str_replace('%', '*', $value);

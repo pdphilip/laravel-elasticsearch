@@ -81,11 +81,19 @@ trait BuildsFieldQueries
     }
 
     // ----------------------------------------------------------------------
-    // Term Exists Query - check if a field has an indexed value
+    // Exists Query - check if a field has an indexed value
     // https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-exists-query.html
+    //
+    // Named whereFieldExists (not whereExists) to avoid colliding with
+    // Laravel's base Builder::whereExists(Closure $callback) — the SQL
+    // EXISTS subquery clause, which has entirely different semantics.
+    //
+    // Works on top-level fields and on nested-mapped fields: the compiler
+    // auto-wraps the exists clause in a nested query when the field's path
+    // is mapped as nested.
     // ----------------------------------------------------------------------
 
-    public function whereTermExists($column, $boolean = 'and', $not = false): self
+    public function whereFieldExists($column, $boolean = 'and', $not = false): self
     {
         $this->wheres[] = [
             'type' => 'Basic',
@@ -99,19 +107,52 @@ trait BuildsFieldQueries
         return $this;
     }
 
-    public function whereNotTermExists($column)
+    public function whereFieldDoesntExist($column): self
     {
-        return $this->whereTermExists($column, 'and', true);
+        return $this->whereFieldExists($column, 'and', true);
     }
 
-    public function orWhereTermExists($column)
+    public function orWhereFieldExists($column): self
     {
-        return $this->whereTermExists($column, 'or', false);
+        return $this->whereFieldExists($column, 'or', false);
     }
 
-    public function orWhereNotTermsExists($column)
+    public function orWhereFieldDoesntExist($column): self
     {
-        return $this->whereTermExists($column, 'or', true);
+        return $this->whereFieldExists($column, 'or', true);
+    }
+
+    /**
+     * @deprecated Use whereFieldExists() instead. Will be removed in v6.
+     */
+    public function whereTermExists($column, $boolean = 'and', $not = false): self
+    {
+        return $this->whereFieldExists($column, $boolean, $not);
+    }
+
+    /**
+     * @deprecated Use whereFieldDoesntExist() instead. Will be removed in v6.
+     */
+    public function whereNotTermExists($column): self
+    {
+        return $this->whereFieldExists($column, 'and', true);
+    }
+
+    /**
+     * @deprecated Use orWhereFieldExists() instead. Will be removed in v6.
+     */
+    public function orWhereTermExists($column): self
+    {
+        return $this->whereFieldExists($column, 'or', false);
+    }
+
+    /**
+     * @deprecated Use orWhereFieldDoesntExist() instead. Will be removed in v6.
+     *             Note: the original method name had a typo ("Terms" plural).
+     */
+    public function orWhereNotTermsExists($column): self
+    {
+        return $this->whereFieldExists($column, 'or', true);
     }
 
     // ----------------------------------------------------------------------

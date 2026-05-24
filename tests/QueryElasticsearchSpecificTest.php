@@ -192,6 +192,66 @@ it('throws BuilderException for invalid nested query argument', function () {
     Post::whereNestedObject('comments', 12345);
 })->throws(\PDPhilip\Elasticsearch\Exceptions\BuilderException::class);
 
+it('whereFieldExists matches users with the field set', function () {
+    expect(User::whereFieldExists('title')->count())->toBe(8);
+});
+
+it('whereFieldDoesntExist matches users with the field missing', function () {
+    expect(User::whereFieldDoesntExist('title')->count())->toBe(1);
+});
+
+it('whereFieldExists is parity with deprecated whereTermExists', function () {
+    $new = User::whereFieldExists('title')->get()->pluck('name')->sort()->values()->all();
+    $old = User::whereTermExists('title')->get()->pluck('name')->sort()->values()->all();
+    expect($new)->toBe($old);
+});
+
+it('whereFieldExists auto-wraps in nested for nested-mapped fields', function () {
+    $dsl = Post::whereFieldExists('comments.country')->toDsl();
+
+    $clause = $dsl['body']['query'];
+    expect($clause)->toHaveKey('nested')
+        ->and($clause['nested']['path'])->toBe('comments')
+        ->and($clause['nested']['query'])->toBe(['exists' => ['field' => 'comments.country']]);
+});
+
+it('whereFieldExists returns posts when nested field exists', function () {
+    expect(Post::whereFieldExists('comments.country')->count())->toBe(4);
+});
+
+it('whereFieldExists does not wrap when already inside a nested closure', function () {
+    $dsl = Post::whereNestedObject('comments', function ($q) {
+        $q->whereFieldExists('country');
+    })->toDsl();
+
+    $nested = $dsl['body']['query']['nested'];
+    expect($nested['path'])->toBe('comments')
+        ->and($nested['query'])->toBe(['exists' => ['field' => 'comments.country']]);
+});
+
+it('whereFieldExists leaves top-level fields unwrapped', function () {
+    $dsl = Post::whereFieldExists('title')->toDsl();
+    expect($dsl['body']['query'])->toBe(['exists' => ['field' => 'title']]);
+});
+
+it('whereNotNull on a nested field auto-wraps in nested', function () {
+    $dsl = Post::whereNotNull('comments.country')->toDsl();
+
+    $clause = $dsl['body']['query'];
+    expect($clause)->toHaveKey('nested')
+        ->and($clause['nested']['path'])->toBe('comments')
+        ->and($clause['nested']['query'])->toBe(['exists' => ['field' => 'comments.country']]);
+});
+
+it('whereNull on a nested field wraps nested inside must_not', function () {
+    $dsl = Post::whereNull('comments.country')->toDsl();
+
+    $mustNot = $dsl['body']['query']['bool']['must_not'][0];
+    expect($mustNot)->toHaveKey('nested')
+        ->and($mustNot['nested']['path'])->toBe('comments')
+        ->and($mustNot['nested']['query'])->toBe(['exists' => ['field' => 'comments.country']]);
+});
+
 it('can search with field boosting', function () {
     $users = User::search('John', 'best_fields', ['name' => 5, 'description' => 1])->get();
     expect($users)->toHaveCount(2)

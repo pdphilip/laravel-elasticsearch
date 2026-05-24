@@ -83,10 +83,14 @@ use PDPhilip\Elasticsearch\Pagination\SearchAfterPaginator;
  * @method static $this orWhereNestedObject($column, $query, $filterInnerHits = false, $options = [])
  * @method static $this orWhereNotNestedObject($column, $query, $filterInnerHits = false, $options = [])
  *-----------------------------------
- * @method static $this whereTermExists($column, $boolean = 'and', $not = false)
- * @method static $this whereNotTermExists($column)
- * @method static $this orWhereTermExists($column)
- * @method static $this orWhereNotTermsExists($column)
+ * @method static $this whereFieldExists($column, $boolean = 'and', $not = false)
+ * @method static $this whereFieldDoesntExist($column)
+ * @method static $this orWhereFieldExists($column)
+ * @method static $this orWhereFieldDoesntExist($column)
+ * @method static $this whereTermExists($column, $boolean = 'and', $not = false) @deprecated use whereFieldExists
+ * @method static $this whereNotTermExists($column) @deprecated use whereFieldDoesntExist
+ * @method static $this orWhereTermExists($column) @deprecated use orWhereFieldExists
+ * @method static $this orWhereNotTermsExists($column) @deprecated use orWhereFieldDoesntExist
  *-----------------------------------
  * @method static $this whereRaw($dsl, $bindings = [], $boolean = 'and', $options = [])
  *===========================================
