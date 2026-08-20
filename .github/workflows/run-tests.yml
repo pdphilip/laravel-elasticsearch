@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev-main
+      - 5.x-dev
 
 jobs:
   test:
