@@ -319,6 +319,49 @@ class Builder extends BaseEloquentBuilder
     }
 
     /**
+     * {@inheritdoc}
+     *
+     * Laravel skips the query entirely when the count comes back as zero and
+     * returns a bare collection. Elasticsearch still ran a search to produce
+     * that zero, so the count query's meta is carried over rather than lost -
+     * without it getQueryMeta() on an empty page has nothing to report.
+     *
+     * @param  Closure|int|null  $perPage
+     * @param  Closure|int|null  $total
+     */
+    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null, $total = null)
+    {
+        $page = $page ?: Paginator::resolveCurrentPage($pageName);
+        $countQuery = $this->toBase();
+        $total = value($total) ?? $countQuery->getCountForPagination();
+        $perPage = value($perPage, $total) ?: $this->model->getPerPage();
+
+        $results = $total
+            ? $this->forPage($page, $perPage)->get($columns)
+            : $this->emptyPageCollection($countQuery);
+
+        return $this->paginator($results, $total, $perPage, $page, [
+            'path' => Paginator::resolveCurrentPath(),
+            'pageName' => $pageName,
+        ]);
+    }
+
+    /**
+     * The collection for a page that matched nothing, carrying the meta of the
+     * count query where the model's collection can hold it.
+     */
+    protected function emptyPageCollection(QueryBuilder $countQuery): Collection
+    {
+        $collection = $this->model->newCollection();
+
+        if ($collection instanceof ElasticCollection) {
+            $collection->setQueryMeta($countQuery->getMetaTransfer());
+        }
+
+        return $collection;
+    }
+
+    /**
      *  Using Laravel base method name rather
      *
      * @throws BindingResolutionException

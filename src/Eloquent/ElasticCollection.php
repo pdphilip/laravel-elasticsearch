@@ -2,7 +2,6 @@
 
 namespace PDPhilip\Elasticsearch\Eloquent;
 
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Collection;
 use PDPhilip\Elasticsearch\Data\MetaDTO;
 use PDPhilip\Elasticsearch\Data\QueryMeta;
@@ -15,16 +14,7 @@ use PDPhilip\Elasticsearch\Data\QueryMeta;
  */
 class ElasticCollection extends Collection
 {
-    protected ?QueryMeta $meta;
-
-    /**
-     * @param  Arrayable<TKey, TModel>|iterable<TKey, TModel>|array<TKey|int, mixed>|null  $items
-     */
-    public function __construct($items = [])
-    {
-        parent::__construct($items);
-        //        $this->meta = new QueryMeta;
-    }
+    protected ?QueryMeta $meta = null;
 
     public static function loadCollection(Collection $collection)
     {
@@ -45,56 +35,75 @@ class ElasticCollection extends Collection
         return $this;
     }
 
+    /**
+     * Whether this collection carries the meta of the query that built it.
+     *
+     * False for the collections Eloquent builds on its own: newCollection(),
+     * hydrate(), and anything derived through map(), filter() or values().
+     */
+    public function hasQueryMeta(): bool
+    {
+        return $this->meta !== null;
+    }
+
+    /**
+     * Meta of the query that built this collection.
+     *
+     * Falls back to an empty QueryMeta, which reports its unknowns as -1, so
+     * that a collection built without a query still answers every getter. The
+     * fallback is not retained: reading meta that was never set must not make
+     * hasQueryMeta() start answering true.
+     */
     public function getQueryMeta(): QueryMeta
     {
-        return $this->meta;
+        return $this->meta ?? new QueryMeta;
     }
 
     public function getQueryMetaAsArray(): array
     {
-        return $this->meta->toArray();
+        return $this->getQueryMeta()->toArray();
     }
 
     public function getDsl(): array
     {
         return [
-            'query' => $this->meta->getQuery(),
-            'dsl' => $this->meta->getDsl(),
+            'query' => $this->getQueryMeta()->getQuery(),
+            'dsl' => $this->getQueryMeta()->getDsl(),
         ];
     }
 
     public function getTook(): int
     {
-        return $this->meta->getTook();
+        return $this->getQueryMeta()->getTook();
     }
 
     public function getShards(): mixed
     {
-        return $this->meta->getShards();
+        return $this->getQueryMeta()->getShards();
     }
 
     public function getTotal(): int
     {
-        return $this->meta->getTotal();
+        return $this->getQueryMeta()->getTotal();
     }
 
     public function getMaxScore(): string
     {
-        return $this->meta->getMaxScore();
+        return $this->getQueryMeta()->getMaxScore();
     }
 
     public function getResults(): array
     {
-        return $this->meta->getResults();
+        return $this->getQueryMeta()->getResults();
     }
 
     public function getPitId()
     {
-        return $this->meta->getPitId();
+        return $this->getQueryMeta()->getPitId();
     }
 
     public function getAfterKey()
     {
-        return $this->meta->getAfterKey();
+        return $this->getQueryMeta()->getAfterKey();
     }
 }

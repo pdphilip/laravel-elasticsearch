@@ -593,7 +593,7 @@ class Builder extends BaseBuilder
         $results = $this->getResultsOnce();
         $this->columns = $original;
         $collection = ElasticCollection::make($results);
-        $collection->setQueryMeta($this->metaTransfer);
+        $collection->setQueryMeta($this->getMetaTransfer());
 
         return $collection;
     }
@@ -670,9 +670,11 @@ class Builder extends BaseBuilder
      */
     protected function runPaginationCountQuery($columns = ['_id'])
     {
-        return $this->cloneWithout(['columns', 'orders', 'limit', 'offset'])
-            ->limit(1)
-            ->get($columns)->all();
+        $countQuery = $this->cloneWithout(['columns', 'orders', 'limit', 'offset'])->limit(1);
+        $results = $countQuery->get($columns)->all();
+        $this->setMetaTransfer($countQuery->getMetaTransfer());
+
+        return $results;
     }
 
     /**
@@ -1313,7 +1315,7 @@ class Builder extends BaseBuilder
     }
 
     // @internal
-    public function getMetaTransfer(): ?MetaDTO
+    public function getMetaTransfer(): MetaDTO
     {
         if (! $this->metaTransfer) {
             $this->metaTransfer = new MetaDTO([]);

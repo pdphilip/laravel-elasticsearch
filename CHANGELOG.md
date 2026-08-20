@@ -10,6 +10,9 @@ This release is compatible with Laravel 11, 12 & 13, and with Elasticsearch 8 & 
 
 - **Elasticsearch 9 support** - the full suite runs green against ES 8.18 and 9.5, and CI now tests
   both on every push. No code changes were needed: the `^8.17` client talks to both server lines.
+- **`ElasticCollection::hasQueryMeta()`** - whether a collection carries the meta of the query that
+  built it. False for the collections Eloquent builds on its own: `newCollection()`, `hydrate()`,
+  and anything derived through `map()`, `filter()` or `values()`.
 
 ### Fixed
 
@@ -19,6 +22,19 @@ This release is compatible with Laravel 11, 12 & 13, and with Elasticsearch 8 & 
   [laravel-opensearch#28](https://github.com/pdphilip/laravel-opensearch/pull/28)
 - **`cursor()` crashed on a fresh connection** - `Processor::getRawResponse()` dereferenced null when
   a cursor was the first query on its connection (`Call to a member function asArray() on null`)
+- **`paginate()` lost its query meta when nothing matched** - Laravel skips the query entirely once
+  the count comes back as zero, so an empty page arrived as a bare collection and `getQueryMeta()`
+  on it threw `Method Illuminate\Database\Eloquent\Collection::getQueryMeta does not exist`. The
+  count query's meta is now carried onto the empty page: `getTotalHits()` reports `0`, and it still
+  honours `withTrackTotalHits()` for indices past the 10k window
+- **Meta getters fataled on collections Eloquent built itself** - `ElasticCollection::$meta` was a
+  typed property that nothing initialised, so `getQueryMeta()`, `getTook()`, `getDsl()` and the rest
+  threw `Typed property ElasticCollection::$meta must not be accessed before initialization` on any
+  collection that did not come from a query. They now fall back to an empty `QueryMeta`, which
+  reports its unknowns as `-1`. Note that nullsafe could not guard this: the error came from the
+  property access, so `$collection?->getQueryMeta()` fataled too
+- **`Query\Builder::get()` could hand a null `MetaDTO` to `setQueryMeta()`** - it read the
+  `$metaTransfer` property directly instead of the accessor that initialises it
 
 ### Changed
 
@@ -26,6 +42,8 @@ This release is compatible with Laravel 11, 12 & 13, and with Elasticsearch 8 & 
   type-hinting `Generator` or `Iterator` needs updating
 - A cursor is re-iterable - a second pass opens a fresh scroll instead of throwing
   `Cannot rewind a generator`
+- `Query\Builder::getMetaTransfer()` (internal) returns `MetaDTO` instead of `?MetaDTO` - it
+  initialises on demand and never actually returned null
 
 > **Laravel 11 notice:** three advisories now cover the whole 11.x branch with no 11.x release that
 > clears them, and Composer 2.9+ blocks advisory-affected versions while resolving. On Laravel 11,
