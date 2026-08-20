@@ -20,6 +20,8 @@ class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
+        $host = env('ELASTICSEARCH_HOST', 'http://localhost:'.env('ELASTICSEARCH_PORT', '9200'));
+
         $app['config']->set('database.default', 'elasticsearch');
 
         $app['config']->set('database.connections.sqlite', [
@@ -33,7 +35,7 @@ class TestCase extends Orchestra
         $app['config']->set('database.connections.elasticsearch', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
-            'hosts' => ['http://localhost:9200'],
+            'hosts' => [$host],
             'options' => [
                 'logging' => true,
             ],
@@ -41,7 +43,7 @@ class TestCase extends Orchestra
         $app['config']->set('database.connections.elasticsearch_with_default_limit', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
-            'hosts' => ['http://localhost:9200'],
+            'hosts' => [$host],
             'options' => [
                 'default_limit' => 4,
                 'logging' => true,
@@ -51,7 +53,7 @@ class TestCase extends Orchestra
         $app['config']->set('database.connections.elasticsearch_unsafe', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
-            'hosts' => ['http://localhost:9200'],
+            'hosts' => [$host],
             'options' => [
                 'bypass_map_validation' => true,
                 'insert_chunk_size' => 10000,
@@ -62,7 +64,7 @@ class TestCase extends Orchestra
         $app['config']->set('database.connections.elasticsearch_with_default_track_total_hits', [
             'driver' => 'elasticsearch',
             'auth_type' => 'http',
-            'hosts' => ['http://localhost:9200'],
+            'hosts' => [$host],
             'options' => [
                 'track_total_hits' => true,
                 'logging' => true,
