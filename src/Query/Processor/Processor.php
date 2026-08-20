@@ -44,9 +44,17 @@ class Processor extends BaseProcessor
 
     /**
      * Get the raw Elasticsearch response as an array
+     *
+     * Null is legitimate: only select, insert and aggregate processing assign
+     * a raw response, and the scroll behind cursor() runs none of them. Per-hit
+     * meta reaches MetaDTO through documentFromResult's extras either way.
      */
     public function getRawResponse(): array
     {
+        if ($this->rawResponse === null) {
+            return [];
+        }
+
         return is_array($this->rawResponse) ? $this->rawResponse : $this->rawResponse->asArray();
     }
 

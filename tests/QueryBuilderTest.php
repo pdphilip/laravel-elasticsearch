@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\LazyCollection;
 use PDPhilip\Elasticsearch\Eloquent\Builder;
 use PDPhilip\Elasticsearch\Tests\Models\Item;
 use PDPhilip\Elasticsearch\Tests\Models\User;
@@ -596,10 +597,25 @@ it('returns lazy collection via cursor', function () {
 
     $results = Item::orderBy('name.keyword', 'asc')->cursor();
 
-    expect($results)->toBeInstanceOf(Generator::class);
+    expect($results)->toBeInstanceOf(LazyCollection::class);
     foreach ($results as $i => $result) {
         expect($result->name)->toBe($data[$i]['name']);
     }
+});
+
+it('chunks a cursor directly, without iterating it', function () {
+    Item::insert([
+        ['name' => 'fork'],
+        ['name' => 'spoon'],
+        ['name' => 'spork'],
+    ]);
+
+    // Chained straight off cursor() rather than iterated - the call shape that
+    // failed with "Call to undefined method Generator::chunk()".
+    $chunks = Item::orderBy('name.keyword', 'asc')->cursor()->chunk(2);
+
+    expect($chunks->map->count()->all())->toBe([2, 1])
+        ->and($chunks->first()->pluck('name')->all())->toBe(['fork', 'spoon']);
 });
 
 it('increments multiple fields simultaneously', function () {

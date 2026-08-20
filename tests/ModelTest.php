@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
 use PDPhilip\Elasticsearch\Connection;
 use PDPhilip\Elasticsearch\Data\ModelMeta;
@@ -576,6 +578,75 @@ it('tests cursor across many items', function () {
         $names[] = $cursor;
     }
     expect($names)->toHaveCount(15000);
+});
+
+it('returns a chunkable lazy collection from cursor', function () {
+    User::insert([
+        ['name' => 'User 1'],
+        ['name' => 'User 2'],
+        ['name' => 'User 3'],
+    ]);
+
+    $cursor = User::query()->orderBy('name.keyword')->cursor();
+
+    expect($cursor)->toBeInstanceOf(LazyCollection::class);
+
+    $chunkSizes = $cursor->chunk(2)->map(fn ($chunk) => $chunk->count())->all();
+    expect($chunkSizes)->toBe([2, 1]);
+});
+
+it('cursors on a connection that has not run a query yet', function () {
+    User::insert([
+        ['name' => 'User 1'],
+        ['name' => 'User 2'],
+        ['name' => 'User 3'],
+    ]);
+
+    // A scroll populates no raw response, so a cursor that is the first query
+    // on its connection has no earlier select or insert to inherit one from.
+    DB::purge('elasticsearch');
+
+    $names = User::query()->orderBy('name.keyword')->cursor()->pluck('name')->all();
+
+    expect($names)->toBe(['User 1', 'User 2', 'User 3']);
+});
+
+it('keeps the cursor lazy, hydrating only what is consumed', function () {
+    User::insert(array_map(fn ($i) => ['name' => "User {$i}"], range(1, 10)));
+
+    $hydrated = 0;
+    User::retrieved(function () use (&$hydrated) {
+        $hydrated++;
+    });
+
+    $cursor = User::query()->orderBy('name.keyword')->cursor();
+
+    // Building the collection must not touch the cluster.
+    expect($hydrated)->toBe(0);
+
+    $taken = $cursor->take(3)->all();
+
+    // Three, not ten - an eagerly materialised collection would fail here while
+    // every other assertion about cursor() carried on passing.
+    expect($taken)->toHaveCount(3)
+        ->and($hydrated)->toBe(3);
+});
+
+it('re-runs the scroll when the cursor is iterated twice', function () {
+    User::insert([
+        ['name' => 'User 1'],
+        ['name' => 'User 2'],
+        ['name' => 'User 3'],
+    ]);
+
+    $cursor = User::query()->orderBy('name.keyword')->cursor();
+
+    // A bare generator throws "Cannot rewind a generator" on the second pass.
+    $first = $cursor->pluck('name')->all();
+    $second = $cursor->pluck('name')->all();
+
+    expect($first)->toBe(['User 1', 'User 2', 'User 3'])
+        ->and($second)->toBe($first);
 });
 
 it('tests truncate model', function () {
