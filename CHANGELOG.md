@@ -2,6 +2,39 @@
 
 All notable changes to this `laravel-elasticsearch` package will be documented in this file.
 
+## v5.7.1 - 2026-08-20
+
+This release is compatible with Laravel 11, 12 & 13, and with Elasticsearch 8 & 9
+
+### Added
+
+- **Elasticsearch 9 support** - the full suite runs green against ES 8.18 and 9.5, and CI now tests
+  both on every push. No code changes were needed: the `^8.17` client talks to both server lines.
+
+### Fixed
+
+- **`cursor()` returns a `LazyCollection`** - matching Laravel's own builders, so `cursor()->chunk()`,
+  `->map()` and `->filter()` work instead of fataling with `Call to undefined method
+  Generator::chunk()`. Found and fixed by [@BobbyBorisov](https://github.com/BobbyBorisov) in
+  [laravel-opensearch#28](https://github.com/pdphilip/laravel-opensearch/pull/28)
+- **`cursor()` crashed on a fresh connection** - `Processor::getRawResponse()` dereferenced null when
+  a cursor was the first query on its connection (`Call to a member function asArray() on null`)
+
+### Changed
+
+- `cursor()` returns `LazyCollection` instead of `Generator`. `foreach` is unaffected; anything
+  type-hinting `Generator` or `Iterator` needs updating
+- A cursor is re-iterable - a second pass opens a fresh scroll instead of throwing
+  `Cannot rewind a generator`
+
+> **Laravel 11 notice:** three advisories now cover the whole 11.x branch with no 11.x release that
+> clears them, and Composer 2.9+ blocks advisory-affected versions while resolving. On Laravel 11,
+> `composer require` and `composer update` will refuse to install anything, this package included.
+> `composer install` from a lock file still works. `composer config policy.advisories.block false`
+> lifts it; upgrading to 12 or 13 is the real fix.
+
+**Full Changelog**: https://github.com/pdphilip/laravel-elasticsearch/compare/v5.7.0...v5.7.1
+
 ## v5.7.0 - 2026-05-24
 
 This release is compatible with Laravel 11, 12 & 13
